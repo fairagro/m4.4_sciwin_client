@@ -2,8 +2,10 @@ name: Manage Issues
 
 on:
   issues:
-    type: 
+    types: 
       - opened
+      - reopened
+      - transferred
 jobs:
   add-to-project:
     name: Add issue to project
