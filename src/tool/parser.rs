@@ -1,12 +1,19 @@
+use super::input;
+use input::Input;
+use input::OptionType;
+
 //TODO: complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
 pub fn parse_command_line(command: Vec<String>) {
-    let base_command = get_base_command(command);
+    let base_command = get_base_command(&command);
+    let args = command[base_command.len()..].to_vec();
     println!("{:?}", base_command);
+    let inputs = get_inputs(args);
+    println!("{:?}", inputs);
 }
 
-fn get_base_command(command: Vec<String>) -> Vec<String> {
+fn get_base_command(command: &Vec<String>) -> Vec<String> {
     if command.is_empty() {
         return Vec::new();
     };
@@ -18,4 +25,36 @@ fn get_base_command(command: Vec<String>) -> Vec<String> {
     }
 
     return base_command;
+}
+
+fn get_inputs(args: Vec<String>) -> Vec<Input> {
+    let mut inputs = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        let arg = &args[i];
+        let mut input = Input::new();
+
+        if arg.starts_with('-') {
+            //not a positional
+            let id = arg.replace("-", "");
+            input.prefix = Some(arg.clone());
+            input.id = Some(id);
+
+            if i + 1 < args.len() && !args[i + 1].starts_with('-') {
+                //is not a flag, as next one is a value
+                input.value = Some(args[i + 1].clone());
+                i += 1
+            } else {
+                input.r#type = OptionType::Flag;
+            }
+        } else {
+            input.id = Some(arg.clone());
+            input.value = Some(arg.clone());
+            input.r#type = OptionType::Positional;
+            input.index = Some(i);
+        }
+        inputs.push(input);
+        i += 1;
+    }
+    return inputs;
 }
