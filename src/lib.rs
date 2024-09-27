@@ -1,4 +1,5 @@
 pub mod tool {
     pub mod parser;
-    mod input;
+    pub mod input;
+    pub mod tool;
 }

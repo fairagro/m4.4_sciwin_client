@@ -1,21 +1,22 @@
-use super::input;
-use input::Input;
-use input::OptionType;
+use super::{input, tool::Tool};
+use input::{Input, OptionType};
 
 //TODO: complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
-pub fn parse_command_line(command: Vec<String>) {
+pub fn parse_command_line(command: Vec<String>) -> Tool {
     let base_command = get_base_command(&command);
     let args = command[base_command.len()..].to_vec();
-    println!("{:?}", base_command);
     let inputs = get_inputs(args);
-    println!("{:?}", inputs);
+    return Tool {
+        base_command,
+        inputs,
+    };
 }
 
 fn get_base_command(command: &Vec<String>) -> Vec<String> {
     if command.is_empty() {
-        return Vec::new();
+        return vec![];
     };
 
     let mut base_command = vec![command[0].clone()];
@@ -28,7 +29,7 @@ fn get_base_command(command: &Vec<String>) -> Vec<String> {
 }
 
 fn get_inputs(args: Vec<String>) -> Vec<Input> {
-    let mut inputs = Vec::new();
+    let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {
         let arg = &args[i];
