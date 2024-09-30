@@ -11,6 +11,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
                 inputs: vec![],
+                outputs: vec![],
             },
         ),
         (
@@ -24,6 +25,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     Some("--option1"),
                     None,
                 )],
+                outputs: vec![],
             },
         ),
         (
@@ -37,6 +39,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     Some("--option1"),
                     None,
                 )],
+                outputs: vec![],
             },
         ),
         (
@@ -59,6 +62,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                         None,
                     ),
                 ],
+                outputs: vec![],
             },
         ),
         (
@@ -72,6 +76,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     Some("--flag1"),
                     None,
                 )],
+                outputs: vec![],
             },
         ),
         (
@@ -85,6 +90,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     Some("-o"),
                     None,
                 )],
+                outputs: vec![],
             },
         ),
         (
@@ -92,6 +98,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             Tool {
                 base_command: vec!["Rscript".to_string(), "script.R".to_string()],
                 inputs: vec![],
+                outputs: vec![],
             },
         ),
         (
@@ -105,6 +112,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     None,
                     Some(0),
                 )],
+                outputs: vec![],
             },
         ),
         (
@@ -118,6 +126,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     Some("-la"),
                     None,
                 )],
+                outputs: vec![],
             },
         ),
     ]
