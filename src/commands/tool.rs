@@ -59,8 +59,11 @@ pub fn create_tool(args: &CreateToolArgs) {
     }
 
     //convert to CWL
-    //TODO!
+    let cwl = result.to_cwl();    
+
+    //generate yaml
+    let yaml = serde_yml::to_string(&cwl);
 
     //print / save CWL
-    println!("{:?}", result);
+    println!("{:?}", yaml);
 }
