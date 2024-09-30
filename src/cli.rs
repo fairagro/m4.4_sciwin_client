@@ -1,5 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 
+use crate::commands::tool::ToolCommands;
+
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
 pub(crate) struct Cli {
@@ -14,7 +16,10 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         command: DummyCommands,
     },
-    Tool,
+    Tool {
+        #[command(subcommand)]
+        command: ToolCommands,
+    },
     Workflow,
     Annotate,
     Execute,

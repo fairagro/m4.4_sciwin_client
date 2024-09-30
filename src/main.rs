@@ -1,6 +1,7 @@
 mod cli;
+use s4n::commands;
 use cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
-
+use commands::tool::handle_tool_commands;
 use clap::Parser;
 
 fn main() {
@@ -13,7 +14,7 @@ fn main() {
             DummyCommands::Update => todo!(),
             DummyCommands::Delete => todo!(),
         },
-        Commands::Tool => todo!(),
+        Commands::Tool { command } => handle_tool_commands(command),
         Commands::Workflow => todo!(),
         Commands::Annotate => todo!(),
         Commands::Execute => todo!(),

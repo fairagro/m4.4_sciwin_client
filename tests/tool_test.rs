@@ -130,7 +130,7 @@ fn test_command_line_parser() {
 }
 
 #[test]
-fn test_exection() {
+fn test_execution() {
     let command = "ls -la";
     let args = shlex::split(command).expect("parsing failed");
     let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());

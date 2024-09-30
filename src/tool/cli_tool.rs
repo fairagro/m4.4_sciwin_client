@@ -8,16 +8,16 @@ pub struct Tool {
 }
 
 impl Tool {
-    pub fn execute(self) -> ExitStatus{
+    pub fn execute(&self) -> ExitStatus{
         let mut command = Command::new(&self.base_command[0]);
         if self.base_command.len() > 1 {
             command.arg(&self.base_command[1]);
         }
-        for input in self.inputs {
-            if let Some(prefix) = input.prefix {
+        for input in &self.inputs {
+            if let Some(prefix) = &input.prefix {
                 command.arg(prefix);
             }
-            if let Some(value) = input.value {
+            if let Some(value) = &input.value {
                 command.arg(value);
             }
         }
