@@ -1,6 +1,7 @@
 use crate::{
     repo::{get_modified_files, open_repo},
     tool::parser,
+    util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
 use std::env;
@@ -19,6 +20,8 @@ pub enum ToolCommands {
 
 #[derive(Args, Debug)]
 pub struct CreateToolArgs {
+    #[arg(short = 'n', long = "name")]
+    name: Option<String>,
     #[arg(trailing_var_arg = true)]
     command: Vec<String>,
 }
@@ -59,11 +62,28 @@ pub fn create_tool(args: &CreateToolArgs) {
     }
 
     //convert to CWL
-    let cwl = result.to_cwl();    
+    let cwl = result.to_cwl();
 
     //generate yaml
     let yaml = serde_yml::to_string(&cwl);
+    if yaml.is_err() {
+        panic!("❌ Could not create yaml")
+    }
 
-    //print / save CWL
-    println!("{:?}", yaml);
+    //decide over filename
+    let mut script_name = "script".to_string();
+    if result.base_command.len() > 1 {
+        script_name = get_filename_without_extension(result.base_command[1].as_str())
+            .unwrap_or(result.base_command[1].clone());
+    }
+    let filename = args.name.as_ref().unwrap_or(&script_name);
+
+    //save CWL
+    if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.unwrap().as_str()) {
+        panic!(
+            "❌ Could not create file {} because {}",
+            format!("{filename}.cwl"),
+            e
+        );
+    }
 }

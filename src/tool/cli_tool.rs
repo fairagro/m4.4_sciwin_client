@@ -95,6 +95,6 @@ impl Tool {
                 InitialWorkDirRequirement::from_file(self.base_command[1].as_str()),
             )])
         }
-        return tool;
+        tool
     }
 }

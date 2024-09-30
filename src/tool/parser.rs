@@ -5,7 +5,7 @@ use super::{
 use slugify::slugify;
 
 //TODO: complete list
-static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "python3"];
 
 pub fn parse_command_line(command: Vec<&str>) -> Tool {
     let base_command = get_base_command(&command);
