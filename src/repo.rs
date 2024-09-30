@@ -3,12 +3,10 @@ use std::path::Path;
 use git2::{Repository, Status, StatusOptions};
 
 pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
-    let repo = match Repository::open(path) {
+    match Repository::open(path) {
         Ok(repo) => repo,
         Err(e) => panic!("❌ Failed to open repository {}", e),
-    };
-
-    return repo;
+    }
 }
 
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
@@ -30,5 +28,5 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
         }
         Err(e) => panic!("❌ Failed to get repository status: {}", e),
     }
-    return files;
+    files
 }
