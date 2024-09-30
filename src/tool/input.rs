@@ -7,7 +7,7 @@ pub enum OptionType {
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
-    pub id: Option<String>,
+    pub id: String,
     pub value: Option<String>,
     pub r#type: OptionType,
     pub prefix: Option<String>,
@@ -23,7 +23,7 @@ impl Default for Input {
 impl Input {
     pub fn new() -> Self {
         Input {
-            id: None,
+            id: String::from(""),
             value: None,
             r#type: OptionType::Option,
             prefix: None,
@@ -41,7 +41,7 @@ impl Input {
         index: Option<usize>,
     ) -> Self {
         Input {
-            id: Some(id.to_string()),
+            id: id.to_string(),
             value: value.map(|v| v.to_string()),
             r#type: input_type,
             prefix: prefix.map(|p| p.to_string()),

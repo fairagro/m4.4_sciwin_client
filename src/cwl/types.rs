@@ -22,3 +22,12 @@ pub struct File {
     class: String,
     location: String,
 }
+
+impl File {
+    pub fn new(location: &String) -> Self {
+        File {
+            class: String::from("File"),
+            location: location.to_string(),
+        }
+    }
+}

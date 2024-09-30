@@ -1,5 +1,5 @@
 use s4n::cwl::{
-    clt::{CommandInputParameter, CommandLineBinding, CommandLineTool},
+    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool},
     types::CWLType,
 };
 
@@ -50,11 +50,9 @@ baseCommand:
 
 #[test]
 pub fn create_simple_cwl() {
-    let tool = CommandLineTool {
-        class: "CommandLineTool".to_string(),
-        cwl_version: "v1.2".to_string(),
-        base_command: vec!["ls".to_string()],
-        inputs: vec![CommandInputParameter {
+    let tool = CommandLineTool::default()
+        .base_command(Command::Single("ls".to_string()))
+        .inputs(vec![CommandInputParameter {
             id: "la".to_string(),
             type_: CWLType::Boolean,
             input_binding: Some(CommandLineBinding {
@@ -62,10 +60,8 @@ pub fn create_simple_cwl() {
                 position: None,
             }),
             default: None,
-        }],
-        outputs: vec![],
-        requirements: None,
-    };
+        }])
+        .outputs(vec![]);
     let result = serde_yml::to_string(&tool);
     println!("{:?}", result);
     assert!(result.is_ok());

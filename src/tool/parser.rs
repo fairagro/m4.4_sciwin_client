@@ -43,7 +43,7 @@ fn get_inputs(args: &[&str]) -> Vec<Input> {
             //not a positional
             let id = arg.replace("-", "");
             input.prefix = Some(arg.to_string());
-            input.id = Some(slugify!(&id));
+            input.id = slugify!(&id);
 
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
@@ -53,7 +53,7 @@ fn get_inputs(args: &[&str]) -> Vec<Input> {
                 input.r#type = OptionType::Flag;
             }
         } else {
-            input.id = Some(slugify!(&arg));
+            input.id = slugify!(&arg);
             input.value = Some(arg.to_string());
             input.r#type = OptionType::Positional;
             input.index = Some(i);
