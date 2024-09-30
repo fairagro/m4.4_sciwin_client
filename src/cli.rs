@@ -1,6 +1,5 @@
-use clap::{Args, Parser, Subcommand};
-
 use crate::commands::tool::ToolCommands;
+use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
@@ -26,6 +25,7 @@ pub(crate) enum Commands {
     Sync,
 }
 
+//temporary demo how to use clap, move to commands folder for real commands
 #[derive(Debug, Subcommand)]
 pub(crate) enum DummyCommands {
     #[command(about = "Creates a dummy")]

@@ -1,4 +1,8 @@
-use s4n::tool::{input::Input, input::OptionType, parser::parse_command_line, cli_tool::Tool};
+use s4n::tool::{
+    cli_tool::Tool,
+    input::{Input, OptionType},
+    parser::parse_command_line,
+};
 
 pub fn test_cases() -> Vec<(String, Tool)> {
     vec![
@@ -95,7 +99,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             Tool {
                 base_command: vec!["echo".to_string()],
                 inputs: vec![Input::new_with(
-                    "Hello World",
+                    "hello-world",
                     Some("Hello World"),
                     OptionType::Positional,
                     None,
@@ -112,7 +116,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                     None,
                     OptionType::Flag,
                     Some("-la"),
-                    None
+                    None,
                 )],
             },
         ),

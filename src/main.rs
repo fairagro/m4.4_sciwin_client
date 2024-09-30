@@ -1,8 +1,8 @@
 mod cli;
-use s4n::commands;
+use clap::Parser;
 use cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
 use commands::tool::handle_tool_commands;
-use clap::Parser;
+use s4n::commands;
 
 fn main() {
     let args = Cli::parse();

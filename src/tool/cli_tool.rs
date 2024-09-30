@@ -8,7 +8,7 @@ pub struct Tool {
 }
 
 impl Tool {
-    pub fn execute(&self) -> ExitStatus{
+    pub fn execute(&self) -> ExitStatus {
         let mut command = Command::new(&self.base_command[0]);
         if self.base_command.len() > 1 {
             command.arg(&self.base_command[1]);

@@ -1,2 +1,2 @@
-pub mod tool;
 pub mod commands;
+pub mod tool;

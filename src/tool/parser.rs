@@ -1,5 +1,8 @@
-use super::cli_tool::Tool;
-use super::input::{Input, OptionType};
+use super::{
+    cli_tool::Tool,
+    input::{Input, OptionType},
+};
+use slugify::slugify;
 
 //TODO: complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -39,7 +42,7 @@ fn get_inputs(args: &[&str]) -> Vec<Input> {
             //not a positional
             let id = arg.replace("-", "");
             input.prefix = Some(arg.to_string());
-            input.id = Some(id);
+            input.id = Some(slugify!(&id));
 
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
@@ -49,7 +52,7 @@ fn get_inputs(args: &[&str]) -> Vec<Input> {
                 input.r#type = OptionType::Flag;
             }
         } else {
-            input.id = Some(arg.to_string());
+            input.id = Some(slugify!(&arg));
             input.value = Some(arg.to_string());
             input.r#type = OptionType::Positional;
             input.index = Some(i);
