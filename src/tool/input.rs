@@ -14,6 +14,12 @@ pub struct Input {
     pub index: Option<usize>,
 }
 
+impl Default for Input {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Input {
     pub fn new() -> Self {
         Input {
@@ -24,13 +30,16 @@ impl Input {
             index: None,
         }
     }
-    pub fn input(
+}
+
+impl Input {
+    pub fn new_with(
         id: &str,
         value: Option<&str>,
         input_type: OptionType,
         prefix: Option<&str>,
         index: Option<usize>,
-    ) -> Input {
+    ) -> Self {
         Input {
             id: Some(id.to_string()),
             value: value.map(|v| v.to_string()),

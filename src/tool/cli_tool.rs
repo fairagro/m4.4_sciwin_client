@@ -40,6 +40,6 @@ impl Tool {
             eprintln!("{}", String::from_utf8_lossy(&output.stderr));
         }
 
-        return output.status;
+        output.status
     }
 }

@@ -1,4 +1,4 @@
-use super::tool::Tool;
+use super::cli_tool::Tool;
 use super::input::{Input, OptionType};
 
 //TODO: complete list
@@ -8,10 +8,10 @@ pub fn parse_command_line(command: Vec<&str>) -> Tool {
     let base_command = get_base_command(&command);
     let args = &command[base_command.len()..];
     let inputs = get_inputs(args);
-    return Tool {
+    Tool {
         base_command,
         inputs,
-    };
+    }
 }
 
 fn get_base_command(command: &[&str]) -> Vec<String> {
@@ -25,7 +25,7 @@ fn get_base_command(command: &[&str]) -> Vec<String> {
         base_command.push(command[1].to_string());
     }
 
-    return base_command;
+    base_command
 }
 
 fn get_inputs(args: &[&str]) -> Vec<Input> {
@@ -57,5 +57,5 @@ fn get_inputs(args: &[&str]) -> Vec<Input> {
         inputs.push(input);
         i += 1;
     }
-    return inputs;
+    inputs
 }

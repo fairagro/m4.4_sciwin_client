@@ -1,8 +1,7 @@
-use s4n;
-use s4n::tool::{input::Input, input::OptionType, parser::parse_command_line, tool::Tool};
+use s4n::tool::{input::Input, input::OptionType, parser::parse_command_line, cli_tool::Tool};
 
 pub fn test_cases() -> Vec<(String, Tool)> {
-    return vec![
+    vec![
         (
             "python script.py".to_string(),
             Tool {
@@ -14,7 +13,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "python script.py --option1 value1".to_string(),
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "option1",
                     Some("value1"),
                     OptionType::Option,
@@ -27,7 +26,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "python script.py --option1 \"value with spaces\"".to_string(),
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "option1",
                     Some("value with spaces"),
                     OptionType::Option,
@@ -41,14 +40,14 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
                 inputs: vec![
-                    Input::input(
+                    Input::new_with(
                         "positional1",
                         Some("positional1"),
                         OptionType::Positional,
                         None,
                         Some(0),
                     ),
-                    Input::input(
+                    Input::new_with(
                         "option1",
                         Some("value1"),
                         OptionType::Option,
@@ -62,7 +61,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "python script.py --flag1".to_string(),
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "flag1",
                     None,
                     OptionType::Flag,
@@ -75,7 +74,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "python script.py -o value1".to_string(),
             Tool {
                 base_command: vec!["python".to_string(), "script.py".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "o",
                     Some("value1"),
                     OptionType::Option,
@@ -95,7 +94,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "echo \"Hello World\"".to_string(),
             Tool {
                 base_command: vec!["echo".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "Hello World",
                     Some("Hello World"),
                     OptionType::Positional,
@@ -108,7 +107,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
             "ls -la".to_string(),
             Tool {
                 base_command: vec!["ls".to_string()],
-                inputs: vec![Input::input(
+                inputs: vec![Input::new_with(
                     "la",
                     None,
                     OptionType::Flag,
@@ -117,7 +116,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
                 )],
             },
         ),
-    ];
+    ]
 }
 
 #[test]
