@@ -1,5 +1,5 @@
-use super::{input, tool::Tool};
-use input::{Input, OptionType};
+use super::tool::Tool;
+use super::input::{Input, OptionType};
 
 //TODO: complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
