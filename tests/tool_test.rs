@@ -62,7 +62,7 @@ pub fn test_cases() -> Vec<(String, Tool)> {
 fn test_command_line_parser() {
     for (input, expected) in test_cases() {
         let args = shlex::split(input.as_str()).expect("Parsing test case failed");
-        let result = parse_command_line(args);
+        let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
         assert_eq!(result, expected);
     }
 }
