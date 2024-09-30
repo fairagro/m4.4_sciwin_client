@@ -22,22 +22,25 @@ impl Tool {
             }
         }
 
-        let debug = format!(
-            "{} {}",
-            self.base_command[0],
-            command
-                .get_args()
-                .map(|arg| arg.to_string_lossy())
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-        println!("{}", debug);
+        //debug print command
+        if cfg!(debug_assertions) {
+            let cmd = format!(
+                "{} {}",
+                self.base_command[0],
+                command
+                    .get_args()
+                    .map(|arg| arg.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+            println!("❕ Executing command: {}", cmd);
+        }
 
         let output = command.output().expect("Running failed");
 
         println!("{}", String::from_utf8_lossy(&output.stdout));
         if !output.stderr.is_empty() {
-            eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
         }
 
         output.status
