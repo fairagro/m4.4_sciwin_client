@@ -14,6 +14,7 @@ pub fn parse_command_line(command: Vec<&str>) -> Tool {
     Tool {
         base_command,
         inputs,
+        outputs: vec![],
     }
 }
 

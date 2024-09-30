@@ -5,6 +5,7 @@ use std::process::{Command, ExitStatus};
 pub struct Tool {
     pub base_command: Vec<String>,
     pub inputs: Vec<Input>,
+    pub outputs:Vec<String>,
 }
 
 impl Tool {

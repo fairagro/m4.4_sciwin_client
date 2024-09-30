@@ -37,7 +37,7 @@ pub fn create_tool(args: &CreateToolArgs) {
         panic!("❌ No commandline string given!")
     }
 
-    let result = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+    let mut result = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
 
     //execute command
     let status = result.execute();
@@ -54,7 +54,9 @@ pub fn create_tool(args: &CreateToolArgs) {
     if files.is_empty() {
         println!("⚠ No output produced!")
     }
-    //TODO: define outputs in tool
+    for file in files {
+        result.outputs.push(file);
+    }
 
     //convert to CWL
     //TODO!
