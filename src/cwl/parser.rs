@@ -58,7 +58,7 @@ fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     while i < args.len() {
         let arg = &args[i];
         let mut input = CommandInputParameter::default();
-
+        //TODO add type to input
         if arg.starts_with('-') {
             //not a positional
             let id = arg.replace("-", "");

@@ -1,10 +1,8 @@
 use crate::{
-    repo::{get_modified_files, open_repo},
-    cwl::parser,
-    util::{create_and_write_file, get_filename_without_extension},
+    cwl::{clt::{CommandOutputBinding, CommandOutputParameter}, parser}, repo::{get_modified_files, open_repo}, util::{create_and_write_file, get_filename_without_extension}
 };
 use clap::{Args, Subcommand};
-use std::{env, process::exit};
+use std::env;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) {
     match subcommand {
@@ -40,10 +38,10 @@ pub fn create_tool(args: &CreateToolArgs) {
         panic!("❌ No commandline string given!")
     }
 
-    let mut result = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+    let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
 
     //execute command
-    let status = result.execute();
+    let status = cwl.execute();
 
     if !status.success() {
         panic!(
@@ -57,23 +55,22 @@ pub fn create_tool(args: &CreateToolArgs) {
     if files.is_empty() {
         println!("⚠ No output produced!")
     }
-    /* TODO: reimplement:
-    for file in files {
-        result.outputs.push(file);
-    }
+    
+    
+    cwl = cwl.with_outputs(files.iter().map(|f| CommandOutputParameter::default().with_binding(CommandOutputBinding{glob: f.clone()})).collect());
 
     //convert to CWL
-    let cwl = result.to_cwl();
+    //let cwl = result.to_cwl();
 
     //generate yaml
     let yaml = cwl.to_string();
     //decide over filename
-    let mut script_name = "script".to_string();
-    if result.base_command.len() > 1 {
-        script_name = get_filename_without_extension(result.base_command[1].as_str())
-            .unwrap_or(result.base_command[1].clone());
-    }
-    let filename = args.name.as_ref().unwrap_or(&script_name);
+    /*let mut script_name = "script".to_string();
+    if cwl.base_command.len() > 1 {
+        script_name = get_filename_without_extension(cwl.base_command[1].as_str())
+            .unwrap_or(cwl.base_command[1].clone());
+    */
+    let filename = "tool".to_string();//args.name.as_ref().unwrap();
 
     //save CWL
     if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.as_str()) {
@@ -83,5 +80,4 @@ pub fn create_tool(args: &CreateToolArgs) {
             e
         );
     }
-    */
 }
