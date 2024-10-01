@@ -14,7 +14,7 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) {
 
 #[derive(Debug, Subcommand)]
 pub enum ToolCommands {
-    #[command(about = "Runs commandline string and creates a tool")]
+    #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
 }
 
