@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.18", features = ["derive"] }
+which = "6.0.3"
+rust_xlsxwriter = "0.78.0"

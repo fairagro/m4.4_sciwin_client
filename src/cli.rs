@@ -19,6 +19,7 @@ pub(crate) enum Commands {
     Annotate,
     Execute,
     Sync,
+    Init(InitArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -35,4 +36,12 @@ pub(crate) struct CreateDummyArgs {
     name: String,
     #[arg(short = 'o', long = "option")]
     option: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct InitArgs {
+    #[arg(short, long)]
+    pub project: Option<String>,
+    #[arg(long)]
+    pub arc: Option<bool>,
 }
