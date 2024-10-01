@@ -2,7 +2,8 @@ use super::input::Input;
 use crate::cwl::{
     clt::{
         Command as CWLCommand, CommandInputParameter, CommandLineBinding, CommandLineTool,
-        CommandOutputBinding, CommandOutputParameter, InitialWorkDirRequirement, Requirement,
+        CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement,
+        Requirement,
     },
     types::{CWLType, File},
 };
@@ -68,7 +69,8 @@ impl Tool {
                             .with_id(&i.id)
                             .with_type(CWLType::File); //build checks for that!
                         if let Some(value) = &i.value {
-                            input = input.with_default_value(File::from_location(value));
+                            input = input
+                                .with_default_value(DefaultValue::File(File::from_location(value)));
                         }
                         if let Some(prefix) = &i.prefix {
                             input = input

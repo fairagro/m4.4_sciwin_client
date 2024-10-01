@@ -1,10 +1,10 @@
 use crate::{
     repo::{get_modified_files, open_repo},
-    tool::parser,
+    cwl::parser,
     util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
-use std::env;
+use std::{env, process::exit};
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) {
     match subcommand {
@@ -57,6 +57,7 @@ pub fn create_tool(args: &CreateToolArgs) {
     if files.is_empty() {
         println!("⚠ No output produced!")
     }
+    /*
     for file in files {
         result.outputs.push(file);
     }
@@ -82,4 +83,5 @@ pub fn create_tool(args: &CreateToolArgs) {
             e
         );
     }
+    */
 }

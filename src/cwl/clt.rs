@@ -1,10 +1,9 @@
-use core::fmt;
-use std::fmt::Display;
-
 use super::types::{CWLType, File};
+use core::fmt;
 use serde::{Deserialize, Serialize};
+use std::{fmt::Display, process::Command as SystemCommand, process::ExitStatus};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub class: String,
@@ -57,14 +56,66 @@ impl Display for CommandLineTool {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+impl CommandLineTool {
+    pub fn execute(&self) -> ExitStatus {
+        let cmd = match &self.base_command {
+            Command::Single(cmd) => cmd,
+            Command::Multiple(vec) => &vec[0],
+        };
+
+        let mut command = SystemCommand::new(cmd);
+        if let Command::Multiple(ref vec) = &self.base_command {
+            command.arg(&vec[1]);
+        }
+        for input in &self.inputs {
+            if let Some(binding) = &input.input_binding {
+                if let Some(prefix) = &binding.prefix {
+                    command.arg(prefix);
+                }
+            }
+            if let Some(default_) = &input.default {
+                let value = match &default_ {
+                    DefaultValue::File(file) => &file.location,
+                    DefaultValue::Any(value) => &serde_yml::to_string(value).unwrap(),
+                };
+                command.arg(value);
+            }
+        }
+
+        //debug print command
+        if cfg!(debug_assertions) {
+            let cmd = format!(
+                "{} {}",
+                command.get_program().to_str().unwrap(),
+                command
+                    .get_args()
+                    .map(|arg| arg.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+            println!("❕ Executing command: {}", cmd);
+        }
+
+        let output = command.output().expect("Could not execute command!");
+
+        //report from stdout/stderr
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+        if !output.stderr.is_empty() {
+            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
+        }
+
+        output.status
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Command {
     Single(String),
     Multiple(Vec<String>),
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandInputParameter {
     pub id: String,
@@ -72,7 +123,7 @@ pub struct CommandInputParameter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub default: Option<File>, //refactor to enum of file and dir
+    pub default: Option<DefaultValue>, //refactor to enum of file and dir
 }
 
 impl CommandInputParameter {
@@ -86,7 +137,7 @@ impl CommandInputParameter {
         self
     }
 
-    pub fn with_default_value(mut self, f: File) -> Self {
+    pub fn with_default_value(mut self, f: DefaultValue) -> Self {
         self.default = Some(f);
         self
     }
@@ -97,7 +148,14 @@ impl CommandInputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum DefaultValue {
+    File(File),
+    Any(serde_yml::Value),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -118,7 +176,7 @@ impl CommandLineBinding {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputParameter {
     pub id: String,
@@ -141,19 +199,19 @@ impl CommandOutputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
     pub glob: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "class")]
 pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
     pub listing: Vec<Listing>,
@@ -172,20 +230,20 @@ impl InitialWorkDirRequirement {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Listing {
     pub entryname: String,
     pub entry: Entry,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Entry {
     Source(String),
     Include(Include),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Include {
     #[serde(rename = "$include")]
     pub include: String,

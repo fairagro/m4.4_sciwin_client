@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum CWLType {
     #[default]
@@ -17,11 +17,11 @@ pub enum CWLType {
     Directory,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
-    class: String,
-    location: String,
+    pub class: String,
+    pub location: String,
 }
 
 impl File {
