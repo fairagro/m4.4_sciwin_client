@@ -16,6 +16,12 @@ pub enum CWLType {
     Directory,
 }
 
+impl Default for CWLType{
+    fn default() -> Self {
+        CWLType::Null
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
@@ -24,7 +30,7 @@ pub struct File {
 }
 
 impl File {
-    pub fn new(location: &String) -> Self {
+    pub fn from_location(location: &String) -> Self {
         File {
             class: String::from("File"),
             location: location.to_string(),

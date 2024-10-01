@@ -51,8 +51,8 @@ baseCommand:
 #[test]
 pub fn create_simple_cwl() {
     let tool = CommandLineTool::default()
-        .base_command(Command::Single("ls".to_string()))
-        .inputs(vec![CommandInputParameter {
+        .with_base_command(Command::Single("ls".to_string()))
+        .with_inputs(vec![CommandInputParameter {
             id: "la".to_string(),
             type_: CWLType::Boolean,
             input_binding: Some(CommandLineBinding {
@@ -61,7 +61,7 @@ pub fn create_simple_cwl() {
             }),
             default: None,
         }])
-        .outputs(vec![]);
+        .with_outputs(vec![]);
     let result = serde_yml::to_string(&tool);
     println!("{:?}", result);
     assert!(result.is_ok());

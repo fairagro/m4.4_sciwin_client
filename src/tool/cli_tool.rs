@@ -59,39 +59,44 @@ impl Tool {
 impl Tool {
     pub fn to_cwl(&self) -> CommandLineTool {
         let mut tool = CommandLineTool::default()
-            .base_command(CWLCommand::Multiple(self.base_command.to_owned()))
-            .inputs(
+            .with_base_command(CWLCommand::Multiple(self.base_command.to_owned()))
+            .with_inputs(
                 self.inputs
                     .iter()
                     .map(|i| {
-                        let mut input = CommandInputParameter::new(&i.id).set_type(CWLType::File); //build checks for that!
+                        let mut input = CommandInputParameter::default()
+                            .with_id(&i.id)
+                            .with_type(CWLType::File); //build checks for that!
                         if let Some(value) = &i.value {
-                            input = input.set_default(File::new(value));
+                            input = input.with_default_value(File::from_location(value));
                         }
                         if let Some(prefix) = &i.prefix {
-                            input = input.set_binding(CommandLineBinding::with_prefix(prefix))
+                            input = input
+                                .with_binding(CommandLineBinding::default().with_prefix(prefix))
                         }
                         if let Some(position) = i.index {
-                            input = input.set_binding(CommandLineBinding::with_position(position))
+                            input = input
+                                .with_binding(CommandLineBinding::default().with_position(position))
                         }
                         input
                     })
                     .collect(),
             )
-            .outputs(
+            .with_outputs(
                 self.outputs
                     .iter()
-                    .map(|o| CommandOutputParameter {
-                        id: get_filename_without_extension(o).unwrap_or(o.to_string()),
-                        type_: CWLType::File,
-                        output_binding: Some(CommandOutputBinding {
-                            glob: o.to_string(),
-                        }),
+                    .map(|o| {
+                        CommandOutputParameter::default()
+                            .with_id(get_filename_without_extension(o).unwrap().as_str())
+                            .with_type(CWLType::File)
+                            .with_binding(CommandOutputBinding {
+                                glob: o.to_string(),
+                            })
                     })
                     .collect(),
             );
         if self.base_command.len() > 1 {
-            tool = tool.requirements(vec![Requirement::InitialWorkDirRequirement(
+            tool = tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(
                 InitialWorkDirRequirement::from_file(self.base_command[1].as_str()),
             )])
         }

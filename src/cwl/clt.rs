@@ -1,3 +1,6 @@
+use core::fmt;
+use std::fmt::Display;
+
 use super::types::{CWLType, File};
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
-    pub base_command: Option<Command>,
+    pub base_command: Command,
     pub inputs: Vec<CommandInputParameter>,
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -18,7 +21,7 @@ impl Default for CommandLineTool {
         Self {
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
-            base_command: Default::default(),
+            base_command: Command::Single("echo".to_string()),
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
@@ -27,21 +30,30 @@ impl Default for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn base_command(mut self, command: Command) -> Self {
-        self.base_command = Some(command);
+    pub fn with_base_command(mut self, command: Command) -> Self {
+        self.base_command = command;
         self
     }
-    pub fn inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
+    pub fn with_inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
         self.inputs = inputs;
         self
     }
-    pub fn outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
+    pub fn with_outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
         self.outputs = outputs;
         self
     }
-    pub fn requirements(mut self, requirements: Vec<Requirement>) -> Self {
+    pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
         self.requirements = Some(requirements);
         self
+    }
+}
+
+impl Display for CommandLineTool {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match serde_yml::to_string(self) {
+            Ok(yaml) => write!(f, "{}", yaml),
+            Err(_) => Err(fmt::Error),
+        }
     }
 }
 
@@ -52,7 +64,7 @@ pub enum Command {
     Multiple(Vec<String>),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandInputParameter {
     pub id: String,
@@ -63,42 +75,29 @@ pub struct CommandInputParameter {
     pub default: Option<File>, //refactor to enum of file and dir
 }
 
-impl Default for CommandInputParameter {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            type_: CWLType::Null,
-            input_binding: Default::default(),
-            default: Default::default(),
-        }
-    }
-}
-
 impl CommandInputParameter {
-    pub fn new(id: &str) -> Self {
-        CommandInputParameter {
-            id: id.to_string(),
-            ..Default::default()
-        }
+    pub fn with_id(mut self, id: &str) -> Self {
+        self.id = id.to_string();
+        self
     }
 
-    pub fn set_type(mut self, t: CWLType) -> Self {
+    pub fn with_type(mut self, t: CWLType) -> Self {
         self.type_ = t;
         self
     }
 
-    pub fn set_default(mut self, f: File) -> Self {
+    pub fn with_default_value(mut self, f: File) -> Self {
         self.default = Some(f);
         self
     }
 
-    pub fn set_binding(mut self, binding: CommandLineBinding) -> Self {
+    pub fn with_binding(mut self, binding: CommandLineBinding) -> Self {
         self.input_binding = Some(binding);
         self
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -108,27 +107,38 @@ pub struct CommandLineBinding {
 }
 
 impl CommandLineBinding {
-    pub fn with_prefix(prefix: &String) -> Self {
-        CommandLineBinding {
-            prefix: Some(prefix.to_string()),
-            position: None,
-        }
+    pub fn with_prefix(mut self, prefix: &String) -> Self {
+        self.prefix = Some(prefix.to_string());
+        self
     }
 
-    pub fn with_position(position: usize) -> Self {
-        CommandLineBinding {
-            prefix: None,
-            position: Some(position),
-        }
+    pub fn with_position(mut self, position: usize) -> Self {
+        self.position = Some(position);
+        self
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputParameter {
     pub id: String,
     pub type_: CWLType,
     pub output_binding: Option<CommandOutputBinding>,
+}
+
+impl CommandOutputParameter {
+    pub fn with_id(mut self, id: &str) -> Self {
+        self.id = id.to_string();
+        self
+    }
+    pub fn with_type(mut self, type_: CWLType) -> Self {
+        self.type_ = type_;
+        self
+    }
+    pub fn with_binding(mut self, binding: CommandOutputBinding) -> Self {
+        self.output_binding = Some(binding);
+        self
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

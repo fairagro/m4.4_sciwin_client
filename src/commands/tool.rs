@@ -65,11 +65,7 @@ pub fn create_tool(args: &CreateToolArgs) {
     let cwl = result.to_cwl();
 
     //generate yaml
-    let yaml = serde_yml::to_string(&cwl);
-    if yaml.is_err() {
-        panic!("❌ Could not create yaml")
-    }
-
+    let yaml = cwl.to_string();
     //decide over filename
     let mut script_name = "script".to_string();
     if result.base_command.len() > 1 {
@@ -79,10 +75,10 @@ pub fn create_tool(args: &CreateToolArgs) {
     let filename = args.name.as_ref().unwrap_or(&script_name);
 
     //save CWL
-    if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.unwrap().as_str()) {
+    if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.as_str()) {
         panic!(
-            "❌ Could not create file {} because {}",
-            format!("{filename}.cwl"),
+            "❌ Could not create file {}.cwl because {}",
+            filename,
             e
         );
     }
