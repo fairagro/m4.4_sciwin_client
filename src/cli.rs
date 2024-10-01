@@ -1,6 +1,5 @@
-use crate::commands::tool::ToolCommands;
 use clap::{Args, Parser, Subcommand};
-use s4n::commands::tool::CreateToolArgs;
+use s4n::commands::tool::{CreateToolArgs, ToolCommands};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
@@ -20,7 +19,7 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         command: ToolCommands,
     },
-    #[command(hide=true)]
+    #[command(hide = true)]
     Run(CreateToolArgs),
     Workflow,
     Annotate,

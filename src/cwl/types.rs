@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum CWLType {
+    #[default]
     Null,
     Boolean,
     Int,
@@ -14,12 +15,6 @@ pub enum CWLType {
     File,
     #[serde(rename = "Directory")]
     Directory,
-}
-
-impl Default for CWLType{
-    fn default() -> Self {
-        CWLType::Null
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
