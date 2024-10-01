@@ -57,7 +57,7 @@ pub fn create_tool(args: &CreateToolArgs) {
     if files.is_empty() {
         println!("⚠ No output produced!")
     }
-    /*
+    /* TODO: reimplement:
     for file in files {
         result.outputs.push(file);
     }
