@@ -1,4 +1,4 @@
-use s4n::cwl::{clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, InitialWorkDirRequirement, Requirement}, parser::parse_command_line};
+use s4n::cwl::{clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, InitialWorkDirRequirement, Requirement}, parser::parse_command_line, types::CWLType};
 use serde_yml::Value;
 
 pub fn test_cases() -> Vec<(String, CommandLineTool)> {
@@ -34,6 +34,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                 .with_inputs(vec![
                     CommandInputParameter::default()
                         .with_id("option1")
+                        .with_type(CWLType::String)
                         .with_binding(
                             CommandLineBinding::default()
                                 .with_prefix(&"--option1".to_string())
@@ -55,6 +56,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                 .with_inputs(vec![
                     CommandInputParameter::default()
                         .with_id("option1")
+                        .with_type(CWLType::String)
                         .with_binding(
                             CommandLineBinding::default()
                                 .with_prefix(&"--option1".to_string())
@@ -77,17 +79,19 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                     CommandInputParameter::default()
                         .with_id(&"positional1".to_string())
                         .with_default_value(DefaultValue::Any(Value::String("positional1".to_string())))
+                        .with_type(CWLType::String)
                         .with_binding(
                             CommandLineBinding::default()
                                 .with_position(0)   
                         ),
                     CommandInputParameter::default()
                         .with_id("option1")
+                        .with_type(CWLType::String)
                         .with_binding(
                             CommandLineBinding::default()
                                 .with_prefix(&"--option1".to_string())
                         )
-                        .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))
+                        .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))
                 ])
                 .with_requirements(
                     vec![

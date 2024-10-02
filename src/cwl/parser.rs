@@ -1,9 +1,11 @@
+use crate::util::guess_type;
+
 use super::{
     clt::{
         Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue,
         InitialWorkDirRequirement, Requirement,
     },
-    types::File,
+    types::{CWLType, File},
 };
 use slugify::slugify;
 
@@ -32,7 +34,6 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
 }
 
 fn get_base_command(command: &[&str]) -> Command {
-    println!("{:?}", command);
     if command.is_empty() {
         return Command::Single(String::from(""));
     };
@@ -48,7 +49,7 @@ fn get_base_command(command: &[&str]) -> Command {
 
     match base_command.len() {
         1 => Command::Single(command[0].to_string()),
-        _ => Command::Multiple(base_command)
+        _ => Command::Multiple(base_command),
     }
 }
 
@@ -56,34 +57,57 @@ fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {
-        let arg = &args[i];
-        let mut input = CommandInputParameter::default();
-        //TODO add type to input
+        let arg = args[i];
+        let input: CommandInputParameter;
         if arg.starts_with('-') {
-            //not a positional
-            let id = arg.replace("-", "");
-            input = input
-                .with_binding(CommandLineBinding::default().with_prefix(&arg.to_string()))
-                .with_id(slugify!(&id).as_str());
-
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
-                //TODO: support other stuff than file
-                input = input.with_default_value(DefaultValue::File(File::from_location(
-                    &args[i + 1].to_string(),
-                )));
+                input = get_option(arg, args[i + 1]);
                 i += 1
+            } else {
+                input = get_flag(arg)
             }
         } else {
-            input = input
-                .with_id(slugify!(&arg).as_str())
-                .with_default_value(DefaultValue::File(File::from_location(
-                    &args[i + 1].to_string(),
-                )))
-                .with_binding(CommandLineBinding::default().with_position(i));
+            input = get_positional(arg, i);
         }
         inputs.push(input);
         i += 1;
     }
     inputs
+}
+
+fn get_positional(current: &str, index: usize) -> CommandInputParameter {
+    let cwl_type = guess_type(current);
+    let default_value = match cwl_type {
+        CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),
+        _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
+    };
+    CommandInputParameter::default()
+        .with_id(slugify!(&current).as_str())
+        .with_type(guess_type(current))
+        .with_default_value(default_value)
+        .with_binding(CommandLineBinding::default().with_position(index))
+}
+
+fn get_flag(current: &str) -> CommandInputParameter {
+    let id = current.replace("-", "");
+    CommandInputParameter::default()
+        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_id(slugify!(&id).as_str())
+        .with_type(CWLType::Boolean)
+}
+
+fn get_option(current: &str, next: &str) -> CommandInputParameter {
+    let id = current.replace("-", "");
+    let cwl_type = guess_type(next);
+    let default_value = match cwl_type {
+        CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
+        _ => DefaultValue::Any(serde_yml::from_str(next).unwrap()),
+    };
+
+    CommandInputParameter::default()
+        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_id(slugify!(&id).as_str())
+        .with_type(cwl_type)
+        .with_default_value(default_value)
 }
