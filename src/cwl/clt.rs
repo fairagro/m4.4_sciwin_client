@@ -235,14 +235,23 @@ impl InitialWorkDirRequirement {
 #[serde(rename_all = "camelCase")]
 pub enum DockerRequirement {
     DockerPull(String),
-    DockerFile(Entry),
+    #[serde(untagged)]
+    DockerFile {
+        #[serde(rename = "dockerFile")]
+        docker_file: Entry,
+        #[serde(rename = "dockerImageId")]
+        docker_image_id: String,
+    },
 }
 
 impl DockerRequirement {
-    pub fn from_file(filename: &str) -> Self {
-        DockerRequirement::DockerFile(Entry::Include(Include {
-            include: filename.to_string(),
-        }))
+    pub fn from_file(filename: &str, tag: &str) -> Self {
+        DockerRequirement::DockerFile {
+            docker_file: Entry::Include(Include {
+                include: filename.to_string(),
+            }),
+            docker_image_id: tag.to_string(),
+        }
     }
     pub fn from_pull(image_id: &str) -> Self {
         DockerRequirement::DockerPull(image_id.to_string())

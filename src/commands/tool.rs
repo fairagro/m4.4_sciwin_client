@@ -36,6 +36,12 @@ pub struct CreateToolArgs {
     )]
     container: Option<String>,
     #[arg(
+        short = 't',
+        long = "container-tag",
+        help = "The tag for the container when using a Dockerfile"
+    )]
+    image_id: Option<String>,
+    #[arg(
         trailing_var_arg = true,
         help = "Command line call e.g. python script.py [ARGUMENTS]"
     )]
@@ -87,9 +93,14 @@ pub fn create_tool(args: &CreateToolArgs) {
 
     //check container usage
     if let Some(container) = &args.container {
-        //TODO: get id somehow
         let requirement = if container.contains("Dockerfile") {
-            Requirement::DockerRequirement(DockerRequirement::from_file(container))
+            let image_id = if let Some(tag) = &args.image_id {
+                tag
+            }
+            else {
+                &"sciwin-container".to_string()
+            };
+            Requirement::DockerRequirement(DockerRequirement::from_file(container, image_id.as_str()))
         } else {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
         };
