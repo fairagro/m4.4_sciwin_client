@@ -209,6 +209,7 @@ pub struct CommandOutputBinding {
 #[serde(tag = "class")]
 pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
+    DockerRequirement(DockerRequirement),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -227,6 +228,21 @@ impl InitialWorkDirRequirement {
                 }),
             }],
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum DockerRequirement {
+    DockerPull(String),
+    DockerFile(Entry),
+}
+
+impl DockerRequirement {
+    pub fn from_file(filename: &str) -> Self {
+        DockerRequirement::DockerFile(Entry::Include(Include {
+            include: filename.to_string(),
+        }))
     }
 }
 

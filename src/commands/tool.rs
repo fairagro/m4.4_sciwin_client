@@ -1,5 +1,8 @@
 use crate::{
-    cwl::{clt::Command, parser},
+    cwl::{
+        clt::{Command, DockerRequirement, Requirement},
+        parser,
+    },
     repo::{get_modified_files, open_repo},
     util::{create_and_write_file, get_filename_without_extension},
 };
@@ -27,6 +30,12 @@ pub struct CreateToolArgs {
     #[arg(short = 'd', long = "dry", help = "Do not run given command")]
     is_dry: bool,
     #[arg(
+        short = 'c',
+        long = "container",
+        help = "An image to pull from e.g. docker hub or path to a Dockerfile"
+    )]
+    container: Option<String>,
+    #[arg(
         trailing_var_arg = true,
         help = "Command line call e.g. python script.py [ARGUMENTS]"
     )]
@@ -51,13 +60,13 @@ pub fn create_tool(args: &CreateToolArgs) {
 
     let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
 
-    //only run if not prohibited 
+    //only run if not prohibited
     if !args.is_dry {
         //execute command
         let status = cwl.execute();
 
         if !status.success() {
-            panic!(
+            println!(
                 "❌ could not execute commandline: {:?}",
                 args.command.join(" ")
             )
@@ -71,9 +80,23 @@ pub fn create_tool(args: &CreateToolArgs) {
 
         //could check here if an output file matches an input string
         cwl = cwl.with_outputs(parser::get_outputs(files));
-    }
-    else {
+    } else {
+        //let them set outputs explicitly in future
         println!("⚠ User requested no run, could not determine outputs!")
+    }
+
+    //check container usage
+    if let Some(container) = &args.container {
+        //TODO: get id somehow
+        if container.contains("Dockerfile") {
+            let requirement =
+                Requirement::DockerRequirement(DockerRequirement::from_file(container));
+            if let Some(ref mut vec) = cwl.requirements {
+                vec.push(requirement);
+            } else {
+                cwl = cwl.with_requirements(vec![requirement])
+            }
+        }
     }
 
     //generate yaml
@@ -97,5 +120,4 @@ pub fn create_tool(args: &CreateToolArgs) {
     if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.as_str()) {
         panic!("❌ Could not create file {}.cwl because {}", filename, e);
     }
-    
 }
