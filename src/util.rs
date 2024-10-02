@@ -31,6 +31,7 @@ pub fn guess_type(value: &str) -> CWLType {
             return CWLType::Directory;
         }
     }
+    //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
     let yaml_value: Value = serde_yml::from_str(value).unwrap();
     match yaml_value {
         Value::Null => CWLType::Null,

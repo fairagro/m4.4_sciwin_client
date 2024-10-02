@@ -22,6 +22,7 @@ pub fn test_filename_without_extension() {
 pub fn test_cwl_type_inference() {
     let inputs = &[
         ("./README.md", CWLType::File),
+        ("/some/path/that/does/not/exist.txt", CWLType::String),
         ("src/", CWLType::Directory),
         ("--option", CWLType::String),
         ("2", CWLType::Int),

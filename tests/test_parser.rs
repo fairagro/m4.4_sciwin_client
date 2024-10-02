@@ -77,7 +77,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                 .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
                 .with_inputs(vec![
                     CommandInputParameter::default()
-                        .with_id(&"positional1".to_string())
+                        .with_id("positional1")
                         .with_default_value(DefaultValue::Any(Value::String("positional1".to_string())))
                         .with_type(CWLType::String)
                         .with_binding(

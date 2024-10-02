@@ -43,7 +43,7 @@ baseCommand:
 - python
 - calculation.py
 "#;
-    let clt: Result<CommandLineTool, serde_yml::Error> = serde_yml::from_str(&cwl);
+    let clt: Result<CommandLineTool, serde_yml::Error> = serde_yml::from_str(cwl);
     println!("{:?}", clt);
     assert!(clt.is_ok());
 }

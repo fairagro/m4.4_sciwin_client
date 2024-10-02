@@ -1,9 +1,9 @@
-use crate::util::guess_type;
+use crate::util::{get_filename_without_extension, guess_type};
 
 use super::{
     clt::{
-        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue,
-        InitialWorkDirRequirement, Requirement,
+        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding,
+        CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
     },
     types::{CWLType, File},
 };
@@ -31,6 +31,22 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
             )])
         }
     }
+}
+
+pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
+    files
+        .iter()
+        .map(|f| {
+            CommandOutputParameter::default()
+                .with_type(CWLType::File)
+                .with_id(
+                    get_filename_without_extension(f)
+                        .unwrap_or(f.to_string())
+                        .as_str(),
+                )
+                .with_binding(CommandOutputBinding { glob: f.clone() })
+        })
+        .collect()
 }
 
 fn get_base_command(command: &[&str]) -> Command {

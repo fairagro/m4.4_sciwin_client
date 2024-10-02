@@ -1,5 +1,7 @@
 use crate::{
-    cwl::{clt::{CommandOutputBinding, CommandOutputParameter}, parser}, repo::{get_modified_files, open_repo}, util::{create_and_write_file, get_filename_without_extension}
+    cwl::{clt::Command, parser},
+    repo::{get_modified_files, open_repo},
+    util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
 use std::env;
@@ -12,7 +14,9 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) {
 
 #[derive(Debug, Subcommand)]
 pub enum ToolCommands {
-    #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
+    #[command(
+        about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)"
+    )]
     Create(CreateToolArgs),
 }
 
@@ -55,29 +59,22 @@ pub fn create_tool(args: &CreateToolArgs) {
     if files.is_empty() {
         println!("⚠ No output produced!")
     }
-    
-    
-    cwl = cwl.with_outputs(files.iter().map(|f| CommandOutputParameter::default().with_binding(CommandOutputBinding{glob: f.clone()})).collect());
 
-    //convert to CWL
-    //let cwl = result.to_cwl();
+    //could check here if an output file matches an input string
+    cwl = cwl.with_outputs(parser::get_outputs(files));
 
     //generate yaml
     let yaml = cwl.to_string();
     //decide over filename
-    /*let mut script_name = "script".to_string();
-    if cwl.base_command.len() > 1 {
-        script_name = get_filename_without_extension(cwl.base_command[1].as_str())
-            .unwrap_or(cwl.base_command[1].clone());
-    */
-    let filename = "tool".to_string();//args.name.as_ref().unwrap();
+    let filename = match cwl.base_command {
+        Command::Multiple(cmd) => {
+            get_filename_without_extension(cmd[1].as_str()).unwrap_or(cmd[1].clone())
+        }
+        Command::Single(cmd) => cmd,
+    };
 
     //save CWL
     if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.as_str()) {
-        panic!(
-            "❌ Could not create file {}.cwl because {}",
-            filename,
-            e
-        );
+        panic!("❌ Could not create file {}.cwl because {}", filename, e);
     }
 }
