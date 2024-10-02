@@ -88,14 +88,17 @@ pub fn create_tool(args: &CreateToolArgs) {
     //check container usage
     if let Some(container) = &args.container {
         //TODO: get id somehow
-        if container.contains("Dockerfile") {
-            let requirement =
-                Requirement::DockerRequirement(DockerRequirement::from_file(container));
-            if let Some(ref mut vec) = cwl.requirements {
-                vec.push(requirement);
-            } else {
-                cwl = cwl.with_requirements(vec![requirement])
-            }
+        let requirement = if container.contains("Dockerfile") {
+            Requirement::DockerRequirement(DockerRequirement::from_file(container))
+        } else {
+            Requirement::DockerRequirement(DockerRequirement::from_pull(container))
+        };
+
+        //push to existing requirements or create new
+        if let Some(ref mut vec) = cwl.requirements {
+            vec.push(requirement);
+        } else {
+            cwl = cwl.with_requirements(vec![requirement])
         }
     }
 

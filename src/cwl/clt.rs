@@ -244,6 +244,9 @@ impl DockerRequirement {
             include: filename.to_string(),
         }))
     }
+    pub fn from_pull(image_id: &str) -> Self {
+        DockerRequirement::DockerPull(image_id.to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
