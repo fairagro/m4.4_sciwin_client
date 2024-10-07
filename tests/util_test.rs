@@ -1,6 +1,6 @@
 use s4n::{
-    cwl::types::CWLType,
-    util::{get_filename_without_extension, guess_type},
+    cwl::{parser::guess_type, types::CWLType},
+    util::get_filename_without_extension,
 };
 
 #[test]

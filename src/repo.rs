@@ -45,13 +45,6 @@ pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
     let author = repo.signature()?;
     let head = repo.head()?;
     let parent = repo.find_commit(head.target().unwrap())?;
-    repo.commit(
-        Some("HEAD"),
-        &author,
-        &author,
-        message,
-        &new_tree,
-        &[&parent],
-    )?;
+    repo.commit(Some("HEAD"), &author, &author, message, &new_tree, &[&parent])?;
     Ok(())
 }

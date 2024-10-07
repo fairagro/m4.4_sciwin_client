@@ -1,7 +1,7 @@
 use super::types::{CWLType, File};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, process::Command as SystemCommand, process::ExitStatus};
+use std::{fmt::Display, io, process::Command as SystemCommand};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -57,7 +57,7 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> ExitStatus {
+    pub fn execute(&self) -> io::Result<()> {
         let cmd = match &self.base_command {
             Command::Single(cmd) => cmd,
             Command::Multiple(vec) => &vec[0],
@@ -87,16 +87,12 @@ impl CommandLineTool {
             let cmd = format!(
                 "{} {}",
                 command.get_program().to_str().unwrap(),
-                command
-                    .get_args()
-                    .map(|arg| arg.to_string_lossy())
-                    .collect::<Vec<_>>()
-                    .join(" ")
+                command.get_args().map(|arg| arg.to_string_lossy()).collect::<Vec<_>>().join(" ")
             );
-            println!("❕ Executing command: {}", cmd);
+            println!("Executing command: {}", cmd);
         }
 
-        let output = command.output().expect("Could not execute command!");
+        let output = command.output()?;
 
         //report from stdout/stderr
         println!("{}", String::from_utf8_lossy(&output.stdout));
@@ -104,7 +100,7 @@ impl CommandLineTool {
             eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
         }
 
-        output.status
+        Ok(())
     }
 }
 
@@ -223,9 +219,7 @@ impl InitialWorkDirRequirement {
         InitialWorkDirRequirement {
             listing: vec![Listing {
                 entryname: filename.to_string(),
-                entry: Entry::Include(Include {
-                    include: filename.to_string(),
-                }),
+                entry: Entry::Include(Include { include: filename.to_string() }),
             }],
         }
     }
@@ -247,9 +241,7 @@ pub enum DockerRequirement {
 impl DockerRequirement {
     pub fn from_file(filename: &str, tag: &str) -> Self {
         DockerRequirement::DockerFile {
-            docker_file: Entry::Include(Include {
-                include: filename.to_string(),
-            }),
+            docker_file: Entry::Include(Include { include: filename.to_string() }),
             docker_image_id: tag.to_string(),
         }
     }
