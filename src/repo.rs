@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use git2::{Repository, Status, StatusOptions};
+use git2::{Error, Repository, Status, StatusOptions};
 
 pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
     match Repository::open(path) {
@@ -29,4 +29,11 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
         Err(e) => panic!("❌ Failed to get repository status: {}", e),
     }
     files
+}
+
+pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
+    let mut index = repo.index()?;
+    index.add_path(Path::new(path))?;
+    index.write()?;
+    Ok(())
 }

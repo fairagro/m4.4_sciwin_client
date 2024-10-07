@@ -3,7 +3,7 @@ use crate::{
         clt::{Command, DockerRequirement, Requirement},
         parser,
     },
-    repo::{get_modified_files, open_repo},
+    repo::{get_modified_files, open_repo, stage_file},
     util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
@@ -82,6 +82,12 @@ pub fn create_tool(args: &CreateToolArgs) {
         let files = get_modified_files(&repo);
         if files.is_empty() {
             println!("⚠ No output produced!")
+        } else {
+            println!("❕ Found changes: {:?}", files)
+        }
+
+        for file in &files {
+            stage_file(&repo, file.as_str()).unwrap();
         }
 
         //could check here if an output file matches an input string
@@ -96,11 +102,13 @@ pub fn create_tool(args: &CreateToolArgs) {
         let requirement = if container.contains("Dockerfile") {
             let image_id = if let Some(tag) = &args.image_id {
                 tag
-            }
-            else {
+            } else {
                 &"sciwin-container".to_string()
             };
-            Requirement::DockerRequirement(DockerRequirement::from_file(container, image_id.as_str()))
+            Requirement::DockerRequirement(DockerRequirement::from_file(
+                container,
+                image_id.as_str(),
+            ))
         } else {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
         };
@@ -131,7 +139,12 @@ pub fn create_tool(args: &CreateToolArgs) {
     }
 
     //save CWL
-    if let Err(e) = create_and_write_file(format!("{filename}.cwl").as_str(), yaml.as_str()) {
-        panic!("❌ Could not create file {}.cwl because {}", filename, e);
+    filename.push_str(".cwl");
+    if let Err(e) = create_and_write_file(filename.as_str(), yaml.as_str()) {
+        println!("❌ Could not create file {} because {}", filename, e);
+        exit(1)
+    } else {
+        println!("❕ Created CWL file {}", filename);
+        stage_file(&repo, filename.as_str()).unwrap();
     }
 }
