@@ -1,8 +1,7 @@
-use crate::io::resolve_path;
-
 use super::types::{CWLType, File};
-use core::fmt;
+use crate::io::resolve_path;
 use colored::Colorize;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, io, process::Command as SystemCommand};
 
@@ -106,23 +105,23 @@ impl CommandLineTool {
         Ok(())
     }
 
-    pub fn save(&mut self, path: &String) -> String {
+    pub fn save(&mut self, path: &str) -> String {
         //rewire paths to new location
         for input in &mut self.inputs {
-            if let Some(default) = &mut input.default {
-                if let DefaultValue::File(value) = default {
-                    value.location = resolve_path(&value.location, path);
-                }
+            if let Some(DefaultValue::File(value)) = &mut input.default {
+                value.location = resolve_path(&value.location, path);
             }
         }
 
         if let Some(requirements) = &mut self.requirements {
             for requirement in requirements {
                 if let Requirement::DockerRequirement(docker) = requirement {
-                    if let DockerRequirement::DockerFile { docker_file, docker_image_id: _ } = docker {
-                        if let Entry::Include(include) = docker_file {
-                            include.include = resolve_path(&include.include, path)
-                        }
+                    if let DockerRequirement::DockerFile {
+                        docker_file: Entry::Include(include),
+                        docker_image_id: _,
+                    } = docker
+                    {
+                        include.include = resolve_path(&include.include, path)
                     }
                 } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
                     for listing in &mut iwdr.listing {
@@ -252,7 +251,7 @@ impl InitialWorkDirRequirement {
         InitialWorkDirRequirement {
             listing: vec![Listing {
                 entryname: filename.to_string(),
-                entry: Entry::Include(Include { include: filename.to_string() }),
+                entry: Entry::from_file(filename),
             }],
         }
     }
@@ -274,7 +273,7 @@ pub enum DockerRequirement {
 impl DockerRequirement {
     pub fn from_file(filename: &str, tag: &str) -> Self {
         DockerRequirement::DockerFile {
-            docker_file: Entry::Include(Include { include: filename.to_string() }),
+            docker_file: Entry::from_file(filename),
             docker_image_id: tag.to_string(),
         }
     }
@@ -294,6 +293,12 @@ pub struct Listing {
 pub enum Entry {
     Source(String),
     Include(Include),
+}
+
+impl Entry {
+    pub fn from_file(path: &str) -> Entry {
+        Entry::Include(Include { include: path.to_string() })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

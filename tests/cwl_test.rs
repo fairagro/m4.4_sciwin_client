@@ -1,5 +1,5 @@
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, InitialWorkDirRequirement, Requirement},
+    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
     types::{CWLType, File},
 };
 use serde_yml::Value;
@@ -26,7 +26,27 @@ pub fn test_cwl_save() {
             Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
         ]);
 
-    clt.save(&"workflows/tool/tool.cwl".to_string());
-    println!("{:?}", clt);
-    assert!(false)
+    clt.save("workflows/tool/tool.cwl");
+
+    //check if paths are rewritten upon tool saving
+    assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&"../../test_data/input.txt".to_string()))));
+    let requirements = &clt.requirements.unwrap();
+    let req_0 = &requirements[0];
+    let req_1 = &requirements[1];
+    assert_eq!(
+        *req_0,
+        Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
+            listing: vec![Listing {
+                entry: Entry::from_file("../../test/script.py"),
+                entryname: "test/script.py".to_string()
+            }]
+        })
+    );
+    assert_eq!(
+        *req_1,
+        Requirement::DockerRequirement(DockerRequirement::DockerFile {
+            docker_file: Entry::from_file("../../test/data/Dockerfile"),
+            docker_image_id: "test".to_string()
+        })
+    );
 }
