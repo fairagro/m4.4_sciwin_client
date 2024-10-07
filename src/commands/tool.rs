@@ -3,7 +3,7 @@ use crate::{
         clt::{Command, DockerRequirement, Requirement},
         parser,
     },
-    repo::{get_modified_files, open_repo, stage_file},
+    repo::{commit, get_modified_files, open_repo, stage_file},
     util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
@@ -146,5 +146,6 @@ pub fn create_tool(args: &CreateToolArgs) {
     } else {
         println!("❕ Created CWL file {}", filename);
         stage_file(&repo, filename.as_str()).unwrap();
+        commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap()
     }
 }
