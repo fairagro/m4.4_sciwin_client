@@ -38,13 +38,20 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn commit(repo: &Repository, message: &str) -> Result<(), Error>{
+pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
     let mut index = repo.index()?;
     let new_oid = index.write_tree()?;
     let new_tree = repo.find_tree(new_oid)?;
     let author = repo.signature()?;
     let head = repo.head()?;
     let parent = repo.find_commit(head.target().unwrap())?;
-    repo.commit(Some("HEAD"), &author, &author, message, &new_tree, &[&parent])?;
+    repo.commit(
+        Some("HEAD"),
+        &author,
+        &author,
+        message,
+        &new_tree,
+        &[&parent],
+    )?;
     Ok(())
 }

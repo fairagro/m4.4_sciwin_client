@@ -7,6 +7,7 @@ use crate::{
     util::{create_and_write_file, get_filename_without_extension},
 };
 use clap::{Args, Subcommand};
+use colored::Colorize;
 use std::{env, process::exit};
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) {
@@ -53,10 +54,16 @@ pub struct CreateToolArgs {
 pub fn create_tool(args: &CreateToolArgs) {
     //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
-    println!("The current working directory is {:?}", cwd);
+    println!(
+        "📂 The current working directory is {}",
+        cwd.to_str().unwrap().green().bold()
+    );
     let repo = open_repo(cwd);
     if !get_modified_files(&repo).is_empty() {
-        println!("❌ Uncommitted changes detected, aborting ...");
+        println!(
+            "❌ {}",
+            "Uncommitted changes detected, aborting ...".red().bold()
+        );
         exit(0)
     }
 

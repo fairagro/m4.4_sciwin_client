@@ -1,3 +1,3 @@
 pub mod clt;
-pub mod types;
 pub mod parser;
+pub mod types;

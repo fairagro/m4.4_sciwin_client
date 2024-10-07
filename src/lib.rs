@@ -1,4 +1,4 @@
 pub mod commands;
-pub mod repo;
 pub mod cwl;
+pub mod repo;
 pub mod util;

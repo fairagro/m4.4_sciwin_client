@@ -5,11 +5,7 @@ use s4n::{
 
 #[test]
 pub fn test_filename_without_extension() {
-    let inputs = &[
-        "results.csv",
-        "/some/relative/path.txt",
-        "some/archive.tar.gz",
-    ];
+    let inputs = &["results.csv", "/some/relative/path.txt", "some/archive.tar.gz"];
     let outputs = &["results", "path", "archive"];
 
     for i in 0..inputs.len() {

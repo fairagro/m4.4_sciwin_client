@@ -39,11 +39,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
         .map(|f| {
             CommandOutputParameter::default()
                 .with_type(CWLType::File)
-                .with_id(
-                    get_filename_without_extension(f)
-                        .unwrap_or(f.to_string())
-                        .as_str(),
-                )
+                .with_id(get_filename_without_extension(f).unwrap_or(f.to_string()).as_str())
                 .with_binding(CommandOutputBinding { glob: f.clone() })
         })
         .collect()
@@ -56,10 +52,7 @@ fn get_base_command(command: &[&str]) -> Command {
 
     let mut base_command = vec![command[0].to_string()];
 
-    if SCRIPT_EXECUTORS
-        .iter()
-        .any(|&exec| command[0].starts_with(exec))
-    {
+    if SCRIPT_EXECUTORS.iter().any(|&exec| command[0].starts_with(exec)) {
         base_command.push(command[1].to_string());
     }
 
