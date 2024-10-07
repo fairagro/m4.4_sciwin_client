@@ -27,11 +27,11 @@ pub enum ToolCommands {
 pub struct CreateToolArgs {
     #[arg(short = 'n', long = "name", help = "A name to be used for this tool")]
     name: Option<String>,
-    #[arg(short = 'd', long = "dry", help = "Do not run given command")]
+    #[arg(short = 'd', long = "dry-run", help = "Do not run given command")]
     is_dry: bool,
     #[arg(
         short = 'c',
-        long = "container",
+        long = "container-image",
         help = "An image to pull from e.g. docker hub or path to a Dockerfile"
     )]
     container: Option<String>,
@@ -41,6 +41,8 @@ pub struct CreateToolArgs {
         help = "The tag for the container when using a Dockerfile"
     )]
     image_id: Option<String>,
+    #[arg(long = "no-commit", help = "Do not commit at the end of tool creation")]
+    no_commit: bool,
     #[arg(
         trailing_var_arg = true,
         help = "Command line call e.g. python script.py [ARGUMENTS]"
@@ -86,10 +88,11 @@ pub fn create_tool(args: &CreateToolArgs) {
             println!("❕ Found changes: {:?}", files)
         }
 
-        for file in &files {
-            stage_file(&repo, file.as_str()).unwrap();
+        if !args.no_commit {
+            for file in &files {
+                stage_file(&repo, file.as_str()).unwrap();
+            }
         }
-
         //could check here if an output file matches an input string
         cwl = cwl.with_outputs(parser::get_outputs(files));
     } else {
@@ -145,7 +148,13 @@ pub fn create_tool(args: &CreateToolArgs) {
         exit(1)
     } else {
         println!("❕ Created CWL file {}", filename);
-        stage_file(&repo, filename.as_str()).unwrap();
-        commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap()
+        if !args.no_commit {
+            stage_file(&repo, filename.as_str()).unwrap();
+            commit(
+                &repo,
+                format!("Execution of `{}`", args.command.join(" ").as_str()).as_str(),
+            )
+            .unwrap()
+        }
     }
 }
