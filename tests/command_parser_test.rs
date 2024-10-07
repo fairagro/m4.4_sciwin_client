@@ -77,8 +77,5 @@ pub fn test_execution() {
     let command = "ls -la";
     let args = shlex::split(command).expect("parsing failed");
     let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
-    match result.execute() {
-        Ok(_) => assert!(true),
-        Err(_) => assert!(false),
-    }
+    assert!(result.execute().is_ok())
 }

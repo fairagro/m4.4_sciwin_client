@@ -1,5 +1,8 @@
+use crate::io::resolve_path;
+
 use super::types::{CWLType, File};
 use core::fmt;
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, io, process::Command as SystemCommand};
 
@@ -89,7 +92,7 @@ impl CommandLineTool {
                 command.get_program().to_str().unwrap(),
                 command.get_args().map(|arg| arg.to_string_lossy()).collect::<Vec<_>>().join(" ")
             );
-            println!("Executing command: {}", cmd);
+            println!("▶️  Executing command: {}", cmd.green().bold());
         }
 
         let output = command.output()?;
@@ -101,6 +104,36 @@ impl CommandLineTool {
         }
 
         Ok(())
+    }
+
+    pub fn save(&mut self, path: &String) -> String {
+        //rewire paths to new location
+        for input in &mut self.inputs {
+            if let Some(default) = &mut input.default {
+                if let DefaultValue::File(value) = default {
+                    value.location = resolve_path(&value.location, path);
+                }
+            }
+        }
+
+        if let Some(requirements) = &mut self.requirements {
+            for requirement in requirements {
+                if let Requirement::DockerRequirement(docker) = requirement {
+                    if let DockerRequirement::DockerFile { docker_file, docker_image_id: _ } = docker {
+                        if let Entry::Include(include) = docker_file {
+                            include.include = resolve_path(&include.include, path)
+                        }
+                    }
+                } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
+                    for listing in &mut iwdr.listing {
+                        if let Entry::Include(include) = &mut listing.entry {
+                            include.include = resolve_path(&include.include, path)
+                        }
+                    }
+                }
+            }
+        }
+        self.to_string()
     }
 }
 

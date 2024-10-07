@@ -104,10 +104,8 @@ pub fn create_tool(args: &CreateToolArgs) {
     }
 
     //generate yaml
-    let yaml = cwl.to_string();
     let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-
-    //save CWL
+    let yaml = cwl.save(&path);
     match create_and_write_file(path.as_str(), yaml.as_str()) {
         Ok(_) => {
             println!("\n📄 Created CWL file {}", path.green().bold());
