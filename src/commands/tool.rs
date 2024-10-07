@@ -3,7 +3,7 @@ use crate::{
         clt::{DockerRequirement, Requirement},
         parser,
     },
-    io::{create_and_write_file, get_filename},
+    io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, open_repo, stage_file},
     util::{print_error_and_exit, print_files, warn},
 };
@@ -105,7 +105,7 @@ pub fn create_tool(args: &CreateToolArgs) {
 
     //generate yaml
     let yaml = cwl.to_string();
-    let path = get_filename(cwl.base_command, &args.name);
+    let path = get_qualified_filename(&cwl.base_command, args.name.clone());
 
     //save CWL
     match create_and_write_file(path.as_str(), yaml.as_str()) {

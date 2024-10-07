@@ -38,7 +38,7 @@ pub fn resolve_path(filename: &str, relative_to: &str) -> String {
     pathdiff::diff_paths(path, base_dir).expect("to be valid").to_string_lossy().into_owned()
 }
 
-pub fn get_filename(command: Command, the_name: &Option<String>) -> String {
+pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
     //decide over filename
     let mut filename = match &command {
         Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or(cmd[1].clone()),

@@ -1,7 +1,8 @@
 use s4n::{
-    cwl::{parser::guess_type, types::CWLType},
-    io::{get_filename_without_extension, resolve_path},
+    cwl::{clt::Command, parser::guess_type, types::CWLType},
+    io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path},
 };
+use std::vec;
 
 #[test]
 pub fn test_filename_without_extension() {
@@ -33,6 +34,12 @@ pub fn test_cwl_type_inference() {
 }
 
 #[test]
+pub fn test_get_workflows_folder() {
+    //could be variable in future
+    assert_eq!(get_workflows_folder(), "workflows/")
+}
+
+#[test]
 fn test_path_resolver() {
     let test_cases = &[
         ("tests/testdata/input.txt", "workflows/echo/echo.cwl", "../../tests/testdata/input.txt"),
@@ -45,4 +52,19 @@ fn test_path_resolver() {
         let actual = resolve_path(path, relative_to);
         assert_eq!(actual, *expected);
     }
+}
+
+#[test]
+fn test_get_qualified_filename() {
+    let command_multiple = Command::Multiple(vec!["python".to_string(), "test/data/script.py".to_string()]);
+    let command_single = Command::Single("echo".to_string());
+    let name = "hello";
+
+    let result_name = get_qualified_filename(&command_single, Some(name.to_string()));
+    let result_single = get_qualified_filename(&command_single, None);
+    let result_multiple = get_qualified_filename(&command_multiple, None);
+
+    assert_eq!(result_name, "workflows/hello/hello.cwl");
+    assert_eq!(result_single, "workflows/echo/echo.cwl");
+    assert_eq!(result_multiple, "workflows/script/script.cwl");
 }
