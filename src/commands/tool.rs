@@ -1,10 +1,11 @@
 use crate::{
     cwl::{
-        clt::{Command, DockerRequirement, Requirement},
+        clt::{DockerRequirement, Requirement},
         parser,
     },
+    io::{create_and_write_file, get_filename},
     repo::{commit, get_modified_files, open_repo, stage_file},
-    util::{create_and_write_file, get_filename_without_extension, get_workflows_folder, print_error_and_exit, print_files, warn},
+    util::{print_error_and_exit, print_files, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -104,24 +105,9 @@ pub fn create_tool(args: &CreateToolArgs) {
 
     //generate yaml
     let yaml = cwl.to_string();
-    //decide over filename
-    let mut filename = match cwl.base_command {
-        Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or(cmd[1].clone()),
-        Command::Single(cmd) => cmd,
-    };
-
-    if let Some(name) = &args.name {
-        filename = name.clone();
-        if filename.ends_with(".cwl") {
-            filename = filename.replace(".cwl", "");
-        }
-    }
+    let path = get_filename(cwl.base_command, &args.name);
 
     //save CWL
-    let foldername = filename.clone();
-    filename.push_str(".cwl");
-
-    let path = get_workflows_folder() + &foldername + "/" + &filename;
     match create_and_write_file(path.as_str(), yaml.as_str()) {
         Ok(_) => {
             println!("\n📄 Created CWL file {}", path.green().bold());

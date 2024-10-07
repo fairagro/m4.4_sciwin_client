@@ -119,7 +119,7 @@ pub struct CommandInputParameter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub default: Option<DefaultValue>, //refactor to enum of file and dir
+    pub default: Option<DefaultValue>,
 }
 
 impl CommandInputParameter {

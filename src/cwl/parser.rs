@@ -1,16 +1,11 @@
-use std::path::Path;
-
-use crate::util::get_filename_without_extension;
-
 use super::{
-    clt::{
-        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding,
-        CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
-    },
+    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
     types::{CWLType, File},
 };
+use crate::io::get_filename_without_extension;
 use serde_yml::Value;
 use slugify::slugify;
+use std::path::Path;
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -22,17 +17,11 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
         Command::Multiple(ref vec) => &command[vec.len()..],
     });
 
-    let tool = CommandLineTool::default()
-        .with_base_command(base_command.clone())
-        .with_inputs(inputs);
+    let tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(inputs);
 
     match base_command {
         Command::Single(_) => tool,
-        Command::Multiple(ref vec) => {
-            tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(
-                InitialWorkDirRequirement::from_file(&vec[1]),
-            )])
-        }
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&vec[1]))]),
     }
 }
 

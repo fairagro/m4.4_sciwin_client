@@ -1,6 +1,6 @@
 use s4n::{
     cwl::{parser::guess_type, types::CWLType},
-    util::get_filename_without_extension,
+    io::{get_filename_without_extension, resolve_path},
 };
 
 #[test]
@@ -29,5 +29,20 @@ pub fn test_cwl_type_inference() {
         let t = guess_type(input.0);
         println!("{:?}=>{:?}", input.0, input.1);
         assert_eq!(t, input.1);
+    }
+}
+
+#[test]
+fn test_path_resolver() {
+    let test_cases = &[
+        ("tests/testdata/input.txt", "workflows/echo/echo.cwl", "../../tests/testdata/input.txt"),
+        ("tests/testdata/input.txt", "workflows/echo/", "../../tests/testdata/input.txt"),
+        ("workflows/echo/echo.py", "workflows/echo/echo.cwl", "echo.py"),
+        ("workflows/lol/echo.py", "workflows/echo/echo.cwl", "../lol/echo.py"),
+        ("/home/user/workflows/echo/echo.py", "/home/user/workflows/echo/echo.cwl", "echo.py"),
+    ];
+    for (path, relative_to, expected) in test_cases {
+        let actual = resolve_path(path, relative_to);
+        assert_eq!(actual, *expected);
     }
 }
