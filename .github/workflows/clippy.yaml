@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ "main" ]
 
-name: 📎  Clippy
+name: 📎 Clippy
 
 # Make sure CI fails on all warnings, including Clippy lints
 env:
