@@ -51,19 +51,19 @@ jobs:
         id: archive
         shell: bash
         run: |
-          DIR="s4n-${{github.ref_name}}-${{matrix.name}}"
+          DIR="s4n-${{ github.ref_name }}-${{ matrix.name }}"
           if [[ "${{ matrix.target }}" =~ "-pc-windows-" ]]; then
               SUFFIX=".exe"
           else
               SUFFIX=""
           fi
           mkdir "$DIR"
-          cp "target/${{matrix.target}}/release/s4n.$SUFFIX" "$DIRECTORY"
-          7z a "$DIRECTORY.zip" "$DIRECTORY"
-          echo "path=$DIRECTORY.zip" >> $GITHUB_OUTPUT
+          cp "target/${{ matrix.target }}/release/s4n$SUFFIX" "$DIR"
+          7z a "$DIR.zip" "$DIR"
+          echo "path=$DIR.zip" >> $GITHUB_OUTPUT
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: s4n-${{github.ref_name}}-${{matrix.name}}
-          path: | 
+          path: |
             ${{ steps.archive.outputs.path }}
