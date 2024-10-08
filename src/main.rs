@@ -1,11 +1,10 @@
 mod cli;
 mod init;
-use crate::init::init_s4n;
-use cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
+use cli::{init, Cli, Commands, CreateDummyArgs, DummyCommands};
 
 use clap::Parser;
 
-fn main() -> Result<(), Box<dyn std::error::Error>>{
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     match &args.command {
@@ -20,11 +19,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         Commands::Annotate => todo!(),
         Commands::Execute => todo!(),
         Commands::Sync => todo!(),
+        Commands::Init(args) => init(args)?,
+        /*
         Commands::Init(init_args) => {
             let project = init_args.project.clone();
             let arc = init_args.arc;
             init_s4n(project, arc)?;
         }
+        */
     }
     Ok(())
 }
@@ -33,4 +35,3 @@ fn create_dummy(args: &CreateDummyArgs) -> Result<(), Box<dyn std::error::Error>
     println!("Dummy creation called with {:?}", args);
     Ok(())
 }
-

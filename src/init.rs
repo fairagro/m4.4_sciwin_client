@@ -1,23 +1,20 @@
 use rust_xlsxwriter::Workbook;
-use std::env;
-use std::fs;
-use std::path::PathBuf;
-use std::process::Command;
+use std::{env, fs, path::PathBuf, process::Command};
 
 pub fn init_s4n(
     folder_name: Option<String>,
     arc: Option<bool>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref().unwrap_or("").to_string();
-    let _ = create_minimal_folder_structure(Some(folder.clone()));
+    let _ = create_minimal_folder_structure(Some(&folder));
     check_git_installation()?;
-    if folder != "" {
-        let is_git_repo_result = is_git_repo(Some(folder.clone()));
+    if !folder.is_empty() {
+        let is_git_repo_result = is_git_repo(Some(&folder));
         if !is_git_repo_result {
-            init_git_repo(Some(folder.clone()))?;
+            init_git_repo(Some(&folder))?;
         }
         if arc.is_some() && arc.unwrap_or(true) {
-            let _ = create_arc_folder_structure(Some(folder.clone()));
+            let _ = create_arc_folder_structure(Some(&folder));
         }
     } else {
         let is_git_repo_result = is_git_repo(None);
@@ -32,21 +29,20 @@ pub fn init_s4n(
     Ok(())
 }
 
-fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
-    if !Command::new("git").output().is_ok() {
+pub fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
+    if Command::new("git").output().is_err() {
         eprintln!("Git is not installed or not in PATH");
         std::process::exit(1);
     }
     Ok(())
 }
 
-fn is_git_repo(base_folder: Option<String>) -> bool {
+pub fn is_git_repo(base_folder: Option<&String>) -> bool {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {
             // Get the current working directory
-            let current_dir = env::current_dir().expect("Failed to get current directory");
-            current_dir
+            env::current_dir().expect("Failed to get current directory")
         }
     };
     println!("Base dir {}", base_dir.display());
@@ -60,43 +56,41 @@ fn is_git_repo(base_folder: Option<String>) -> bool {
     output.status.success()
 }
 
-fn init_git_repo(base_folder: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     println!("Checking if git repo: {:?}", base_folder);
 
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
-        None => {
-            // Get the current working directory
-            let current_dir = env::current_dir().expect("Failed to get current directory");
-            current_dir
-        }
+        None => env::current_dir().expect("Failed to get current directory"),
     };
-    let git_path = which::which("git").ok().expect("Git not found");
+
+    std::fs::create_dir_all(&base_dir)?;
+
+    let git_path = which::which("git").expect("Git not found");
     println!("Current working directory: {}", base_dir.display());
 
     Command::new(git_path)
         .arg("init")
-        .current_dir(base_dir)
+        .current_dir(&base_dir)
         .output()
         .expect("Failed to execute git init command");
 
     println!("Git repository initialized successfully");
 
-    let gitignore_path = PathBuf::from(".gitignore");
-    fs::File::create(&gitignore_path).expect("Failed to create .gitignore file");
+    let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
+    std::fs::File::create(gitignore_path).expect("Failed to create .gitignore file");
 
     Ok(())
 }
 
-fn create_minimal_folder_structure(
-    base_folder: Option<String>,
+pub fn create_minimal_folder_structure(
+    base_folder: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {
             // Get the current working directory
-            let current_dir = env::current_dir()?;
-            current_dir
+            env::current_dir().expect("Failed to get current directory")
         }
     };
 
@@ -128,15 +122,14 @@ fn create_minimal_folder_structure(
     Ok(())
 }
 
-fn create_arc_folder_structure(
-    base_folder: Option<String>,
+pub fn create_arc_folder_structure(
+    base_folder: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {
             // Get the current working directory
-            let current_dir = env::current_dir()?;
-            current_dir
+            env::current_dir().expect("Failed to get current directory")
         }
     };
 
@@ -145,7 +138,7 @@ fn create_arc_folder_structure(
         fs::create_dir_all(&base_dir)?;
     }
 
-    create_investigation_excel_file(&base_dir.to_str().unwrap_or(""))?;
+    let _ = create_investigation_excel_file(base_dir.to_str().unwrap_or(""));
     // Check and create subdirectories
     let assays_dir = base_dir.join("assays");
     if !assays_dir.exists() {
@@ -174,12 +167,12 @@ fn create_arc_folder_structure(
     Ok(())
 }
 
-fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Construct the full path for the Excel file
     let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
 
     // Create the directory if it doesn't exist
-    std::fs::create_dir_all(&excel_path.parent().unwrap())?;
+    let _ = std::fs::create_dir_all(excel_path.parent().unwrap());
     // Create a new workbook
     let mut workbook = Workbook::new();
 

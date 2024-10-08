@@ -1,3 +1,4 @@
+use crate::init::init_s4n;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -38,10 +39,19 @@ pub(crate) struct CreateDummyArgs {
     option: Option<String>,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Args, Debug)]
 pub struct InitArgs {
-    #[arg(short, long)]
-    pub project: Option<String>,
-    #[arg(long)]
-    pub arc: Option<bool>,
+    #[arg(short = 'p', long = "project", help = "Name of the project")]
+    project: Option<String>,
+    #[arg(
+        short = 'a',
+        long = "arc",
+        help = "Option to create basic arc folder structure"
+    )]
+    arc: bool,
+}
+
+pub fn init(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
+    init_s4n(args.project.clone(), Some(args.arc))?;
+    Ok(())
 }
