@@ -1,7 +1,8 @@
 name: 🕶️ Nightly Release
 
 on:
-  # add push also
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 env:
@@ -28,7 +29,7 @@ jobs:
           - name: windows-arm64
             os: windows-latest
             target: aarch64-pc-windows-msvc
-            command: cross
+            command: cargo
           - name: macos-x64
             os: macos-latest
             target: x86_64-apple-darwin
@@ -45,6 +46,9 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: VS Tools
+        if: ${{ startsWith(matrix.os, 'windows') }}
+        uses: microsoft/setup-msbuild@v2
       - name: Build
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Copy
