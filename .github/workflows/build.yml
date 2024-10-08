@@ -1,4 +1,4 @@
-name: Rust
+name: 🏗️ Build and Test
 
 on:
   push:
