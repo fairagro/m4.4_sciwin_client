@@ -4,8 +4,8 @@ use crate::cwl::parser::get_base_command;
 //test private cwl api here
 #[test]
 pub fn test_get_base_command() {
-    let commands = vec!["python script.py --arg1 hello", "echo 'Hello World!'", "Rscript lol.R", ""];
-    let expected = vec![
+    let commands = ["python script.py --arg1 hello", "echo 'Hello World!'", "Rscript lol.R", ""];
+    let expected = [
         Command::Multiple(vec!["python".to_string(), "script.py".to_string()]),
         Command::Single("echo".to_string()),
         Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]),
