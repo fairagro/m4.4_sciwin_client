@@ -1,4 +1,4 @@
-use super::types::{CWLType, File};
+use super::types::{CWLType, Directory, File};
 use crate::io::resolve_path;
 use colored::Colorize;
 use core::fmt;
@@ -78,6 +78,7 @@ impl CommandLineTool {
             if let Some(default_) = &input.default {
                 let value = match &default_ {
                     DefaultValue::File(file) => &file.location,
+                    DefaultValue::Directory(dir) => &dir.location,
                     DefaultValue::Any(value) => &serde_yml::to_string(value).unwrap(),
                 };
                 command.arg(value);
@@ -109,6 +110,9 @@ impl CommandLineTool {
         //rewire paths to new location
         for input in &mut self.inputs {
             if let Some(DefaultValue::File(value)) = &mut input.default {
+                value.location = resolve_path(&value.location, path);
+            }
+            if let Some(DefaultValue::Directory(value)) = &mut input.default {
                 value.location = resolve_path(&value.location, path);
             }
         }
@@ -180,6 +184,7 @@ impl CommandInputParameter {
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
+    Directory(Directory),
     Any(serde_yml::Value),
 }
 

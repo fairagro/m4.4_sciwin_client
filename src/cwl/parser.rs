@@ -1,6 +1,6 @@
 use super::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
-    types::{CWLType, File},
+    types::{CWLType, Directory, File},
 };
 use crate::io::get_filename_without_extension;
 use serde_yml::Value;
@@ -81,6 +81,7 @@ fn get_positional(current: &str, index: usize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&current.to_string())),
         _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
     };
     CommandInputParameter::default()
@@ -96,6 +97,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
         .with_id(slugify!(&id).as_str())
         .with_type(CWLType::Boolean)
+        .with_default_value(DefaultValue::Any(Value::Bool(true)))
 }
 
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
@@ -103,6 +105,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let cwl_type = guess_type(next);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&next.to_string())),
         _ => DefaultValue::Any(serde_yml::from_str(next).unwrap()),
     };
 

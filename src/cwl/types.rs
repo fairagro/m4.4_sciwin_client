@@ -32,3 +32,19 @@ impl File {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Directory {
+    pub class: String,
+    pub location: String,
+}
+
+impl Directory {
+    pub fn from_location(location: &String) -> Self {
+        Directory {
+            class: String::from("File"),
+            location: location.to_string(),
+        }
+    }
+}
