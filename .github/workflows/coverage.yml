@@ -2,7 +2,9 @@ name: 🦺 Coverage
 
 on:
   push:
-    branches: ["*"]
+    branches: ["main", "feature/**"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   coverage:
