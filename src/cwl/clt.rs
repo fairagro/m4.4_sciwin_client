@@ -79,8 +79,12 @@ impl CommandLineTool {
                 let value = match &default_ {
                     DefaultValue::File(file) => &file.location,
                     DefaultValue::Directory(dir) => &dir.location,
-                    DefaultValue::Any(value) => &serde_yml::to_string(value).unwrap(),
+                    DefaultValue::Any(value) => match value {
+                        serde_yml::Value::Bool(_) => &String::from(""), // do not remove!
+                        _ => &serde_yml::to_string(value).unwrap().trim_end().to_string(),
+                    },
                 };
+                println!("{:?}", value);
                 command.arg(value);
             }
         }
