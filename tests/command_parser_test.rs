@@ -63,7 +63,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
 }
 
 #[test]
-pub fn test_command_line_parser() {
+pub fn test_parse_command_line() {
     for (input, expected) in test_cases() {
         let args = shlex::split(input.as_str()).expect("Parsing test case failed");
         let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
@@ -73,9 +73,9 @@ pub fn test_command_line_parser() {
 }
 
 #[test]
-pub fn test_execution() {
+pub fn test_cwl_execute() {
     let command = "ls -la";
     let args = shlex::split(command).expect("parsing failed");
-    let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
-    assert!(result.execute().is_ok())
+    let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+    assert!(cwl.execute().is_ok())
 }

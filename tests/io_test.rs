@@ -5,7 +5,7 @@ use s4n::{
 use std::vec;
 
 #[test]
-pub fn test_filename_without_extension() {
+pub fn test_get_filename_without_extension() {
     let inputs = &["results.csv", "/some/relative/path.txt", "some/archive.tar.gz"];
     let outputs = &["results", "path", "archive"];
 
@@ -16,7 +16,7 @@ pub fn test_filename_without_extension() {
 }
 
 #[test]
-pub fn test_cwl_type_inference() {
+pub fn test_guess_type() {
     let inputs = &[
         ("./README.md", CWLType::File),
         ("/some/path/that/does/not/exist.txt", CWLType::String),
@@ -40,7 +40,7 @@ pub fn test_get_workflows_folder() {
 }
 
 #[test]
-fn test_path_resolver() {
+fn test_resolve_path() {
     let test_cases = &[
         ("tests/testdata/input.txt", "workflows/echo/echo.cwl", "../../tests/testdata/input.txt"),
         ("tests/testdata/input.txt", "workflows/echo/", "../../tests/testdata/input.txt"),
