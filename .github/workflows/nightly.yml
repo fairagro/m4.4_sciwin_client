@@ -50,6 +50,9 @@ jobs:
       - name: VS Tools
         if: ${{ startsWith(matrix.os, 'windows') }}
         uses: microsoft/setup-msbuild@v2
+      - name: Apple stuff
+        if : ${{ startsWith(matrix.os, 'macos') }}
+        run: brew install openssl@3
       - name: Build
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Copy
