@@ -1,6 +1,6 @@
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, InitialWorkDirRequirement, Requirement},
-    parser::parse_command_line,
+    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
+    parser::{get_outputs, parse_command_line},
     types::CWLType,
 };
 use serde_yml::Value;
@@ -78,4 +78,22 @@ pub fn test_cwl_execute() {
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
     assert!(cwl.execute().is_ok())
+}
+
+#[test]
+pub fn test_get_outputs() {
+    let files = vec!["my-file.txt".to_string(), "archive.tar.gz".to_string()];
+    let expected = vec![
+        CommandOutputParameter::default()
+            .with_type(CWLType::File)
+            .with_id("my-file")
+            .with_binding(CommandOutputBinding { glob: "my-file.txt".to_string() }),
+        CommandOutputParameter::default()
+            .with_type(CWLType::File)
+            .with_id("archive")
+            .with_binding(CommandOutputBinding { glob: "archive.tar.gz".to_string() }),
+    ];
+
+    let outputs = get_outputs(files);
+    assert_eq!(outputs, expected);
 }

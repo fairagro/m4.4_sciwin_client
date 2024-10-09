@@ -37,7 +37,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
         .collect()
 }
 
-fn get_base_command(command: &[&str]) -> Command {
+pub(crate) fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
         return Command::Single(String::from(""));
     };
