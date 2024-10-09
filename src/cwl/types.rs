@@ -43,7 +43,7 @@ pub struct Directory {
 impl Directory {
     pub fn from_location(location: &String) -> Self {
         Directory {
-            class: String::from("File"),
+            class: String::from("Directory"),
             location: location.to_string(),
         }
     }
