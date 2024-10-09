@@ -1,8 +1,8 @@
-name: Rust
+name: 🏗️ Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
     - name: Build
       run: cargo build --verbose
     - name: Run tests
