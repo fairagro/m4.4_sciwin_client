@@ -9,9 +9,9 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use std::{env, error::Error, fs::remove_file};
+use std::{env, error::Error, fs::remove_file, path::Path};
 
-pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>>{
+pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
     }
@@ -47,7 +47,7 @@ pub struct CreateToolArgs {
 }
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
-pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>>{
+pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
     if !args.is_raw {
@@ -93,7 +93,10 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>>{
 
         if !args.no_commit {
             for file in &files {
-                stage_file(&repo, file.as_str()).unwrap();
+                //could be cleaned before
+                if Path::new(file).exists() {
+                    stage_file(&repo, file.as_str()).unwrap();
+                }
             }
         }
         //could check here if an output file matches an input string
