@@ -57,7 +57,7 @@ pub fn test_get_inputs() {
             .with_default_value(DefaultValue::Any(serde_yml::from_str("1").unwrap())),
     ];
 
-    let inputs_vec = shlex::split(&inputs).unwrap();
+    let inputs_vec = shlex::split(inputs).unwrap();
     let inputs_slice: Vec<&str> = inputs_vec.iter().map(|x| x.as_ref()).collect();
 
     let result = get_inputs(&inputs_slice);

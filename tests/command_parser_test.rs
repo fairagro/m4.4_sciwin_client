@@ -1,11 +1,10 @@
-use std::{fs, path::Path, vec};
-
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
     parser::{get_outputs, parse_command_line},
     types::{CWLType, File},
 };
 use serde_yml::Value;
+use std::{fs, path::Path, vec};
 
 pub fn test_cases() -> Vec<(String, CommandLineTool)> {
     vec![
