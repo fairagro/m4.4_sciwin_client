@@ -1,7 +1,9 @@
+use std::{fs, path::Path, vec};
+
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
     parser::{get_outputs, parse_command_line},
-    types::CWLType,
+    types::{CWLType, File},
 };
 use serde_yml::Value;
 
@@ -73,11 +75,41 @@ pub fn test_parse_command_line() {
 }
 
 #[test]
-pub fn test_cwl_execute() {
+pub fn test_parse_command_line_testdata() {
+    let command = "python tests/test_data/echo.py --test tests/test_data/input.txt";
+    let args = shlex::split(command).expect("parsing failed");
+    let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+    let expected = CommandLineTool::default()
+        .with_base_command(Command::Multiple(vec!["python".to_string(), "tests/test_data/echo.py".to_string()]))
+        .with_inputs(vec![CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::File)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
+            .with_default_value(DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())))])
+        .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))]);
+    assert_eq!(cwl, expected)
+}
+
+#[test]
+pub fn test_cwl_execute_command_single() {
     let command = "ls -la";
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
     assert!(cwl.execute().is_ok())
+}
+
+#[test]
+pub fn test_cwl_execute_command_multiple() {
+    let command = "python ./tests/test_data/echo.py --test ./tests/test_data/input.txt";
+    let args = shlex::split(command).expect("parsing failed");
+    let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+    assert!(cwl.execute().is_ok());
+
+    let output_path = Path::new("results.txt");
+    assert!(output_path.exists());
+
+    assert!(fs::remove_file(output_path).is_ok());
+    assert!(!output_path.exists());
 }
 
 #[test]
