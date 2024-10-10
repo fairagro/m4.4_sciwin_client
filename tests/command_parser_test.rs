@@ -6,6 +6,7 @@ use s4n::cwl::{
     types::{CWLType, File},
 };
 use serde_yml::Value;
+use serial_test::serial;
 use std::{path::Path, vec};
 
 pub fn test_cases() -> Vec<(String, CommandLineTool)> {
@@ -76,6 +77,7 @@ pub fn test_parse_command_line() {
 }
 
 #[test]
+#[serial]
 pub fn test_parse_command_line_testdata() {
     with_temp_repository(|_| {
         let command = "python scripts/echo.py --test data/input.txt";
@@ -102,6 +104,7 @@ pub fn test_cwl_execute_command_single() {
 }
 
 #[test]
+#[serial]
 pub fn test_cwl_execute_command_multiple() {
     with_temp_repository(|dir| {
         let command = "python scripts/echo.py --test data/input.txt";

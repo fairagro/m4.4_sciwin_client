@@ -1,10 +1,11 @@
 mod common;
-use std::path::Path;
-
 use common::with_temp_repository;
 use s4n::commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands};
+use serial_test::serial;
+use std::path::Path;
 
 #[test]
+#[serial]
 pub fn tool_create_test() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
