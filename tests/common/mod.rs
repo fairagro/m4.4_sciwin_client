@@ -44,6 +44,8 @@ fn set_up_repository() -> TempDir {
     dir
 }
 
+/// Sets up a repository with the files in tests/test_data in tmp folder. 
+/// You *must* specify `#[serial]` for those tests
 pub fn with_temp_repository<F>(test: F)
 where
     F: FnOnce(&TempDir),
