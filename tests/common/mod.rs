@@ -34,6 +34,11 @@ fn set_up_repository() -> TempDir {
     let repo = Repository::init(&dir).expect("Failed to create a blank repository");
     stage_all(&repo).expect("Could not stage files");
 
+    if repo.signature().is_err() {
+        let mut cfg = repo.config().expect("Could not get config");
+        cfg.set_str("name", "Derp").expect("Could not set name");
+        cfg.set_str("email", "derp@google.de").expect("Could not set email");
+    }
     initial_commit(&repo).expect("Could not create inital commit");
 
     dir
@@ -49,6 +54,6 @@ where
 
     test(&dir);
 
-    env::set_current_dir(current_dir).expect("Could not reset current dir");    
+    env::set_current_dir(current_dir).expect("Could not reset current dir");
     dir.close().unwrap()
 }
