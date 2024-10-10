@@ -36,8 +36,8 @@ fn set_up_repository() -> TempDir {
 
     if repo.signature().is_err() {
         let mut cfg = repo.config().expect("Could not get config");
-        cfg.set_str("name", "Derp").expect("Could not set name");
-        cfg.set_str("email", "derp@google.de").expect("Could not set email");
+        cfg.set_str("user.name", "Derp").expect("Could not set name");
+        cfg.set_str("user.email", "derp@google.de").expect("Could not set email");
     }
     initial_commit(&repo).expect("Could not create inital commit");
 
