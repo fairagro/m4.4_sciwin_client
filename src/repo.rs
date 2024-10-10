@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use git2::{Error, Repository, Status, StatusOptions};
+use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
 
 pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
     match Repository::open(path) {
@@ -38,13 +38,30 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn stage_all(repo: &Repository) -> Result<(), Error>{
+    let mut index = repo.index()?;
+    index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+    index.write()?;
+    Ok(())
+}
+
 pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
+    let head = repo.head()?;
+    let parent = repo.find_commit(head.target().unwrap())?;
+    _commit(repo, message, &[&parent])?;
+    Ok(())
+}
+
+pub fn initial_commit(repo: &Repository) -> Result<(), Error> {
+    _commit(repo, "Initial Commit", &[])?;
+    Ok(())
+}
+
+fn _commit(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Result<(), Error> {
     let mut index = repo.index()?;
     let new_oid = index.write_tree()?;
     let new_tree = repo.find_tree(new_oid)?;
     let author = repo.signature()?;
-    let head = repo.head()?;
-    let parent = repo.find_commit(head.target().unwrap())?;
-    repo.commit(Some("HEAD"), &author, &author, message, &new_tree, &[&parent])?;
+    repo.commit(Some("HEAD"), &author, &author, message, &new_tree, parents)?;
     Ok(())
 }

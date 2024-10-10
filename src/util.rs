@@ -1,9 +1,7 @@
 use colored::Colorize;
-use std::process::exit;
 
-pub fn print_error_and_exit(message: &str, code: i32) {
-    eprintln!("❌ {}: {}", "Error".red().bold(), message.red());
-    exit(code);
+pub fn error(message: &str) {
+    panic!("❌ {}: {}", "Error".red().bold(), message.red())
 }
 
 pub fn warn(message: &str) {

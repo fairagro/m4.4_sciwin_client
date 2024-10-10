@@ -5,16 +5,17 @@ use crate::{
     },
     io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, open_repo, stage_file},
-    util::{print_error_and_exit, print_list, warn},
+    util::{error, print_list, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use std::{env, fs::remove_file};
+use std::{env, error::Error, fs::remove_file};
 
-pub fn handle_tool_commands(subcommand: &ToolCommands) {
+pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>>{
     match subcommand {
-        ToolCommands::Create(args) => create_tool(args),
+        ToolCommands::Create(args) => create_tool(args)?,
     }
+    Ok(())
 }
 
 #[derive(Debug, Subcommand)]
@@ -26,27 +27,27 @@ pub enum ToolCommands {
 #[derive(Args, Debug)]
 pub struct CreateToolArgs {
     #[arg(short = 'n', long = "name", help = "A name to be used for this tool")]
-    name: Option<String>,
+    pub name: Option<String>,
     #[arg(short = 'c', long = "container-image", help = "An image to pull from e.g. docker hub or path to a Dockerfile")]
-    container_image: Option<String>,
+    pub container_image: Option<String>,
     #[arg(short = 't', long = "container-tag", help = "The tag for the container when using a Dockerfile")]
-    container_tag: Option<String>,
+    pub container_tag: Option<String>,
 
     #[arg(short = 'r', long = "raw", help = "Outputs the raw CWL contents to terminal")]
-    is_raw: bool,
+    pub is_raw: bool,
     #[arg(long = "no-commit", help = "Do not commit at the end of tool creation")]
-    no_commit: bool,
+    pub no_commit: bool,
     #[arg(long = "no-run", help = "Do not run given command")]
-    no_run: bool,
+    pub no_run: bool,
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
-    is_clean: bool,
+    pub is_clean: bool,
 
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
-    command: Vec<String>,
+    pub command: Vec<String>,
 }
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
-pub fn create_tool(args: &CreateToolArgs) {
+pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>>{
     //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
     if !args.is_raw {
@@ -54,13 +55,16 @@ pub fn create_tool(args: &CreateToolArgs) {
     }
 
     let repo = open_repo(cwd);
-    if !get_modified_files(&repo).is_empty() {
-        print_error_and_exit("Uncommitted changes detected!", 0);
+    let modified = get_modified_files(&repo);
+    if !modified.is_empty() {
+        println!("Uncommitted changes detected:");
+        print_list(&modified);
+        error("Uncommitted changes detected");
     }
 
     //parse input string
     if args.command.is_empty() {
-        print_error_and_exit("No commandline string given!", 1);
+        error("No commandline string given!");
     }
 
     let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
@@ -69,7 +73,7 @@ pub fn create_tool(args: &CreateToolArgs) {
     if !args.no_run {
         //execute command
         if cwl.execute().is_err() {
-            print_error_and_exit(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str(), 1);
+            error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str());
         }
 
         //check files that changed
@@ -124,12 +128,14 @@ pub fn create_tool(args: &CreateToolArgs) {
                 println!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
                     stage_file(&repo, path.as_str()).unwrap();
-                    commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap()
+                    commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
                 }
+                Ok(())
             }
-            Err(e) => print_error_and_exit(format!("Could not create file {} - {}", path.bold(), e).as_str(), 1),
+            Err(e) => Err(Box::new(e)),
         }
     } else {
         print!("{}", cwl);
+        Ok(())
     }
 }
