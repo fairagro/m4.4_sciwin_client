@@ -54,7 +54,7 @@ pub(crate) fn get_base_command(command: &[&str]) -> Command {
     }
 }
 
-fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
+pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {
