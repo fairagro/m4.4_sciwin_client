@@ -1,6 +1,5 @@
-use std::path::Path;
-
 use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
+use std::path::Path;
 
 pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
     match Repository::open(path) {
@@ -38,7 +37,7 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn stage_all(repo: &Repository) -> Result<(), Error>{
+pub fn stage_all(repo: &Repository) -> Result<(), Error> {
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
     index.write()?;

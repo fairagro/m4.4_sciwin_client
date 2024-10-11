@@ -1,6 +1,5 @@
-mod cli;
 use clap::Parser;
-use cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
+use s4n::cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
 use s4n::commands::tool::{create_tool, handle_tool_commands};
 use std::{error::Error, process::exit};
 

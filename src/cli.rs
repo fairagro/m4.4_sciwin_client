@@ -1,15 +1,15 @@
+use crate::commands::tool::{CreateToolArgs, ToolCommands};
 use clap::{Args, Parser, Subcommand};
-use s4n::commands::tool::{CreateToolArgs, ToolCommands};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
-pub(crate) struct Cli {
+pub struct Cli {
     #[command(subcommand)]
-    pub(crate) command: Commands,
+    pub command: Commands,
 }
 
 #[derive(Debug, Subcommand)]
-pub(crate) enum Commands {
+pub enum Commands {
     //temporary dummy command to showcase clap usage
     Dummy {
         #[command(subcommand)]
@@ -29,7 +29,7 @@ pub(crate) enum Commands {
 
 //temporary demo how to use clap, move to commands folder for real commands
 #[derive(Debug, Subcommand)]
-pub(crate) enum DummyCommands {
+pub enum DummyCommands {
     #[command(about = "Creates a dummy")]
     Create(CreateDummyArgs),
     Read,
@@ -38,7 +38,7 @@ pub(crate) enum DummyCommands {
 }
 
 #[derive(Args, Debug)]
-pub(crate) struct CreateDummyArgs {
+pub struct CreateDummyArgs {
     name: String,
     #[arg(short = 'o', long = "option")]
     option: Option<String>,
