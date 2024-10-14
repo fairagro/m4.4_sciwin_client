@@ -14,7 +14,8 @@ pub enum Commands {
     Dummy {
         #[command(subcommand)]
         command: DummyCommands,
-    },
+    },    
+    #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
         command: ToolCommands,
