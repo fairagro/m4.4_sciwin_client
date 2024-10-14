@@ -157,9 +157,9 @@ pub struct CommandInputParameter {
     pub id: String,
     pub type_: CWLType,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_binding: Option<CommandLineBinding>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_binding: Option<CommandLineBinding>,
 }
 
 impl CommandInputParameter {

@@ -1,7 +1,6 @@
 use crate::{
     cwl::{
-        clt::{DockerRequirement, Requirement},
-        parser,
+        clt::{DockerRequirement, Requirement}, format::format_cwl, parser
     },
     io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, open_repo, stage_file},
@@ -125,7 +124,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     //generate yaml
     if !args.is_raw {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-        let yaml = cwl.save(&path);
+        let mut yaml = cwl.save(&path);
+
+        //format
+        yaml = format_cwl(&yaml)?;
+
         match create_and_write_file(path.as_str(), yaml.as_str()) {
             Ok(_) => {
                 println!("\n📄 Created CWL file {}", path.green().bold());
