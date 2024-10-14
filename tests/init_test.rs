@@ -45,7 +45,6 @@ fn test_is_git_repo() {
     );
 }
 
-
 #[test]
 fn test_init_s4n_without_folder() {
     //create a temp dir
@@ -58,8 +57,10 @@ fn test_init_s4n_without_folder() {
 
     // Change to the temporary directory
     env::set_current_dir(test_dir.clone()).unwrap();
-    println!("Current directory changed to: {}", env::current_dir().unwrap().display());
-
+    println!(
+        "Current directory changed to: {}",
+        env::current_dir().unwrap().display()
+    );
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
@@ -95,7 +96,6 @@ fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = env::temp_dir();
     println!("Temporary directory: {}", temp_dir.display());
-
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
     env::set_current_dir(temp_dir).unwrap();
