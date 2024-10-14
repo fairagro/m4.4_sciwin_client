@@ -3,11 +3,8 @@ use s4n::init::{
     check_git_installation, create_arc_folder_structure, create_investigation_excel_file,
     create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo,
 };
-use std::{
-    path::PathBuf,
-    process::Command,
-};
-use tempfile::{Builder, NamedTempFile};
+use std::{env, path::PathBuf, process::Command};
+use tempfile::{Builder, NamedTempFile, TempDir};
 
 #[test]
 fn test_is_git_repo() {
@@ -32,23 +29,63 @@ fn test_is_git_repo() {
         .status()
         .expect("Failed to execute bash script");
 
-    assert!(output.success(), "Expected success of running command, got {:?}", output);
+    assert!(
+        output.success(),
+        "Expected success of running command, got {:?}",
+        output
+    );
 
     // Check if this directory is a git repository
     let result = is_git_repo(Some(&repo_dir_string));
 
     // Assert that directory is a git repo
-    assert!(result, "Expected directory to be a git repo true, got false");
+    assert!(
+        result,
+        "Expected directory to be a git repo true, got false"
+    );
 }
 
 
 #[test]
-fn test_check_git_installation_success() {
-    // Test case: Git is installed and accessible
-    assert!(check_git_installation().is_ok(), "Expected git to be installed and in PATH. Please install git.");
+fn test_init_s4n_without_folder() {
+    //create a temp dir
+    let temp_dir = env::temp_dir();
+    println!("Temporary directory: {}", temp_dir.display());
+
+
+    // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
+    env::set_current_dir(temp_dir).unwrap();
+    println!(
+        "Current directory changed to: {}",
+        env::current_dir().unwrap().display()
+    );
+
+    // test method without folder name and do not create arc folders
+    let folder_name: Option<String> = None;
+    let arc: Option<bool> = Some(false);
+
+    let result = init_s4n(folder_name, arc);
+
+    // Assert results is ok and folders exist/ do not exist
+    assert!(result.is_ok());
+
+    assert!(std::path::PathBuf::from("workflows").exists());
+    assert!(std::path::PathBuf::from("workflows/wf").exists());
+    assert!(std::path::PathBuf::from("workflows/wf").exists());
+    assert!(std::path::PathBuf::from(".git").exists());
+    assert!(!std::path::PathBuf::from("assays").exists());
+    assert!(!std::path::PathBuf::from("studies").exists());
+    assert!(!std::path::PathBuf::from("runs").exists());
 }
 
-
+#[test]
+fn test_check_git_installation_success() {
+    // Test case: Git is installed and accessible
+    assert!(
+        check_git_installation().is_ok(),
+        "Expected git to be installed and in PATH. Please install git."
+    );
+}
 
 #[test]
 fn test_is_not_git_repo() {
@@ -140,8 +177,7 @@ fn test_create_investigation_excel_file() {
 }
 
 #[test]
-fn test_create_arc_folder_structure_invalid(
-) {
+fn test_create_arc_folder_structure_invalid() {
     //this test only gives create_arc_folder_structure a file instead of a directory
     let temp_file = NamedTempFile::new().unwrap();
     let base_path = Some(temp_file.path().to_str().unwrap());
@@ -149,7 +185,6 @@ fn test_create_arc_folder_structure_invalid(
     let result = create_arc_folder_structure(base_path.as_deref());
     //result should not be okay because of invalid input
     assert!(!result.is_ok(), "Expected failed initialization");
-
 }
 
 #[test]
@@ -170,21 +205,30 @@ fn test_create_arc_folder_structure() {
     }
 }
 
-
 #[test]
 fn test_init_s4n_with_arc() {
-    let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
+    let temp_dir = Builder::new()
+        .prefix("init_with_arc_test")
+        .tempdir()
+        .unwrap();
     let arc = Some(true);
-    
+
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
-    
+
     //call method with temp dir
     let result = init_s4n(base_folder, arc);
 
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
-    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf", "assays", "studies", "runs"];
+    let expected_dirs = vec![
+        "workflows",
+        "workflows/tools",
+        "workflows/wf",
+        "assays",
+        "studies",
+        "runs",
+    ];
 
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
@@ -193,11 +237,14 @@ fn test_init_s4n_with_arc() {
 }
 #[test]
 fn test_init_s4n_minimal() {
-    let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
+    let temp_dir = Builder::new()
+        .prefix("init_without_arc_test")
+        .tempdir()
+        .unwrap();
     let arc = None;
-    
+
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
-    
+
     //call method with temp dir
     let result = init_s4n(base_folder, arc);
 
@@ -207,7 +254,7 @@ fn test_init_s4n_minimal() {
     let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf"];
     //check that other directories are not created
     let unexpected_dirs = vec!["assays", "studies", "runs"];
-    
+
     //assert minimal folders do exist
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
@@ -216,7 +263,10 @@ fn test_init_s4n_minimal() {
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
+        assert!(
+            !full_path.exists(),
+            "Directory {} does exist, but should not exist",
+            dir
+        );
     }
 }
-
