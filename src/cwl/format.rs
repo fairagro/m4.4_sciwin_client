@@ -31,7 +31,7 @@ fn format_node(cwl: &Value) -> Value {
 }
 
 fn infer_type(cwl: &Mapping) -> &str {
-    if let Some(Value::String(class)) = cwl.get(&Value::String("class".to_string())) {
+    if let Some(Value::String(class)) = cwl.get(Value::String("class".to_string())) {
         class
     } else {
         "generic-ordering"
