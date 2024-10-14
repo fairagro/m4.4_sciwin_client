@@ -84,7 +84,6 @@ impl CommandLineTool {
                         _ => &serde_yml::to_string(value).unwrap().trim_end().to_string(),
                     },
                 };
-                println!("{:?}", value);
                 command.arg(value);
             }
         }

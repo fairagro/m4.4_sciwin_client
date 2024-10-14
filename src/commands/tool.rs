@@ -1,10 +1,12 @@
 use crate::{
     cwl::{
-        clt::{DockerRequirement, Requirement}, format::format_cwl, parser
+        clt::{DockerRequirement, Requirement},
+        format::format_cwl,
+        parser,
     },
     io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, open_repo, stage_file},
-    util::{error, print_list, warn},
+    util::{error, highlight_cwl, print_list, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -141,7 +143,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             Err(e) => Err(Box::new(e)),
         }
     } else {
-        print!("{}", cwl);
+        let mut yaml = serde_yml::to_string(&cwl)?;
+        yaml = format_cwl(&yaml)?;
+
+        highlight_cwl(yaml.as_str());
+
         Ok(())
     }
 }
