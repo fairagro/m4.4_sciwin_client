@@ -23,7 +23,9 @@ fn format_node(cwl: &Value) -> Value {
         Value::Mapping(map) => {
             let node_type = infer_type(map);
             let reordered_map = reorder_node(map, node_type);
-            Value::Mapping(reordered_map)
+
+            let formatted_map: Mapping = reordered_map.into_iter().map(|(k, v)| (k, format_node(&v))).collect();
+            Value::Mapping(formatted_map)
         }
         Value::Sequence(seq) => Value::Sequence(seq.iter().map(format_node).collect()),
         _ => cwl.clone(),
