@@ -71,11 +71,43 @@ fn test_init_s4n_without_folder() {
 
     assert!(std::path::PathBuf::from("workflows").exists());
     assert!(std::path::PathBuf::from("workflows/wf").exists());
-    assert!(std::path::PathBuf::from("workflows/wf").exists());
+    assert!(std::path::PathBuf::from("workflows/tools").exists());
     assert!(std::path::PathBuf::from(".git").exists());
     assert!(!std::path::PathBuf::from("assays").exists());
     assert!(!std::path::PathBuf::from("studies").exists());
     assert!(!std::path::PathBuf::from("runs").exists());
+}
+
+#[test]
+fn test_init_s4n_without_folder_with_arc() {
+    //create a temp dir
+    let temp_dir = env::temp_dir();
+    println!("Temporary directory: {}", temp_dir.display());
+
+
+    // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
+    env::set_current_dir(temp_dir).unwrap();
+    println!(
+        "Current directory changed to: {}",
+        env::current_dir().unwrap().display()
+    );
+
+    // test method without folder name and do not create arc folders
+    let folder_name: Option<String> = None;
+    let arc: Option<bool> = Some(true);
+
+    let result = init_s4n(folder_name, arc);
+
+    // Assert results is ok and folders exist/ do not exist
+    assert!(result.is_ok());
+
+    assert!(std::path::PathBuf::from("workflows").exists());
+    assert!(std::path::PathBuf::from("workflows/wf").exists());
+    assert!(std::path::PathBuf::from("workflows/tools").exists());
+    assert!(std::path::PathBuf::from(".git").exists());
+    assert!(std::path::PathBuf::from("assays").exists());
+    assert!(std::path::PathBuf::from("studies").exists());
+    assert!(std::path::PathBuf::from("runs").exists());
 }
 
 #[test]
