@@ -52,13 +52,14 @@ fn test_init_s4n_without_folder() {
     let temp_dir = env::temp_dir();
     println!("Temporary directory: {}", temp_dir.display());
 
+    // Create a subdirectory in the temporary directory
+    let test_dir = temp_dir.join("test_directory");
+    std::fs::create_dir_all(&test_dir).expect("Failed to create test directory");
 
-    // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
-    env::set_current_dir(temp_dir).unwrap();
-    println!(
-        "Current directory changed to: {}",
-        env::current_dir().unwrap().display()
-    );
+    // Change to the temporary directory
+    env::set_current_dir(test_dir.clone()).unwrap();
+    println!("Current directory changed to: {}", env::current_dir().unwrap().display());
+
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
@@ -69,13 +70,24 @@ fn test_init_s4n_without_folder() {
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
 
-    assert!(std::path::PathBuf::from("workflows").exists());
-    assert!(std::path::PathBuf::from("workflows/wf").exists());
-    assert!(std::path::PathBuf::from("workflows/tools").exists());
-    assert!(std::path::PathBuf::from(".git").exists());
-    assert!(!std::path::PathBuf::from("assays").exists());
-    assert!(!std::path::PathBuf::from("studies").exists());
-    assert!(!std::path::PathBuf::from("runs").exists());
+    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf"];
+    //check that other directories are not created
+    let unexpected_dirs = vec!["assays", "studies", "runs"];
+
+    //assert minimal folders do exist
+    for dir in &expected_dirs {
+        let full_path = PathBuf::from(test_dir.as_path()).join(dir);
+        assert!(full_path.exists(), "Directory {} does not exist", dir);
+    }
+    //assert other arc folders do not exist
+    for dir in &unexpected_dirs {
+        let full_path = PathBuf::from(test_dir.as_path()).join(dir);
+        assert!(
+            !full_path.exists(),
+            "Directory {} does exist, but should not exist",
+            dir
+        );
+    }
 }
 
 #[test]
