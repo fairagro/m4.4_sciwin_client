@@ -54,9 +54,6 @@ jobs:
         if : ${{ startsWith(matrix.os, 'macos') }}
         run: brew install openssl@3
       - name: Build
-        env:
-          OPENSSL_DIR: $(brew --prefix openssl)
-          PKG_CONFIG_PATH: $(brew --prefix openssl)/lib/pkgconfig:$PKG_CONFIG_PATH
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Copy
         id: archive
