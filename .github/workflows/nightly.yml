@@ -56,7 +56,7 @@ jobs:
       - name: Build (Mac)
         if: ${{ startsWith(matrix.os, 'macos') }}
         env: 
-          OPENSSL_DIR: $(brew --prefix openssl)
+          OPENSSL_DIR: /usr/local/opt/openssl/bin/openssl
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Build (Win & Linux)
         if: ${{ !startsWith(matrix.os, 'macos') }}
