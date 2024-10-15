@@ -7,6 +7,8 @@ Your interface to the SciWIn World ...
 
 This project is being developed using Rust and Cargo. To run the source code use `cargo run`, to build use `cargo build`.
 
+# Testing
+To run the tests use `cargo test` or `cargo test -- --nocapture` to output logs.
 
 <!--section images-->
 [coverage-badge]: https://coverage.jenskrumsieck.de/coverage/fairagro/m4.4_sciwin_client
