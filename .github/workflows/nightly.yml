@@ -52,11 +52,13 @@ jobs:
         uses: microsoft/setup-msbuild@v2
       - name: Apple stuff
         if: ${{ startsWith(matrix.os, 'macos') }}
-        run: brew install openssl@3
+        run: |
+          brew install openssl@3
+          brew --prefix openssl
       - name: Build (Mac)
         if: ${{ startsWith(matrix.os, 'macos') }}
         env: 
-          OPENSSL_DIR: /usr/local/opt/openssl/bin/openssl
+          OPENSSL_DIR: ${{ brew --prefix openssl }}
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Build (Win & Linux)
         if: ${{ !startsWith(matrix.os, 'macos') }}
