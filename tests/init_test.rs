@@ -1,7 +1,8 @@
 use calamine::{open_workbook, Reader, Xlsx};
 use s4n::commands::init::{check_git_installation, create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
+use serial_test::serial;
 use std::{env, path::PathBuf, process::Command};
-use tempfile::{Builder, NamedTempFile};
+use tempfile::{tempdir, Builder, NamedTempFile};
 
 #[test]
 fn test_is_git_repo() {
@@ -36,17 +37,17 @@ fn test_is_git_repo() {
 }
 
 #[test]
+#[serial]
 fn test_init_s4n_without_folder() {
     //create a temp dir
-    let temp_dir = env::temp_dir();
-    println!("Temporary directory: {}", temp_dir.display());
+    let temp_dir = tempdir().expect("Failed to create a temporary directory");
+    println!("Temporary directory: {:?}", temp_dir);
 
     // Create a subdirectory in the temporary directory
-    let test_dir = temp_dir.join("test_directory");
-    std::fs::create_dir_all(&test_dir).expect("Failed to create test directory");
+    std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
 
     // Change to the temporary directory
-    env::set_current_dir(test_dir.clone()).unwrap();
+    env::set_current_dir(&temp_dir).unwrap();
     println!("Current directory changed to: {}", env::current_dir().unwrap().display());
 
     // test method without folder name and do not create arc folders
@@ -64,17 +65,18 @@ fn test_init_s4n_without_folder() {
 
     //assert minimal folders do exist
     for dir in &expected_dirs {
-        let full_path = PathBuf::from(test_dir.as_path()).join(dir);
+        let full_path = PathBuf::from(&temp_dir.path()).join(dir);
         assert!(full_path.exists(), "Directory {} does not exist", dir);
     }
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
-        let full_path = PathBuf::from(test_dir.as_path()).join(dir);
+        let full_path = PathBuf::from(&temp_dir.path()).join(dir);
         assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
     }
 }
 
 #[test]
+#[serial]
 fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = env::temp_dir();
