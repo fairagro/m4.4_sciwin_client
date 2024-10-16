@@ -8,15 +8,16 @@ use std::{
 use tempfile::{tempdir, TempDir};
 
 /// Sets up a temporary repository with test data
+#[allow(dead_code)]
 fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
     create_dir_all(dir.path().join(Path::new("data"))).expect("Failed to create data-dir");
 
     let source_files: [(PathBuf, &str); 3] = [
-        (PathBuf::from("./tests/test_data/echo.py"), "scripts/echo.py"),
-        (PathBuf::from("./tests/test_data/input.txt"), "data/input.txt"),
-        (PathBuf::from("./tests/test_data/Dockerfile"), "Dockerfile"),
+        (Path::new("./tests/test_data/echo.py").to_path_buf(), "scripts/echo.py"),
+        (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
+        (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
     ];
 
     for (src, target) in source_files.iter() {
@@ -44,8 +45,9 @@ fn set_up_repository() -> TempDir {
     dir
 }
 
-/// Sets up a repository with the files in tests/test_data in tmp folder. 
+/// Sets up a repository with the files in tests/test_data in tmp folder.
 /// You *must* specify `#[serial]` for those tests
+#[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
 where
     F: FnOnce(&TempDir),
@@ -58,4 +60,13 @@ where
 
     env::set_current_dir(current_dir).expect("Could not reset current dir");
     dir.close().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn os_path(path: &str) -> String {
+    if cfg!(target_os = "windows") {
+        Path::new(path).to_string_lossy().replace("/", "\\")
+    } else {
+        path.to_string()
+    }
 }

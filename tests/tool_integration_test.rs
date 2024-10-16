@@ -1,5 +1,5 @@
 mod common;
-use common::with_temp_repository;
+use common::{os_path, with_temp_repository};
 use s4n::{
     commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
     cwl::clt::{CommandLineTool, DockerRequirement, Entry, Requirement},
@@ -202,7 +202,7 @@ pub fn tool_create_test_dockerfile() {
         assert_eq!(requirements.len(), 2);
 
         if let Requirement::DockerRequirement(DockerRequirement::DockerFile { docker_file, docker_image_id }) = &requirements[1] {
-            assert_eq!(*docker_file, Entry::from_file("../../Dockerfile")); //as file is in root and cwl in workflows/echo
+            assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
             assert_eq!(*docker_image_id, "sciwin-client".to_string())
         } else {
             panic!("Requirement is not a Dockerfile");
