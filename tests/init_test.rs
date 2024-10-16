@@ -22,7 +22,7 @@ fn test_is_git_repo() {
     //execute script to init git repo
     let output = Command::new("bash")
         .arg("-c")
-        .arg(init_script.replace("{repo_dir}", &repo_dir_str))
+        .arg(init_script.replace("{repo_dir}", repo_dir_str))
         .status()
         .expect("Failed to execute bash script");
 
@@ -142,10 +142,10 @@ fn test_create_minimal_folder_structure_invalid() {
     let temp_file = NamedTempFile::new().unwrap();
     let base_folder = Some(temp_file.path().to_str().unwrap());
 
-    println!("Base folder path: {:?}", base_folder.as_deref());
+    println!("Base folder path: {:?}", base_folder);
     //path to file instead of a directory, assert that it fails
-    let result = create_minimal_folder_structure(base_folder.as_deref());
-    assert!(!result.is_ok(), "Expected failed initialization");
+    let result = create_minimal_folder_structure(base_folder);
+    assert!(result.is_err(), "Expected failed initialization");
 }
 
 #[test]
@@ -154,7 +154,7 @@ fn test_create_minimal_folder_structure() {
 
     let base_folder = Some(temp_dir.path().to_str().unwrap());
 
-    let result = create_minimal_folder_structure(base_folder.as_deref());
+    let result = create_minimal_folder_structure(base_folder);
 
     //test if result is ok
     assert!(result.is_ok(), "Expected successful initialization");
@@ -194,9 +194,9 @@ fn test_create_arc_folder_structure_invalid() {
     let temp_file = NamedTempFile::new().unwrap();
     let base_path = Some(temp_file.path().to_str().unwrap());
 
-    let result = create_arc_folder_structure(base_path.as_deref());
+    let result = create_arc_folder_structure(base_path);
     //result should not be okay because of invalid input
-    assert!(!result.is_ok(), "Expected failed initialization");
+    assert!(result.is_err(), "Expected failed initialization");
 }
 
 #[test]
@@ -205,7 +205,7 @@ fn test_create_arc_folder_structure() {
 
     let base_folder = Some(temp_dir.path().to_str().unwrap());
 
-    let result = create_arc_folder_structure(base_folder.as_deref());
+    let result = create_arc_folder_structure(base_folder);
 
     assert!(result.is_ok(), "Expected successful initialization");
 
