@@ -6,7 +6,7 @@ use serde_yml::Value;
 
 #[cfg (target_os = "windows")]
 fn os_path(path: &str) -> String {
-        Path::new(path).to_string_lossy().replace("/", "\\")
+    std::path::Path::new(path).to_string_lossy().replace("/", "\\")
 }
 #[cfg (not(target_os = "windows"))]
 fn os_path(path: &str) -> String {
