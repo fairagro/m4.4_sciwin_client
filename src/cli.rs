@@ -1,5 +1,7 @@
-use crate::init::init_s4n;
-use crate::commands::tool::{CreateToolArgs, ToolCommands};
+use crate::commands::{
+    init::InitArgs,
+    tool::{CreateToolArgs, ToolCommands},
+};
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -15,7 +17,7 @@ pub enum Commands {
     Dummy {
         #[command(subcommand)]
         command: DummyCommands,
-    },    
+    },
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
@@ -45,21 +47,4 @@ pub struct CreateDummyArgs {
     name: String,
     #[arg(short = 'o', long = "option")]
     option: Option<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct InitArgs {
-    #[arg(short = 'p', long = "project", help = "Name of the project")]
-    project: Option<String>,
-    #[arg(
-        short = 'a',
-        long = "arc",
-        help = "Option to create basic arc folder structure"
-    )]
-    arc: bool,
-}
-
-pub fn init(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    init_s4n(args.project.clone(), Some(args.arc))?;
-    Ok(())
 }

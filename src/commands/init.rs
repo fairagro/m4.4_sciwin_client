@@ -1,10 +1,21 @@
+use clap::Args;
 use rust_xlsxwriter::Workbook;
 use std::{env, fs, path::PathBuf, process::Command};
 
-pub fn init_s4n(
-    folder_name: Option<String>,
-    arc: Option<bool>,
-) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Args, Debug)]
+pub struct InitArgs {
+    #[arg(short = 'p', long = "project", help = "Name of the project")]
+    project: Option<String>,
+    #[arg(short = 'a', long = "arc", help = "Option to create basic arc folder structure")]
+    arc: bool,
+}
+
+pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
+    init_s4n(args.project.clone(), Some(args.arc))?;
+    Ok(())
+}
+
+pub fn init_s4n(folder_name: Option<String>, arc: Option<bool>) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref().unwrap_or("").to_string();
     let _ = create_minimal_folder_structure(Some(&folder));
     check_git_installation()?;
@@ -69,11 +80,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     let git_path = which::which("git").expect("Git not found");
     println!("Current working directory: {}", base_dir.display());
 
-    Command::new(git_path)
-        .arg("init")
-        .current_dir(&base_dir)
-        .output()
-        .expect("Failed to execute git init command");
+    Command::new(git_path).arg("init").current_dir(&base_dir).output().expect("Failed to execute git init command");
 
     println!("Git repository initialized successfully");
 
@@ -83,9 +90,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
-pub fn create_minimal_folder_structure(
-    base_folder: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {
@@ -122,9 +127,7 @@ pub fn create_minimal_folder_structure(
     Ok(())
 }
 
-pub fn create_arc_folder_structure(
-    base_folder: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {

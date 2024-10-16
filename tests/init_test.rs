@@ -1,10 +1,7 @@
 use calamine::{open_workbook, Reader, Xlsx};
-use s4n::init::{
-    check_git_installation, create_arc_folder_structure, create_investigation_excel_file,
-    create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo,
-};
+use s4n::commands::init::{check_git_installation, create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use std::{env, path::PathBuf, process::Command};
-use tempfile::{Builder, NamedTempFile, TempDir};
+use tempfile::{Builder, NamedTempFile};
 
 #[test]
 fn test_is_git_repo() {
@@ -29,20 +26,13 @@ fn test_is_git_repo() {
         .status()
         .expect("Failed to execute bash script");
 
-    assert!(
-        output.success(),
-        "Expected success of running command, got {:?}",
-        output
-    );
+    assert!(output.success(), "Expected success of running command, got {:?}", output);
 
     // Check if this directory is a git repository
     let result = is_git_repo(Some(&repo_dir_string));
 
     // Assert that directory is a git repo
-    assert!(
-        result,
-        "Expected directory to be a git repo true, got false"
-    );
+    assert!(result, "Expected directory to be a git repo true, got false");
 }
 
 #[test]
@@ -57,10 +47,7 @@ fn test_init_s4n_without_folder() {
 
     // Change to the temporary directory
     env::set_current_dir(test_dir.clone()).unwrap();
-    println!(
-        "Current directory changed to: {}",
-        env::current_dir().unwrap().display()
-    );
+    println!("Current directory changed to: {}", env::current_dir().unwrap().display());
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
@@ -83,11 +70,7 @@ fn test_init_s4n_without_folder() {
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
         let full_path = PathBuf::from(test_dir.as_path()).join(dir);
-        assert!(
-            !full_path.exists(),
-            "Directory {} does exist, but should not exist",
-            dir
-        );
+        assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
     }
 }
 
@@ -99,10 +82,7 @@ fn test_init_s4n_without_folder_with_arc() {
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
     env::set_current_dir(temp_dir).unwrap();
-    println!(
-        "Current directory changed to: {}",
-        env::current_dir().unwrap().display()
-    );
+    println!("Current directory changed to: {}", env::current_dir().unwrap().display());
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
@@ -125,10 +105,7 @@ fn test_init_s4n_without_folder_with_arc() {
 #[test]
 fn test_check_git_installation_success() {
     // Test case: Git is installed and accessible
-    assert!(
-        check_git_installation().is_ok(),
-        "Expected git to be installed and in PATH. Please install git."
-    );
+    assert!(check_git_installation().is_ok(), "Expected git to be installed and in PATH. Please install git.");
 }
 
 #[test]
@@ -193,17 +170,11 @@ fn test_create_minimal_folder_structure() {
 #[test]
 fn test_create_investigation_excel_file() {
     //create directory
-    let temp_dir = Builder::new()
-        .prefix("investigation_excel_test_")
-        .tempdir()
-        .unwrap();
+    let temp_dir = Builder::new().prefix("investigation_excel_test_").tempdir().unwrap();
     let directory = temp_dir.path().to_str().unwrap();
 
     //call the function
-    assert!(
-        create_investigation_excel_file(directory).is_ok(),
-        "Unexpected function create_investigation_excel fail"
-    );
+    assert!(create_investigation_excel_file(directory).is_ok(), "Unexpected function create_investigation_excel fail");
 
     //verify file exists
     let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
@@ -214,10 +185,7 @@ fn test_create_investigation_excel_file() {
     let sheets = workbook.sheet_names().to_owned();
 
     //verify sheet name
-    assert_eq!(
-        sheets[0], "isa_investigation",
-        "Worksheet name is incorrect"
-    );
+    assert_eq!(sheets[0], "isa_investigation", "Worksheet name is incorrect");
 }
 
 #[test]
@@ -251,10 +219,7 @@ fn test_create_arc_folder_structure() {
 
 #[test]
 fn test_init_s4n_with_arc() {
-    let temp_dir = Builder::new()
-        .prefix("init_with_arc_test")
-        .tempdir()
-        .unwrap();
+    let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
     let arc = Some(true);
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
@@ -265,14 +230,7 @@ fn test_init_s4n_with_arc() {
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
-    let expected_dirs = vec![
-        "workflows",
-        "workflows/tools",
-        "workflows/wf",
-        "assays",
-        "studies",
-        "runs",
-    ];
+    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf", "assays", "studies", "runs"];
 
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
@@ -281,10 +239,7 @@ fn test_init_s4n_with_arc() {
 }
 #[test]
 fn test_init_s4n_minimal() {
-    let temp_dir = Builder::new()
-        .prefix("init_without_arc_test")
-        .tempdir()
-        .unwrap();
+    let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
     let arc = None;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
@@ -307,10 +262,6 @@ fn test_init_s4n_minimal() {
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(
-            !full_path.exists(),
-            "Directory {} does exist, but should not exist",
-            dir
-        );
+        assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
     }
 }
