@@ -1,18 +1,18 @@
+use std::path::Path;
+
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
     types::{CWLType, File},
 };
 use serde_yml::Value;
 
-#[cfg (target_os = "windows")]
 fn os_path(path: &str) -> String {
-    std::path::Path::new(path).to_string_lossy().replace("/", "\\")
-}
-#[cfg (not(target_os = "windows"))]
-fn os_path(path: &str) -> String {
+    if cfg!(target_os = "windows") {
+        Path::new(path).to_string_lossy().replace("/", "\\")
+    } else {
         path.to_string()
+    }
 }
-
 
 #[test]
 pub fn test_cwl_save() {
