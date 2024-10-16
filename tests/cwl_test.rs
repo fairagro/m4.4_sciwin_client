@@ -1,20 +1,16 @@
-use std::path::Path;
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
-    types::{CWLType, Directory, File},
+    types::{CWLType, File},
 };
 use serde_yml::Value;
+use std::{env, path::Path};
 
 /// converts \\ to /
-fn normalize_path(path: &str) -> String {
-    Path::new(path).to_string_lossy().replace("\\", "/")
-}
-
-fn normalize_default_value(value: &DefaultValue) -> DefaultValue {
-    match value {
-        DefaultValue::File(file) => DefaultValue::File(File::from_location(&normalize_path(&file.location))),
-        DefaultValue::Directory(directory) => DefaultValue::Directory(Directory::from_location(&normalize_path(&directory.location))),
-        DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+fn os_path(path: &str) -> String {
+    if env::consts::OS == "windows" {
+        Path::new(path).to_string_lossy().replace("/", "\\")
+    } else {
+        path.to_string()
     }
 }
 
@@ -44,10 +40,7 @@ pub fn test_cwl_save() {
 
     //check if paths are rewritten upon tool saving
 
-    assert_eq!(
-        clt.inputs[0].default.as_ref().map(|value| normalize_default_value(&value)),
-        Some(DefaultValue::File(File::from_location(&"../../test_data/input.txt".to_string())))
-    );
+    assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt")))));
     let requirements = &clt.requirements.unwrap();
     let req_0 = &requirements[0];
     let req_1 = &requirements[1];
@@ -55,7 +48,7 @@ pub fn test_cwl_save() {
         *req_0,
         Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
             listing: vec![Listing {
-                entry: Entry::from_file("../../test/script.py"),
+                entry: Entry::from_file(&os_path("../../test/script.py")),
                 entryname: "test/script.py".to_string()
             }]
         })
@@ -63,7 +56,7 @@ pub fn test_cwl_save() {
     assert_eq!(
         *req_1,
         Requirement::DockerRequirement(DockerRequirement::DockerFile {
-            docker_file: Entry::from_file("../../test/data/Dockerfile"),
+            docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
             docker_image_id: "test".to_string()
         })
     );
