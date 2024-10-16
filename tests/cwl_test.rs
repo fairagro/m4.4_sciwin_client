@@ -1,14 +1,22 @@
-use std::path::Path;
+use std::{ops::Deref, path::Path};
 
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
-    types::{CWLType, File},
+    types::{CWLType, Directory, File},
 };
 use serde_yml::Value;
 
 /// converts \\ to /
 fn normalize_path(path: &str) -> String {
     Path::new(path).to_string_lossy().replace("\\", "/")
+}
+
+fn normalize_default_value(value: &DefaultValue) -> DefaultValue {
+    match value {
+        DefaultValue::File(file) => DefaultValue::File(File::from_location(&normalize_path(&file.location))),
+        DefaultValue::Directory(directory) => DefaultValue::Directory(Directory::from_location(&normalize_path(&directory.location))),
+        DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+    }
 }
 
 #[test]
@@ -37,7 +45,10 @@ pub fn test_cwl_save() {
 
     //check if paths are rewritten upon tool saving
 
-    assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&normalize_path("../../test_data/input.txt")))));
+    assert_eq!(
+        clt.inputs[0].default.as_ref().map(|value| normalize_default_value(&value)),
+        Some(DefaultValue::File(File::from_location(&"../../test_data/input.txt".to_string())))
+    );
     let requirements = &clt.requirements.unwrap();
     let req_0 = &requirements[0];
     let req_1 = &requirements[1];
