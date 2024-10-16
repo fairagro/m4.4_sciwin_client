@@ -15,9 +15,9 @@ fn set_up_repository() -> TempDir {
     create_dir_all(dir.path().join(Path::new("data"))).expect("Failed to create data-dir");
 
     let source_files: [(PathBuf, &str); 3] = [
-        (PathBuf::from("./tests/test_data/echo.py"), "scripts/echo.py"),
-        (PathBuf::from("./tests/test_data/input.txt"), "data/input.txt"),
-        (PathBuf::from("./tests/test_data/Dockerfile"), "Dockerfile"),
+        (Path::new("./tests/test_data/echo.py").to_path_buf(), "scripts/echo.py"),
+        (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
+        (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
     ];
 
     for (src, target) in source_files.iter() {
