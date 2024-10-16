@@ -3,16 +3,16 @@ use s4n::cwl::{
     types::{CWLType, File},
 };
 use serde_yml::Value;
-use std::{env, path::Path};
 
-/// converts \\ to /
+#[cfg (target_os = "windows")]
 fn os_path(path: &str) -> String {
-    if env::consts::OS == "windows" {
         Path::new(path).to_string_lossy().replace("/", "\\")
-    } else {
-        path.to_string()
-    }
 }
+#[cfg (not(target_os = "windows"))]
+fn os_path(path: &str) -> String {
+        path.to_string()
+}
+
 
 #[test]
 pub fn test_cwl_save() {
