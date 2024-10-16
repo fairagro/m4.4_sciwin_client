@@ -1,5 +1,4 @@
-use std::{ops::Deref, path::Path};
-
+use std::path::Path;
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
     types::{CWLType, Directory, File},
