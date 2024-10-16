@@ -1,5 +1,5 @@
-use std::path::Path;
-
+mod common;
+use common::normalize_path;
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
     types::{CWLType, File},
@@ -31,8 +31,8 @@ pub fn test_cwl_save() {
     clt.save("workflows/tool/tool.cwl");
 
     //check if paths are rewritten upon tool saving
-    let input_path = Path::new("../../test_data/input.txt").to_string_lossy().into_owned();
-    assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&input_path))));
+
+    assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&normalize_path("../../test_data/input.txt")))));
     let requirements = &clt.requirements.unwrap();
     let req_0 = &requirements[0];
     let req_1 = &requirements[1];

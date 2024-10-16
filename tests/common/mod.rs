@@ -7,6 +7,11 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
+/// converts \\ to /
+pub fn normalize_path(path: &str) -> String {
+    Path::new(path).to_string_lossy().replace("\\", "/")
+}
+
 /// Sets up a temporary repository with test data
 fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");
@@ -44,7 +49,7 @@ fn set_up_repository() -> TempDir {
     dir
 }
 
-/// Sets up a repository with the files in tests/test_data in tmp folder. 
+/// Sets up a repository with the files in tests/test_data in tmp folder.
 /// You *must* specify `#[serial]` for those tests
 pub fn with_temp_repository<F>(test: F)
 where
