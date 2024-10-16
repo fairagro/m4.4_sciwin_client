@@ -1,3 +1,5 @@
+mod common;
+use common::os_path;
 use s4n::{
     cwl::{clt::Command, parser::guess_type, types::CWLType},
     io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path},
@@ -50,7 +52,7 @@ fn test_resolve_path() {
     ];
     for (path, relative_to, expected) in test_cases {
         let actual = resolve_path(path, relative_to);
-        assert_eq!(actual, *expected);
+        assert_eq!(actual, os_path(expected));
     }
 }
 

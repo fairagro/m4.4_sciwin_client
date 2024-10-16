@@ -8,6 +8,7 @@ use std::{
 use tempfile::{tempdir, TempDir};
 
 /// Sets up a temporary repository with test data
+#[allow(dead_code)]
 fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
@@ -46,6 +47,7 @@ fn set_up_repository() -> TempDir {
 
 /// Sets up a repository with the files in tests/test_data in tmp folder.
 /// You *must* specify `#[serial]` for those tests
+#[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
 where
     F: FnOnce(&TempDir),
@@ -58,4 +60,13 @@ where
 
     env::set_current_dir(current_dir).expect("Could not reset current dir");
     dir.close().unwrap()
+}
+
+#[allow(dead_code)]
+pub fn os_path(path: &str) -> String {
+    if cfg!(target_os = "windows") {
+        Path::new(path).to_string_lossy().replace("/", "\\")
+    } else {
+        path.to_string()
+    }
 }
