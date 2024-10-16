@@ -50,18 +50,7 @@ jobs:
       - name: VS Tools
         if: ${{ startsWith(matrix.os, 'windows') }}
         uses: microsoft/setup-msbuild@v2
-      - name: Apple stuff
-        if: ${{ startsWith(matrix.os, 'macos') }}
-        run: |
-          brew install openssl@3
-          brew --prefix openssl
-      - name: Build (Mac)
-        if: ${{ startsWith(matrix.os, 'macos') }}
-        env: 
-          OPENSSL_DIR: /opt/homebrew/opt/openssl@3
-        run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Build (Win & Linux)
-        if: ${{ !startsWith(matrix.os, 'macos') }}
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Copy
         id: archive
