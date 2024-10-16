@@ -7,11 +7,6 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-/// converts \\ to /
-pub fn normalize_path(path: &str) -> String {
-    Path::new(path).to_string_lossy().replace("\\", "/")
-}
-
 /// Sets up a temporary repository with test data
 fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");

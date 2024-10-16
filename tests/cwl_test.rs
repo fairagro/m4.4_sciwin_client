@@ -1,10 +1,15 @@
-mod common;
-use common::normalize_path;
+use std::path::Path;
+
 use s4n::cwl::{
     clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
     types::{CWLType, File},
 };
 use serde_yml::Value;
+
+/// converts \\ to /
+fn normalize_path(path: &str) -> String {
+    Path::new(path).to_string_lossy().replace("\\", "/")
+}
 
 #[test]
 pub fn test_cwl_save() {
