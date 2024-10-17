@@ -30,7 +30,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                 .with_inputs(vec![CommandInputParameter::default()
                     .with_id("option1")
                     .with_type(CWLType::String)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()).with_position(0))
                     .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
                 .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
         ),
@@ -41,7 +41,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                 .with_inputs(vec![CommandInputParameter::default()
                     .with_id("option1")
                     .with_type(CWLType::String)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()).with_position(0))
                     .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
                 .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
         ),
@@ -58,7 +58,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                     CommandInputParameter::default()
                         .with_id("option1")
                         .with_type(CWLType::String)
-                        .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                        .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()).with_position(1))
                         .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
                 ])
                 .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
@@ -88,7 +88,7 @@ pub fn test_parse_command_line_testdata() {
             .with_inputs(vec![CommandInputParameter::default()
                 .with_id("test")
                 .with_type(CWLType::File)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()).with_position(0))
                 .with_default_value(DefaultValue::File(File::from_location(&"data/input.txt".to_string())))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("scripts/echo.py"))]);
         assert_eq!(cwl, expected);

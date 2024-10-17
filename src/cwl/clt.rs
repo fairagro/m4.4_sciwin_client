@@ -15,6 +15,8 @@ pub struct CommandLineTool {
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
 }
 
 impl Default for CommandLineTool {
@@ -26,6 +28,7 @@ impl Default for CommandLineTool {
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
+            stdout: Default::default(),
         }
     }
 }
@@ -45,6 +48,10 @@ impl CommandLineTool {
     }
     pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
         self.requirements = Some(requirements);
+        self
+    }
+    pub fn with_stdout(mut self, stdout: &String) -> Self {
+        self.stdout = Some(stdout.to_string());
         self
     }
 }

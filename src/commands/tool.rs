@@ -102,6 +102,10 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         }
         //could check here if an output file matches an input string
         cwl = cwl.with_outputs(parser::get_outputs(files));
+        let stdout_file = parser::get_stdout_file();
+        if !stdout_file.is_empty() {
+            cwl = cwl.with_outputs(parser::get_outputs_stdout(vec![stdout_file.clone()])).with_stdout(&stdout_file);
+        }
     } else {
         warn("User requested no run, could not determine outputs!")
     }

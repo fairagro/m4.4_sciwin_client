@@ -33,7 +33,7 @@ pub fn test_get_inputs() {
         CommandInputParameter::default()
             .with_id("argument1")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--argument1".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix(&"--argument1".to_string()).with_position(0))
             .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
         CommandInputParameter::default()
             .with_id("flag")
@@ -43,7 +43,7 @@ pub fn test_get_inputs() {
         CommandInputParameter::default()
             .with_id("a")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"-a".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix(&"-a".to_string()).with_position(3))
             .with_default_value(DefaultValue::Any(Value::String("value2".to_string()))),
         CommandInputParameter::default()
             .with_id("positional1")
@@ -53,7 +53,7 @@ pub fn test_get_inputs() {
         CommandInputParameter::default()
             .with_id("v")
             .with_type(CWLType::Int)
-            .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()).with_position(6))
             .with_default_value(DefaultValue::Any(serde_yml::from_str("1").unwrap())),
     ];
 
