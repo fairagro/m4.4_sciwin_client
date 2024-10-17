@@ -11,6 +11,10 @@ pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
     pub base_command: Command,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
     pub inputs: Vec<CommandInputParameter>,
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -23,6 +27,8 @@ impl Default for CommandLineTool {
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
             base_command: Command::Single("echo".to_string()),
+            stdout: Default::default(),
+            stderr: Default::default(),
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
@@ -191,6 +197,19 @@ pub enum DefaultValue {
     File(File),
     Directory(Directory),
     Any(serde_yml::Value),
+}
+
+impl DefaultValue {
+    pub fn as_value_string(&self) -> String {
+        match self {
+            DefaultValue::File(file) => file.location.clone(),
+            DefaultValue::Directory(directory) => directory.location.clone(),
+            DefaultValue::Any(value) => match value {
+                serde_yml::Value::Bool(_) => String::from(""), // do not remove!
+                _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
+            },
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
