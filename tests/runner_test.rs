@@ -2,14 +2,14 @@ mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
     clt::{CommandLineTool, DefaultValue},
-    runner::run_command_line_tool,
+    runner::run_command,
 };
 use serial_test::serial;
 use std::{collections::HashMap, fs};
 
 #[test]
 #[serial]
-pub fn test_run_command_line_tool_simple() {
+pub fn test_run_command_simple() {
     with_temp_repository(|dir| {
         let cwl = r#"
 #!/usr/bin/env cwl-runner
@@ -35,7 +35,7 @@ outputs:
 
 "#;
         let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command_line_tool(&tool, None).is_ok());
+        assert!(run_command(&tool, None).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -46,7 +46,7 @@ outputs:
 
 #[test]
 #[serial]
-pub fn test_run_command_line_tool_simple_with_args() {
+pub fn test_run_command_simple_with_args() {
     with_temp_repository(|dir| {
         let cwl = r#"
 #!/usr/bin/env cwl-runner
@@ -77,7 +77,7 @@ outputs:
         let inputs: HashMap<String, DefaultValue> = serde_yml::from_str(yml).expect("Input parsing failed");
 
         let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command_line_tool(&tool, Some(inputs)).is_ok());
+        assert!(run_command(&tool, Some(inputs)).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -88,7 +88,7 @@ outputs:
 
 #[test]
 #[serial]
-pub fn test_run_command_line_tool_mismatching_args() {
+pub fn test_run_command_mismatching_args() {
     with_temp_repository(|_| {
         let cwl = r#"
 #!/usr/bin/env cwl-runner
@@ -123,7 +123,7 @@ message:
 
         let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
 
-        let result = run_command_line_tool(&tool, Some(inputs));
+        let result = run_command(&tool, Some(inputs));
         assert!(result.is_err());
     });
 }

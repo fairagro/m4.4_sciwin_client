@@ -2,9 +2,7 @@ use super::clt::{Command, CommandLineTool, DefaultValue};
 use crate::io::create_and_write_file;
 use std::{collections::HashMap, error::Error, process::Command as SystemCommand};
 
-pub fn run_command_line_tool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
-    //build command
-
+pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     //get executable
     let cmd = match &tool.base_command {
         Command::Single(cmd) => cmd,

@@ -1,5 +1,5 @@
 use super::{
-    runner::run_command_line_tool,
+    runner::run_command,
     types::{CWLType, Directory, File},
 };
 use crate::io::resolve_path;
@@ -68,7 +68,7 @@ impl Display for CommandLineTool {
 
 impl CommandLineTool {
     pub fn execute(&self) -> Result<(), Box<dyn Error>> {
-        run_command_line_tool(&self, None)
+        run_command(&self, None)
     }
 
     pub fn save(&mut self, path: &str) -> String {
