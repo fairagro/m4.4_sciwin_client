@@ -3,10 +3,10 @@ use super::{
     types::{CWLType, Directory, File},
 };
 use crate::io::get_filename_without_extension;
+use lazy_static::lazy_static;
 use serde_yml::Value;
 use slugify::slugify;
 use std::path::Path;
-use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 lazy_static! {
@@ -21,14 +21,13 @@ pub fn get_stdout_file() -> String {
     STDOUT_FILE.lock().unwrap().clone()
 }
 
-
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
 pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&command);
-    let inputs; 
-    let tool; 
+    let inputs;
+    let tool;
     if command.iter().any(|s| s.contains('>')) {
         println!("conatins >");
         inputs = get_inputs(match &base_command {
@@ -36,7 +35,7 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
             Command::Multiple(_) => &command[0..],
         });
         let base = match &base_command {
-            Command::Single(cmd) => &cmd,
+            Command::Single(cmd) => cmd,
             Command::Multiple(vec) => &vec[0],
         };
         tool = CommandLineTool::default().with_base_command(Command::Single(base.clone())).with_inputs(inputs);
@@ -44,9 +43,7 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
             Command::Single(_) => tool,
             Command::Multiple(_) => tool,
         }
-    }
-    else{
-  
+    } else {
         inputs = get_inputs(match &base_command {
             Command::Single(_) => &command[1..],
             Command::Multiple(ref vec) => &command[vec.len()..],
@@ -92,11 +89,9 @@ pub(crate) fn get_base_command(command: &[&str]) -> Command {
 
     if SCRIPT_EXECUTORS.iter().any(|&exec| command[0].starts_with(exec)) {
         base_command.push(command[1].to_string());
-    }
-    else if contains_greater_than(command){
+    } else if contains_greater_than(command) {
         base_command = command[0].to_string().split_whitespace().map(String::from).collect();
     }
-
 
     match base_command.len() {
         1 => Command::Single(command[0].to_string()),
@@ -109,9 +104,9 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut i = 0;
     let mut args2: Vec<&str> = args.to_vec();
     //split at whitespace, requires input similar to "echo 'hello world' > file.txt" with spaces
-    if !args.is_empty() && args2.iter().any(|arg| arg.contains(">")){
+    if !args.is_empty() && args2.iter().any(|arg| arg.contains(">")) {
         args2 = args.iter().flat_map(|&arg| arg.split_whitespace()).collect();
-        i = 1; 
+        i = 1;
     }
     while i < args2.len() {
         let arg = args2[i];
@@ -125,27 +120,26 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
             } else {
                 input = get_flag(arg)
             }
-        }     
-        else if args2[i].contains('>') {
+        } else if args2[i].contains('>') {
             i += 1;
             modify_stdout_file(args2[i]);
+            i += 1;
             continue;
-        }
-        else {
+        } else {
             let mut s = String::from(arg);
             //in case there is a string with whitespace like in command "echo 'hello world'", improve
-            if arg.contains("'"){
-                i += 1; 
+            if arg.contains("'") {
+                i += 1;
                 while i < args2.len() {
-                    let arg2 = String::new() + " " +args2[i];
-                    s.push_str(&arg2);               
-                    if arg2.contains("'"){
+                    let arg2 = String::new() + " " + args2[i];
+                    s.push_str(&arg2);
+                    if arg2.contains("'") {
                         break;
                     }
                     i += 1;
                 }
             }
-                input = get_positional(&s, i);
+            input = get_positional(&s, i);
         }
         inputs.push(input);
         i += 1;
