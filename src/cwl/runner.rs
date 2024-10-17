@@ -1,8 +1,8 @@
 use super::clt::{Command, CommandLineTool, DefaultValue};
-use crate::{io::create_and_write_file, util::error};
+use crate::io::create_and_write_file;
 use std::{collections::HashMap, error::Error, process::Command as SystemCommand};
 
-pub fn run_command_line_tool(tool: CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
+pub fn run_command_line_tool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     //build command
 
     //get executable
@@ -17,6 +17,8 @@ pub fn run_command_line_tool(tool: CommandLineTool, input_values: Option<HashMap
         command.args(&vec[1..]);
     }
 
+    //TODO: handle arguments field...
+
     //build inputs from either fn-args or default values.
     let mut inputs = vec![];
     for input in &tool.inputs {
@@ -27,12 +29,18 @@ pub fn run_command_line_tool(tool: CommandLineTool, input_values: Option<HashMap
         }
         if let Some(ref values) = input_values {
             if let Some(value) = values.get(&input.id) {
+                if !value.has_matching_type(&input.type_) {
+                    //change handling accordingly in utils on main branch!
+                    eprintln!("CWLType is not matching input type");
+                    Err("CWLType is not matching input type")?;
+                }
                 inputs.push(value.as_value_string());
             }
         } else if let Some(default_) = &input.default {
             inputs.push(default_.as_value_string());
         } else {
-            error(format!("You did not include a value for {}", input.id).as_str());
+            eprintln!("You did not include a value for {}", input.id);
+            Err(format!("You did not include a value for {}", input.id).as_str())?;
         }
     }
     command.args(inputs);
@@ -59,5 +67,6 @@ pub fn run_command_line_tool(tool: CommandLineTool, input_values: Option<HashMap
             eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
         }
     }
+
     Ok(())
 }

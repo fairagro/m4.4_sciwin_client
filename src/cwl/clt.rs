@@ -1,9 +1,11 @@
-use super::types::{CWLType, Directory, File};
+use super::{
+    runner::run_command_line_tool,
+    types::{CWLType, Directory, File},
+};
 use crate::io::resolve_path;
-use colored::Colorize;
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, io, process::Command as SystemCommand};
+use std::{error::Error, fmt::Display};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -65,56 +67,8 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> io::Result<()> {
-        let cmd = match &self.base_command {
-            Command::Single(cmd) => cmd,
-            Command::Multiple(vec) => &vec[0],
-        };
-
-        let mut command = SystemCommand::new(cmd);
-        if let Command::Multiple(ref vec) = &self.base_command {
-            for cmd in &vec[1..] {
-                command.arg(cmd);
-            }
-        }
-        for input in &self.inputs {
-            if let Some(binding) = &input.input_binding {
-                if let Some(prefix) = &binding.prefix {
-                    command.arg(prefix);
-                }
-            }
-            if let Some(default_) = &input.default {
-                let value = match &default_ {
-                    DefaultValue::File(file) => &file.location,
-                    DefaultValue::Directory(dir) => &dir.location,
-                    DefaultValue::Any(value) => match value {
-                        serde_yml::Value::Bool(_) => &String::from(""), // do not remove!
-                        _ => &serde_yml::to_string(value).unwrap().trim_end().to_string(),
-                    },
-                };
-                command.arg(value);
-            }
-        }
-
-        //debug print command
-        if cfg!(debug_assertions) {
-            let cmd = format!(
-                "{} {}",
-                command.get_program().to_str().unwrap(),
-                command.get_args().map(|arg| arg.to_string_lossy()).collect::<Vec<_>>().join(" ")
-            );
-            println!("▶️  Executing command: {}", cmd.green().bold());
-        }
-
-        let output = command.output()?;
-
-        //report from stdout/stderr
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        if !output.stderr.is_empty() {
-            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        Ok(())
+    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
+        run_command_line_tool(&self, None)
     }
 
     pub fn save(&mut self, path: &str) -> String {
@@ -208,6 +162,15 @@ impl DefaultValue {
                 serde_yml::Value::Bool(_) => String::from(""), // do not remove!
                 _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
             },
+        }
+    }
+
+    pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
+        match (self, cwl_type) {
+            (DefaultValue::File(_), CWLType::File) => true,
+            (DefaultValue::Directory(_), CWLType::Directory) => true,
+            (DefaultValue::Any(_), _) => true,
+            _ => false,
         }
     }
 }
