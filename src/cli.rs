@@ -1,4 +1,7 @@
-use crate::commands::tool::{CreateToolArgs, ToolCommands};
+use crate::commands::{
+    init::InitArgs,
+    tool::{CreateToolArgs, ToolCommands},
+};
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -14,7 +17,7 @@ pub enum Commands {
     Dummy {
         #[command(subcommand)]
         command: DummyCommands,
-    },    
+    },
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
@@ -26,6 +29,7 @@ pub enum Commands {
     Annotate,
     Execute,
     Sync,
+    Init(InitArgs),
 }
 
 //temporary demo how to use clap, move to commands folder for real commands
