@@ -68,7 +68,7 @@ impl Display for CommandLineTool {
 
 impl CommandLineTool {
     pub fn execute(&self) -> Result<(), Box<dyn Error>> {
-        run_command(&self, None)
+        run_command(self, None)
     }
 
     pub fn save(&mut self, path: &str) -> String {
@@ -166,12 +166,12 @@ impl DefaultValue {
     }
 
     pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
-        match (self, cwl_type) {
-            (DefaultValue::File(_), CWLType::File) => true,
-            (DefaultValue::Directory(_), CWLType::Directory) => true,
-            (DefaultValue::Any(_), _) => true,
-            _ => false,
-        }
+        matches!(
+            (self, cwl_type),
+             (DefaultValue::File(_), CWLType::File) | 
+             (DefaultValue::Directory(_), CWLType::Directory) | 
+             (DefaultValue::Any(_), _)
+        )
     }
 }
 

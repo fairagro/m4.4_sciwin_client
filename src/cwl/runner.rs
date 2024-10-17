@@ -1,6 +1,81 @@
-use super::clt::{Command, CommandLineTool, DefaultValue};
-use crate::io::create_and_write_file;
-use std::{collections::HashMap, error::Error, process::Command as SystemCommand};
+use super::clt::{Command, CommandInputParameter, CommandLineTool, DefaultValue, Entry, Requirement};
+use crate::{
+    cwl::types::CWLType,
+    io::{copy_file, create_and_write_file},
+};
+use std::{collections::HashMap, env, error::Error, fs, process::Command as SystemCommand};
+use tempfile::tempdir;
+
+pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
+    //TODO: handle container
+    let dir = tempdir()?;
+    println!("{:?}", dir.path());
+    //stage initial workdir
+    if let Some(req) = &tool.requirements {
+        for item in req {
+            if let Requirement::InitialWorkDirRequirement(iwdr) = item {
+                for listing in &iwdr.listing {
+                    let path = dir.path().join(&listing.entryname);
+                    match &listing.entry {
+                        Entry::Source(src) => {
+                            create_and_write_file(&path.to_string_lossy(), src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
+                        }
+                        Entry::Include(f) => {
+                            copy_file(&f.include, &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", f.include, path, e))?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //stage inputs
+    for input in &tool.inputs {
+        //TODO: Handle directories
+        if input.type_ == CWLType::File {
+            let file = evaluate_input(input, &input_values)?;
+            let path = dir.path().join(&file);
+            copy_file(&file.as_str(), &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+        }
+    }
+
+    let current = env::current_dir()?;
+    env::set_current_dir(dir.path())?;
+
+    run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
+
+    for output in &tool.outputs {
+        if let Some(binding) = &output.output_binding {
+            let path = &current.join(&binding.glob);
+            fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
+        }
+    }
+    
+    env::set_current_dir(&current)?;
+
+    println!("Command Executed with status: success!");
+    Ok(())
+}
+
+///Either gets the default value for input or the provided one (preferred)
+fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
+    if let Some(ref values) = input_values {
+        if let Some(value) = values.get(&input.id) {
+            if !value.has_matching_type(&input.type_) {
+                //change handling accordingly in utils on main branch!
+                eprintln!("CWLType is not matching input type");
+                Err("CWLType is not matching input type")?;
+            }
+            return Ok(value.as_value_string());
+        }
+    } else if let Some(default_) = &input.default {
+        return Ok(default_.as_value_string());
+    } else {
+        eprintln!("You did not include a value for {}", input.id);
+        Err(format!("You did not include a value for {}", input.id).as_str())?;
+    }
+    Err("Could not evaluate input")?
+}
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     //get executable
@@ -25,21 +100,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
                 inputs.push(prefix.clone());
             }
         }
-        if let Some(ref values) = input_values {
-            if let Some(value) = values.get(&input.id) {
-                if !value.has_matching_type(&input.type_) {
-                    //change handling accordingly in utils on main branch!
-                    eprintln!("CWLType is not matching input type");
-                    Err("CWLType is not matching input type")?;
-                }
-                inputs.push(value.as_value_string());
-            }
-        } else if let Some(default_) = &input.default {
-            inputs.push(default_.as_value_string());
-        } else {
-            eprintln!("You did not include a value for {}", input.id);
-            Err(format!("You did not include a value for {}", input.id).as_str())?;
-        }
+        inputs.push(evaluate_input(input, &input_values)?);
     }
     command.args(inputs);
 

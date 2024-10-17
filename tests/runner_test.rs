@@ -2,7 +2,7 @@ mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
     clt::{CommandLineTool, DefaultValue},
-    runner::run_command,
+    runner::{run_command, run_commandlinetool},
 };
 use serial_test::serial;
 use std::{collections::HashMap, fs};
@@ -126,4 +126,49 @@ message:
         let result = run_command(&tool, Some(inputs));
         assert!(result.is_err());
     });
+}
+
+#[test]
+#[serial]
+pub fn test_run_commandlinetool() {
+    let cwl = r#"
+#!/usr/bin/env cwl-runner
+
+cwlVersion: v1.2
+class: CommandLineTool
+
+requirements:
+- class: InitialWorkDirRequirement
+  listing:
+  - entryname: tests/test_data/echo.py
+    entry:
+      $include: tests/test_data/echo.py
+
+inputs:
+- id: test
+  type: File
+  default:
+    class: File
+    location: tests/test_data/input.txt
+  inputBinding:
+    prefix: '--test'
+
+outputs:
+- id: results
+  type: File
+  outputBinding:
+    glob: results.txt
+
+baseCommand:
+- python
+- tests/test_data/echo.py
+"#;
+
+    let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+    let result = run_commandlinetool(&tool, None);
+    assert!(result.is_ok());
+    match result {
+        Ok(_) => println!("success!"),
+        Err(e) => eprintln!("{:?}", e),
+    }
 }

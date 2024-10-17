@@ -19,11 +19,22 @@ pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error
     let path = Path::new(filename);
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?
+        fs::create_dir_all(parent)?;
     }
 
     let mut file = fs::File::create(filename)?;
     file.write_all(contents.as_bytes())?;
+    Ok(())
+}
+
+pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
+    let path = Path::new(to);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?
+    }
+
+    fs::copy(from, to)?;
     Ok(())
 }
 
