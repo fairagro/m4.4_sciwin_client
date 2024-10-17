@@ -67,7 +67,9 @@ impl CommandLineTool {
 
         let mut command = SystemCommand::new(cmd);
         if let Command::Multiple(ref vec) = &self.base_command {
-            command.arg(&vec[1]);
+            for cmd in &vec[1..] {
+                command.arg(cmd);
+            }
         }
         for input in &self.inputs {
             if let Some(binding) = &input.input_binding {
