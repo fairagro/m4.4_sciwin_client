@@ -77,6 +77,14 @@ pub fn test_parse_command_line() {
 }
 
 #[test]
+pub fn test_cwl_execute_command_redirect() {
+        let command = "echo 'Hello World' > file_echo.txt";
+        let args = shlex::split(command).expect("parsing failed");
+        let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+        assert!(cwl.execute().is_ok());
+}
+
+#[test]
 #[serial]
 pub fn test_parse_command_line_testdata() {
     with_temp_repository(|_| {
