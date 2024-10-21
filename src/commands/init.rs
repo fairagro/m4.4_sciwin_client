@@ -1,6 +1,6 @@
 use clap::Args;
 use rust_xlsxwriter::Workbook;
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{env, fs, path::PathBuf, path::Path, process::Command};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -48,24 +48,27 @@ pub fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-pub fn is_git_repo(base_folder: Option<&String>) -> bool {
-    let base_dir = match base_folder {
-        Some(folder) => PathBuf::from(folder),
+
+pub fn is_git_repo(path: Option<&str>) -> bool {
+    // Determine the base directory from the provided path or use the current directory
+    let base_dir = match path {
+        Some(folder) => Path::new(folder).to_path_buf(),
         None => {
             // Get the current working directory
-            env::current_dir().expect("Failed to get current directory")
+            std::env::current_dir().expect("Failed to get current directory")
         }
     };
-    println!("Base dir {}", base_dir.display());
-    let output = Command::new("git")
-        .arg("rev-parse")
-        .arg("--is-inside-work-tree")
-        .current_dir(base_dir)
-        .output()
-        .expect("Failed to execute git command");
 
-    output.status.success()
+    // Build the path to the `.git` directory
+    let git_dir = base_dir.join(".git");
+
+    // Check if the `.git` directory exists
+    let is_repo = git_dir.exists() && git_dir.is_dir();
+    println!("Checking if {} is a git repository: {}", base_dir.display(), is_repo);
+    
+    is_repo
 }
+
 
 pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     println!("Checking if git repo: {:?}", base_folder);

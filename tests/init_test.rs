@@ -1,40 +1,10 @@
 use calamine::{open_workbook, Reader, Xlsx};
 use s4n::commands::init::{check_git_installation, create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
-use std::{env, path::PathBuf, process::Command};
+use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
 
-#[test]
-fn test_is_git_repo() {
-    let repo_dir = Builder::new().prefix("valid_git_repo").tempdir().unwrap();
 
-    let repo_dir_str = repo_dir.path().to_str().unwrap();
-    let repo_dir_string = String::from(repo_dir_str);
-
-    // Write simple script to init git repository in directory
-    let init_script = r#"
-            mkdir -p {repo_dir}
-            cd {repo_dir}
-            git init
-            echo "Hello World" > file.txt
-            git add .
-        "#;
-
-    //execute script to init git repo
-    let output = Command::new("bash")
-        .arg("-c")
-        .arg(init_script.replace("{repo_dir}", repo_dir_str))
-        .status()
-        .expect("Failed to execute bash script");
-
-    assert!(output.success(), "Expected success of running command, got {:?}", output);
-
-    // Check if this directory is a git repository
-    let result = is_git_repo(Some(&repo_dir_string));
-
-    // Assert that directory is a git repo
-    assert!(result, "Expected directory to be a git repo true, got false");
-}
 
 #[test]
 #[serial]
@@ -105,24 +75,9 @@ fn test_init_s4n_without_folder_with_arc() {
 }
 
 #[test]
-fn test_check_git_installation_success() {
+fn test_check_git_installation() {
     // Test case: Git is installed and accessible
     assert!(check_git_installation().is_ok(), "Expected git to be installed and in PATH. Please install git.");
-}
-
-#[test]
-fn test_is_not_git_repo() {
-    //create directory that is not a git repo
-    let empty_dir = Builder::new().prefix("empty_repo").tempdir().unwrap();
-
-    let empty_dir_str = empty_dir.path().to_str().unwrap();
-    let empty_dir_string = String::from(empty_dir_str);
-
-    // call is_git repo_function
-    let result = is_git_repo(Some(&empty_dir_string));
-
-    // assert that it is not a git repo
-    assert!(!result, "Expected not to be a git repo");
 }
 
 #[test]
@@ -137,6 +92,7 @@ fn test_init_git_repo() {
     let git_dir = base_folder.join(".git");
     assert!(git_dir.exists(), "Expected .git directory to be created");
 }
+
 
 #[test]
 fn test_create_minimal_folder_structure_invalid() {
@@ -266,4 +222,32 @@ fn test_init_s4n_minimal() {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
         assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
     }
+}
+
+
+#[test]
+fn test_is_git_repo() {
+    let repo_dir = Builder::new().prefix("valid_git_repo").tempdir().unwrap();
+    let repo_dir_str = repo_dir.path().to_str().unwrap();
+    let repo_dir_string = String::from(repo_dir_str);
+
+    let _ = init_git_repo(Some(&repo_dir_string));
+    let result = is_git_repo(Some(&repo_dir_string));
+    // Assert that directory is a git repo
+    assert!(result, "Expected directory to be a git repo true, got false");
+}
+
+#[test]
+fn test_is_not_git_repo() {
+    //create directory that is not a git repo
+    let no_repo = Builder::new().prefix("no_repo_test").tempdir().unwrap();
+
+    let no_repo_str = no_repo.path().to_str().unwrap();
+    let no_repo_string = String::from(no_repo_str);
+
+    // call is_git repo_function
+    let result = is_git_repo(Some(&no_repo_string));
+
+    // assert that it is not a git repo
+    assert!(!result, "Expected directory to not be a git repo");
 }
