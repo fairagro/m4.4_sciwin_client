@@ -10,13 +10,14 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use std::{env, error::Error, fs::remove_file, path::Path};
+use std::{env, error::Error, fs::remove_file, path::Path, path::PathBuf, io::Write, fs, io};
 use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
         ToolCommands::Ls => list_tools()?,
+        ToolCommands::Rm(args) => remove_tool(args)?,
     }
     Ok(())
 }
@@ -27,7 +28,10 @@ pub enum ToolCommands {
     Create(CreateToolArgs),
     #[command(about = "Lists all tools")]
     Ls,
+    #[command(about = "Remove a tool, e.g. s4n tool rm toolname")]
+    Rm(ToolArgs),
 }
+
 
 #[derive(Args, Debug)]
 pub struct CreateToolArgs {
@@ -51,6 +55,11 @@ pub struct CreateToolArgs {
     pub command: Vec<String>,
 }
 
+#[derive(Args, Debug)]
+pub struct ToolArgs {
+    #[arg(trailing_var_arg = true, help = "Remove a tool")]
+    pub tool: Vec<String>,
+}
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
@@ -177,3 +186,45 @@ pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+
+
+pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let workflows_path = PathBuf::from("workflows");
+    for tool in &args.tool {
+        let mut tool_path = workflows_path.join(tool);
+        let file_path = PathBuf::from(tool);
+       // Check if the path has an extension
+        if let Some(_) = file_path.extension() {
+            // If it has an extension, remove it
+            let file_stem = file_path.file_stem().unwrap_or_default(); 
+            tool_path= workflows_path.join(file_stem);
+        } 
+        
+        // Check if the directory exists
+        if tool_path.exists() && tool_path.is_dir() {
+            // Ask for user confirmation
+            print!("Are you sure you want to remove the tool '{}'? (y/n): ", tool.red());
+            io::stdout().flush()?; 
+
+            // Read user input
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let input = input.trim().to_lowercase();
+
+            if input.trim().to_lowercase() == "y" || input.trim().to_lowercase() == "yes" {
+                // Attempt to remove the directory
+                fs::remove_dir_all(&tool_path)?;
+                println!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
+            } else {
+                println!("{}", "Operation canceled. Tool not removed.".green());
+            }
+        } else {
+            println!("Tool '{}' does not exist.", tool_path.display().to_string().red());
+        }
+     
+    }
+    if args.tool.is_empty(){
+        println!("Please enter a tool or a list of tools. Alternatively remove everything? Do we want that? Ask");
+    } 
+    Ok(())
+}
