@@ -1,6 +1,11 @@
 use clap::Parser;
-use s4n::cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
-use s4n::commands::tool::{create_tool, handle_tool_commands};
+use s4n::{
+    cli::{Cli, Commands, CreateDummyArgs, DummyCommands},
+    commands::{
+        init::handle_init_command,
+        tool::{create_tool, handle_tool_commands},
+    },
+};
 use std::{error::Error, process::exit};
 
 fn main() {
@@ -26,8 +31,15 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Annotate => todo!(),
         Commands::Execute => todo!(),
         Commands::Sync => todo!(),
+        Commands::Init(args) => handle_init_command(args)?,
+        /*
+        Commands::Init(init_args) => {
+            let project = init_args.project.clone();
+            let arc = init_args.arc;
+            init_s4n(project, arc)?;
+        }
+        */
     }
-
     Ok(())
 }
 
