@@ -11,10 +11,12 @@ use crate::{
 use clap::{Args, Subcommand};
 use colored::Colorize;
 use std::{env, error::Error, fs::remove_file, path::Path};
+use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
+        ToolCommands::Ls => list_tools()?,
     }
     Ok(())
 }
@@ -23,6 +25,8 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Err
 pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
+    #[command(about = "Lists all tools")]
+    Ls,
 }
 
 #[derive(Args, Debug)]
@@ -46,6 +50,7 @@ pub struct CreateToolArgs {
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
+
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
@@ -151,3 +156,24 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
+
+
+pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
+    // Print the current working directory
+    let cwd = env::current_dir()?;
+    println!("📂 The following tools were found in {}", cwd.to_str().unwrap().blue().bold());
+
+    // Build the path to the "workflows" folder
+    let folder_path = cwd.join("workflows");
+
+    // Walk recursively through all directories and subdirectories
+    for entry in WalkDir::new(&folder_path).into_iter().filter_map(Result::ok) {
+        if entry.file_type().is_file() {
+            // Print the file names, could also print directories or something else
+            let file_name = entry.file_name().to_string_lossy();
+            println!("📄 {}", file_name.green().bold());
+        }
+    }
+    Ok(())
+}
+
