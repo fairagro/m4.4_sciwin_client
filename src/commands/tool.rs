@@ -194,7 +194,7 @@ pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
        // Check if the path has an extension
-        if let Some(_) = file_path.extension() {
+        if file_path.extension().is_some() {
             // If it has an extension, remove it
             let file_stem = file_path.file_stem().unwrap_or_default(); 
             tool_path= workflows_path.join(file_stem);
@@ -221,8 +221,8 @@ pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             println!("Tool '{}' does not exist.", tool_path.display().to_string().red());
         }
-     
     }
+
     if args.tool.is_empty(){
         println!("Please enter a tool or a list of tools. Alternatively remove everything? Do we want that? Ask");
     } 
