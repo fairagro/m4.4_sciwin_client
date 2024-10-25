@@ -45,51 +45,59 @@ pub struct CreateToolArgs {
 
     #[arg(long = "inputs", help = "List of inputs for the tool", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
-    //#[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ',', num_args = 1..)]
+    //#[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ',', num_args = 1..)] ',' delimiter would work but could not use spaces
     #[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ' ')]
     pub outputs: Option<Vec<String>>,
 
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
-
-  
 }
 
+// parsing doesn't work correctly because there is no argument for actual command, would work without this if command is seperated by -- but that might be inconvient for user
+fn separate_elements(inputs: Option<Vec<String>>, outputs: Option<Vec<String>>, commands: Vec<String>) -> (Vec<String>, Vec<String>, Vec<String>) {
+    // Unwrap inputs and outputs or use empty vectors if None
+    let mut inputs_vec = inputs.unwrap_or_default();
+    let mut outputs_vec = outputs.unwrap_or_default();
+    let mut remaining_commands: Vec<String> = Vec::new();
 
+    let mut after_inputs_flag = false;
+    let mut after_outputs_flag = false;
 
-//parsing doesn't work correctly because there is no argument for actual command, would work without this if command is seperated by --
-fn separate(command_args: Vec<&str>) -> (Vec<&str>, Vec<&str>) {
-    let mut outputs = Vec::new();
-    let mut command = Vec::new();
-    let mut found_non_file = false;
+    for cmd in commands {
+        if cmd == "--outputs" {
+            after_inputs_flag = true;
+            continue; // Skip "--outputs" flag itself
+        }
 
-    for &arg in &command_args {
-        // Check if the argument contains a dot, assuming it could be a file, maybe to simple
-        if !found_non_file && arg.contains('.') {
-            outputs.push(arg);
+        if cmd.contains('.') && !after_outputs_flag {
+            if after_inputs_flag {
+                outputs_vec.push(cmd);
+            } else {
+                inputs_vec.push(cmd);
+            }
         } else {
-            // Once we find a non-file argument, we assume all subsequent arguments belong to the command, most likely too simple?
-            found_non_file = true;
-            command.push(arg);
+            remaining_commands.push(cmd);
+            after_outputs_flag = true;
         }
     }
 
-    (outputs, command)
+    // Return all three vectors
+    (inputs_vec, outputs_vec, remaining_commands)
 }
 
-
-//problem flag is only in actual command call not in defined inputs, match to command and add flag
-fn add_flags_to_inputs(command: Vec<&str>, inputs: Vec<&str>) -> Vec<String> {
+// problem: flag is only in actual command call not in defined inputs, match to command and add flag
+fn add_flags_to_inputs(command: Vec<String>, inputs: Vec<String>) -> Vec<String> {
     let mut updated_inputs = Vec::new();
 
     for input in &inputs {
-        if let Some(index) = command.iter().position(|&arg| arg == *input) {
+        // Use `as_str()` method to convert `String` to `&str`
+        if let Some(index) = command.iter().position(|arg| arg == input) {
             // Check if the previous element contains '-'
             if index > 0 && command[index - 1].starts_with('-') {
-                // Add the flag before the input
+                // Add the flag before the input as &str
                 updated_inputs.push(command[index - 1].to_string());
             }
-            // Always add the input itself
+            // add the input itself
             updated_inputs.push(input.to_string());
         }
     }
@@ -97,45 +105,22 @@ fn add_flags_to_inputs(command: Vec<&str>, inputs: Vec<&str>) -> Vec<String> {
     updated_inputs
 }
 
-
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
-    
     let cwd = env::current_dir().expect("directory to be accessible");
     let repo = open_repo(&cwd);
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
     let mut cwl;
-    let mut commands;
-    let command_strs: Vec<&str> = args.command.iter().map(|s| s.as_str()).collect();
+    let (inputs, outputs, commands) = separate_elements(args.inputs.clone(), args.outputs.clone(), args.command.clone());
 
-
-    let outputs_temp = args.outputs.clone().unwrap_or_default();
-    let mut outputs: Vec<&str> = outputs_temp.iter().map(AsRef::as_ref).collect();
-
-    let input_temp = args.inputs.clone().unwrap_or_default();
-    let mut inputs: Vec<&str> = input_temp.iter().map(AsRef::as_ref).collect();
-
-    if !outputs.is_empty(){
-        (outputs, commands) = separate(outputs);
-        commands.extend(command_strs);
-    }
-    else if !inputs.is_empty(){
-        (inputs, commands) = separate(inputs.clone());
-        commands.extend(command_strs);
-    }
-    else {
-        commands = args.command.iter().map(|s| s.as_str()).collect();
-    }
-    
-    if ! inputs.is_empty() {
-        let updated_inputs = add_flags_to_inputs(commands.clone(), inputs);
-        cwl = parser::parse_command_line_inputs(commands.clone(), updated_inputs.iter().map(|s| s.as_str()).collect());
-    }
-
-
-    else{    
+    //todo only provide one part and infer other part
+    if !inputs.is_empty() {
+        let updated_inputs = add_flags_to_inputs(commands.clone(), inputs.clone());
+        //let vec_str_inputs: Vec<&str> = updated_inputs.iter().map(|s| s.as_str()).collect();
+        cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
+    } else {
         let modified = get_modified_files(&repo);
         if !modified.is_empty() {
             println!("Uncommitted changes detected:");
@@ -146,7 +131,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         if args.command.is_empty() {
             error("No commandline string given!");
         }
-    
+
         cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
     }
 
@@ -180,15 +165,19 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 }
             }
         }
-        if outputs.is_empty(){
+        if outputs.is_empty() {
+            println!("outputs is empty");
             //could check here if an output file matches an input string
             cwl = cwl.with_outputs(parser::get_outputs(files));
+            //let stdout_file = parser::get_stdout_file();
+           // if !stdout_file.is_empty() {
+            //    cwl = cwl.with_outputs(parser::get_outputs_stdout(vec![stdout_file.clone()])).with_stdout(&stdout_file);
+            //}
+        } else {
+            //let out: Vec<String> = outputs.iter().map(|s| s.to_string()).collect();
+            //cwl = cwl.with_outputs(parser::get_outputs(out));
+            cwl = cwl.with_outputs(parser::get_outputs(outputs));
         }
-        else{
-            let out: Vec<String> = outputs.iter().map(|s| s.to_string()).collect();
-            cwl = cwl.with_outputs(parser::get_outputs(out));
-        }
-        
     } else {
         warn("User requested no run, could not determine outputs!")
     }
