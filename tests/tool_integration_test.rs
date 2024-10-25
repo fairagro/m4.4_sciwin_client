@@ -1,5 +1,5 @@
 mod common;
-use common::{os_path, with_temp_repository};
+use common::with_temp_repository;
 use s4n::{
     commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
     cwl::clt::{CommandLineTool, DockerRequirement, Entry, Requirement},
@@ -20,6 +20,8 @@ pub fn tool_create_test() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -49,6 +51,8 @@ pub fn tool_create_test_is_raw() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -74,6 +78,8 @@ pub fn tool_create_test_no_commit() {
             no_commit: true, //look!
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -102,6 +108,8 @@ pub fn tool_create_test_no_run() {
             no_commit: false,
             no_run: true, //look!
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -126,6 +134,8 @@ pub fn tool_create_test_is_clean() {
             no_commit: false,
             no_run: false,
             is_clean: true, //look!
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -151,6 +161,8 @@ pub fn tool_create_test_container_image() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -188,6 +200,8 @@ pub fn tool_create_test_dockerfile() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -202,7 +216,7 @@ pub fn tool_create_test_dockerfile() {
         assert_eq!(requirements.len(), 2);
 
         if let Requirement::DockerRequirement(DockerRequirement::DockerFile { docker_file, docker_image_id }) = &requirements[1] {
-            assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
+            assert_eq!(*docker_file, Entry::from_file("../../Dockerfile")); //as file is in root and cwl in workflows/echo
             assert_eq!(*docker_image_id, "sciwin-client".to_string())
         } else {
             panic!("Requirement is not a Dockerfile");
