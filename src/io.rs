@@ -1,10 +1,10 @@
 use crate::cwl::clt::Command;
+use sha2::{Digest, Sha256};
 use std::{
-    fs,
-    io::{Error, Write},
+    fs::{self, File},
+    io::{self, Error, Read, Write},
     path::Path,
 };
-
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
 
@@ -67,4 +67,21 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     filename.push_str(".cwl");
 
     get_workflows_folder() + &foldername + "/" + &filename
+}
+
+pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
+    let metadata = std::fs::metadata(path)?;
+    Ok(metadata.len())
+}
+
+pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    hasher.update(&buffer);
+
+    let result = hasher.finalize();
+    Ok(format!("{:x}", result))
 }

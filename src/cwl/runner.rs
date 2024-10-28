@@ -1,14 +1,14 @@
 use super::clt::{Command, CommandInputParameter, CommandLineTool, DefaultValue, Entry, Requirement};
 use crate::{
-    cwl::types::CWLType,
-    io::{copy_file, create_and_write_file},
+    cwl::types::{CWLType, OutputFile},
+    io::{copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
 };
 use std::{
     collections::HashMap,
     env,
     error::Error,
     fs::{self, create_dir_all},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command as SystemCommand,
 };
 use tempfile::tempdir;
@@ -16,7 +16,7 @@ use tempfile::tempdir;
 pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
     let dir = tempdir()?;
-    println!("📁 Created staging directory: {:?}", dir.path());
+    eprintln!("📁 Created staging directory: {:?}", dir.path());
 
     //save current dir
     let current = env::current_dir()?;
@@ -62,17 +62,22 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
 
     //copy back requested output
+    let mut outputs = HashMap::new();
     for output in &tool.outputs {
         if let Some(binding) = &output.output_binding {
             let path = &current.join(&binding.glob);
             fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
-            println!("📜 Wrote output file: {:?}", path);
+            eprintln!("📜 Wrote output file: {:?}", path);
+            outputs.insert(&output.id, get_file_metadata(path.into()));
         }
     }
+    //print output metadata
+    let json = serde_json::to_string_pretty(&outputs)?;
+    println!("{}", json);
 
     env::set_current_dir(&current)?;
 
-    println!("✔️  Command Executed with status: success!");
+    eprintln!("✔️  Command Executed with status: success!");
     Ok(())
 }
 
@@ -147,4 +152,20 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     }
 
     Ok(())
+}
+
+fn get_file_metadata(path: PathBuf) -> OutputFile {
+    let p_str = path.to_str().unwrap();
+    let basename = get_filename_without_extension(p_str).unwrap();
+    let size = get_file_size(&path).expect(&format!("Could not get filesize: {:?}", path));
+    let checksum = get_file_checksum(&path).expect(&format!("Could not get checksum: {:?}", path));
+
+    OutputFile {
+        location: format!("file://{}", path.display()),
+        basename,
+        class: "File".to_string(),
+        checksum,
+        size,
+        path: path.to_string_lossy().into_owned(),
+    }
 }

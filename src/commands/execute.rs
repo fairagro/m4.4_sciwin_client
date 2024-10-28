@@ -39,6 +39,10 @@ pub enum Runner {
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     match args.runner {
         Runner::CWLTool => {
+            eprintln!(
+                "💻 Executing {} using cwltool.",
+                &args.file
+            );
             let mut cmd = Command::new("cwltool");
             cmd.arg(&args.file).args(&args.args);
             let output = &cmd.output()?;
@@ -51,7 +55,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Runner::Custom => {
-            println!(
+            eprintln!(
                 "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed)",
                 &args.file
             );

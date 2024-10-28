@@ -48,3 +48,13 @@ impl Directory {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OutputFile {
+    pub location: String,
+    pub basename: String,
+    pub class: String,
+    pub checksum: String,
+    pub size: u64,
+    pub path: String,
+}
