@@ -46,7 +46,7 @@ pub fn resolve_path(filename: &str, relative_to: &str) -> String {
         None => relative_path,
     };
 
-    pathdiff::diff_paths(path, base_dir).expect("to be valid").to_string_lossy().into_owned()
+    pathdiff::diff_paths(path, base_dir).expect("path diffs not valid").to_string_lossy().into_owned()
 }
 
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {

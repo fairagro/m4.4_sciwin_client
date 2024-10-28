@@ -3,19 +3,33 @@ use crate::{
     cwl::types::CWLType,
     io::{copy_file, create_and_write_file},
 };
-use std::{collections::HashMap, env, error::Error, fs, process::Command as SystemCommand};
+use std::{
+    collections::HashMap,
+    env,
+    error::Error,
+    fs::{self, create_dir_all},
+    path::Path,
+    process::Command as SystemCommand,
+};
 use tempfile::tempdir;
 
-pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
+pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
     let dir = tempdir()?;
-    println!("Created staging directory: {:?}", dir.path());
+    println!("📁 Created staging directory: {:?}", dir.path());
+
+    //save current dir
+    let current = env::current_dir()?;
+    let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
+    //change to cwl dir as paths are given relative to here
+    env::set_current_dir(current.join(tool_path))?;
+
     //stage initial workdir
     if let Some(req) = &tool.requirements {
         for item in req {
             if let Requirement::InitialWorkDirRequirement(iwdr) = item {
                 for listing in &iwdr.listing {
-                    let path = dir.path().join(&listing.entryname);
+                    let path = dir.path().join(tool_path).join(&listing.entryname);
                     match &listing.entry {
                         Entry::Source(src) => {
                             create_and_write_file(&path.to_string_lossy(), src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
@@ -33,15 +47,17 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     for input in &tool.inputs {
         //TODO: Handle directories
         if input.type_ == CWLType::File {
-            let file = evaluate_input(input, &input_values)?;
+            let in_file = evaluate_input(input, &input_values)?;
+            let file = in_file.trim_start_matches("../");
             let path = dir.path().join(&file);
-            copy_file(file.as_str(), &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+            copy_file(&in_file, &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
         }
     }
 
     //change working directory and run command
-    let current = env::current_dir()?;
-    env::set_current_dir(dir.path())?;
+    let tmp_tool_dir = dir.path().join(tool_path);
+    create_dir_all(&tmp_tool_dir)?;
+    env::set_current_dir(tmp_tool_dir)?;
 
     run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
 
@@ -50,12 +66,13 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
         if let Some(binding) = &output.output_binding {
             let path = &current.join(&binding.glob);
             fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
+            println!("📜 Wrote output file: {:?}", path);
         }
     }
-    
+
     env::set_current_dir(&current)?;
 
-    println!("Command Executed with status: success!");
+    println!("✔️  Command Executed with status: success!");
     Ok(())
 }
 
@@ -76,7 +93,7 @@ fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<S
         eprintln!("You did not include a value for {}", input.id);
         Err(format!("You did not include a value for {}", input.id).as_str())?;
     }
-    Err("Could not evaluate input")?
+    Err(format!("Could not evaluate input: {}", input.id))?
 }
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
