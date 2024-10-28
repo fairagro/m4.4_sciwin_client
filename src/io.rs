@@ -1,9 +1,10 @@
 use crate::cwl::clt::Command;
-use sha2::{Digest, Sha256};
+use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::Path, vec,
+    path::Path,
+    vec,
 };
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
@@ -92,7 +93,7 @@ pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
 
 pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;
-    let mut hasher = Sha256::new();
+    let mut hasher = Sha1::new();
 
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;

@@ -128,6 +128,8 @@ pub struct CommandInputParameter {
     pub default: Option<DefaultValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_binding: Option<CommandLineBinding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl CommandInputParameter {
@@ -207,7 +209,10 @@ pub struct CommandOutputParameter {
     #[serde(default)]
     pub id: String,
     pub type_: CWLType,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_binding: Option<CommandOutputBinding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl CommandOutputParameter {

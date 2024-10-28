@@ -11,7 +11,7 @@ pathdiff = "0.2.1"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"
 serde_yml = "0.0.12"
-sha2 = "0.10.8"
+sha1 = "0.10.6"
 shlex = "1.3.0"
 slugify = "0.1.0"
 syntect = {version = "5.2.0", default-features = false, features = ["default-fancy"]}

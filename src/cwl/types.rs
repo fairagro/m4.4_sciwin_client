@@ -57,6 +57,8 @@ pub struct OutputFile {
     pub checksum: String,
     pub size: u64,
     pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]

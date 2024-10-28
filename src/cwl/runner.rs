@@ -14,7 +14,7 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>) -> Result<(), Box<dyn Error>> {
+pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, outdir: Option<String>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
@@ -42,7 +42,8 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     }
 
     //evaluate outputs
-    evaluate_outputs(&tool.outputs, &current)?;
+    let output_directory = if let Some(out) = outdir { &PathBuf::from(out) } else { &current };
+    evaluate_outputs(&tool.outputs, output_directory)?;
 
     //reset dir to calling directory
     env::set_current_dir(&current)?;
@@ -87,7 +88,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
             let out = &String::from_utf8_lossy(&output.stdout);
             create_and_write_file(stdout, out)?;
         } else {
-            println!("{}", String::from_utf8_lossy(&output.stdout));
+            eprintln!("{}", String::from_utf8_lossy(&output.stdout));
         }
     }
 
@@ -133,7 +134,7 @@ fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &Pa
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(&output.id, OutputItem::OutputFile(get_file_metadata(path.into())));
+                outputs.insert(&output.id, OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
             if let Some(binding) = &output.output_binding {
@@ -141,7 +142,8 @@ fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &Pa
                     initial_dir
                 } else {
                     let working_dir = env::current_dir()?;
-                    let glob_name = working_dir.file_name().unwrap().to_string_lossy()[1..].to_owned();
+                    let raw_basename = working_dir.file_name().unwrap().to_string_lossy();
+                    let glob_name = if raw_basename.starts_with(".") { raw_basename[1..].to_owned() } else { raw_basename.into_owned() };
                     &initial_dir.join(&glob_name)
                 };
                 fs::create_dir_all(dir)?;
@@ -155,7 +157,7 @@ fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &Pa
                 };
                 let files = copy_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
                 for file in files {
-                    out_dir.listing.push(get_file_metadata(file.into()));
+                    out_dir.listing.push(get_file_metadata(file.into(), None));
                 }
                 outputs.insert(&output.id, OutputItem::OutputDirectory(out_dir));
             }
@@ -167,7 +169,7 @@ fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &Pa
     Ok(())
 }
 
-fn get_file_metadata(path: PathBuf) -> OutputFile {
+fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
     let p_str = path.to_str().unwrap();
     let basename = get_filename_without_extension(p_str).unwrap();
     let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
@@ -180,6 +182,7 @@ fn get_file_metadata(path: PathBuf) -> OutputFile {
         checksum,
         size,
         path: path.to_string_lossy().into_owned(),
+        format,
     }
 }
 
@@ -212,7 +215,7 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
         if input.type_ == CWLType::File {
             let in_file = evaluate_input(input, input_values)?;
             let file = in_file.trim_start_matches("../");
-            let path = into_dir.path().join(file);
+            let path = into_dir.path().join(tool_path).join(file);
             let path_str = &path.to_string_lossy();
             copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
             files.push(path_str.clone().into_owned());

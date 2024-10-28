@@ -165,7 +165,7 @@ baseCommand:
 "#;
 
     let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
-    let result = run_commandlinetool(&tool, None, None);
+    let result = run_commandlinetool(&tool, None, None, None);
     assert!(result.is_ok());
     //delete results.txt
     let _ = fs::remove_file("results.txt");

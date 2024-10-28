@@ -21,11 +21,15 @@ pub enum ExecuteCommands {
 
 #[derive(Args, Debug)]
 pub struct LocalExecuteArgs {
-    #[arg(value_enum, default_value_t = Runner::Custom, short = 'r', long = "runner")]
+    #[arg(value_enum, default_value_t = Runner::Custom, short = 'r', long = "runner", help="Choose your cwl runner implementation")]
     pub runner: Runner,
+    #[arg(long = "outdir", help = "A path to output resulting files to")]
+    pub out_dir: Option<String>,
+    #[arg(long = "quiet", help = "Runner does not print to stdout")]
+    pub is_quiet: bool,
     #[arg(help = "CWL File to execute")]
     pub file: String,
-    #[arg(trailing_var_arg = true, help = "other arguments provided to cwl file", allow_hyphen_values = true)]
+    #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
     pub args: Vec<String>,
 }
 
@@ -39,8 +43,19 @@ pub enum Runner {
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     match args.runner {
         Runner::CWLTool => {
-            eprintln!("💻 Executing {} using cwltool.", &args.file);
+            if !args.is_quiet {
+                eprintln!("💻 Executing {} using cwltool.", &args.file);
+            }
             let mut cmd = Command::new("cwltool");
+
+            //handle args
+            if args.is_quiet {
+                cmd.arg("--quiet");
+            }
+            if let Some(outdir) = &args.out_dir {
+                cmd.arg("--outdir").arg(outdir);
+            }
+
             cmd.arg(&args.file).args(&args.args);
             let output = &cmd.output()?;
             if !output.stdout.is_empty() {
@@ -52,10 +67,13 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Runner::Custom => {
-            eprintln!(
-                "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed)",
-                &args.file
-            );
+            if !args.is_quiet {
+                eprintln!(
+                    "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed)",
+                    &args.file
+                );
+            }
+
             let contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {}: {}", args.file, e))?;
             let tool: CommandLineTool = serde_yml::from_str(&contents).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
 
@@ -90,7 +108,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 _ => {}
             }
 
-            run_commandlinetool(&tool, inputs, Some(args.file.as_str()))?;
+            run_commandlinetool(&tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
 
             Ok(())
         }

@@ -60,6 +60,7 @@ pub fn create_simple_cwl() {
                 position: None,
             }),
             default: None,
+            format: None,
         }])
         .with_outputs(vec![]);
     let result = serde_yml::to_string(&tool);
