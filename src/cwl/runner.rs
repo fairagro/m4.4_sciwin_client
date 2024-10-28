@@ -9,7 +9,7 @@ use tempfile::tempdir;
 pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
     let dir = tempdir()?;
-    println!("{:?}", dir.path());
+    println!("Created staging directory: {:?}", dir.path());
     //stage initial workdir
     if let Some(req) = &tool.requirements {
         for item in req {
@@ -35,15 +35,17 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
         if input.type_ == CWLType::File {
             let file = evaluate_input(input, &input_values)?;
             let path = dir.path().join(&file);
-            copy_file(&file.as_str(), &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+            copy_file(file.as_str(), &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
         }
     }
 
+    //change working directory and run command
     let current = env::current_dir()?;
     env::set_current_dir(dir.path())?;
 
     run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
 
+    //copy back requested output
     for output in &tool.outputs {
         if let Some(binding) = &output.output_binding {
             let path = &current.join(&binding.glob);

@@ -4,7 +4,8 @@ use super::{
 };
 use crate::io::resolve_path;
 use core::fmt;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_yml::Value;
 use std::{error::Error, fmt::Display};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -17,7 +18,9 @@ pub struct CommandLineTool {
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
+    #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
+    #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<Vec<Requirement>>,
@@ -115,6 +118,7 @@ pub enum Command {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandInputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -168,9 +172,7 @@ impl DefaultValue {
     pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
         matches!(
             (self, cwl_type),
-             (DefaultValue::File(_), CWLType::File) | 
-             (DefaultValue::Directory(_), CWLType::Directory) | 
-             (DefaultValue::Any(_), _)
+            (DefaultValue::File(_), CWLType::File) | (DefaultValue::Directory(_), CWLType::Directory) | (DefaultValue::Any(_), _)
         )
     }
 }
@@ -199,6 +201,7 @@ impl CommandLineBinding {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
     pub output_binding: Option<CommandOutputBinding>,
@@ -217,6 +220,74 @@ impl CommandOutputParameter {
         self.output_binding = Some(binding);
         self
     }
+}
+
+fn deserialize_inputs<'de, D>(deserializer: D) -> Result<Vec<CommandInputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: CommandInputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let param = match value {
+                    Value::String(type_str) => {
+                        let type_ = serde_yml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                        CommandInputParameter::default().with_id(id).with_type(type_)
+                    }
+                    _ => {
+                        let mut param: CommandInputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                        param.id = id.to_string();
+                        param
+                    }
+                };
+
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for inputs")),
+    };
+
+    Ok(parameters)
+}
+
+fn deserialize_outputs<'de, D>(deserializer: D) -> Result<Vec<CommandOutputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: CommandOutputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                param.id = id.to_string();
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(parameters)
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
