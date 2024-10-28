@@ -63,6 +63,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             //check for yaml input
             match args.args.len() {
+                // is input.yml file
                 1 => {
                     let input = &args.args[0];
                     if !input.starts_with("-") {
@@ -70,6 +71,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                         inputs = Some(serde_yml::from_str(&yaml).map_err(|e| format!("Could not read input file: {}", e))?);
                     }
                 }
+                //arguments given as commandline inputs
                 n if n > 1 => {
                     inputs = Some(HashMap::new());
                     let map = inputs.as_mut().unwrap();
@@ -84,6 +86,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                         i += 1;
                     }
                 }
+                //ignore and use without args
                 _ => {}
             }
 
