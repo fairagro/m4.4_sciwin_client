@@ -70,7 +70,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                         inputs = Some(serde_yml::from_str(&yaml).map_err(|e| format!("Could not read input file: {}", e))?);
                     }
                 }
-                _ => {
+                n if n > 1 => {
                     inputs = Some(HashMap::new());
                     let map = inputs.as_mut().unwrap();
                     let mut i = 0;
@@ -84,6 +84,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                         i += 1;
                     }
                 }
+                _ => {}
             }
 
             run_commandlinetool(&tool, inputs, Some(args.file.as_str()))?;
