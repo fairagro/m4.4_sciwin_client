@@ -24,6 +24,8 @@ pub struct CommandLineTool {
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hints: Option<Vec<Requirement>>,
 }
 
 impl Default for CommandLineTool {
@@ -37,6 +39,7 @@ impl Default for CommandLineTool {
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
+            hints: Default::default(),
         }
     }
 }
