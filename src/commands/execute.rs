@@ -15,7 +15,7 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
 
 #[derive(Debug, Subcommand)]
 pub enum ExecuteCommands {
-    #[command(about = "Runs CWL locally using a custom runner")]
+    #[command(about = "Runs CWL files locally using a custom runner or cwltool")]
     Local(LocalExecuteArgs),
 }
 

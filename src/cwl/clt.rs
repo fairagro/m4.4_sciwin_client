@@ -305,6 +305,7 @@ pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
     DockerRequirement(DockerRequirement),
     ResourceRequirement(ResourceRequirement),
+    ShellCommandRequirement,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

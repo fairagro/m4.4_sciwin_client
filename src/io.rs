@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::Path,
+    path::Path, vec,
 };
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
@@ -36,6 +36,22 @@ pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
 
     fs::copy(from, to)?;
     Ok(())
+}
+
+pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
+    let mut files = vec![];
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dest_path = Path::new(dest).join(entry.file_name());
+        if src_path.is_dir() {
+            files.extend(copy_dir(src, dest)?);
+        } else {
+            copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            files.push(dest_path.to_string_lossy().into_owned())
+        }
+    }
+    Ok(files)
 }
 
 pub fn resolve_path(filename: &str, relative_to: &str) -> String {

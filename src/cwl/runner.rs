@@ -1,7 +1,7 @@
-use super::clt::{Command, CommandInputParameter, CommandLineTool, DefaultValue, Entry, Requirement};
+use super::clt::{Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, Requirement};
 use crate::{
-    cwl::types::{CWLType, OutputFile},
-    io::{copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
+    cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
+    io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
 };
 use std::{
     collections::HashMap,
@@ -10,8 +10,9 @@ use std::{
     fs::{self, create_dir_all},
     path::{Path, PathBuf},
     process::Command as SystemCommand,
+    vec,
 };
-use tempfile::tempdir;
+use tempfile::{tempdir, TempDir};
 
 pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
@@ -24,57 +25,26 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     //change to cwl dir as paths are given relative to here
     env::set_current_dir(current.join(tool_path))?;
 
-    //stage initial workdir
-    if let Some(req) = &tool.requirements {
-        for item in req {
-            if let Requirement::InitialWorkDirRequirement(iwdr) = item {
-                for listing in &iwdr.listing {
-                    let path = dir.path().join(tool_path).join(&listing.entryname);
-                    match &listing.entry {
-                        Entry::Source(src) => {
-                            create_and_write_file(&path.to_string_lossy(), src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
-                        }
-                        Entry::Include(f) => {
-                            copy_file(&f.include, &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", f.include, path, e))?;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    //stage files
+    let staged_files = stage_needed_files(tool, &dir, &input_values, tool_path)?;
 
-    //stage inputs
-    for input in &tool.inputs {
-        //TODO: Handle directories
-        if input.type_ == CWLType::File {
-            let in_file = evaluate_input(input, &input_values)?;
-            let file = in_file.trim_start_matches("../");
-            let path = dir.path().join(file);
-            copy_file(&in_file, &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
-        }
-    }
-
-    //change working directory and run command
+    //change working directory
     let tmp_tool_dir = dir.path().join(tool_path);
     create_dir_all(&tmp_tool_dir)?;
     env::set_current_dir(tmp_tool_dir)?;
 
+    //run the tool's command
     run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
 
-    //copy back requested output
-    let mut outputs = HashMap::new();
-    for output in &tool.outputs {
-        if let Some(binding) = &output.output_binding {
-            let path = &current.join(&binding.glob);
-            fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
-            eprintln!("📜 Wrote output file: {:?}", path);
-            outputs.insert(&output.id, get_file_metadata(path.into()));
-        }
+    //remove staged files
+    for file in staged_files {
+        fs::remove_file(file)?;
     }
-    //print output metadata
-    let json = serde_json::to_string_pretty(&outputs)?;
-    println!("{}", json);
 
+    //evaluate outputs
+    evaluate_outputs(&tool.outputs, &current)?;
+
+    //reset dir to calling directory
     env::set_current_dir(&current)?;
 
     eprintln!("✔️  Command Executed with status: success!");
@@ -154,11 +124,54 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     Ok(())
 }
 
+fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<(), Box<dyn Error>> {
+    //copy back requested output
+    let mut outputs: HashMap<&String, OutputItem> = HashMap::new();
+    for output in tool_outputs {
+        if output.type_ == CWLType::File {
+            if let Some(binding) = &output.output_binding {
+                let path = &initial_dir.join(&binding.glob);
+                fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
+                eprintln!("📜 Wrote output file: {:?}", path);
+                outputs.insert(&output.id, OutputItem::OutputFile(get_file_metadata(path.into())));
+            }
+        } else if output.type_ == CWLType::Directory {
+            if let Some(binding) = &output.output_binding {
+                let dir = if &binding.glob != "." {
+                    initial_dir
+                } else {
+                    let working_dir = env::current_dir()?;
+                    let glob_name = working_dir.file_name().unwrap().to_string_lossy()[1..].to_owned();
+                    &initial_dir.join(&glob_name)
+                };
+                fs::create_dir_all(dir)?;
+
+                let mut out_dir = OutputDirectory {
+                    location: format!("file://{}", dir.display()),
+                    basename: dir.file_name().unwrap().to_string_lossy().into_owned(),
+                    class: "Directory".to_string(),
+                    listing: vec![],
+                    path: dir.to_string_lossy().into_owned(),
+                };
+                let files = copy_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
+                for file in files {
+                    out_dir.listing.push(get_file_metadata(file.into()));
+                }
+                outputs.insert(&output.id, OutputItem::OutputDirectory(out_dir));
+            }
+        }
+    }
+    //print output metadata
+    let json = serde_json::to_string_pretty(&outputs)?;
+    println!("{}", json);
+    Ok(())
+}
+
 fn get_file_metadata(path: PathBuf) -> OutputFile {
     let p_str = path.to_str().unwrap();
     let basename = get_filename_without_extension(p_str).unwrap();
     let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
-    let checksum = get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path));
+    let checksum = format!("sha1${}", get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path)));
 
     OutputFile {
         location: format!("file://{}", path.display()),
@@ -168,4 +181,43 @@ fn get_file_metadata(path: PathBuf) -> OutputFile {
         size,
         path: path.to_string_lossy().into_owned(),
     }
+}
+
+fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: &Option<HashMap<String, DefaultValue>>, tool_path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut files = vec![];
+    //stage initial workdir
+    if let Some(req) = &tool.requirements {
+        for item in req {
+            if let Requirement::InitialWorkDirRequirement(iwdr) = item {
+                for listing in &iwdr.listing {
+                    let path = into_dir.path().join(tool_path).join(&listing.entryname);
+                    let path_str = &path.to_string_lossy();
+                    files.push(path_str.clone().into_owned());
+                    match &listing.entry {
+                        Entry::Source(src) => {
+                            create_and_write_file(&path_str, src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
+                        }
+                        Entry::Include(f) => {
+                            copy_file(&f.include, &path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", f.include, path, e))?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //stage inputs
+    for input in &tool.inputs {
+        //TODO: Handle directories
+        if input.type_ == CWLType::File {
+            let in_file = evaluate_input(input, input_values)?;
+            let file = in_file.trim_start_matches("../");
+            let path = into_dir.path().join(file);
+            let path_str = &path.to_string_lossy();
+            copy_file(&in_file, &path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+            files.push(path_str.clone().into_owned());
+        }
+    }
+
+    Ok(files)
 }

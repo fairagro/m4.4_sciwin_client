@@ -58,3 +58,19 @@ pub struct OutputFile {
     pub size: u64,
     pub path: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OutputDirectory {
+    pub location: String,
+    pub basename: String,
+    pub class: String,
+    pub listing: Vec<OutputFile>,
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum OutputItem {
+    OutputFile(OutputFile),
+    OutputDirectory(OutputDirectory),
+}
