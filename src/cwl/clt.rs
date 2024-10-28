@@ -1,12 +1,12 @@
 use super::{
     runner::run_command,
-    types::{CWLType, Directory, File},
+    types::{CWLType, Directory, EnvironmentDef, File},
 };
 use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yml::Value;
-use std::{error::Error, fmt::Display};
+use serde_yml::{Mapping, Value};
+use std::{collections::HashMap, error::Error, fmt::Display};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -23,6 +23,8 @@ pub struct CommandLineTool {
     #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hints: Option<Vec<Requirement>>,
@@ -310,7 +312,53 @@ pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
     DockerRequirement(DockerRequirement),
     ResourceRequirement(ResourceRequirement),
+    EnvVarRequirement(EnvVarRequirement),
     ShellCommandRequirement,
+}
+
+fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Option<Value> = Deserialize::deserialize(deserializer)?;
+    if value.is_none() {
+        return Ok(None);
+    }
+
+    let value = value.unwrap();
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: Requirement = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let class = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let mut modified_value = value;
+                let new_map = match modified_value {
+                    Value::Mapping(ref mut inner_map) => {
+                        inner_map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                        inner_map.clone()
+                    }
+                    _ => {
+                        let mut map = Mapping::new();
+                        map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                        map
+                    }
+                };
+                let param: Requirement = serde_yml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(Some(parameters))
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -366,6 +414,19 @@ pub struct ResourceRequirement {
     pub tmpdir_max: Option<i32>,
     pub outdir_min: Option<i32>,
     pub outdir_max: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvVarRequirement {
+    pub env_def: EnviromentDefs,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum EnviromentDefs {
+    Vec(Vec<EnvironmentDef>),
+    Map(HashMap<String, String>),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

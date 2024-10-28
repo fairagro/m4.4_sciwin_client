@@ -143,7 +143,11 @@ fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &Pa
                 } else {
                     let working_dir = env::current_dir()?;
                     let raw_basename = working_dir.file_name().unwrap().to_string_lossy();
-                    let glob_name = if raw_basename.starts_with(".") { raw_basename[1..].to_owned() } else { raw_basename.into_owned() };
+                    let glob_name = if let Some(stripped) = raw_basename.strip_prefix(".") {
+                        stripped.to_owned()
+                    } else {
+                        raw_basename.into_owned()
+                    };
                     &initial_dir.join(&glob_name)
                 };
                 fs::create_dir_all(dir)?;
