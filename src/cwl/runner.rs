@@ -51,26 +51,6 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     Ok(())
 }
 
-///Either gets the default value for input or the provided one (preferred)
-fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
-    if let Some(ref values) = input_values {
-        if let Some(value) = values.get(&input.id) {
-            if !value.has_matching_type(&input.type_) {
-                //change handling accordingly in utils on main branch!
-                eprintln!("CWLType is not matching input type");
-                Err("CWLType is not matching input type")?;
-            }
-            return Ok(value.as_value_string());
-        }
-    } else if let Some(default_) = &input.default {
-        return Ok(default_.as_value_string());
-    } else {
-        eprintln!("You did not include a value for {}", input.id);
-        Err(format!("You did not include a value for {}", input.id).as_str())?;
-    }
-    Err(format!("Could not evaluate input: {}", input.id))?
-}
-
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     //get executable
     let cmd = match &tool.base_command {
@@ -122,6 +102,26 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     }
 
     Ok(())
+}
+
+///Either gets the default value for input or the provided one (preferred)
+fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
+    if let Some(ref values) = input_values {
+        if let Some(value) = values.get(&input.id) {
+            if !value.has_matching_type(&input.type_) {
+                //change handling accordingly in utils on main branch!
+                eprintln!("CWLType is not matching input type");
+                Err("CWLType is not matching input type")?;
+            }
+            return Ok(value.as_value_string());
+        }
+    } else if let Some(default_) = &input.default {
+        return Ok(default_.as_value_string());
+    } else {
+        eprintln!("You did not include a value for {}", input.id);
+        Err(format!("You did not include a value for {}", input.id).as_str())?;
+    }
+    Err(format!("Could not evaluate input: {}", input.id))?
 }
 
 fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<(), Box<dyn Error>> {
