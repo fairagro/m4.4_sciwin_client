@@ -304,6 +304,7 @@ pub struct CommandOutputBinding {
 pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
     DockerRequirement(DockerRequirement),
+    ResourceRequirement(ResourceRequirement),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -346,6 +347,19 @@ impl DockerRequirement {
     pub fn from_pull(image_id: &str) -> Self {
         DockerRequirement::DockerPull(image_id.to_string())
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceRequirement {
+    pub cores_min: Option<i32>,
+    pub cores_max: Option<i32>,
+    pub ram_min: Option<i32>,
+    pub ram_max: Option<i32>,
+    pub tmpdir_min: Option<i32>,
+    pub tmpdir_max: Option<i32>,
+    pub outdir_min: Option<i32>,
+    pub outdir_max: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
