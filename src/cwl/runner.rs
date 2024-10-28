@@ -195,10 +195,10 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
                     files.push(path_str.clone().into_owned());
                     match &listing.entry {
                         Entry::Source(src) => {
-                            create_and_write_file(&path_str, src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
+                            create_and_write_file(path_str, src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
                         }
                         Entry::Include(f) => {
-                            copy_file(&f.include, &path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", f.include, path, e))?;
+                            copy_file(&f.include, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", f.include, path, e))?;
                         }
                     }
                 }
@@ -214,7 +214,7 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
             let file = in_file.trim_start_matches("../");
             let path = into_dir.path().join(file);
             let path_str = &path.to_string_lossy();
-            copy_file(&in_file, &path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+            copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
             files.push(path_str.clone().into_owned());
         }
     }
