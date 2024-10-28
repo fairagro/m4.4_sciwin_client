@@ -49,7 +49,7 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
         if input.type_ == CWLType::File {
             let in_file = evaluate_input(input, &input_values)?;
             let file = in_file.trim_start_matches("../");
-            let path = dir.path().join(&file);
+            let path = dir.path().join(file);
             copy_file(&in_file, &path.to_string_lossy()).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
         }
     }
@@ -157,8 +157,8 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
 fn get_file_metadata(path: PathBuf) -> OutputFile {
     let p_str = path.to_str().unwrap();
     let basename = get_filename_without_extension(p_str).unwrap();
-    let size = get_file_size(&path).expect(&format!("Could not get filesize: {:?}", path));
-    let checksum = get_file_checksum(&path).expect(&format!("Could not get checksum: {:?}", path));
+    let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
+    let checksum = get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path));
 
     OutputFile {
         location: format!("file://{}", path.display()),
