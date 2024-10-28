@@ -27,6 +27,8 @@ pub struct CommandLineTool {
     #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub hints: Option<Vec<Requirement>>,
 }
 
