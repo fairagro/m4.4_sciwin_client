@@ -1,4 +1,4 @@
-use super::clt::{Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, Requirement};
+use super::clt::{Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement};
 use crate::{
     cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
@@ -33,6 +33,15 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     create_dir_all(&tmp_tool_dir)?;
     env::set_current_dir(tmp_tool_dir)?;
 
+    let mut environment_variables = vec![];
+    if let Some(requirements) = &tool.requirements {
+        for req in requirements {
+            if let Requirement::EnvVarRequirement(env_defs) = req {
+                environment_variables.extend(set_environment_vars(env_defs));
+            }
+        }
+    }
+
     //run the tool's command
     run_command(tool, input_values).map_err(|e| format!("Could not execute tool command: {}", e))?;
 
@@ -40,11 +49,13 @@ pub fn run_commandlinetool(tool: &CommandLineTool, input_values: Option<HashMap<
     for file in staged_files {
         fs::remove_file(file)?;
     }
-
+    
     //evaluate outputs
     let output_directory = if let Some(out) = outdir { &PathBuf::from(out) } else { &current };
     evaluate_outputs(&tool.outputs, output_directory)?;
-
+    
+    unset_environment_vars(environment_variables);
+    
     //reset dir to calling directory
     env::set_current_dir(&current)?;
 
@@ -227,4 +238,29 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
     }
 
     Ok(files)
+}
+
+fn set_environment_vars(req: &EnvVarRequirement) -> Vec<String> {
+    let mut keys = vec![];
+    match &req.env_def {
+        EnviromentDefs::Vec(vec) => {
+            for def in vec {
+                env::set_var(&def.env_name, &def.env_value);
+                keys.push(def.env_name.to_string());
+            }
+        }
+        EnviromentDefs::Map(hash_map) => {
+            for (key, value) in hash_map {
+                env::set_var(&key, &value);
+                keys.push(key.to_string());
+            }
+        }
+    }
+    keys
+}
+
+fn unset_environment_vars(keys: Vec<String>) {
+    for key in keys {
+        env::remove_var(key);
+    }
 }

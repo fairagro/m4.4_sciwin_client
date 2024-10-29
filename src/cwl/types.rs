@@ -52,8 +52,8 @@ impl Directory {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvironmentDef {
-    env_name: String,
-    env_value: String,
+    pub env_name: String,
+    pub env_value: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
