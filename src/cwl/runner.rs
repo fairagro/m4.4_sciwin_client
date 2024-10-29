@@ -265,7 +265,6 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
 
     //stage inputs
     for input in &tool.inputs {
-        
         if input.type_ == CWLType::File {
             let in_file = evaluate_input(input, input_values)?;
             let file = in_file.trim_start_matches("../");
@@ -273,8 +272,7 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
             let path_str = &path.to_string_lossy();
             copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
             files.push(path_str.clone().into_owned());
-        }
-        else if input.type_ == CWLType::Directory {
+        } else if input.type_ == CWLType::Directory {
             let in_dir = evaluate_input(input, input_values)?;
             let dir = in_dir.trim_start_matches("../");
             let path = into_dir.path().join(tool_path).join(dir);

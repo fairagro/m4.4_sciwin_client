@@ -1,10 +1,12 @@
-
+use crate::cwl::clt::Command;
 use sha1::{Digest, Sha1};
 use std::{
-    fs::{self, File}, io::{self, Error, Read, Write}, path::Path, process::Command as SystemCommand, vec
+    fs::{self, File},
+    io::{self, Error, Read, Write},
+    path::Path,
+    process::Command as SystemCommand,
+    vec,
 };
-
-use crate::cwl::clt::Command;
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
 
@@ -102,7 +104,7 @@ pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(format!("{:x}", result))
 }
 
-pub fn get_shell_command() -> SystemCommand{
+pub fn get_shell_command() -> SystemCommand {
     let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
     let param = if cfg!(target_os = "windows") { "/C" } else { "-c" };
     let mut cmd = SystemCommand::new(shell);
