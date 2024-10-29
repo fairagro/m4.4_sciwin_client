@@ -324,7 +324,7 @@ fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashM
                 Argument::Binding(binding) => {
                     let mut new_binding = binding.clone();
                     if let Some(value_from) = &mut new_binding.value_from {
-                        *value_from = set_placeholder_values_in_string(&value_from, input_values, &cwl.inputs);
+                        *value_from = set_placeholder_values_in_string(value_from, input_values, &cwl.inputs);
                     }
                     Argument::Binding(new_binding)
                 }
