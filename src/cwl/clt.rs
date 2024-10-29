@@ -6,13 +6,14 @@ use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::{Mapping, Value};
-use std::{collections::HashMap, error::Error, fmt::Display};
+use std::{collections::HashMap, error::Error, fmt::Display, vec};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
+    #[serde(default)]
     pub base_command: Command,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
@@ -30,6 +31,8 @@ pub struct CommandLineTool {
     #[serde(deserialize_with = "deserialize_requirements")]
     #[serde(default)]
     pub hints: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<Argument>>,
 }
 
 impl Default for CommandLineTool {
@@ -37,13 +40,14 @@ impl Default for CommandLineTool {
         Self {
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
-            base_command: Command::Single("echo".to_string()),
+            base_command: Default::default(),
             stdout: Default::default(),
             stderr: Default::default(),
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
             hints: Default::default(),
+            arguments: Default::default(),
         }
     }
 }
@@ -117,9 +121,22 @@ impl CommandLineTool {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
+pub enum Argument {
+    String(String),
+    Binding(CommandLineBinding),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
 pub enum Command {
     Single(String),
     Multiple(Vec<String>),
+}
+
+impl Default for Command{
+    fn default() -> Self {
+        Command::Single(String::new())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -186,13 +203,15 @@ impl DefaultValue {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_from: Option<String>,
 }
 
 impl CommandLineBinding {

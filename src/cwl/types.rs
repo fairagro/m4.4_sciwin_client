@@ -21,6 +21,7 @@ pub enum CWLType {
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
+    #[serde(alias = "path")]
     pub location: String,
 }
 
@@ -37,6 +38,7 @@ impl File {
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,
+    #[serde(alias = "path")]
     pub location: String,
 }
 

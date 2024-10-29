@@ -1,4 +1,4 @@
-use super::clt::{Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement};
+use super::clt::{Argument, Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement};
 use crate::{
     cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
@@ -25,10 +25,10 @@ pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<Hash
     let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
     //change to cwl dir as paths are given relative to here
     env::set_current_dir(current.join(tool_path))?;
-    
+
     //replace inputs placeholders
     set_placeholder_values(tool, input_values.as_ref());
-    
+
     //stage files
     let staged_files = stage_needed_files(tool, &dir, &input_values, tool_path)?;
 
@@ -63,19 +63,46 @@ pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<Hash
 }
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
+    let mut args = vec![];
+
     //get executable
     let cmd = match &tool.base_command {
         Command::Single(cmd) => cmd,
         Command::Multiple(vec) => &vec[0],
     };
 
-    let mut command = SystemCommand::new(cmd);
+    args.push(cmd);
     //append rest of base command as args
     if let Command::Multiple(ref vec) = &tool.base_command {
-        command.args(&vec[1..]);
+        args.extend(&vec[1..]);
     }
 
-    //TODO: handle arguments field...
+    //handle arguments field...
+    if let Some(arguments) = &tool.arguments {
+        for arg in arguments {
+            match arg {
+                Argument::String(str) => {
+                    args.push(str);
+                }
+                Argument::Binding(binding) => {
+                    if let Some(prefix) = &binding.prefix {
+                        args.push(prefix);
+                    }
+                    if let Some(value_from) = &binding.value_from {
+                        args.push(value_from);
+                    }
+                }
+            }
+        }
+    }
+
+    //remove empty args
+    args.retain(|s| !s.is_empty());
+
+    let mut command = SystemCommand::new(args[0]);
+    for arg in &args[1..] {
+        command.arg(arg);
+    }
 
     //build inputs from either fn-args or default values.
     let mut inputs = vec![];
@@ -286,6 +313,26 @@ fn unset_environment_vars(keys: Vec<String>) {
 }
 
 fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>) {
+    //set values in arguments
+    if let Some(args) = &mut cwl.arguments {
+        for arg in args.iter_mut() {
+            *arg = match arg {
+                Argument::String(str) => {
+                    let new_str = set_placeholder_values_in_string(str, input_values, &cwl.inputs);
+                    Argument::String(new_str)
+                }
+                Argument::Binding(binding) => {
+                    let mut new_binding = binding.clone();
+                    if let Some(value_from) = &mut new_binding.value_from {
+                        *value_from = set_placeholder_values_in_string(&value_from, input_values, &cwl.inputs);
+                    }
+                    Argument::Binding(new_binding)
+                }
+            }
+        }
+    }
+
+    //set values in output glob
     for output in cwl.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
             let glob = set_placeholder_values_in_string(&binding.glob, input_values, &cwl.inputs);
@@ -343,14 +390,14 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, inpu
 }
 
 fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) -> String {
-    let re = Regex::new(r"\$\(inputs.(\w*)\)").unwrap();
+    let re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
     re.replace_all(text, |caps: &regex::Captures| {
         let mut placeholder = &caps[1];
         if placeholder.ends_with(".path") {
-            placeholder = placeholder.strip_prefix(".path").unwrap_or(placeholder);
-            get_input_value(placeholder, input_values, inputs, false).unwrap_or_else(|| placeholder.to_string())
+            placeholder = placeholder.strip_suffix(".path").unwrap_or(placeholder);
+            get_input_value(placeholder, input_values, inputs, false).expect("Input not provided")
         } else {
-            get_input_value(placeholder, input_values, inputs, true).unwrap_or_else(|| placeholder.to_string())
+            get_input_value(placeholder, input_values, inputs, true).expect("Input not provided")
         }
     })
     .to_string()

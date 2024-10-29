@@ -58,6 +58,7 @@ pub fn create_simple_cwl() {
             input_binding: Some(CommandLineBinding {
                 prefix: Some("-la".to_string()),
                 position: None,
+                value_from: None,
             }),
             default: None,
             format: None,
