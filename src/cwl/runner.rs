@@ -1,4 +1,7 @@
-use super::clt::{Argument, Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement};
+use super::{
+    clt::{Argument, Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement},
+    types::{Directory, File},
+};
 use crate::{
     cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension, get_shell_command},
@@ -36,7 +39,8 @@ pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<Hash
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files
-    let staged_files = stage_needed_files(tool, &dir, &input_values, tool_path)?;
+    let mut input_values = input_values;
+    let staged_files = stage_needed_files(tool, &dir, &mut input_values, tool_path)?;
 
     //change working directory
     let tmp_tool_dir = dir.path().join(tool_path);
@@ -240,7 +244,7 @@ fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
     }
 }
 
-fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: &Option<HashMap<String, DefaultValue>>, tool_path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn stage_needed_files(tool: &mut CommandLineTool, into_dir: &TempDir, input_values: &mut Option<HashMap<String, DefaultValue>>, tool_path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut files = vec![];
     //stage initial workdir
     if let Some(req) = &tool.requirements {
@@ -264,20 +268,65 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
     }
 
     //stage inputs
-    for input in &tool.inputs {
+    for input in &mut tool.inputs {
+        //step ahead if not file or dir
+        if input.type_ != CWLType::File && input.type_ != CWLType::Directory {
+            continue;
+        }
+
+        let in_file = evaluate_input(input, input_values)?;
+        let mut file = in_file.clone();
+
+        //check if we are going deeper than root:
+        let segments = file.split("../").collect::<Vec<_>>();
+        let depth = segments.len() - 1;
+        let tool_depth = tool_path.components().count();
+
+        if depth > tool_depth {
+            //stage into tool dir
+            file = file.trim_start_matches("../").to_string();
+
+            //rewrite inputs
+            if let Some(values) = input_values {
+                if let Some(existing_value) = values.get(&input.id) {
+                    let new_value = match existing_value {
+                        DefaultValue::File(file) => {
+                            let new_location = file.location.trim_start_matches("../").to_string();
+                            DefaultValue::File(File::from_location(&new_location))
+                        }
+                        DefaultValue::Directory(directory) => {
+                            let new_location = directory.location.trim_start_matches("../").to_string();
+                            DefaultValue::Directory(Directory::from_location(&new_location))
+                        }
+                        DefaultValue::Any(_) => return Err("Unexpected Scenario".into()),
+                    };
+                    values.insert(input.id.clone(), new_value);
+                }
+            }
+
+            if let Some(default) = &mut input.default {
+                let new_value = match default {
+                    DefaultValue::File(file) => {
+                        let new_location = file.location.trim_start_matches("../").to_string();
+                        DefaultValue::File(File::from_location(&new_location))
+                    }
+                    DefaultValue::Directory(directory) => {
+                        let new_location = directory.location.trim_start_matches("../").to_string();
+                        DefaultValue::Directory(Directory::from_location(&new_location))
+                    }
+                    DefaultValue::Any(_) => return Err("Unexpected Scenario".into()),
+                };
+                input.default = Some(new_value);
+            }
+        }
+        let path = into_dir.path().join(tool_path).join(&file);
+        let path_str = &path.to_string_lossy();
+
         if input.type_ == CWLType::File {
-            let in_file = evaluate_input(input, input_values)?;
-            let file = in_file.trim_start_matches("../");
-            let path = into_dir.path().join(tool_path).join(file);
-            let path_str = &path.to_string_lossy();
-            copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
+            copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", in_file, path, e))?;
             files.push(path_str.clone().into_owned());
         } else if input.type_ == CWLType::Directory {
-            let in_dir = evaluate_input(input, input_values)?;
-            let dir = in_dir.trim_start_matches("../");
-            let path = into_dir.path().join(tool_path).join(dir);
-            let path_str = &path.to_string_lossy();
-            copy_dir(&in_dir, path_str).map_err(|e| format!("Failed to copy dir from {:?} to {:?}: {}", dir, path, e))?;
+            copy_dir(&in_file, path_str).map_err(|e| format!("Failed to copy dir from {:?} to {:?}: {}", in_file, path, e))?;
         }
     }
 
