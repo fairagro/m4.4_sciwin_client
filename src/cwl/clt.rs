@@ -450,7 +450,7 @@ impl Entry {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Include {
     #[serde(rename = "$include")]
     pub include: String,

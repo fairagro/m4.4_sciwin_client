@@ -3,6 +3,7 @@ use crate::{
     cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
 };
+use regex::Regex;
 use std::{
     collections::HashMap,
     env,
@@ -12,7 +13,6 @@ use std::{
     process::Command as SystemCommand,
     vec,
 };
-use regex::Regex;
 use tempfile::{tempdir, TempDir};
 
 pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, outdir: Option<String>) -> Result<(), Box<dyn Error>> {
@@ -20,15 +20,15 @@ pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<Hash
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
 
-    //replace inputs placeholders
-    set_placeholder_values(tool, input_values.as_ref());
-    
     //save current dir
     let current = env::current_dir()?;
     let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
     //change to cwl dir as paths are given relative to here
     env::set_current_dir(current.join(tool_path))?;
-
+    
+    //replace inputs placeholders
+    set_placeholder_values(tool, input_values.as_ref());
+    
     //stage files
     let staged_files = stage_needed_files(tool, &dir, &input_values, tool_path)?;
 
@@ -209,7 +209,7 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
                 for listing in &iwdr.listing {
                     let path = into_dir.path().join(tool_path).join(&listing.entryname);
                     let path_str = &path.to_string_lossy();
-                    files.push(path_str.clone().into_owned());
+                    //files.push(path_str.clone().into_owned());
                     match &listing.entry {
                         Entry::Source(src) => {
                             create_and_write_file(path_str, src).map_err(|e| format!("Failed to create and write file {:?}: {}", path, e))?;
@@ -239,8 +239,8 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
     Ok(files)
 }
 
-fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String>{
-    let mut environment_variables = vec![];    
+fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String> {
+    let mut environment_variables = vec![];
     //iterate requirements
     if let Some(requirements) = &tool.requirements {
         for req in requirements {
@@ -250,7 +250,7 @@ fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String>{
         }
     }
     //iterate hints
-    if let Some(requirements) = &tool.hints{
+    if let Some(requirements) = &tool.hints {
         for req in requirements {
             if let Requirement::EnvVarRequirement(env_defs) = req {
                 environment_variables.extend(set_environment_vars(env_defs));
@@ -286,7 +286,13 @@ fn unset_environment_vars(keys: Vec<String>) {
 }
 
 fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>) {
-    
+    for output in cwl.outputs.iter_mut() {
+        if let Some(binding) = &mut output.output_binding {
+            let glob = set_placeholder_values_in_string(&binding.glob, input_values, &cwl.inputs);
+            binding.glob = glob;
+        }
+    }
+
     //set values in requirements
     if let Some(requirements) = &mut cwl.requirements {
         set_placeholder_values_requirements(requirements, input_values, &cwl.inputs);
@@ -298,49 +304,90 @@ fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashM
     }
 }
 
-fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]){
+fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) {
     for requirement in requirements {
-        if let Requirement::EnvVarRequirement(env_req) = requirement{
+        if let Requirement::EnvVarRequirement(env_req) = requirement {
             env_req.env_def = match &mut env_req.env_def {
                 EnviromentDefs::Vec(vec) => {
                     for env_def in vec.iter_mut() {
                         env_def.env_value = set_placeholder_values_in_string(&env_def.env_value, input_values, inputs)
                     }
                     EnviromentDefs::Vec(vec.clone())
-                },
+                }
                 EnviromentDefs::Map(hash_map) => {
                     for (_key, value) in hash_map.iter_mut() {
                         *value = set_placeholder_values_in_string(value, input_values, inputs);
                     }
                     EnviromentDefs::Map(hash_map.clone())
-                },
+                }
+            }
+        }
+
+        if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
+            for listing in wd_req.listing.iter_mut() {
+                listing.entryname = set_placeholder_values_in_string(&listing.entryname, input_values, inputs);
+                listing.entry = match &mut listing.entry {
+                    Entry::Source(src) => {
+                        *src = set_placeholder_values_in_string(src, input_values, inputs);
+                        Entry::Source(src.clone())
+                    }
+                    Entry::Include(include) => {
+                        let updated_include = set_placeholder_values_in_string(&include.include, input_values, inputs);
+                        include.include = updated_include;
+                        Entry::Include(include.clone())
+                    }
+                }
             }
         }
     }
 }
 
-fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) -> String{
+fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) -> String {
     let re = Regex::new(r"\$\(inputs.(\w*)\)").unwrap();
     re.replace_all(text, |caps: &regex::Captures| {
-        let placeholder = &caps[1];
-        get_input_value(placeholder, input_values, inputs).unwrap_or_else(|| placeholder.to_string())
-    }).to_string()
+        let mut placeholder = &caps[1];
+        if placeholder.ends_with(".path") {
+            placeholder = placeholder.strip_prefix(".path").unwrap_or(placeholder);
+            get_input_value(placeholder, input_values, inputs, false).unwrap_or_else(|| placeholder.to_string())
+        } else {
+            get_input_value(placeholder, input_values, inputs, true).unwrap_or_else(|| placeholder.to_string())
+        }
+    })
+    .to_string()
 }
 
-fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) -> Option<String> {
+fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter], read_file: bool) -> Option<String> {
     let mut value = None;
 
     for input in inputs {
         if input.id == key {
             if let Some(default) = &input.default {
-                value = Some(default.as_value_string());
+                if let DefaultValue::File(file) = default {
+                    if read_file {
+                        let contents = fs::read_to_string(&file.location).unwrap_or_else(|_| panic!("Could not read file {}", file.location));
+                        value = Some(contents)
+                    } else {
+                        value = Some(default.as_value_string());
+                    }
+                } else {
+                    value = Some(default.as_value_string());
+                }
             }
         }
     }
 
     if let Some(values) = input_values {
         if values.contains_key(key) {
-            value = Some(values[key].as_value_string());
+            if let DefaultValue::File(file) = &values[key] {
+                if read_file {
+                    let contents = fs::read_to_string(&file.location).unwrap_or_else(|_| panic!("Could not read file {}", file.location));
+                    value = Some(contents)
+                } else {
+                    value = Some(values[key].as_value_string());
+                }
+            } else {
+                value = Some(values[key].as_value_string());
+            }
         }
     }
     value
