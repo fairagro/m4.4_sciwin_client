@@ -424,7 +424,7 @@ pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum EnviromentDefs {
     Vec(Vec<EnvironmentDef>),

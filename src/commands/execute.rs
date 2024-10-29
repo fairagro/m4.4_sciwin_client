@@ -75,7 +75,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             }
 
             let contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {}: {}", args.file, e))?;
-            let tool: CommandLineTool = serde_yml::from_str(&contents).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
+            let mut tool: CommandLineTool = serde_yml::from_str(&contents).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
 
             let mut inputs: Option<HashMap<String, DefaultValue>> = None;
 
@@ -108,7 +108,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 _ => {}
             }
 
-            run_commandlinetool(&tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
+            run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
 
             Ok(())
         }
