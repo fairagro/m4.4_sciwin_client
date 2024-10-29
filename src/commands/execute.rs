@@ -69,7 +69,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
         Runner::Custom => {
             if !args.is_quiet {
                 eprintln!(
-                    "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed)",
+                    "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). SciWIn's runner currently only supports 'CommandLineTools'!",
                     &args.file
                 );
             }
