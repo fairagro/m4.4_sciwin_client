@@ -164,8 +164,8 @@ baseCommand:
 - tests/test_data/echo.py
 "#;
 
-    let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
-    let result = run_commandlinetool(&tool, None, None, None);
+    let mut tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+    let result = run_commandlinetool(&mut tool, None, None, None);
     assert!(result.is_ok());
     //delete results.txt
     let _ = fs::remove_file("results.txt");
