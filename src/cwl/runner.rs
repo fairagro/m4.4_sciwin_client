@@ -1,7 +1,7 @@
 use super::clt::{Argument, Command, CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, EnvVarRequirement, EnviromentDefs, Requirement};
 use crate::{
     cwl::types::{CWLType, OutputDirectory, OutputFile, OutputItem},
-    io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension},
+    io::{copy_dir, copy_file, create_and_write_file, get_file_checksum, get_file_size, get_filename_without_extension, get_shell_command},
 };
 use regex::Regex;
 use std::{
@@ -17,17 +17,23 @@ use tempfile::{tempdir, TempDir};
 
 pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, outdir: Option<String>) -> Result<(), Box<dyn Error>> {
     //TODO: handle container
+
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
 
     //save current dir
     let current = env::current_dir()?;
+    let output_directory = if let Some(out) = outdir { &PathBuf::from(out) } else { &current };
+
+    //build runtime
+    let runtime = HashMap::from([("outdir".to_string(), output_directory.to_string_lossy().into_owned())]);
+
     let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
     //change to cwl dir as paths are given relative to here
     env::set_current_dir(current.join(tool_path))?;
 
     //replace inputs placeholders
-    set_placeholder_values(tool, input_values.as_ref());
+    set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files
     let staged_files = stage_needed_files(tool, &dir, &input_values, tool_path)?;
@@ -49,7 +55,6 @@ pub fn run_commandlinetool(tool: &mut CommandLineTool, input_values: Option<Hash
     }
 
     //evaluate outputs
-    let output_directory = if let Some(out) = outdir { &PathBuf::from(out) } else { &current };
     evaluate_outputs(&tool.outputs, output_directory)?;
 
     //unset environment variables
@@ -99,10 +104,18 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     //remove empty args
     args.retain(|s| !s.is_empty());
 
-    let mut command = SystemCommand::new(args[0]);
-    for arg in &args[1..] {
-        command.arg(arg);
-    }
+    let mut command = if tool.has_shell_command_requirement() {
+        let joined_args = args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join(" ");
+        let mut cmd = get_shell_command();
+        cmd.arg(joined_args);
+        cmd
+    } else {
+        let mut cmd = SystemCommand::new(args[0]);
+        for arg in &args[1..] {
+            cmd.arg(arg);
+        }
+        cmd
+    };
 
     //build inputs from either fn-args or default values.
     let mut inputs = vec![];
@@ -252,7 +265,7 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
 
     //stage inputs
     for input in &tool.inputs {
-        //TODO: Handle directories
+        
         if input.type_ == CWLType::File {
             let in_file = evaluate_input(input, input_values)?;
             let file = in_file.trim_start_matches("../");
@@ -260,6 +273,13 @@ fn stage_needed_files(tool: &CommandLineTool, into_dir: &TempDir, input_values: 
             let path_str = &path.to_string_lossy();
             copy_file(&in_file, path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", file, path, e))?;
             files.push(path_str.clone().into_owned());
+        }
+        else if input.type_ == CWLType::Directory {
+            let in_dir = evaluate_input(input, input_values)?;
+            let dir = in_dir.trim_start_matches("../");
+            let path = into_dir.path().join(tool_path).join(dir);
+            let path_str = &path.to_string_lossy();
+            copy_dir(&in_dir, path_str).map_err(|e| format!("Failed to copy dir from {:?} to {:?}: {}", dir, path, e))?;
         }
     }
 
@@ -312,19 +332,19 @@ fn unset_environment_vars(keys: Vec<String>) {
     }
 }
 
-fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>) {
+fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>, runtime: &HashMap<String, String>) {
     //set values in arguments
     if let Some(args) = &mut cwl.arguments {
         for arg in args.iter_mut() {
             *arg = match arg {
                 Argument::String(str) => {
-                    let new_str = set_placeholder_values_in_string(str, input_values, &cwl.inputs);
+                    let new_str = set_placeholder_values_in_string(str, input_values, runtime, &cwl.inputs);
                     Argument::String(new_str)
                 }
                 Argument::Binding(binding) => {
                     let mut new_binding = binding.clone();
                     if let Some(value_from) = &mut new_binding.value_from {
-                        *value_from = set_placeholder_values_in_string(value_from, input_values, &cwl.inputs);
+                        *value_from = set_placeholder_values_in_string(value_from, input_values, runtime, &cwl.inputs);
                     }
                     Argument::Binding(new_binding)
                 }
@@ -335,35 +355,35 @@ fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashM
     //set values in output glob
     for output in cwl.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
-            let glob = set_placeholder_values_in_string(&binding.glob, input_values, &cwl.inputs);
+            let glob = set_placeholder_values_in_string(&binding.glob, input_values, runtime, &cwl.inputs);
             binding.glob = glob;
         }
     }
 
     //set values in requirements
     if let Some(requirements) = &mut cwl.requirements {
-        set_placeholder_values_requirements(requirements, input_values, &cwl.inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
     }
 
     //set values in hints
     if let Some(requirements) = &mut cwl.hints {
-        set_placeholder_values_requirements(requirements, input_values, &cwl.inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
     }
 }
 
-fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) {
+fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, input_values: Option<&HashMap<String, DefaultValue>>, runtime: &HashMap<String, String>, inputs: &[CommandInputParameter]) {
     for requirement in requirements {
         if let Requirement::EnvVarRequirement(env_req) = requirement {
             env_req.env_def = match &mut env_req.env_def {
                 EnviromentDefs::Vec(vec) => {
                     for env_def in vec.iter_mut() {
-                        env_def.env_value = set_placeholder_values_in_string(&env_def.env_value, input_values, inputs)
+                        env_def.env_value = set_placeholder_values_in_string(&env_def.env_value, input_values, runtime, inputs)
                     }
                     EnviromentDefs::Vec(vec.clone())
                 }
                 EnviromentDefs::Map(hash_map) => {
                     for (_key, value) in hash_map.iter_mut() {
-                        *value = set_placeholder_values_in_string(value, input_values, inputs);
+                        *value = set_placeholder_values_in_string(value, input_values, runtime, inputs);
                     }
                     EnviromentDefs::Map(hash_map.clone())
                 }
@@ -372,14 +392,14 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, inpu
 
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
             for listing in wd_req.listing.iter_mut() {
-                listing.entryname = set_placeholder_values_in_string(&listing.entryname, input_values, inputs);
+                listing.entryname = set_placeholder_values_in_string(&listing.entryname, input_values, runtime, inputs);
                 listing.entry = match &mut listing.entry {
                     Entry::Source(src) => {
-                        *src = set_placeholder_values_in_string(src, input_values, inputs);
+                        *src = set_placeholder_values_in_string(src, input_values, runtime, inputs);
                         Entry::Source(src.clone())
                     }
                     Entry::Include(include) => {
-                        let updated_include = set_placeholder_values_in_string(&include.include, input_values, inputs);
+                        let updated_include = set_placeholder_values_in_string(&include.include, input_values, runtime, inputs);
                         include.include = updated_include;
                         Entry::Include(include.clone())
                     }
@@ -389,9 +409,10 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, inpu
     }
 }
 
-fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter]) -> String {
-    let re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
+fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<String, DefaultValue>>, runtime: &HashMap<String, String>, inputs: &[CommandInputParameter]) -> String {
+    let in_re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
+    let run_re = Regex::new(r"\$\(runtime.([\w]*)\)").unwrap();
+    let result = in_re.replace_all(text, |caps: &regex::Captures| {
         let mut placeholder = &caps[1];
         if placeholder.ends_with(".path") {
             placeholder = placeholder.strip_suffix(".path").unwrap_or(placeholder);
@@ -399,8 +420,13 @@ fn set_placeholder_values_in_string(text: &str, input_values: Option<&HashMap<St
         } else {
             get_input_value(placeholder, input_values, inputs, true).expect("Input not provided")
         }
-    })
-    .to_string()
+    });
+    run_re
+        .replace_all(&result, |caps: &regex::Captures| {
+            let placeholder = &caps[1];
+            runtime[placeholder].clone()
+        })
+        .to_string()
 }
 
 fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter], read_file: bool) -> Option<String> {

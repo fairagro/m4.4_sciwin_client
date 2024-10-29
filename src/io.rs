@@ -1,11 +1,10 @@
-use crate::cwl::clt::Command;
+
 use sha1::{Digest, Sha1};
 use std::{
-    fs::{self, File},
-    io::{self, Error, Read, Write},
-    path::Path,
-    vec,
+    fs::{self, File}, io::{self, Error, Read, Write}, path::Path, process::Command as SystemCommand, vec
 };
+
+use crate::cwl::clt::Command;
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
 
@@ -46,7 +45,7 @@ pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
         let src_path = entry.path();
         let dest_path = Path::new(dest).join(entry.file_name());
         if src_path.is_dir() {
-            files.extend(copy_dir(src, dest)?);
+            files.extend(copy_dir(src_path.to_str().unwrap(), dest)?);
         } else {
             copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
             files.push(dest_path.to_string_lossy().into_owned())
@@ -101,4 +100,12 @@ pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
 
     let result = hasher.finalize();
     Ok(format!("{:x}", result))
+}
+
+pub fn get_shell_command() -> SystemCommand{
+    let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
+    let param = if cfg!(target_os = "windows") { "/C" } else { "-c" };
+    let mut cmd = SystemCommand::new(shell);
+    cmd.arg(param);
+    cmd
 }

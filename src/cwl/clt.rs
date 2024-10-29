@@ -117,6 +117,14 @@ impl CommandLineTool {
         }
         self.to_string()
     }
+
+    pub fn has_shell_command_requirement(&self) -> bool {
+        if let Some(requirements) = &self.requirements {
+            requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -133,7 +141,7 @@ pub enum Command {
     Multiple(Vec<String>),
 }
 
-impl Default for Command{
+impl Default for Command {
     fn default() -> Self {
         Command::Single(String::new())
     }
@@ -175,7 +183,7 @@ impl CommandInputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
@@ -200,6 +208,27 @@ impl DefaultValue {
             (self, cwl_type),
             (DefaultValue::File(_), CWLType::File) | (DefaultValue::Directory(_), CWLType::Directory) | (DefaultValue::Any(_), _)
         )
+    }
+}
+
+impl<'de> Deserialize<'de> for DefaultValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+
+        let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
+
+        if let Some(location_str) = location {
+            match value.get("class").and_then(Value::as_str) {
+                Some("File") => Ok(DefaultValue::File(File::from_location(&location_str.to_string()))),
+                Some("Directory") => Ok(DefaultValue::Directory(Directory::from_location(&location_str.to_string()))),
+                _ => Ok(DefaultValue::Any(value)),
+            }
+        } else {
+            Ok(DefaultValue::Any(value))
+        }
     }
 }
 
