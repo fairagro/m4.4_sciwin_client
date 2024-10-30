@@ -6,7 +6,7 @@ use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::{Mapping, Value};
-use std::{collections::HashMap, error::Error, fmt::Display, path::Path, vec};
+use std::{collections::HashMap, error::Error, fmt::Display, vec};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]

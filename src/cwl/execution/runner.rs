@@ -1,4 +1,3 @@
-use super::util::evaluate_input;
 use crate::cwl::clt::Argument;
 use crate::cwl::clt::Command;
 use crate::cwl::execution::staging::unstage_files;

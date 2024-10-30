@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::io::get_filename_without_extension;
 
 use super::clt::DefaultValue;
 

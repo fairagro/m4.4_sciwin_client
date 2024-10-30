@@ -1,4 +1,3 @@
-use clap::builder::Str;
 
 use super::util::evaluate_input;
 use crate::{
@@ -108,30 +107,27 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
 
 fn stage_secondary_files(incoming_data: DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files = vec![];
-    match &incoming_data {
-        DefaultValue::File(file) => {
-            if let Some(secondary_files) = &file.secondary_files {
-                for value in secondary_files {
-                    let incoming_file = value.as_value_string();
-                    let outcoming_file = handle_filename(&value);
-                    let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
-                    let into_path = path.join(&outcoming_file_stripped);
-                    let path_str = &into_path.to_string_lossy();
-                    match value {
-                        DefaultValue::File(_) => {
-                            copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
-                            staged_files.push(path_str.clone().into_owned());
-                        }
-                        DefaultValue::Directory(_) => {
-                            copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
-                            staged_files.push(path_str.clone().into_owned());
-                        }
-                        _ => {}
+    if let DefaultValue::File(file) = &incoming_data {
+        if let Some(secondary_files) = &file.secondary_files {
+            for value in secondary_files {
+                let incoming_file = value.as_value_string();
+                let outcoming_file = handle_filename(value);
+                let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
+                let into_path = path.join(&outcoming_file_stripped);
+                let path_str = &into_path.to_string_lossy();
+                match value {
+                    DefaultValue::File(_) => {
+                        copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
+                        staged_files.push(path_str.clone().into_owned());
                     }
+                    DefaultValue::Directory(_) => {
+                        copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
+                        staged_files.push(path_str.clone().into_owned());
+                    }
+                    _ => {}
                 }
             }
         }
-        _ => {}
     }
     Ok(staged_files)
 }
@@ -172,7 +168,7 @@ mod tests {
         let test_file = "tests/test_data/input.txt";
 
         let requirement = Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(test_file));
-        let list = stage_requirements(&Some(vec![requirement]), &tmp_dir.path().to_path_buf()).unwrap();
+        let list = stage_requirements(&Some(vec![requirement]), tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join(test_file);
 
@@ -192,7 +188,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, &tmp_dir.path().to_path_buf()).unwrap();
+        let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -212,7 +208,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, &tmp_dir.path().to_path_buf()).unwrap();
+        let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
