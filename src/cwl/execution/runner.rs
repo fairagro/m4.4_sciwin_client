@@ -68,9 +68,18 @@ pub fn run_commandlinetool(
     let mut input_values = input_values;
     rewire_paths(tool, &mut input_values, &staged_files);
 
+    //set required environment variables
+    let home_directory = env::var("HOME").unwrap_or(String::new());
+    let tmp_directory = env::var("TMPDIR").unwrap_or(String::new());
+    env::set_var("HOME", &runtime["outdir"]);
+    env::set_var("TMPDIR", &runtime["tmpdir"]);
+
     //run the tool command
     run_command(tool, input_values).map_err(|e| format!("❌ Error in Tool execution: {}", e))?;
-    
+    //reset required environment variables
+    env::set_var("HOME", home_directory);
+    env::set_var("TMPDIR", tmp_directory);
+
     //remove staged files
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
 
