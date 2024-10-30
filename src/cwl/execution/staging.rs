@@ -6,7 +6,13 @@ use crate::{
     },
     io::{copy_dir, copy_file, create_and_write_file},
 };
-use std::{collections::HashMap, error::Error, fs, path::{Path, PathBuf}, vec};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+    vec,
+};
 
 pub fn stage_required_files(tool: &CommandLineTool, input_values: &Option<HashMap<String, DefaultValue>>, path: PathBuf) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files: Vec<String> = vec![];
@@ -19,7 +25,7 @@ pub fn stage_required_files(tool: &CommandLineTool, input_values: &Option<HashMa
     Ok(staged_files)
 }
 
-pub fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>>{
+pub fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>> {
     for file in staged_files {
         let mut should_remove = true;
 
@@ -32,9 +38,14 @@ pub fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[Command
                 }
             }
         }
-        
+
         if should_remove {
-            fs::remove_file(file).map_err(|e| format!("Could not remove staged file {}: {}", file, e))?;
+            let path = Path::new(file);
+            if path.is_dir() {
+                fs::remove_dir_all(file).map_err(|e| format!("Could not remove staged dir {}: {}", file, e))?;
+            } else {
+                fs::remove_file(file).map_err(|e| format!("Could not remove staged file {}: {}", file, e))?;
+            }
         }
     }
     Ok(())

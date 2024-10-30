@@ -17,7 +17,6 @@ use crate::{
     io::{create_and_write_file, get_shell_command},
     util::{get_available_ram, get_processor_count},
 };
-use std::fs;
 use std::{
     collections::HashMap,
     env,
@@ -71,7 +70,7 @@ pub fn run_commandlinetool(
 
     //run the tool command
     run_command(&tool, input_values).map_err(|e| format!("❌ Error in Tool execution: {}", e))?;
-
+    
     //remove staged files
     unstage_files(&staged_files, &dir.path(), &tool.outputs)?;
 
@@ -150,6 +149,11 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
         }
     }
     command.args(inputs);
+
+    //append stdin i guess?
+    if let Some(stdin) = &tool.stdin {
+        command.arg(stdin);
+    }
 
     //run
     eprintln!("⏳ Executing Command: `{}`", format_command(&command));

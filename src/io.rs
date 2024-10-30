@@ -42,12 +42,14 @@ pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
 
 pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
     let mut files = vec![];
+    fs::create_dir_all(dest)?;
+
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
         let dest_path = Path::new(dest).join(entry.file_name());
         if src_path.is_dir() {
-            files.extend(copy_dir(src_path.to_str().unwrap(), dest)?);
+            files.extend(copy_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?);
         } else {
             copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
             files.push(dest_path.to_string_lossy().into_owned())
@@ -112,11 +114,11 @@ pub fn get_shell_command() -> SystemCommand {
     cmd
 }
 
-pub fn get_file_property(filename: &str, property_name: &str) -> String{
+pub fn get_file_property(filename: &str, property_name: &str) -> String {
     match property_name {
         "size" => get_file_size(filename).unwrap_or(1).to_string(),
         "basename" => get_filename_without_extension(filename).unwrap(),
         "path" => filename.to_string(),
-        _ =>  fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Could not read file {}", filename))
+        _ => fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
 }

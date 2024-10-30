@@ -59,6 +59,11 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
     if let Some(requirements) = &mut cwl.hints {
         set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
     }
+
+    //set values in stdin
+    if let Some(stdin) = &mut cwl.stdin {
+        *stdin = set_placeholder_values_in_string(&stdin, input_values, runtime, &cwl.inputs);
+    }
 }
 
 pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap<String, DefaultValue>>, staged_files: &[String]) {
