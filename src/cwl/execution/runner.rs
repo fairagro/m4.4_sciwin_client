@@ -69,8 +69,8 @@ pub fn run_commandlinetool(
     rewire_paths(tool, &mut input_values, &staged_files);
 
     //set required environment variables
-    let home_directory = env::var("HOME").unwrap_or(String::new());
-    let tmp_directory = env::var("TMPDIR").unwrap_or(String::new());
+    let home_directory = env::var("HOME").unwrap_or_default();
+    let tmp_directory = env::var("TMPDIR").unwrap_or_default();
     env::set_var("HOME", &runtime["outdir"]);
     env::set_var("TMPDIR", &runtime["tmpdir"]);
 
