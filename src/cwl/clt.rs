@@ -1,5 +1,5 @@
 use super::{
-    runner::run_command,
+    execution::runner::run_command,
     types::{CWLType, Directory, EnvironmentDef, File},
 };
 use crate::io::resolve_path;
