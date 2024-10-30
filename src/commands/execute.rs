@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, fs, process::Command};
 
 use crate::cwl::{
     clt::{CommandLineTool, DefaultValue},
-    runner::run_commandlinetool,
+    execution::runner::run_commandlinetool,
 };
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {

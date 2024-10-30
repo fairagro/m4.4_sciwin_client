@@ -111,3 +111,12 @@ pub fn get_shell_command() -> SystemCommand {
     cmd.arg(param);
     cmd
 }
+
+pub fn get_file_property(filename: &str, property_name: &str) -> String{
+    match property_name {
+        "size" => get_file_size(filename).unwrap_or(1).to_string(),
+        "basename" => get_filename_without_extension(filename).unwrap(),
+        "path" => filename.to_string(),
+        _ =>  fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Could not read file {}", filename))
+    }
+}

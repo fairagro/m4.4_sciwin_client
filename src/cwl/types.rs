@@ -17,7 +17,7 @@ pub enum CWLType {
     Directory,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
@@ -34,7 +34,7 @@ impl File {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,

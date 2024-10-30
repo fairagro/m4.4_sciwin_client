@@ -16,6 +16,8 @@ pub struct CommandLineTool {
     #[serde(default)]
     pub base_command: Command,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
@@ -41,6 +43,7 @@ impl Default for CommandLineTool {
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
             base_command: Default::default(),
+            stdin: Default::default(),
             stdout: Default::default(),
             stderr: Default::default(),
             inputs: Default::default(),
@@ -183,7 +186,7 @@ impl CommandInputParameter {
     }
 }
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
