@@ -17,7 +17,7 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
         Command::Multiple(vec) => {
             let mut new_command = vec![];
             for item in vec {
-                new_command.push(set_placeholder_values_in_string(&item, input_values, runtime, &cwl.inputs));
+                new_command.push(set_placeholder_values_in_string(item, input_values, runtime, &cwl.inputs));
             }
             Command::Multiple(new_command)
         }
@@ -62,7 +62,7 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
 
     //set values in stdin
     if let Some(stdin) = &mut cwl.stdin {
-        *stdin = set_placeholder_values_in_string(&stdin, input_values, runtime, &cwl.inputs);
+        *stdin = set_placeholder_values_in_string(stdin, input_values, runtime, &cwl.inputs);
     }
 }
 
@@ -93,17 +93,17 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
 fn rewire_default_value(value: DefaultValue, staged_file: &String) -> DefaultValue {
     match value {
         DefaultValue::File(file) => {
-            if let Some(_) = diff_paths(&staged_file, &file.location) {
+            if diff_paths(staged_file, &file.location).is_some() {
                 let new_location = staged_file;
-                DefaultValue::File(File::from_location(&new_location))
+                DefaultValue::File(File::from_location(new_location))
             } else {
                 DefaultValue::File(file)
             }
         }
         DefaultValue::Directory(directory) => {
-            if let Some(_) = diff_paths(&staged_file, &directory.location) {
+            if diff_paths(staged_file, &directory.location).is_some() {
                 let new_location = staged_file;
-                DefaultValue::Directory(Directory::from_location(&new_location))
+                DefaultValue::Directory(Directory::from_location(new_location))
             } else {
                 DefaultValue::Directory(directory)
             }
@@ -166,9 +166,9 @@ fn set_placeholder_values_in_string(
     let result = in_re.replace_all(text, |caps: &regex::Captures| {
         let placeholder = &caps[1];
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
-            get_input_value(base, input_values, inputs, suffix).expect(format!("Input not provided for {}", placeholder).as_str())
+            get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
         } else {
-            get_input_value(placeholder, input_values, inputs, "").expect(format!("Input not provided for {}", placeholder).as_str())
+            get_input_value(placeholder, input_values, inputs, "").unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
         }
     });
     run_re
@@ -187,7 +187,7 @@ fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue
         if input.id == key {
             if let Some(default) = &input.default {
                 if let DefaultValue::File(file) = default {
-                    value = Some(get_file_property(&file.location, &suffix));
+                    value = Some(get_file_property(&file.location, suffix));
                 } else {
                     value = Some(default.as_value_string());
                 }
@@ -198,7 +198,7 @@ fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue
     if let Some(values) = input_values {
         if values.contains_key(key) {
             if let DefaultValue::File(file) = &values[key] {
-                value = Some(get_file_property(&file.location, &suffix));
+                value = Some(get_file_property(&file.location, suffix));
             } else {
                 value = Some(values[key].as_value_string());
             }
@@ -277,7 +277,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(&text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
         let expected = format!("Searching for file {}", file);
 
         assert_eq!(result, expected)
@@ -294,7 +294,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(&text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
         let expected = format!("File has size {}", size);
 
         assert_eq!(result, expected)
@@ -310,7 +310,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(&text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
         let expected = "Greeting: Hello fellow CWL-enjoyers!";
 
         assert_eq!(result, expected)
@@ -327,7 +327,7 @@ outputs:
 
         let inputs = vec![CommandInputParameter::default().with_id("infile").with_type(CWLType::File)];
 
-        let result = set_placeholder_values_in_string(&text, Some(&values), &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, Some(&values), &runtime, &inputs);
         let expected = "Greeting: Hello fellow CWL-enjoyers!";
 
         assert_eq!(result, expected)
@@ -340,7 +340,7 @@ outputs:
         let mut runtime: HashMap<String, String> = HashMap::new();
         runtime.insert("whatever_value".to_string(), "Hello World".to_string());
 
-        let result = set_placeholder_values_in_string(&text, None, &runtime, &vec![]);
+        let result = set_placeholder_values_in_string(text, None, &runtime, &[]);
         let expected = "Greeting: Hello World!";
 
         assert_eq!(result, expected)

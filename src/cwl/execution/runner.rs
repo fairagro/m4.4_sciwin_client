@@ -56,23 +56,23 @@ pub fn run_commandlinetool(
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(&tool, &input_values, dir.path().to_path_buf())?;
+    let staged_files = stage_required_files(tool, &input_values, dir.path().to_path_buf())?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
     //set environment variables
-    let environment_variables = set_tool_environment_vars(&tool);
+    let environment_variables = set_tool_environment_vars(tool);
 
     //rewire files in tool to staged ones
     let mut input_values = input_values;
     rewire_paths(tool, &mut input_values, &staged_files);
 
     //run the tool command
-    run_command(&tool, input_values).map_err(|e| format!("❌ Error in Tool execution: {}", e))?;
+    run_command(tool, input_values).map_err(|e| format!("❌ Error in Tool execution: {}", e))?;
     
     //remove staged files
-    unstage_files(&staged_files, &dir.path(), &tool.outputs)?;
+    unstage_files(&staged_files, dir.path(), &tool.outputs)?;
 
     //evaluate output files
     evaluate_outputs(&tool.outputs, output_directory)?;
