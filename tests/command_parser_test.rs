@@ -97,7 +97,7 @@ pub fn test_parse_command_line_testdata() {
 
 #[test]
 pub fn test_cwl_execute_command_single() {
-    let command = "ls -la";
+    let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
     assert!(cwl.execute().is_ok())
