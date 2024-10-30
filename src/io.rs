@@ -119,6 +119,14 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
         "size" => get_file_size(filename).unwrap_or(1).to_string(),
         "basename" => get_filename_without_extension(filename).unwrap(),
         "path" => filename.to_string(),
+        "dirname" => {
+            let path = Path::new(filename);
+            let parent = path.parent().unwrap_or(path).to_string_lossy().into_owned();
+            if parent.is_empty() {
+                return ".".to_string();
+            }
+            parent
+        }
         _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
 }

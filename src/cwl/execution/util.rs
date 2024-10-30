@@ -8,7 +8,12 @@ use crate::{
 use std::{collections::HashMap, env, error::Error, fs, path::PathBuf};
 
 ///Either gets the default value for input or the provided one (preferred)
-pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
+pub fn evaluate_input_as_string(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
+    Ok(evaluate_input(input, input_values)?.as_value_string())
+}
+
+///Either gets the default value for input or the provided one (preferred)
+pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<DefaultValue, Box<dyn Error>> {
     if let Some(ref values) = input_values {
         if let Some(value) = values.get(&input.id) {
             if !value.has_matching_type(&input.type_) {
@@ -16,10 +21,10 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
                 eprintln!("CWLType is not matching input type");
                 Err("CWLType is not matching input type")?;
             }
-            return Ok(value.as_value_string());
+            return Ok(value.clone());
         }
     } else if let Some(default_) = &input.default {
-        return Ok(default_.as_value_string());
+        return Ok(default_.clone());
     } else {
         eprintln!("You did not include a value for {}", input.id);
         Err(format!("You did not include a value for {}", input.id).as_str())?;

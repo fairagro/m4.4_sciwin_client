@@ -6,7 +6,7 @@ use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::{Mapping, Value};
-use std::{collections::HashMap, error::Error, fmt::Display, vec};
+use std::{collections::HashMap, error::Error, fmt::Display, path::Path, vec};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -197,8 +197,8 @@ pub enum DefaultValue {
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
-            DefaultValue::File(file) => file.location.clone(),
-            DefaultValue::Directory(directory) => directory.location.clone(),
+            DefaultValue::File(item) => item.location.clone(),
+            DefaultValue::Directory(item) => item.location.clone(),
             DefaultValue::Any(value) => match value {
                 serde_yml::Value::Bool(_) => String::from(""), // do not remove!
                 _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
@@ -224,9 +224,29 @@ impl<'de> Deserialize<'de> for DefaultValue {
         let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
 
         if let Some(location_str) = location {
+            let secondary_files = value.get("secondaryFiles")
+                .map(|v| serde_yml::from_value(v.clone()))
+                .transpose()
+                .map_err(serde::de::Error::custom)?;
+        
+            let basename = value.get("basename")
+                .map(|v| serde_yml::from_value(v.clone()))
+                .transpose()
+                .map_err(serde::de::Error::custom)?;
+        
             match value.get("class").and_then(Value::as_str) {
-                Some("File") => Ok(DefaultValue::File(File::from_location(&location_str.to_string()))),
-                Some("Directory") => Ok(DefaultValue::Directory(Directory::from_location(&location_str.to_string()))),
+                Some("File") => {
+                    let mut item = File::from_location(&location_str.to_string());
+                    item.secondary_files = secondary_files;
+                    item.basename = basename;
+                    Ok(DefaultValue::File(item))
+                }
+                Some("Directory") => {
+                    let mut item = Directory::from_location(&location_str.to_string());
+                    item.secondary_files = secondary_files;
+                    item.basename = basename;
+                    Ok(DefaultValue::Directory(item))
+                }
                 _ => Ok(DefaultValue::Any(value)),
             }
         } else {

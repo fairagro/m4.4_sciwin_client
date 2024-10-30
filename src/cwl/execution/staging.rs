@@ -1,3 +1,5 @@
+use clap::builder::Str;
+
 use super::util::evaluate_input;
 use crate::{
     cwl::{
@@ -85,10 +87,11 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
         if input.type_ != CWLType::File && input.type_ != CWLType::Directory {
             continue;
         }
-
-        let incoming_file = evaluate_input(input, input_values)?;
-        let incoming_file_stripped = incoming_file.trim_start_matches("../").to_string();
-        let into_path = path.join(&incoming_file_stripped); //stage as listing's entry name
+        let incoming_data = evaluate_input(input, input_values)?;
+        let incoming_file = incoming_data.as_value_string();
+        let outcoming_file = handle_filename(&incoming_data);
+        let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
+        let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
 
         if input.type_ == CWLType::File {
@@ -98,9 +101,57 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
             copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());
         }
+        staged_files.extend(stage_secondary_files(incoming_data, path)?);
     }
-
     Ok(staged_files)
+}
+
+fn stage_secondary_files(incoming_data: DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut staged_files = vec![];
+    match &incoming_data {
+        DefaultValue::File(file) => {
+            if let Some(secondary_files) = &file.secondary_files {
+                for value in secondary_files {
+                    let incoming_file = value.as_value_string();
+                    let outcoming_file = handle_filename(&value);
+                    let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
+                    let into_path = path.join(&outcoming_file_stripped);
+                    let path_str = &into_path.to_string_lossy();
+                    match value {
+                        DefaultValue::File(_) => {
+                            copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
+                            staged_files.push(path_str.clone().into_owned());
+                        }
+                        DefaultValue::Directory(_) => {
+                            copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
+                            staged_files.push(path_str.clone().into_owned());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+    Ok(staged_files)
+}
+
+fn handle_filename(value: &DefaultValue) -> String {
+    let join_with_basename = |location: &str, basename: &Option<String>| {
+        if let Some(basename) = basename {
+            let path = Path::new(location);
+            let parent = path.parent().unwrap_or_else(|| Path::new(""));
+            parent.join(basename).to_string_lossy().into_owned()
+        } else {
+            location.to_string()
+        }
+    };
+
+    match value {
+        DefaultValue::File(item) => join_with_basename(&item.location, &item.basename),
+        DefaultValue::Directory(item) => join_with_basename(&item.location, &item.basename),
+        DefaultValue::Any(_) => String::new(),
+    }
 }
 
 #[cfg(test)]

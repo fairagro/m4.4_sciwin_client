@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use crate::io::get_filename_without_extension;
+
+use super::clt::DefaultValue;
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum CWLType {
@@ -23,6 +27,10 @@ pub struct File {
     pub class: String,
     #[serde(alias = "path")]
     pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basename: Option<String>,
 }
 
 impl File {
@@ -30,6 +38,8 @@ impl File {
         File {
             class: String::from("File"),
             location: location.to_string(),
+            secondary_files: None,
+            basename: None,
         }
     }
 }
@@ -40,6 +50,10 @@ pub struct Directory {
     pub class: String,
     #[serde(alias = "path")]
     pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basename: Option<String>,
 }
 
 impl Directory {
@@ -47,6 +61,8 @@ impl Directory {
         Directory {
             class: String::from("Directory"),
             location: location.to_string(),
+            secondary_files: None,
+            basename: None,
         }
     }
 }

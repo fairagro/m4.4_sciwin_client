@@ -2,6 +2,7 @@ use super::util::evaluate_input;
 use crate::cwl::clt::Argument;
 use crate::cwl::clt::Command;
 use crate::cwl::execution::staging::unstage_files;
+use crate::cwl::execution::util::evaluate_input_as_string;
 use crate::cwl::execution::util::evaluate_outputs;
 use crate::cwl::execution::validate::rewire_paths;
 use crate::util::format_command;
@@ -145,7 +146,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
                 inputs.push(prefix.clone());
             }
             //only append input values with binding as if not they are not considered to be part of command
-            inputs.push(evaluate_input(input, &input_values)?);
+            inputs.push(evaluate_input_as_string(input, &input_values)?);
         }
     }
     command.args(inputs);
