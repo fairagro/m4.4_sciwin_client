@@ -86,19 +86,22 @@ fn separate_elements(inputs: Option<Vec<String>>, outputs: Option<Vec<String>>, 
 }
 
 // problem: flag is only in actual command call not in defined inputs, match to command and add flag
-fn add_flags_to_inputs(command: Vec<String>, inputs: Vec<String>) -> Vec<String> {
+fn add_flags_to_inputs_outputs(command: Vec<String>, inputs: Vec<String>, outputs: Vec<String>) -> Vec<String> {
     let mut updated_inputs = Vec::new();
-
     for input in &inputs {
-        // Use `as_str()` method to convert `String` to `&str`
         if let Some(index) = command.iter().position(|arg| arg == input) {
-            // Check if the previous element contains '-'
             if index > 0 && command[index - 1].starts_with('-') {
-                // Add the flag before the input as &str
                 updated_inputs.push(command[index - 1].to_string());
             }
-            // add the input itself
             updated_inputs.push(input.to_string());
+        }
+    }
+    for output in &outputs {
+        if let Some(index) = command.iter().position(|arg| arg == output) {
+            if index > 0 && command[index - 1].starts_with('-') {
+                updated_inputs.push(command[index - 1].to_string());
+            }
+            updated_inputs.push(output.to_string());
         }
     }
 
@@ -115,16 +118,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let mut cwl;
     let (inputs, outputs, commands) = separate_elements(args.inputs.clone(), args.outputs.clone(), args.command.clone());
 
-    //todo only provide one part and infer other part
-    if !inputs.is_empty() {
-        let updated_inputs = add_flags_to_inputs(commands.clone(), inputs.clone());
-        //let vec_str_inputs: Vec<&str> = updated_inputs.iter().map(|s| s.as_str()).collect();
-        cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
-    } 
-    //this case was added for python script that takes output filename as input, should be in inputs section of cwl file 
-    //e.g. tool create --outputs res.txt python tests/test_data/test.py --out res.txt
-    else if !outputs.is_empty() {
-        let updated_inputs = add_flags_to_inputs(commands.clone(), outputs.clone());
+    if !inputs.is_empty() || !outputs.is_empty() {
+        let updated_inputs = add_flags_to_inputs_outputs(commands.clone(), inputs.clone(), outputs.clone());
         cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
     } 
     else {
