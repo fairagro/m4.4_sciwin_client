@@ -120,7 +120,14 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         let updated_inputs = add_flags_to_inputs(commands.clone(), inputs.clone());
         //let vec_str_inputs: Vec<&str> = updated_inputs.iter().map(|s| s.as_str()).collect();
         cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
-    } else {
+    } 
+    //this case was added for python script that takes output filename as input, should be in inputs section of cwl file 
+    //e.g. tool create --outputs res.txt python tests/test_data/test.py --out res.txt
+    else if !outputs.is_empty() {
+        let updated_inputs = add_flags_to_inputs(commands.clone(), outputs.clone());
+        cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
+    } 
+    else {
         let modified = get_modified_files(&repo);
         if !modified.is_empty() {
             println!("Uncommitted changes detected:");
