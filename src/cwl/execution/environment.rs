@@ -40,10 +40,13 @@ pub fn unset_environment_vars(keys: Vec<String>) {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
+    use crate::cwl::types::EnvironmentDef;
     use super::*;
     use std::{collections::HashMap, vec};
 
     #[test]
+    #[serial]
     fn test_set_environment_vars() {
         let mut current_vars = env::vars();
         assert!(!current_vars.any(|v| v.0 == "MY_COOL_VAR"));
@@ -53,6 +56,35 @@ mod tests {
 
         let requirement = EnvVarRequirement {
             env_def: EnviromentDefs::Map(env_map),
+        };
+
+        let keys = set_environment_vars(&requirement);
+        assert_eq!(keys, vec!["MY_COOL_VAR"]);
+
+        //exists now!
+        let mut current_vars = env::vars();
+        assert!(current_vars.any(|v| v.0 == "MY_COOL_VAR"));
+
+        unset_environment_vars(keys);
+
+        //gone again
+        let mut current_vars = env::vars();
+        assert!(!current_vars.any(|v| v.0 == "MY_COOL_VAR"));
+    }
+
+    #[test]
+    #[serial]
+    fn test_set_environment_vars_envdef() {
+        let mut current_vars = env::vars();
+        assert!(!current_vars.any(|v| v.0 == "MY_COOL_VAR"));
+
+        let env_def = vec![EnvironmentDef {
+            env_name: "MY_COOL_VAR".to_string(),
+            env_value: "my awesome value".to_string(),
+        }];
+
+        let requirement = EnvVarRequirement {
+            env_def: EnviromentDefs::Vec(env_def),
         };
 
         let keys = set_environment_vars(&requirement);
