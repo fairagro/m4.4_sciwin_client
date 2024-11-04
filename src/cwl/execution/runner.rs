@@ -123,8 +123,10 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
         for (i, arg) in arguments.iter().enumerate() {
             match arg {
                 Argument::String(str) => {
-                    let mut binding = CommandLineBinding::default();
-                    binding.value_from = Some(str.clone());
+                    let binding = CommandLineBinding {
+                        value_from: Some(str.clone()),
+                        ..Default::default()
+                    };
                     bindings.push((0, i, binding));
                 }
                 Argument::Binding(binding) => {
@@ -158,11 +160,11 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
 
     //add bindings
     let inputs: Vec<CommandLineBinding> = bindings.iter().map(|(_, _, binding)| binding.clone()).collect();
-    for input in &inputs{
-        if let Some(prefix) = &input.prefix{
+    for input in &inputs {
+        if let Some(prefix) = &input.prefix {
             args.push(prefix);
         }
-        if let Some(value) = &input.value_from{
+        if let Some(value) = &input.value_from {
             args.push(value)
         }
     }
