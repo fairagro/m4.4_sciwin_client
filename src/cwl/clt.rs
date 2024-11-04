@@ -280,7 +280,7 @@ pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub position: Option<usize>,
+    pub position: Option<isize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
 }
@@ -291,7 +291,7 @@ impl CommandLineBinding {
         self
     }
 
-    pub fn with_position(mut self, position: usize) -> Self {
+    pub fn with_position(mut self, position: isize) -> Self {
         self.position = Some(position);
         self
     }

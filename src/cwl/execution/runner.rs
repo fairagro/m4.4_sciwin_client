@@ -1,5 +1,6 @@
 use crate::cwl::clt::Argument;
 use crate::cwl::clt::Command;
+use crate::cwl::clt::CommandLineBinding;
 use crate::cwl::execution::staging::unstage_files;
 use crate::cwl::execution::util::evaluate_input_as_string;
 use crate::cwl::execution::util::evaluate_outputs;
@@ -115,22 +116,54 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
         args.extend(&vec[1..]);
     }
 
+    let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
+
     //handle arguments field...
     if let Some(arguments) = &tool.arguments {
-        for arg in arguments {
+        for (i, arg) in arguments.iter().enumerate() {
             match arg {
                 Argument::String(str) => {
-                    args.push(str);
+                    let mut binding = CommandLineBinding::default();
+                    binding.value_from = Some(str.clone());
+                    bindings.push((0, i, binding));
                 }
                 Argument::Binding(binding) => {
-                    if let Some(prefix) = &binding.prefix {
-                        args.push(prefix);
-                    }
-                    if let Some(value_from) = &binding.value_from {
-                        args.push(value_from);
-                    }
+                    let position = if let Some(pos) = binding.position { pos } else { 0 };
+                    bindings.push((position, i, binding.clone()));
                 }
             }
+        }
+    }
+    let index = bindings.len() + 1;
+
+    //handle inputs
+    for (i, input) in tool.inputs.iter().enumerate() {
+        if let Some(ref binding) = &input.input_binding {
+            let mut binding = binding.clone();
+            let position = if let Some(pos) = binding.position { pos } else { 0 };
+            binding.value_from = Some(evaluate_input_as_string(input, &input_values)?);
+            bindings.push((position, i + index, binding))
+        }
+    }
+
+    //do sorting
+    bindings.sort_by(|a, b| {
+        let cmp = a.0.cmp(&b.0);
+        if cmp == std::cmp::Ordering::Equal {
+            a.1.cmp(&b.1)
+        } else {
+            cmp
+        }
+    });
+
+    //add bindings
+    let inputs: Vec<CommandLineBinding> = bindings.iter().map(|(_, _, binding)| binding.clone()).collect();
+    for input in &inputs{
+        if let Some(prefix) = &input.prefix{
+            args.push(prefix);
+        }
+        if let Some(value) = &input.value_from{
+            args.push(value)
         }
     }
 
@@ -151,17 +184,8 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     };
 
     //build inputs from either fn-args or default values.
-    let mut inputs = vec![];
-    for input in &tool.inputs {
-        if let Some(binding) = &input.input_binding {
-            if let Some(prefix) = &binding.prefix {
-                inputs.push(prefix.clone());
-            }
-            //only append input values with binding as if not they are not considered to be part of command
-            inputs.push(evaluate_input_as_string(input, &input_values)?);
-        }
-    }
-    command.args(inputs);
+
+    //command.args(inputs);
 
     //append stdin i guess?
     if let Some(stdin) = &tool.stdin {
