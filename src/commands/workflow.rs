@@ -33,7 +33,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
 
     let filename = format!("workflows/{}/{}.cwl", args.name, args.name);
 
-    create_and_write_file(&filename, &yaml)?;
+    create_and_write_file(&filename, &yaml).map_err(|e| format!("Could not create workflow {}: {}", args.name, e))?;
 
     Ok(())
 }
