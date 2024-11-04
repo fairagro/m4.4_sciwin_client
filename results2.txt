@@ -1,2 +1,0 @@
-Hello fellow CWL-enjoyers!
-This is a second input file

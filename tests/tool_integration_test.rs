@@ -119,6 +119,38 @@ pub fn tool_create_test_inputs_output() {
 
 #[test]
 #[serial]
+pub fn tool_create_test_output() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: false,
+            no_run: false,
+            is_clean: false,
+            inputs: None,
+            outputs: Some(vec!["result.txt".to_string()]),
+            command: vec!["python".to_string(), "scripts/echo3.py".to_string(), "--out".to_string(), "result.txt".to_string()],
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![dir.path().join(Path::new("result.txt")), dir.path().join(Path::new("workflows/echo3/echo3.cwl"))];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = open_repo(dir.path());
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+#[test]
+#[serial]
 pub fn tool_create_test_is_raw() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
