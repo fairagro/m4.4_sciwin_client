@@ -1,4 +1,4 @@
-use crate::commands::tool::{CreateToolArgs, ToolCommands};
+use crate::commands::{tool::{CreateToolArgs, ToolCommands}, workflow::WorkflowCommands};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -17,7 +17,11 @@ pub enum Commands {
     },
     #[command(hide = true)]
     Run(CreateToolArgs),
-    Workflow,
+    #[command(about = "Provides commands to create and work with CWL Workflows")]
+    Workflow{
+        #[command(subcommand)]
+        command: WorkflowCommands
+    },
     Annotate,
     Execute,
     Sync,

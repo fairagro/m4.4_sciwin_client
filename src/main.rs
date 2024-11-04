@@ -1,6 +1,7 @@
 use clap::Parser;
 use s4n::cli::{Cli, Commands};
 use s4n::commands::tool::{create_tool, handle_tool_commands};
+use s4n::commands::workflow::handle_workflow_commands;
 use std::{error::Error, process::exit};
 
 fn main() {
@@ -16,7 +17,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     match &args.command {
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
-        Commands::Workflow => todo!(),
+        Commands::Workflow { command } => handle_workflow_commands(command)?,
         Commands::Annotate => todo!(),
         Commands::Execute => todo!(),
         Commands::Sync => todo!(),
