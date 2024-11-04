@@ -6,7 +6,7 @@ use crate::{
     io::get_file_property,
 };
 use pathdiff::diff_paths;
-use regex::Regex;
+use fancy_regex::Regex;
 use std::collections::HashMap;
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
@@ -163,7 +163,7 @@ fn set_placeholder_values_in_string(
 ) -> String {
     let in_re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
     let run_re = Regex::new(r"\$\(runtime.([\w]*)\)").unwrap();
-    let result = in_re.replace_all(text, |caps: &regex::Captures| {
+    let result = in_re.replace_all(text, |caps: &fancy_regex::Captures| {
         let placeholder = &caps[1];
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
             get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
@@ -172,7 +172,7 @@ fn set_placeholder_values_in_string(
         }
     });
     run_re
-        .replace_all(&result, |caps: &regex::Captures| {
+        .replace_all(&result, |caps: &fancy_regex::Captures| {
             let placeholder = &caps[1];
             runtime[placeholder].clone()
         })

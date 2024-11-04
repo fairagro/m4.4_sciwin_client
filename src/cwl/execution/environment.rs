@@ -68,4 +68,41 @@ mod tests {
         let mut current_vars = env::vars();
         assert!(!current_vars.any(|v| v.0 == "MY_COOL_VAR"));
     }
+
+    #[test]
+    fn test_set_tool_environment_vars() {
+        let cwl = r#"class: CommandLineTool
+cwlVersion: v1.2
+inputs:
+  in: string
+outputs:
+  out:
+    type: File
+    outputBinding:
+      glob: out
+
+requirements:
+  EnvVarRequirement:
+    envDef:
+      TEST_ENV: "Hello World"
+
+baseCommand: ["/bin/sh", "-c", "echo $TEST_ENV"]
+
+stdout: out"#;
+        let tool = &serde_yml::from_str(&cwl).unwrap();
+
+        let mut current_vars = env::vars();
+        assert!(!current_vars.any(|v| v.0 == "TEST_ENV"));
+
+        set_tool_environment_vars(tool);
+
+        let mut current_vars = env::vars();
+        assert!(current_vars.any(|v| v.0 == "TEST_ENV"));
+
+        assert_eq!(env::var("TEST_ENV").unwrap(), "Hello World");
+
+        env::remove_var("TEST_ENV");
+        let mut current_vars = env::vars();
+        assert!(!current_vars.any(|v| v.0 == "TEST_ENV"));
+    }
 }

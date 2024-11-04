@@ -6,9 +6,9 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.18", features = ["derive", "wrap_help"] }
 colored = "2.1.0"
+fancy-regex = "0.11.0"
 git2 = { version = "0.19.0", features = ["vendored-openssl"] }
 pathdiff = "0.2.1"
-regex = "1.11.1"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"
 serde_yml = "0.0.12"

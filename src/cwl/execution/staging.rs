@@ -153,7 +153,7 @@ fn handle_filename(value: &DefaultValue) -> String {
 mod tests {
     use super::*;
     use crate::cwl::{
-        clt::InitialWorkDirRequirement,
+        clt::{CommandOutputBinding, InitialWorkDirRequirement},
         types::{Directory, File},
     };
     use std::vec;
@@ -213,5 +213,45 @@ mod tests {
 
         assert_eq!(list.len(), 1);
         assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
+    }
+
+    #[test]
+    fn test_unstage_files() {
+        let tmp_dir = tempdir().unwrap();
+
+        let test_dir = "tests/test_data/input.txt";
+
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::File)
+            .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
+
+        let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
+
+        unstage_files(&list, &tmp_dir.path(), &vec![]).unwrap();
+        //file should be gone
+        assert!(!Path::new(&list[0]).exists())
+    }
+
+    #[test]
+    fn test_unstage_files_not_in_output() {
+        let tmp_dir = tempdir().unwrap();
+
+        let test_dir = "tests/test_data/input.txt";
+
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::File)
+            .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
+
+        let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
+            glob: "tests/test_data/input.txt".to_string(),
+        });
+
+        let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
+
+        unstage_files(&list, &tmp_dir.path(), &vec![output]).unwrap();
+        //file should still be there
+        assert!(Path::new(&list[0]).exists())
     }
 }
