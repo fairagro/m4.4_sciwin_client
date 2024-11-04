@@ -97,7 +97,7 @@ pub fn run_commandlinetool(
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, input_values)?;
-    
+
     //run
     eprintln!("⏳ Executing Command: `{}`", format_command(&command));
     let output = command.output()?;
@@ -218,4 +218,90 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
     }
 
     Ok(command)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_command() {
+        let yaml = r#"
+class: CommandLineTool
+cwlVersion: v1.2
+inputs:
+  file1: 
+    type: File
+    inputBinding: {position: 0}
+outputs:
+  output_file:
+    type: File
+    outputBinding: {glob: output.txt}
+baseCommand: cat
+stdout: output.txt"#;
+        let tool = &serde_yml::from_str(yaml).unwrap();
+
+        let inputs = r#"{
+    "file1": {
+        "class": "File",
+        "location": "hello.txt"
+    }
+}"#;
+
+        let input_values = serde_json::from_str(inputs).unwrap();
+
+        let cmd = build_command(tool, input_values).unwrap();
+
+        assert_eq!(format_command(&cmd), "cat hello.txt")
+    }
+
+    #[test]
+    fn test_build_command_stdin() {
+        let yaml = r#"
+class: CommandLineTool
+cwlVersion: v1.2
+inputs: []
+outputs: []
+baseCommand: [cat]
+stdin: hello.txt"#;
+        let tool = &serde_yml::from_str(yaml).unwrap();
+
+        let cmd = build_command(tool, None).unwrap();
+
+        assert_eq!(format_command(&cmd), "cat hello.txt")
+    }
+
+    #[test]
+    fn test_build_command_args() {
+        let yaml = r#"class: CommandLineTool
+cwlVersion: v1.2
+requirements:
+  - class: ShellCommandRequirement
+inputs:
+  indir: Directory
+outputs:
+  outlist:
+    type: File
+    outputBinding:
+      glob: output.txt
+arguments: ["cd", "$(inputs.indir.path)",
+  {shellQuote: false, valueFrom: "&&"},
+  "find", ".",
+  {shellQuote: false, valueFrom: "|"},
+  "sort"]
+stdout: output.txt"#;
+        let in_yaml = r#"indir:
+  class: Directory
+  location: testdir"#;
+        let tool = &serde_yml::from_str(yaml).unwrap();
+        let input_values: HashMap<String, DefaultValue> = serde_yml::from_str(in_yaml).unwrap();
+
+        let cmd = build_command(tool, Some(input_values)).unwrap();
+
+        let shell_cmd = get_shell_command();
+        let shell = shell_cmd.get_program().to_string_lossy();
+        let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
+
+        assert_eq!(format_command(&cmd), format!("{} {} \"cd $(inputs.indir.path) && find . | sort\"", shell, c_arg))
+    }
 }
