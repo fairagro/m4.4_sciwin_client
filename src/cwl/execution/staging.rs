@@ -176,6 +176,26 @@ mod tests {
     }
 
     #[test]
+    fn test_stage_requirement_inline() {
+        //create tmp_dir
+        let tmp_dir = tempdir().unwrap();
+
+        let test_contents = "Hello fellow CWL-enjoyers";
+
+        let requirement = Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_contents("input.txt", test_contents));
+        let list = stage_requirements(&Some(vec![requirement]), tmp_dir.path()).unwrap();
+
+        let expected_path = tmp_dir.path().join("input.txt");
+
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
+
+        //read contents
+        let result = fs::read_to_string(expected_path).unwrap();
+        assert_eq!(result, test_contents);
+    }
+
+    #[test]
     fn test_stage_input_files_dir() {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
@@ -228,7 +248,25 @@ mod tests {
 
         let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
 
-        unstage_files(&list, &tmp_dir.path(), &vec![]).unwrap();
+        unstage_files(&list, tmp_dir.path(), &[]).unwrap();
+        //file should be gone
+        assert!(!Path::new(&list[0]).exists())
+    }
+
+    #[test]
+    fn test_unstage_files_dir() {
+        let tmp_dir = tempdir().unwrap();
+
+        let test_dir = "tests/test_data";
+
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::Directory)
+            .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
+
+        let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
+
+        unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
         assert!(!Path::new(&list[0]).exists())
     }
@@ -237,12 +275,12 @@ mod tests {
     fn test_unstage_files_not_in_output() {
         let tmp_dir = tempdir().unwrap();
 
-        let test_dir = "tests/test_data/input.txt";
+        let test_file = "tests/test_data/input.txt";
 
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
+            .with_default_value(DefaultValue::File(File::from_location(&test_file.to_string())));
 
         let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
             glob: "tests/test_data/input.txt".to_string(),
@@ -250,8 +288,26 @@ mod tests {
 
         let list = stage_input_files(&[input], &None, tmp_dir.path()).unwrap();
 
-        unstage_files(&list, &tmp_dir.path(), &vec![output]).unwrap();
+        unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there
         assert!(Path::new(&list[0]).exists())
+    }
+
+    #[test]
+    fn test_stage_secondary_files(){    
+        let tmp_dir = tempdir().unwrap();
+
+        let test_file = "tests/test_data/input.txt";
+        let secondary_file = "tests/test_data/echo.py";
+        let mut file = File::from_location(&test_file.to_string());
+        file.secondary_files = Some(vec![DefaultValue::File(File::from_location(&secondary_file.to_string()))]);
+        let data = DefaultValue::File(file);
+
+        let list = stage_secondary_files(data, tmp_dir.path()).unwrap();
+        
+        let expected_path = tmp_dir.path().join(secondary_file);
+        //secondary file should be there
+        assert_eq!(list, vec![expected_path.to_string_lossy()]);
+        assert!(expected_path.exists());
     }
 }

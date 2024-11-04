@@ -468,6 +468,14 @@ impl InitialWorkDirRequirement {
             }],
         }
     }
+    pub fn from_contents(entryname: &str, contents: &str) -> Self {
+        InitialWorkDirRequirement {
+            listing: vec![Listing {
+                entryname: entryname.to_string(),
+                entry: Entry::Source(contents.to_string()),
+            }],
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

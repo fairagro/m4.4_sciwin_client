@@ -89,7 +89,7 @@ requirements:
 baseCommand: ["/bin/sh", "-c", "echo $TEST_ENV"]
 
 stdout: out"#;
-        let tool = &serde_yml::from_str(&cwl).unwrap();
+        let tool = &serde_yml::from_str(cwl).unwrap();
 
         let mut current_vars = env::vars();
         assert!(!current_vars.any(|v| v.0 == "TEST_ENV"));
