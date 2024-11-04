@@ -1,21 +1,15 @@
-use crate::cwl::clt::Argument;
-use crate::cwl::clt::Command;
-use crate::cwl::clt::CommandLineBinding;
-use crate::cwl::execution::staging::unstage_files;
-use crate::cwl::execution::util::evaluate_input_as_string;
-use crate::cwl::execution::util::evaluate_outputs;
-use crate::cwl::execution::validate::rewire_paths;
-use crate::error::CommandError;
 use crate::util::format_command;
 use crate::{
     cwl::{
-        clt::{CommandLineTool, DefaultValue},
+        clt::{Argument, Command, CommandLineBinding, CommandLineTool, DefaultValue},
         execution::{
             environment::{set_tool_environment_vars, unset_environment_vars},
-            staging::stage_required_files,
-            validate::set_placeholder_values,
+            staging::{stage_required_files, unstage_files},
+            util::{evaluate_input_as_string, evaluate_outputs},
+            validate::{rewire_paths, set_placeholder_values},
         },
     },
+    error::CommandError,
     io::{create_and_write_file, get_shell_command},
     util::{get_available_ram, get_processor_count},
 };

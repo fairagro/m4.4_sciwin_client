@@ -42,7 +42,10 @@ fn infer_type(cwl: &Mapping) -> &str {
 
 fn reorder_node(cwl: &Mapping, node_type: &str) -> Mapping {
     let key_order_dict = get_key_order();
-    let key_order = key_order_dict.get(node_type).or_else(|| key_order_dict.get("generic-ordering")).expect("Key order not found");
+    let key_order = key_order_dict
+        .get(node_type)
+        .or_else(|| key_order_dict.get("generic-ordering"))
+        .expect("Key order not found");
 
     let mut ordered_map = Mapping::new();
     let mut extra_keys = vec![];
@@ -140,7 +143,19 @@ fn get_key_order() -> HashMap<&'static str, Vec<&'static str>> {
 
     key_order_dict.insert(
         "Workflow",
-        vec!["cwlVersion", "class", "label", "doc", "$namespaces", "requirements", "inputs", "outputs", "steps", "hints", "id"],
+        vec![
+            "cwlVersion",
+            "class",
+            "label",
+            "doc",
+            "$namespaces",
+            "requirements",
+            "inputs",
+            "outputs",
+            "steps",
+            "hints",
+            "id",
+        ],
     );
 
     key_order_dict

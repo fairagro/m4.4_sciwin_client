@@ -1,5 +1,7 @@
 use super::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
+    clt::{
+        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
+    },
     types::{CWLType, Directory, File},
 };
 use crate::io::get_filename_without_extension;

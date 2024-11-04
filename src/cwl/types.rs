@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 use super::clt::DefaultValue;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
