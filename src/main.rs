@@ -2,13 +2,19 @@ use clap::Parser;
 use s4n::cli::{Cli, Commands, CreateDummyArgs, DummyCommands};
 use s4n::commands::execute::handle_execute_commands;
 use s4n::commands::tool::{create_tool, handle_tool_commands};
+use s4n::error::{CommandError, ExitCode};
 use std::{error::Error, process::exit};
 
 fn main() {
     if let Err(e) = run() {
         eprintln!("Error: {}", e);
-        exit(1);
+        if let Some(cmd_err) = e.downcast_ref::<CommandError>() {
+            exit(cmd_err.exit_code());
+        } else {
+            exit(1);
+        }
     }
+    exit(0);
 }
 
 fn run() -> Result<(), Box<dyn Error>> {

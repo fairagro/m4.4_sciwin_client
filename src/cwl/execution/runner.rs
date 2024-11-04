@@ -4,6 +4,7 @@ use crate::cwl::execution::staging::unstage_files;
 use crate::cwl::execution::util::evaluate_input_as_string;
 use crate::cwl::execution::util::evaluate_outputs;
 use crate::cwl::execution::validate::rewire_paths;
+use crate::error::CommandError;
 use crate::util::format_command;
 use crate::{
     cwl::{
@@ -74,8 +75,11 @@ pub fn run_commandlinetool(
     env::set_var("HOME", &runtime["outdir"]);
     env::set_var("TMPDIR", &runtime["tmpdir"]);
 
-    //run the tool command
-    run_command(tool, input_values).map_err(|e| format!("❌ Error in Tool execution: {}", e))?;
+    //run the tool command)
+    run_command(tool, input_values).map_err(|e| CommandError {
+        message: format!("❌ Error in Tool execution: {}", e),
+        exit_code: tool.get_error_code(),
+    })?;
     //reset required environment variables
     env::set_var("HOME", home_directory);
     env::set_var("TMPDIR", tmp_directory);

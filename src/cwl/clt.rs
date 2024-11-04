@@ -35,6 +35,12 @@ pub struct CommandLineTool {
     pub hints: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arguments: Option<Vec<Argument>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permanent_fail_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temporary_fail_codes: Option<Vec<i32>>,
 }
 
 impl Default for CommandLineTool {
@@ -51,6 +57,9 @@ impl Default for CommandLineTool {
             requirements: Default::default(),
             hints: Default::default(),
             arguments: Default::default(),
+            success_codes: None,
+            permanent_fail_codes: None,
+            temporary_fail_codes: None,
         }
     }
 }
@@ -126,6 +135,14 @@ impl CommandLineTool {
             requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
         } else {
             false
+        }
+    }
+
+    pub fn get_error_code(&self) -> i32 {
+        if let Some(code) = &self.permanent_fail_codes {
+            code[0]
+        } else {
+            1
         }
     }
 }
@@ -224,16 +241,18 @@ impl<'de> Deserialize<'de> for DefaultValue {
         let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
 
         if let Some(location_str) = location {
-            let secondary_files = value.get("secondaryFiles")
+            let secondary_files = value
+                .get("secondaryFiles")
                 .map(|v| serde_yml::from_value(v.clone()))
                 .transpose()
                 .map_err(serde::de::Error::custom)?;
-        
-            let basename = value.get("basename")
+
+            let basename = value
+                .get("basename")
                 .map(|v| serde_yml::from_value(v.clone()))
                 .transpose()
                 .map_err(serde::de::Error::custom)?;
-        
+
             match value.get("class").and_then(Value::as_str) {
                 Some("File") => {
                     let mut item = File::from_location(&location_str.to_string());
