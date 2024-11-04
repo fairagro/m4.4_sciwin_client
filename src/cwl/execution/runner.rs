@@ -96,6 +96,39 @@ pub fn run_commandlinetool(
 }
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
+    let mut command = build_command(tool, input_values)?;
+    
+    //run
+    eprintln!("⏳ Executing Command: `{}`", format_command(&command));
+    let output = command.output()?;
+
+    //handle redirection of stdout
+    if !output.stdout.is_empty() {
+        if let Some(stdout) = &tool.stdout {
+            let out = &String::from_utf8_lossy(&output.stdout);
+            create_and_write_file(stdout, out)?;
+        } else {
+            eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+        }
+    }
+
+    //handle redirection of stderr
+    if !output.stderr.is_empty() {
+        if let Some(stderr) = &tool.stderr {
+            let out = &String::from_utf8_lossy(&output.stderr);
+            create_and_write_file(stderr, out)?;
+        } else {
+            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
+        }
+    }
+
+    match output.status.success() {
+        true => Ok(()),
+        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
+    }
+}
+
+fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<SystemCommand, Box<dyn Error>> {
     let mut args = vec![];
 
     //get executable
@@ -184,32 +217,5 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
         command.arg(stdin);
     }
 
-    //run
-    eprintln!("⏳ Executing Command: `{}`", format_command(&command));
-    let output = command.output()?;
-
-    //handle redirection of stdout
-    if !output.stdout.is_empty() {
-        if let Some(stdout) = &tool.stdout {
-            let out = &String::from_utf8_lossy(&output.stdout);
-            create_and_write_file(stdout, out)?;
-        } else {
-            eprintln!("{}", String::from_utf8_lossy(&output.stdout));
-        }
-    }
-
-    //handle redirection of stderr
-    if !output.stderr.is_empty() {
-        if let Some(stderr) = &tool.stderr {
-            let out = &String::from_utf8_lossy(&output.stderr);
-            create_and_write_file(stderr, out)?;
-        } else {
-            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
-        }
-    }
-
-    match output.status.success() {
-        true => Ok(()),
-        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
-    }
+    Ok(command)
 }
