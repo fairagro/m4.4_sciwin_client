@@ -3,7 +3,7 @@ use std::error::Error;
 
 use crate::{
     cwl::{format::format_cwl, wf::Workflow},
-    io::create_and_write_file,
+    io::{create_and_write_file, get_workflows_folder},
 };
 
 pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
@@ -31,7 +31,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     let mut yaml = serde_yml::to_string(&wf)?;
     yaml = format_cwl(&yaml)?;
 
-    let filename = format!("workflows/{}/{}.cwl", args.name, args.name);
+    let filename = format!("{}/{}/{}.cwl", get_workflows_folder(), args.name, args.name);
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("Could not create workflow {}: {}", args.name, e))?;
 
