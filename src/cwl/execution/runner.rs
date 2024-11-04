@@ -128,7 +128,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
                     bindings.push((0, i, binding));
                 }
                 Argument::Binding(binding) => {
-                    let position = if let Some(pos) = binding.position { pos } else { 0 };
+                    let position = binding.position.unwrap_or_default();
                     bindings.push((position, i, binding.clone()));
                 }
             }
@@ -140,7 +140,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     for (i, input) in tool.inputs.iter().enumerate() {
         if let Some(ref binding) = &input.input_binding {
             let mut binding = binding.clone();
-            let position = if let Some(pos) = binding.position { pos } else { 0 };
+            let position = binding.position.unwrap_or_default();
             binding.value_from = Some(evaluate_input_as_string(input, &input_values)?);
             bindings.push((position, i + index, binding))
         }
