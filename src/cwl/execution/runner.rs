@@ -185,10 +185,6 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
         cmd
     };
 
-    //build inputs from either fn-args or default values.
-
-    //command.args(inputs);
-
     //append stdin i guess?
     if let Some(stdin) = &tool.stdin {
         command.arg(stdin);
