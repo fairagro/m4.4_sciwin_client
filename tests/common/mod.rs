@@ -7,6 +7,7 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
+
 /// Sets up a temporary repository with test data
 #[allow(dead_code)]
 fn set_up_repository() -> TempDir {

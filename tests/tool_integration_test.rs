@@ -1,5 +1,5 @@
 mod common;
-use common::with_temp_repository;
+use common::{os_path, with_temp_repository};
 use s4n::{
     commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
     cwl::clt::{CommandLineTool, DockerRequirement, Entry, Requirement},
@@ -8,36 +8,6 @@ use s4n::{
 use serial_test::serial;
 use std::{fs::read_to_string, path::Path};
 
-#[test]
-#[serial]
-pub fn tool_create_test() {
-    with_temp_repository(|dir| {
-        let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
-        };
-        let cmd = ToolCommands::Create(tool_create_args);
-        assert!(handle_tool_commands(&cmd).is_ok());
-
-        //check for files being present
-        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(Path::new("workflows/echo/echo.cwl"))];
-        for output_path in output_paths {
-            assert!(output_path.exists());
-        }
-
-        //no uncommitted left?
-        let repo = open_repo(dir.path());
-        assert!(get_modified_files(&repo).is_empty());
-    });
-}
 
 #[test]
 #[serial]
@@ -138,6 +108,38 @@ pub fn tool_create_test_output() {
 
         //check for files being present
         let output_paths = vec![dir.path().join(Path::new("result.txt")), dir.path().join(Path::new("workflows/echo3/echo3.cwl"))];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = open_repo(dir.path());
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+#[test]
+#[serial]
+pub fn tool_create_test() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: false,
+            no_run: false,
+            is_clean: false,
+            inputs: None,
+            outputs: None,
+            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(Path::new("workflows/echo/echo.cwl"))];
         for output_path in output_paths {
             assert!(output_path.exists());
         }
@@ -298,6 +300,7 @@ pub fn tool_create_test_container_image() {
     });
 }
 
+
 #[test]
 #[serial]
 pub fn tool_create_test_dockerfile() {
@@ -326,7 +329,7 @@ pub fn tool_create_test_dockerfile() {
         assert_eq!(requirements.len(), 2);
 
         if let Requirement::DockerRequirement(DockerRequirement::DockerFile { docker_file, docker_image_id }) = &requirements[1] {
-            assert_eq!(*docker_file, Entry::from_file("../../Dockerfile")); //as file is in root and cwl in workflows/echo
+            assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
             assert_eq!(*docker_image_id, "sciwin-client".to_string())
         } else {
             panic!("Requirement is not a Dockerfile");
