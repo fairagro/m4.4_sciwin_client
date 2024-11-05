@@ -74,9 +74,9 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
-    if from_parts[0] == "@inputs".to_string() {
+    if from_parts[0] == "@inputs" {
         add_input_connection(from_parts[1], &args.to, &mut workflow, &filename)?;
-    } else if to_parts[0] == "@outputs".to_string() {
+    } else if to_parts[0] == "@outputs" {
         add_output_connection(&args.from, to_parts[1], &mut workflow, &filename)?;
     } else {
         step_connection(&args.from, &args.to, &mut workflow, &filename)?;
@@ -113,14 +113,14 @@ pub fn add_input_connection(from_input: &str, to: &String, workflow: &mut Workfl
         .find(|step| step.id == to_parts[0])
         .unwrap()
         .in_
-        .insert(to_parts[1].to_string(), from_input.to_string());
+        .insert(to_parts[1].to_string(), from_input.to_owned());
 
     println!("➕ Added or updated connection from inputs.{} to {} in workflow {}", from_input, to, filename);
 
     Ok(())
 }
 
-pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
+pub fn step_connection(from: &str, to: &str, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
     //handle from
     let from_parts = from.split('/').collect::<Vec<_>>();
     //check if step already exists and create if not
@@ -137,7 +137,7 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
         }
 
         //create step
-        workflow.add_new_step_if_not_exists(&from_parts[0], &from_tool);
+        workflow.add_new_step_if_not_exists(from_parts[0], &from_tool);
     } else {
         println!("🔗 Found step {} in workflow {}. Not changing that!", from_parts[0], filename);
     }
@@ -149,11 +149,11 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
         let to_filename = resolve_filename(to_parts[0]);
         let to_tool: CommandLineTool = load_tool(&to_filename)?;
 
-        workflow.add_new_step_if_not_exists(&to_parts[0], &to_tool);
+        workflow.add_new_step_if_not_exists(to_parts[0], &to_tool);
     }
 
     let step = workflow.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
-    step.in_.insert(to_parts[1].to_string(), from.clone());
+    step.in_.insert(to_parts[1].to_string(), from.to_string());
 
     Ok(())
 }

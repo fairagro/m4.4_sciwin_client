@@ -144,7 +144,7 @@ impl CommandLineTool {
         self.to_string()
     }
 
-    pub fn get_output_ids(self: &Self) -> Vec<String> {
+    pub fn get_output_ids(&self) -> Vec<String> {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
 }

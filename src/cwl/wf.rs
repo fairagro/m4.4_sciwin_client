@@ -33,23 +33,23 @@ impl Default for Workflow {
 }
 
 impl Workflow {
-    pub fn has_step(self: &Self, id: &str) -> bool {
+    pub fn has_step(&self, id: &str) -> bool {
         self.steps.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
     }
 
-    pub fn has_input(self: &Self, id: &str) -> bool {
+    pub fn has_input(&self, id: &str) -> bool {
         self.inputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
     }
 
-    pub fn has_output(self: &Self, id: &str) -> bool {
+    pub fn has_output(&self, id: &str) -> bool {
         self.outputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
     }
 
-    pub fn get_step(self: &Self, id: &str) -> Option<&WorkflowStep> {
-        self.steps.iter().find(|s| s.id == id.to_string())
+    pub fn get_step(&self, id: &str) -> Option<&WorkflowStep> {
+        self.steps.iter().find(|s| s.id == *id)
     }
 
-    pub fn add_new_step_if_not_exists(self: &mut Self, name: &str, tool: &CommandLineTool) {
+    pub fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool) {
         if !self.has_step(name) {
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
@@ -82,7 +82,7 @@ pub struct WorkflowOutputParameter{
 }
 
 impl WorkflowOutputParameter {
-    pub fn with_id(self: &mut Self, id: &str) -> &Self {
+    pub fn with_id(&mut self, id: &str) -> &Self {
         self.id = id.to_string();
         self
     }
