@@ -143,6 +143,10 @@ impl CommandLineTool {
         }
         self.to_string()
     }
+
+    pub fn get_output_ids(self: &Self) -> Vec<String> {
+        self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

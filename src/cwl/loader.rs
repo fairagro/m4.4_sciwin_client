@@ -1,5 +1,11 @@
 use super::{clt::CommandLineTool, wf::Workflow};
+use crate::io::get_workflows_folder;
 use std::{error::Error, fs, path::Path};
+
+/// Locates CWL File by name
+pub fn resolve_filename(cwl_filename: &str) -> String {
+    format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename)
+}
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML
 pub fn load_tool(filename: &str) -> Result<CommandLineTool, Box<dyn Error>> {

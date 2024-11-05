@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::clt::{CommandInputParameter, CommandOutputParameter, Requirement};
+use super::clt::{CommandInputParameter, CommandLineTool, CommandOutputParameter, Requirement};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +43,20 @@ impl Workflow {
 
     pub fn get_step(self: &Self, id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|s| s.id == id.to_string())
+    }
+
+    pub fn add_new_step_if_not_exists(self: &mut Self, name: &str, tool: &CommandLineTool) {
+        if !self.has_step(name) {
+            let workflow_step = WorkflowStep {
+                id: name.to_string(),
+                run: format!("../{}/{}.cwl", name, name),
+                in_: HashMap::new(),
+                out: tool.get_output_ids(),
+            };
+            self.steps.push(workflow_step);
+
+            println!("➕ Added step {} to workflow", name);
+        }
     }
 }
 

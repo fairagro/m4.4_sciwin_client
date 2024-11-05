@@ -1,12 +1,12 @@
 use clap::{Args, Subcommand};
-use std::{collections::HashMap, error::Error, fs, hash::Hash, io::Write, path::Path};
+use std::{error::Error, fs, io::Write, path::Path};
 
 use crate::{
     cwl::{
         clt::{CommandInputParameter, CommandLineTool},
         format::format_cwl,
-        loader::{load_tool, load_workflow},
-        wf::{Workflow, WorkflowStep},
+        loader::{load_tool, load_workflow, resolve_filename},
+        wf::Workflow,
     },
     io::{create_and_write_file, get_workflows_folder},
 };
@@ -75,7 +75,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
     if from_parts[0] == "@inputs".to_string() {
-        input_connection(from_parts[1], &args.to, &mut workflow, &filename)?;
+        add_input_connection(from_parts[1], &args.to, &mut workflow, &filename)?;
     } else if to_parts[0] == "$outputs".to_string() {
     } else {
         step_connection(&args.from, &args.to, &mut workflow, &filename)?;
@@ -91,29 +91,20 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     Ok(())
 }
 
-pub fn input_connection(from_input: &str, to: &String, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
+/// Adds a connection between an input and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow input will be added.
+pub fn add_input_connection(from_input: &str, to: &String, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
     let to_parts = to.split('/').collect::<Vec<_>>();
 
     let to_filename = format!("{}{}/{}.cwl", get_workflows_folder(), to_parts[0], to_parts[0]);
-    let to_tool = load_tool(&to_filename)?;
+    let to_tool: CommandLineTool = load_tool(&to_filename)?;
     let to_slot = to_tool.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slut");
 
-    //register intput
+    //register input
     if !workflow.has_input(from_input) {
         workflow.inputs.push(CommandInputParameter::default().with_id(from_input).with_type(to_slot.type_.clone()));
     }
 
-    if !workflow.has_step(to_parts[0]) {
-        //create step
-        let workflow_step = WorkflowStep {
-            id: to_parts[0].to_string(),
-            run: format!("../{}/{}.cwl", to_parts[0], to_parts[0]),
-            in_: HashMap::new(),
-            out: vec![],
-        };
-        workflow.steps.push(workflow_step.clone());
-        println!("➕ Added step {} to workflow {}", to_parts[0], filename);
-    }
+    workflow.add_new_step_if_not_exists(to_parts[0], &to_tool);
     //add input in step
     workflow
         .steps
@@ -123,7 +114,7 @@ pub fn input_connection(from_input: &str, to: &String, workflow: &mut Workflow, 
         .in_
         .insert(to_parts[1].to_string(), from_input.to_string());
 
-    println!("➕ Added connection from inputs.{} to {} in workflow {}", from_input, to, filename);
+    println!("➕ Added or updated connection from inputs.{} to {} in workflow {}", from_input, to, filename);
 
     Ok(())
 }
@@ -133,9 +124,9 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
     let from_parts = from.split('/').collect::<Vec<_>>();
     //check if step already exists and create if not
     if !workflow.has_step(from_parts[0]) {
-        let from_filename = format!("{}{}/{}.cwl", get_workflows_folder(), from_parts[0], from_parts[0]);
+        let from_filename = resolve_filename(from_parts[0]);
         let from_tool: CommandLineTool = load_tool(&from_filename)?;
-        let from_outputs = from_tool.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>();
+        let from_outputs = from_tool.get_output_ids();
         if !from_outputs.contains(&from_parts[1].to_string()) {
             return Err(format!(
                 "❌ Tool {} does not have output `{}`. Cannot not create node from {} in Workflow {}!",
@@ -145,14 +136,7 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
         }
 
         //create step
-        let workflow_step = WorkflowStep {
-            id: from_parts[0].to_string(),
-            run: format!("../{}/{}.cwl", from_parts[0], from_parts[0]),
-            in_: HashMap::new(),
-            out: from_outputs,
-        };
-        workflow.steps.push(workflow_step);
-        println!("➕ Added step {} to workflow {}", from_parts[0], filename);
+        workflow.add_new_step_if_not_exists(&from_parts[0], &from_tool);
     } else {
         println!("🔗 Found step {} in workflow {}. Not changing that!", from_parts[0], filename);
     }
@@ -160,12 +144,15 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
     //handle to
     let to_parts = to.split('/').collect::<Vec<_>>();
     //check if step exists
-    let to_step = workflow.get_step(to_parts[0]).expect(
-        format!(
-            "❌ Step {} does not exists. Cannot not create node to {} in Workflow {}! Try adding {} first!",
-            to_parts[0], to_parts[0], filename, to_parts[0]
-        )
-        .as_str(),
-    );
+    if !workflow.has_step(to_parts[0]) {
+        let to_filename = resolve_filename(to_parts[0]);
+        let to_tool: CommandLineTool = load_tool(&to_filename)?;
+
+        workflow.add_new_step_if_not_exists(&to_parts[0], &to_tool);
+    }
+
+    let step = workflow.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
+    step.in_.insert(to_parts[1].to_string(), from.clone());
+
     Ok(())
 }
