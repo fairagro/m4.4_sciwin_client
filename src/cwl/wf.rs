@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use super::clt::{CommandInputParameter, CommandOutputParameter, Requirement};
@@ -30,11 +32,25 @@ impl Default for Workflow {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+impl Workflow {
+    pub fn has_step(self: &Self, id: &str) -> bool {
+        self.steps.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
+    }
+
+    pub fn has_input(self: &Self, id: &str) -> bool {
+        self.inputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
+    }
+
+    pub fn get_step(self: &Self, id: &str) -> Option<&WorkflowStep> {
+        self.steps.iter().find(|s| s.id == id.to_string())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStep {
     pub id: String,
     pub run: String,
-    pub in_: Vec<String>,
+    pub in_: HashMap<String, String>,
     pub out: Vec<String>,
 }
