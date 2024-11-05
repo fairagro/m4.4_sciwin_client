@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::clt::{CommandInputParameter, CommandLineTool, CommandOutputParameter, Requirement};
+use super::{clt::{CommandInputParameter, CommandLineTool, Requirement}, types::CWLType};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -14,7 +14,7 @@ pub struct Workflow {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hints: Option<Vec<Requirement>>,
     pub inputs: Vec<CommandInputParameter>,
-    pub outputs: Vec<CommandOutputParameter>,
+    pub outputs: Vec<WorkflowOutputParameter>,
     pub steps: Vec<WorkflowStep>,
 }
 
@@ -39,6 +39,10 @@ impl Workflow {
 
     pub fn has_input(self: &Self, id: &str) -> bool {
         self.inputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
+    }
+
+    pub fn has_output(self: &Self, id: &str) -> bool {
+        self.outputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
     }
 
     pub fn get_step(self: &Self, id: &str) -> Option<&WorkflowStep> {
@@ -67,4 +71,19 @@ pub struct WorkflowStep {
     pub run: String,
     pub in_: HashMap<String, String>,
     pub out: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowOutputParameter{
+    pub id: String,
+    pub type_: CWLType,
+    pub output_source: String,
+}
+
+impl WorkflowOutputParameter {
+    pub fn with_id(self: &mut Self, id: &str) -> &Self {
+        self.id = id.to_string();
+        self
+    }
 }

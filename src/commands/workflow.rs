@@ -6,7 +6,7 @@ use crate::{
         clt::{CommandInputParameter, CommandLineTool},
         format::format_cwl,
         loader::{load_tool, load_workflow, resolve_filename},
-        wf::Workflow,
+        wf::{Workflow, WorkflowOutputParameter},
     },
     io::{create_and_write_file, get_workflows_folder},
 };
@@ -76,7 +76,8 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     let to_parts = args.to.split('/').collect::<Vec<_>>();
     if from_parts[0] == "@inputs".to_string() {
         add_input_connection(from_parts[1], &args.to, &mut workflow, &filename)?;
-    } else if to_parts[0] == "$outputs".to_string() {
+    } else if to_parts[0] == "@outputs".to_string() {
+        add_output_connection(&args.from, to_parts[1], &mut workflow, &filename)?;
     } else {
         step_connection(&args.from, &args.to, &mut workflow, &filename)?;
     }
@@ -95,9 +96,9 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
 pub fn add_input_connection(from_input: &str, to: &String, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
     let to_parts = to.split('/').collect::<Vec<_>>();
 
-    let to_filename = format!("{}{}/{}.cwl", get_workflows_folder(), to_parts[0], to_parts[0]);
+    let to_filename = resolve_filename(to_parts[0]);
     let to_tool: CommandLineTool = load_tool(&to_filename)?;
-    let to_slot = to_tool.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slut");
+    let to_slot = to_tool.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slot");
 
     //register input
     if !workflow.has_input(from_input) {
@@ -153,6 +154,26 @@ pub fn step_connection(from: &String, to: &String, workflow: &mut Workflow, file
 
     let step = workflow.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
     step.in_.insert(to_parts[1].to_string(), from.clone());
+
+    Ok(())
+}
+
+pub fn add_output_connection(from: &String, to_output: &str, workflow: &mut Workflow, filename: &str) -> Result<(), Box<dyn Error>> {
+    let from_parts = from.split('/').collect::<Vec<_>>();
+
+    let from_filename = resolve_filename(from_parts[0]);
+    let from_tool: CommandLineTool = load_tool(&from_filename)?;
+    let from_slot = from_tool.outputs.iter().find(|i| i.id == from_parts[1]).expect("No slot");
+
+    if !workflow.has_output(to_output) {
+        workflow.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());
+    }
+
+    let output = workflow.outputs.iter_mut().find(|o| o.id == to_output).unwrap();
+    output.type_ = from_slot.type_.clone();
+    output.output_source = from.clone();
+
+    println!("➕ Added or updated connection from {} to outputs.{} in workflow {}", from, to_output, filename);
 
     Ok(())
 }
