@@ -1,5 +1,5 @@
 use clap::{Args, Subcommand, ValueEnum};
-use std::{collections::HashMap, env, error::Error, fs, path::Path, process::Command};
+use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
 
 use crate::{cwl::{
     clt::{CommandLineTool, DefaultValue},

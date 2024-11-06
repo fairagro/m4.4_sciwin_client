@@ -66,7 +66,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                         }
                         Entry::Include(include) => {
                             let include_path = tool_path.join(&include.include);
-                            copy_file(&include_path.to_str().unwrap(), path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
+                            copy_file(include_path.to_str().unwrap(), path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
                         }
                     }
                     staged_files.push(path_str.clone().into_owned());

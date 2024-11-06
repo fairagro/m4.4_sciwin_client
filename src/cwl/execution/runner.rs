@@ -51,7 +51,7 @@ pub fn run_commandlinetool(
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, &tool_path, dir.path().to_path_buf())?;
+    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf())?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;

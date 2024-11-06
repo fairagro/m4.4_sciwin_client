@@ -93,7 +93,7 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
 fn rewire_default_value(value: DefaultValue, staged_file: &String) -> DefaultValue {
     match value {
         DefaultValue::File(file) => {
-            let test = env::current_dir().unwrap().join(&file.location.trim_start_matches("../"));
+            let test = env::current_dir().unwrap().join(file.location.trim_start_matches("../"));
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {
                     let new_location = staged_file;
@@ -106,7 +106,7 @@ fn rewire_default_value(value: DefaultValue, staged_file: &String) -> DefaultVal
             }
         }
         DefaultValue::Directory(directory) => {
-            let test = env::current_dir().unwrap().join(&directory.location.trim_start_matches("../"));
+            let test = env::current_dir().unwrap().join(directory.location.trim_start_matches("../"));
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {
                     let new_location = staged_file;

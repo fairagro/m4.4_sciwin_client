@@ -3,7 +3,7 @@ use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::{Path, PathBuf},
+    path::Path,
     process::Command as SystemCommand,
     vec,
 };
