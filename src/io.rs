@@ -3,7 +3,7 @@ use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command as SystemCommand,
     vec,
 };
@@ -129,4 +129,9 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
         }
         _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
+}
+
+pub fn join_path_string(path: &Path, location: &str) -> String{
+    let new_location = path.join(location);
+    new_location.to_string_lossy().into_owned()
 }

@@ -46,13 +46,12 @@ pub fn run_commandlinetool(
 
     //change working directory to the cwl file's path as all paths are given relative to the tool
     let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
-    env::set_current_dir(current.join(tool_path))?;
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, dir.path().to_path_buf())?;
+    let staged_files = stage_required_files(tool, &input_values, &tool_path, dir.path().to_path_buf())?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;

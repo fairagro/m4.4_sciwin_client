@@ -1,10 +1,10 @@
 use clap::{Args, Subcommand, ValueEnum};
-use std::{collections::HashMap, error::Error, fs, process::Command};
+use std::{collections::HashMap, env, error::Error, fs, path::Path, process::Command};
 
-use crate::cwl::{
+use crate::{cwl::{
     clt::{CommandLineTool, DefaultValue},
-    execution::runner::run_commandlinetool,
-};
+    execution::runner::run_commandlinetool, types::PathItem,
+}, io::join_path_string};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -81,12 +81,14 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             let mut inputs: Option<HashMap<String, DefaultValue>> = None;
 
+            let is_file_input = args.args.len() == 1 && !&args.args[0].starts_with("-");
+
             //check for yaml input
             match args.args.len() {
                 // is input.yml file
                 1 => {
                     let input = &args.args[0];
-                    if !input.starts_with("-") {
+                    if is_file_input {
                         let yaml = fs::read_to_string(input).map_err(|e| format!("Could not load File {}: {}", input, e))?;
                         inputs = Some(serde_yml::from_str(&yaml).map_err(|e| format!("Could not read input file: {}", e))?);
                     }
@@ -108,6 +110,40 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 }
                 //ignore and use without args
                 _ => {}
+            }
+
+            fn correct_path<T: PathItem>(item: &mut T, path_prefix: &Path) {
+                let location = item.location().clone();
+                item.set_location(join_path_string(path_prefix, &location));            
+                if let Some(secondary_files) = item.secondary_files_mut() {
+                    for sec_file in secondary_files {
+                        match sec_file {
+                            DefaultValue::File(file) => {
+                                file.set_location(join_path_string(path_prefix, &file.location));
+                            },
+                            DefaultValue::Directory(directory) =>{
+                                directory.set_location(join_path_string(path_prefix, &directory.location))
+                            }
+                            DefaultValue::Any(_) => (),
+                        }                        
+                    }
+                }
+            }
+
+            //make paths relative to calling object
+            if let Some(inputs) = &mut inputs {
+                let path_prefix  = if is_file_input {
+                    Path::new(&args.args[0]).parent().unwrap()
+                } else {
+                    Path::new(".")
+                };
+                for value in inputs.values_mut() {
+                    match value {
+                        DefaultValue::File(file) => correct_path(file, path_prefix),
+                        DefaultValue::Directory(directory) => correct_path(directory, path_prefix),
+                        DefaultValue::Any(_) => (),
+                    }
+                }
             }
 
             run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;

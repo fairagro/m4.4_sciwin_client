@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 use super::clt::DefaultValue;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +16,12 @@ pub enum CWLType {
     File,
     #[serde(rename = "Directory")]
     Directory,
+}
+
+pub trait PathItem {
+    fn location(&self) -> &String;
+    fn set_location(&mut self, new_location: String);
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -42,6 +47,20 @@ impl File {
     }
 }
 
+impl PathItem for File {
+    fn set_location(&mut self, new_location: String) {
+        self.location = new_location;
+    }
+
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
+        self.secondary_files.as_mut()
+    }
+
+    fn location(&self) -> &String {
+        &self.location
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
@@ -62,6 +81,20 @@ impl Directory {
             secondary_files: None,
             basename: None,
         }
+    }
+}
+
+impl PathItem for Directory {
+    fn set_location(&mut self, new_location: String) {
+        self.location = new_location;
+    }
+
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
+        self.secondary_files.as_mut()
+    }
+
+    fn location(&self) -> &String {
+        &self.location
     }
 }
 
