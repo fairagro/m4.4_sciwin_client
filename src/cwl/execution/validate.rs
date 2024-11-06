@@ -5,8 +5,8 @@ use crate::{
     },
     io::get_file_property,
 };
-use pathdiff::diff_paths;
 use fancy_regex::Regex;
+use pathdiff::diff_paths;
 use std::collections::HashMap;
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
@@ -72,7 +72,9 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
         if let Some(default) = &mut input.default {
             let mut new_default = default.clone();
             for staged_file in staged_files {
-                new_default = rewire_default_value(new_default, staged_file)
+                if diff_paths(&new_default.as_value_string(), staged_file).is_some() {
+                    new_default = rewire_default_value(new_default, staged_file)
+                }
             }
             *default = new_default;
         }
@@ -82,7 +84,9 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
             if let Some(existing_value) = values.get(&input.id) {
                 let mut new_value = existing_value.clone();
                 for staged_file in staged_files {
-                    new_value = rewire_default_value(new_value.clone(), staged_file);
+                    if diff_paths(&new_value.as_value_string(), staged_file).is_some() {
+                        new_value = rewire_default_value(new_value.clone(), staged_file);
+                    }
                 }
                 values.insert(input.id.clone(), new_value);
             }
