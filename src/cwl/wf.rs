@@ -69,7 +69,7 @@ impl Workflow {
     }
 
     /// Adds a connection between an input and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow input will be added.
-    pub fn add_input_connection(self: &mut Self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>> {
+    pub fn add_input_connection(&mut self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
         let to_filename = resolve_filename(to_parts[0]);
@@ -96,7 +96,7 @@ impl Workflow {
     }
 
     /// Adds a connection between an output and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow output will be added.
-    pub fn add_output_connection(self: &mut Self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>> {
+    pub fn add_output_connection(&mut self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
         let from_filename = resolve_filename(from_parts[0]);
@@ -117,7 +117,7 @@ impl Workflow {
     }
 
     /// Adds a connection between two a CommandLineToos. The tools will be registered as step if registered not already.
-    pub fn step_connection(self: &mut Self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
+    pub fn step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         //handle from
         let from_parts = from.split('/').collect::<Vec<_>>();
         //check if step already exists and create if not
