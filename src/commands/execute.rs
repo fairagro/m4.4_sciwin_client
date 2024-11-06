@@ -1,10 +1,13 @@
+use crate::{
+    cwl::{
+        clt::{CommandLineTool, DefaultValue},
+        execution::runner::run_commandlinetool,
+        types::PathItem,
+    },
+    io::join_path_string,
+};
 use clap::{Args, Subcommand, ValueEnum};
 use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
-
-use crate::{cwl::{
-    clt::{CommandLineTool, DefaultValue},
-    execution::runner::run_commandlinetool, types::PathItem,
-}, io::join_path_string};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -114,29 +117,23 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             fn correct_path<T: PathItem>(item: &mut T, path_prefix: &Path) {
                 let location = item.location().clone();
-                item.set_location(join_path_string(path_prefix, &location));            
+                item.set_location(join_path_string(path_prefix, &location));
                 if let Some(secondary_files) = item.secondary_files_mut() {
                     for sec_file in secondary_files {
                         match sec_file {
                             DefaultValue::File(file) => {
                                 file.set_location(join_path_string(path_prefix, &file.location));
-                            },
-                            DefaultValue::Directory(directory) =>{
-                                directory.set_location(join_path_string(path_prefix, &directory.location))
                             }
+                            DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.location)),
                             DefaultValue::Any(_) => (),
-                        }                        
+                        }
                     }
                 }
             }
 
             //make paths relative to calling object
             if let Some(inputs) = &mut inputs {
-                let path_prefix  = if is_file_input {
-                    Path::new(&args.args[0]).parent().unwrap()
-                } else {
-                    Path::new(".")
-                };
+                let path_prefix = if is_file_input { Path::new(&args.args[0]).parent().unwrap() } else { Path::new(".") };
                 for value in inputs.values_mut() {
                     match value {
                         DefaultValue::File(file) => correct_path(file, path_prefix),
