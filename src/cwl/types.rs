@@ -34,6 +34,8 @@ pub struct File {
     pub secondary_files: Option<Vec<DefaultValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl File {
@@ -43,6 +45,7 @@ impl File {
             location: location.to_string(),
             secondary_files: None,
             basename: None,
+            format: None,
         }
     }
 }

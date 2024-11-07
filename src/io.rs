@@ -126,7 +126,7 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
                 return ".".to_string();
             }
             parent
-        }
+        },
         _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
 }

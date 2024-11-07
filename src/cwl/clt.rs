@@ -255,9 +255,15 @@ impl<'de> Deserialize<'de> for DefaultValue {
 
             match value.get("class").and_then(Value::as_str) {
                 Some("File") => {
+                    let format = value
+                        .get("format")
+                        .map(|v| serde_yml::from_value(v.clone()))
+                        .transpose()
+                        .map_err(serde::de::Error::custom)?;
                     let mut item = File::from_location(&location_str.to_string());
                     item.secondary_files = secondary_files;
                     item.basename = basename;
+                    item.format = format;
                     Ok(DefaultValue::File(item))
                 }
                 Some("Directory") => {

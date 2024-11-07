@@ -50,6 +50,14 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
         }
     }
 
+    //set values in output format
+    for output in cwl.outputs.iter_mut() {
+        if let Some(format) = &mut output.format {
+            let format = set_placeholder_values_in_string(&format, input_values, runtime, &cwl.inputs);
+            output.format = Some(format);
+        }
+    }
+
     //set values in requirements
     if let Some(requirements) = &mut cwl.requirements {
         set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
@@ -197,7 +205,11 @@ fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue
         if input.id == key {
             if let Some(default) = &input.default {
                 if let DefaultValue::File(file) = default {
-                    value = Some(get_file_property(&file.location, suffix));
+                    if suffix == "format" {
+                        value = file.format.clone();
+                    } else {
+                        value = Some(get_file_property(&file.location, suffix));
+                    }
                 } else {
                     value = Some(default.as_value_string());
                 }
@@ -208,7 +220,11 @@ fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue
     if let Some(values) = input_values {
         if values.contains_key(key) {
             if let DefaultValue::File(file) = &values[key] {
-                value = Some(get_file_property(&file.location, suffix));
+                if suffix == "format" {
+                    value = file.format.clone();
+                } else {
+                    value = Some(get_file_property(&file.location, suffix));
+                }
             } else {
                 value = Some(values[key].as_value_string());
             }
