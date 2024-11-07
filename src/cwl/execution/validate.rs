@@ -184,7 +184,15 @@ fn set_placeholder_values_in_string(
     let result = in_re.replace_all(text, |caps: &fancy_regex::Captures| {
         let placeholder = &caps[1];
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
-            get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
+            let mut input_value = get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder));
+            if suffix == "dirname" {
+                if let Some(diff) = diff_paths(&input_value, &runtime["tooldir"]) {
+                    if let Some(diff_str) = diff.to_str() {
+                        input_value = format!(".{}", input_value.trim_start_matches(diff_str).to_string());
+                    }
+                }
+            }
+            input_value
         } else {
             get_input_value(placeholder, input_values, inputs, "").unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
         }

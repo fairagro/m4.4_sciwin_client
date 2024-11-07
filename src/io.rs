@@ -13,6 +13,19 @@ pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     path.file_name().and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
 }
 
+fn get_basename(filename: &str) -> String {
+    let path = Path::new(filename);
+
+    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
+}
+
+fn get_extension(filename: &str) -> String {
+    let path = Path::new(filename);
+
+    path.extension().unwrap_or_default().to_string_lossy().into_owned()
+}
+
+
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
 }
@@ -117,11 +130,13 @@ pub fn get_shell_command() -> SystemCommand {
 pub fn get_file_property(filename: &str, property_name: &str) -> String {
     match property_name {
         "size" => get_file_size(filename).unwrap_or(1).to_string(),
-        "basename" => get_filename_without_extension(filename).unwrap(),
+        "basename" => get_basename(filename),
+        "nameroot" => get_filename_without_extension(filename).unwrap(),
+        "nameext" => get_extension(filename),
         "path" => filename.to_string(),
         "dirname" => {
             let path = Path::new(filename);
-            let parent = path.parent().unwrap_or(path).to_string_lossy().into_owned();
+            let parent = path.parent().unwrap_or(&path).to_string_lossy().into_owned();
             if parent.is_empty() {
                 return ".".to_string();
             }

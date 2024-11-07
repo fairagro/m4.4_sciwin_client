@@ -95,12 +95,12 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
             incoming_path = tool_path.join(&incoming_file);
         }
         incoming_file = incoming_path.to_string_lossy().to_string();
-        
+
         let outcoming_file = handle_filename(&incoming_data);
         let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
-        
+
         if input.type_ == CWLType::File {
             copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());
@@ -143,9 +143,7 @@ fn stage_secondary_files(incoming_data: DefaultValue, path: &Path) -> Result<Vec
 fn handle_filename(value: &DefaultValue) -> String {
     let join_with_basename = |location: &str, basename: &Option<String>| {
         if let Some(basename) = basename {
-            let path = Path::new(location);
-            let parent = path.parent().unwrap_or_else(|| Path::new(""));
-            parent.join(basename).to_string_lossy().into_owned()
+            basename.to_string()
         } else {
             location.to_string()
         }

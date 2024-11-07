@@ -36,16 +36,17 @@ pub fn run_commandlinetool(
     let current = env::current_dir()?;
     let output_directory = if let Some(out) = out_dir { &PathBuf::from(out) } else { &current };
 
+    //set tool path. all paths are given relative to the tool
+    let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
+
     //build runtime object
     let runtime = HashMap::from([
+        ("tooldir".to_string(), tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned()),
         ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
         ("tmpdir".to_string(), dir.path().to_string_lossy().into_owned()),
         ("cores".to_string(), get_processor_count().to_string()),
         ("ram".to_string(), get_available_ram().to_string()),
     ]);
-
-    //change working directory to the cwl file's path as all paths are given relative to the tool
-    let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
