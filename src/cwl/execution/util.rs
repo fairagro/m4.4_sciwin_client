@@ -3,9 +3,15 @@ use crate::{
         clt::{CommandInputParameter, CommandOutputParameter, DefaultValue},
         types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     },
-    io::{copy_dir, get_file_checksum, get_file_size, get_filename_without_extension},
+    io::{copy_file, get_file_checksum, get_file_size, get_filename_without_extension},
 };
-use std::{collections::HashMap, env, error::Error, fs, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env,
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+};
 
 ///Either gets the default value for input or the provided one (preferred)
 pub fn evaluate_input_as_string(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
@@ -60,17 +66,7 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
                 };
                 fs::create_dir_all(dir)?;
 
-                let mut out_dir = OutputDirectory {
-                    location: format!("file://{}", dir.display()),
-                    basename: dir.file_name().unwrap().to_string_lossy().into_owned(),
-                    class: "Directory".to_string(),
-                    listing: vec![],
-                    path: dir.to_string_lossy().into_owned(),
-                };
-                let files = copy_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                for file in files {
-                    out_dir.listing.push(get_file_metadata(file.into(), None));
-                }
+                let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
                 outputs.insert(&output.id, OutputItem::OutputDirectory(out_dir));
             }
         }
@@ -82,8 +78,7 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
 }
 
 fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
-    let p_str = path.to_str().unwrap();
-    let basename = get_filename_without_extension(p_str).unwrap();
+    let basename = path.file_name().and_then(|n| n.to_str()).unwrap().to_string();
     let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
     let checksum = format!("sha1${}", get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path)));
 
@@ -96,4 +91,33 @@ fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
         path: path.to_string_lossy().into_owned(),
         format,
     }
+}
+
+fn get_diretory_metadata(path: PathBuf) -> OutputDirectory {
+    OutputDirectory {
+        location: format!("file://{}", path.display()),
+        basename: path.file_name().unwrap().to_string_lossy().into_owned(),
+        class: "Directory".to_string(),
+        listing: vec![],
+        path: path.to_string_lossy().into_owned(),
+    }
+}
+
+pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io::Error> {
+    fs::create_dir_all(dest)?;
+    let mut dir = get_diretory_metadata(dest.into());
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dest_path = Path::new(dest).join(entry.file_name());
+        if src_path.is_dir() {
+            let sub_dir = copy_output_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            dir.listing.push(OutputItem::OutputDirectory(sub_dir));
+        } else {
+            copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            dir.listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)))
+        }
+    }
+    Ok(dir)
 }

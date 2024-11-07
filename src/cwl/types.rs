@@ -122,7 +122,7 @@ pub struct OutputDirectory {
     pub location: String,
     pub basename: String,
     pub class: String,
-    pub listing: Vec<OutputFile>,
+    pub listing: Vec<OutputItem>,
     pub path: String,
 }
 
