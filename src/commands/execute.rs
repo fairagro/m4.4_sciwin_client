@@ -103,7 +103,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                         if args.args[i].starts_with("-") {
                             let key = args.args[i].trim_start_matches("--").to_string();
                             let raw_value = &args.args[i + 1];
-                            let value = match guess_type(&raw_value) {
+                            let value = match guess_type(raw_value) {
                                 CWLType::File => DefaultValue::File(File::from_location(raw_value)),
                                 CWLType::Directory => DefaultValue::Directory(Directory::from_location(raw_value)),
                                 _ => serde_yml::from_str(&args.args[i + 1])?
