@@ -3,7 +3,7 @@ use crate::{
         clt::{CommandInputParameter, CommandOutputParameter, DefaultValue},
         types::{CWLType, OutputDirectory, OutputFile, OutputItem},
     },
-    io::{copy_file, get_file_checksum, get_file_size, get_filename_without_extension},
+    io::{copy_file, get_file_checksum, get_file_size},
 };
 use std::{
     collections::HashMap,
