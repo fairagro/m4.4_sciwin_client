@@ -89,7 +89,16 @@ fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
         checksum,
         size,
         path: path.to_string_lossy().into_owned(),
-        format,
+        format: resolve_format(format),
+    }
+}
+
+fn resolve_format(format: Option<String>) -> Option<String> {
+    if let Some(format) = format {
+        let edam_url = "http://www.edamontology.org/";
+        Some(format.replace("edam:", edam_url))
+    } else {
+        None
     }
 }
 
