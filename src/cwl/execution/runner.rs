@@ -129,7 +129,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
 }
 
 fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<SystemCommand, Box<dyn Error>> {
-    let mut args = vec![];
+    let mut args: Vec<String> = vec![];
 
     //get executable
     let cmd = match &tool.base_command {
@@ -137,10 +137,10 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
         Command::Multiple(vec) => &vec[0],
     };
 
-    args.push(cmd);
+    args.push(cmd.to_string());
     //append rest of base command as args
     if let Command::Multiple(ref vec) = &tool.base_command {
-        args.extend(&vec[1..]);
+        args.extend(vec[1..].iter().cloned());
     }
 
     let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
@@ -189,10 +189,22 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
     let inputs: Vec<CommandLineBinding> = bindings.iter().map(|(_, _, binding)| binding.clone()).collect();
     for input in &inputs {
         if let Some(prefix) = &input.prefix {
-            args.push(prefix);
+            args.push(prefix.to_string());
         }
         if let Some(value) = &input.value_from {
-            args.push(value)
+            if tool.has_shell_command_requirement() {
+                if let Some(shellquote) = input.shell_quote {
+                    if shellquote {
+                        args.push(format!("\"{}\"", value));
+                    } else {
+                        args.push(value.to_string())
+                    }
+                } else {
+                    args.push(format!("\"{}\"", value));
+                }
+            } else {
+                args.push(value.to_string())
+            }
         }
     }
 
@@ -205,7 +217,7 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
         cmd.arg(joined_args);
         cmd
     } else {
-        let mut cmd = SystemCommand::new(args[0]);
+        let mut cmd = SystemCommand::new(args[0].clone());
         for arg in &args[1..] {
             cmd.arg(arg);
         }

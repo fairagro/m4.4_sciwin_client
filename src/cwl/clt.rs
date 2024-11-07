@@ -289,6 +289,8 @@ pub struct CommandLineBinding {
     pub position: Option<isize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shell_quote: Option<bool>,
 }
 
 impl CommandLineBinding {

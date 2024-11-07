@@ -53,11 +53,7 @@ pub fn format_command(command: &Command) -> String {
         .get_args()
         .map(|arg| {
             let arg_str = arg.to_string_lossy();
-            if arg_str.contains(' ') {
-                format!("\"{}\"", arg_str)
-            } else {
-                arg_str.to_string()
-            }
+            arg_str.to_string()
         })
         .collect();
 
