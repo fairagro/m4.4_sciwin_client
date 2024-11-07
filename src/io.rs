@@ -136,7 +136,7 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
         "path" => filename.to_string(),
         "dirname" => {
             let path = Path::new(filename);
-            let parent = path.parent().unwrap_or(&path).to_string_lossy().into_owned();
+            let parent = path.parent().unwrap_or(path).to_string_lossy().into_owned();
             if parent.is_empty() {
                 return ".".to_string();
             }

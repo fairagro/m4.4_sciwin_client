@@ -53,7 +53,7 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
     //set values in output format
     for output in cwl.outputs.iter_mut() {
         if let Some(format) = &mut output.format {
-            let format = set_placeholder_values_in_string(&format, input_values, runtime, &cwl.inputs);
+            let format = set_placeholder_values_in_string(format, input_values, runtime, &cwl.inputs);
             output.format = Some(format);
         }
     }
@@ -188,7 +188,7 @@ fn set_placeholder_values_in_string(
             if suffix == "dirname" {
                 if let Some(diff) = diff_paths(&input_value, &runtime["tooldir"]) {
                     if let Some(diff_str) = diff.to_str() {
-                        input_value = format!(".{}", input_value.trim_start_matches(diff_str).to_string());
+                        input_value = format!(".{}", input_value.trim_start_matches(diff_str));
                     }
                 }
             }

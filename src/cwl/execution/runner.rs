@@ -199,8 +199,8 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
                     } else {
                         args.push(value.to_string())
                     }
-                } else {
-                    args.push(format!("\"{}\"", value));
+                } else {                    
+                    args.push(value.to_string())
                 }
             } else {
                 args.push(value.to_string())
@@ -314,6 +314,6 @@ stdout: output.txt"#;
         let shell = shell_cmd.get_program().to_string_lossy();
         let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
 
-        assert_eq!(format_command(&cmd), format!("{} {} \"cd $(inputs.indir.path) && find . | sort\"", shell, c_arg))
+        assert_eq!(format_command(&cmd), format!("{} {} cd $(inputs.indir.path) && find . | sort", shell, c_arg))
     }
 }

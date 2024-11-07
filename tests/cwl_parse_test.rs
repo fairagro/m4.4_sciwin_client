@@ -59,6 +59,7 @@ pub fn create_simple_cwl() {
                 prefix: Some("-la".to_string()),
                 position: None,
                 value_from: None,
+                shell_quote: None,
             }),
             default: None,
             format: None,
