@@ -1,8 +1,6 @@
 use crate::{
     cwl::{
-        clt::{CommandLineTool, DefaultValue},
-        execution::runner::run_commandlinetool,
-        types::PathItem,
+        clt::{CommandLineTool, DefaultValue}, execution::runner::run_commandlinetool, parser::guess_type, types::{CWLType, Directory, File, PathItem}
     },
     io::join_path_string,
 };
@@ -104,7 +102,12 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                     while i < args.args.len() {
                         if args.args[i].starts_with("-") {
                             let key = args.args[i].trim_start_matches("--").to_string();
-                            let value: DefaultValue = serde_yml::from_str(&args.args[i + 1])?;
+                            let raw_value = &args.args[i + 1];
+                            let value = match guess_type(&raw_value) {
+                                CWLType::File => DefaultValue::File(File::from_location(raw_value)),
+                                CWLType::Directory => DefaultValue::Directory(Directory::from_location(raw_value)),
+                                _ => serde_yml::from_str(&args.args[i + 1])?
+                            };                            
                             map.insert(key, value);
                             i += 1;
                         }
