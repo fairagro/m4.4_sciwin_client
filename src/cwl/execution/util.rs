@@ -95,7 +95,7 @@ fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
 
 fn resolve_format(format: Option<String>) -> Option<String> {
     if let Some(format) = format {
-        let edam_url = "http://www.edamontology.org/";
+        let edam_url = "http://edamontology.org/";
         Some(format.replace("edam:", edam_url))
     } else {
         None
