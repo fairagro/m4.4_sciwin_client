@@ -1,5 +1,7 @@
 use super::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
+    clt::{
+        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
+    },
     types::{CWLType, Directory, File},
 };
 use crate::io::get_filename_without_extension;
@@ -69,7 +71,7 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
                 input = get_flag(arg)
             }
         } else {
-            input = get_positional(arg, i);
+            input = get_positional(arg, i.try_into().unwrap());
         }
         inputs.push(input);
         i += 1;
@@ -77,7 +79,7 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     inputs
 }
 
-fn get_positional(current: &str, index: usize) -> CommandInputParameter {
+fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),

@@ -1,4 +1,5 @@
 use crate::commands::{
+    execute::ExecuteCommands,
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
 };
@@ -24,6 +25,15 @@ pub enum Commands {
     Run(CreateToolArgs),
     Workflow,
     Annotate,
-    Execute,
+    #[command(about = "Execution of CWL Files locally or on remote servers (\x1b[1msynonym\x1b[0m: s4n ex)")]
+    Execute {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    },    
+    #[command(hide = true)]
+    Ex {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    }, 
     Sync,
 }

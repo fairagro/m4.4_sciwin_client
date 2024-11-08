@@ -1,20 +1,46 @@
-use super::types::{CWLType, Directory, File};
+use super::{
+    execution::runner::run_command,
+    types::{CWLType, Directory, EnvironmentDef, File},
+};
 use crate::io::resolve_path;
-use colored::Colorize;
 use core::fmt;
-use serde::{Deserialize, Serialize};
-use std::{fmt::Display, io, process::Command as SystemCommand};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_yml::{Mapping, Value};
+use std::{collections::HashMap, error::Error, fmt::Display, vec};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
+    #[serde(default)]
     pub base_command: Command,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
+    #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
+    pub hints: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<Argument>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permanent_fail_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temporary_fail_codes: Option<Vec<i32>>,
 }
 
 impl Default for CommandLineTool {
@@ -22,10 +48,18 @@ impl Default for CommandLineTool {
         Self {
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
-            base_command: Command::Single("echo".to_string()),
+            base_command: Default::default(),
+            stdin: Default::default(),
+            stdout: Default::default(),
+            stderr: Default::default(),
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
+            hints: Default::default(),
+            arguments: Default::default(),
+            success_codes: None,
+            permanent_fail_codes: None,
+            temporary_fail_codes: None,
         }
     }
 }
@@ -59,56 +93,8 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> io::Result<()> {
-        let cmd = match &self.base_command {
-            Command::Single(cmd) => cmd,
-            Command::Multiple(vec) => &vec[0],
-        };
-
-        let mut command = SystemCommand::new(cmd);
-        if let Command::Multiple(ref vec) = &self.base_command {
-            for cmd in &vec[1..] {
-                command.arg(cmd);
-            }
-        }
-        for input in &self.inputs {
-            if let Some(binding) = &input.input_binding {
-                if let Some(prefix) = &binding.prefix {
-                    command.arg(prefix);
-                }
-            }
-            if let Some(default_) = &input.default {
-                let value = match &default_ {
-                    DefaultValue::File(file) => &file.location,
-                    DefaultValue::Directory(dir) => &dir.location,
-                    DefaultValue::Any(value) => match value {
-                        serde_yml::Value::Bool(_) => &String::from(""), // do not remove!
-                        _ => &serde_yml::to_string(value).unwrap().trim_end().to_string(),
-                    },
-                };
-                command.arg(value);
-            }
-        }
-
-        //debug print command
-        if cfg!(debug_assertions) {
-            let cmd = format!(
-                "{} {}",
-                command.get_program().to_str().unwrap(),
-                command.get_args().map(|arg| arg.to_string_lossy()).collect::<Vec<_>>().join(" ")
-            );
-            println!("▶️  Executing command: {}", cmd.green().bold());
-        }
-
-        let output = command.output()?;
-
-        //report from stdout/stderr
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        if !output.stderr.is_empty() {
-            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        Ok(())
+    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
+        run_command(self, None)
     }
 
     pub fn save(&mut self, path: &str) -> String {
@@ -143,6 +129,29 @@ impl CommandLineTool {
         }
         self.to_string()
     }
+
+    pub fn has_shell_command_requirement(&self) -> bool {
+        if let Some(requirements) = &self.requirements {
+            requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
+        } else {
+            false
+        }
+    }
+
+    pub fn get_error_code(&self) -> i32 {
+        if let Some(code) = &self.permanent_fail_codes {
+            code[0]
+        } else {
+            1
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum Argument {
+    String(String),
+    Binding(CommandLineBinding),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -152,15 +161,24 @@ pub enum Command {
     Multiple(Vec<String>),
 }
 
+impl Default for Command {
+    fn default() -> Self {
+        Command::Single(String::new())
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandInputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_binding: Option<CommandLineBinding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl CommandInputParameter {
@@ -185,7 +203,7 @@ impl CommandInputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
@@ -193,13 +211,86 @@ pub enum DefaultValue {
     Any(serde_yml::Value),
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+impl DefaultValue {
+    pub fn as_value_string(&self) -> String {
+        match self {
+            DefaultValue::File(item) => item.location.clone(),
+            DefaultValue::Directory(item) => item.location.clone(),
+            DefaultValue::Any(value) => match value {
+                serde_yml::Value::Bool(_) => String::from(""), // do not remove!
+                _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
+            },
+        }
+    }
+
+    pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
+        matches!(
+            (self, cwl_type),
+            (DefaultValue::File(_), CWLType::File) | (DefaultValue::Directory(_), CWLType::Directory) | (DefaultValue::Any(_), _)
+        )
+    }
+}
+
+impl<'de> Deserialize<'de> for DefaultValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+
+        let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
+
+        if let Some(location_str) = location {
+            let secondary_files = value
+                .get("secondaryFiles")
+                .map(|v| serde_yml::from_value(v.clone()))
+                .transpose()
+                .map_err(serde::de::Error::custom)?;
+
+            let basename = value
+                .get("basename")
+                .map(|v| serde_yml::from_value(v.clone()))
+                .transpose()
+                .map_err(serde::de::Error::custom)?;
+
+            match value.get("class").and_then(Value::as_str) {
+                Some("File") => {
+                    let format = value
+                        .get("format")
+                        .map(|v| serde_yml::from_value(v.clone()))
+                        .transpose()
+                        .map_err(serde::de::Error::custom)?;
+                    let mut item = File::from_location(&location_str.to_string());
+                    item.secondary_files = secondary_files;
+                    item.basename = basename;
+                    item.format = format;
+                    Ok(DefaultValue::File(item))
+                }
+                Some("Directory") => {
+                    let mut item = Directory::from_location(&location_str.to_string());
+                    item.secondary_files = secondary_files;
+                    item.basename = basename;
+                    Ok(DefaultValue::Directory(item))
+                }
+                _ => Ok(DefaultValue::Any(value)),
+            }
+        } else {
+            Ok(DefaultValue::Any(value))
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub position: Option<usize>,
+    pub position: Option<isize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shell_quote: Option<bool>,
 }
 
 impl CommandLineBinding {
@@ -208,7 +299,7 @@ impl CommandLineBinding {
         self
     }
 
-    pub fn with_position(mut self, position: usize) -> Self {
+    pub fn with_position(mut self, position: isize) -> Self {
         self.position = Some(position);
         self
     }
@@ -217,9 +308,13 @@ impl CommandLineBinding {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_binding: Option<CommandOutputBinding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl CommandOutputParameter {
@@ -237,6 +332,74 @@ impl CommandOutputParameter {
     }
 }
 
+fn deserialize_inputs<'de, D>(deserializer: D) -> Result<Vec<CommandInputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: CommandInputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let param = match value {
+                    Value::String(type_str) => {
+                        let type_ = serde_yml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                        CommandInputParameter::default().with_id(id).with_type(type_)
+                    }
+                    _ => {
+                        let mut param: CommandInputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                        param.id = id.to_string();
+                        param
+                    }
+                };
+
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for inputs")),
+    };
+
+    Ok(parameters)
+}
+
+fn deserialize_outputs<'de, D>(deserializer: D) -> Result<Vec<CommandOutputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: CommandOutputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                param.id = id.to_string();
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(parameters)
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
@@ -248,6 +411,54 @@ pub struct CommandOutputBinding {
 pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
     DockerRequirement(DockerRequirement),
+    ResourceRequirement(ResourceRequirement),
+    EnvVarRequirement(EnvVarRequirement),
+    ShellCommandRequirement,
+}
+
+fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Option<Value> = Deserialize::deserialize(deserializer)?;
+    if value.is_none() {
+        return Ok(None);
+    }
+
+    let value = value.unwrap();
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: Requirement = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let class = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let mut modified_value = value;
+                let new_map = match modified_value {
+                    Value::Mapping(ref mut inner_map) => {
+                        inner_map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                        inner_map.clone()
+                    }
+                    _ => {
+                        let mut map = Mapping::new();
+                        map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                        map
+                    }
+                };
+                let param: Requirement = serde_yml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(Some(parameters))
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -262,6 +473,14 @@ impl InitialWorkDirRequirement {
             listing: vec![Listing {
                 entryname: filename.to_string(),
                 entry: Entry::from_file(filename),
+            }],
+        }
+    }
+    pub fn from_contents(entryname: &str, contents: &str) -> Self {
+        InitialWorkDirRequirement {
+            listing: vec![Listing {
+                entryname: entryname.to_string(),
+                entry: Entry::Source(contents.to_string()),
             }],
         }
     }
@@ -294,6 +513,32 @@ impl DockerRequirement {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct ResourceRequirement {
+    pub cores_min: Option<i32>,
+    pub cores_max: Option<i32>,
+    pub ram_min: Option<i32>,
+    pub ram_max: Option<i32>,
+    pub tmpdir_min: Option<i32>,
+    pub tmpdir_max: Option<i32>,
+    pub outdir_min: Option<i32>,
+    pub outdir_max: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvVarRequirement {
+    pub env_def: EnviromentDefs,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum EnviromentDefs {
+    Vec(Vec<EnvironmentDef>),
+    Map(HashMap<String, String>),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Listing {
     pub entryname: String,
     pub entry: Entry,
@@ -311,7 +556,7 @@ impl Entry {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Include {
     #[serde(rename = "$include")]
     pub include: String,
