@@ -34,6 +34,12 @@ Options:
       --clean                              Deletes created outputs after usage
 ```
 
+## Execution of CWL Files
+SciWIn-Client comes with its custom CWL Runner (which does not support all `cwltool` can do, yet!) to run the CommandLineTools (Workflows to be added soon!). The command `s4n execute local` can also be triggered using `s4n ex l`.
+```bash
+s4n execute local <CWLFILE> [ARGUMENTS]
+```
+
 # Build
 ![Rust][rust-image]
 ![Coverage][coverage-badge]
