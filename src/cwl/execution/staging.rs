@@ -163,10 +163,12 @@ mod tests {
         clt::{CommandOutputBinding, InitialWorkDirRequirement},
         types::{Directory, File},
     };
+    use serial_test::serial;
     use std::vec;
     use tempfile::tempdir;
 
     #[test]
+    #[serial]
     fn test_stage_requirement() {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
@@ -183,6 +185,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_stage_requirement_inline() {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
@@ -203,6 +206,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_stage_input_files_dir() {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
@@ -223,6 +227,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_stage_input_files_file() {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
@@ -243,6 +248,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_unstage_files() {
         let tmp_dir = tempdir().unwrap();
 
@@ -261,6 +267,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_unstage_files_dir() {
         let tmp_dir = tempdir().unwrap();
 
@@ -279,6 +286,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_unstage_files_not_in_output() {
         let tmp_dir = tempdir().unwrap();
 
@@ -301,6 +309,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_stage_secondary_files() {
         let tmp_dir = tempdir().unwrap();
 

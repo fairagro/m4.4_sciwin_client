@@ -130,3 +130,63 @@ pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io
     }
     Ok(dir)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cwl::clt::{CommandLineBinding, CommandOutputBinding};
+    use serde_yml::value;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    #[test]
+    pub fn test_evaluate_input() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+        let mut values = HashMap::new();
+        values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
+
+        let evaluation = evaluate_input(&input, &Some(values.clone())).unwrap();
+
+        assert_eq!(evaluation, values["test"]);
+    }
+
+    #[test]
+    pub fn test_evaluate_input_as_string() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+        let mut values = HashMap::new();
+        values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
+
+        let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
+
+        assert_eq!(evaluation, values["test"].as_value_string());
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_evaluate_outputs() {
+        let dir = tempdir().unwrap();
+        let current = env::current_dir().unwrap();
+
+        let output = CommandOutputParameter::default()
+            .with_id("out")
+            .with_type(CWLType::File)
+            .with_binding(CommandOutputBinding {
+                glob: "tests/test_data/file.txt".to_string(),
+            });
+
+        fs::create_dir_all(dir.path().join("tests/test_data")).expect("Could not create folders");
+        fs::copy("tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
+        env::set_current_dir(dir.path()).unwrap();
+
+        let result = evaluate_outputs(&vec![output], &current);
+        assert!(result.is_ok());
+        
+        env::set_current_dir(current).unwrap();
+    }
+}
