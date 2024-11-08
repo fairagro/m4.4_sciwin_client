@@ -1,13 +1,12 @@
 use clap::Parser;
-use s4n::cli::{Cli, Commands};
-use s4n::commands::execute::handle_execute_commands;
-use s4n::error::{CommandError, ExitCode};
 use s4n::{
     cli::{Cli, Commands},
     commands::{
+        execute::handle_execute_commands,
         init::handle_init_command,
         tool::{create_tool, handle_tool_commands},
     },
+    error::{CommandError, ExitCode},
 };
 use std::{error::Error, process::exit};
 
