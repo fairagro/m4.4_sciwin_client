@@ -186,7 +186,40 @@ mod tests {
 
         let result = evaluate_outputs(&vec![output], &current);
         assert!(result.is_ok());
-        
+
         env::set_current_dir(current).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_get_file_metadata() {
+        let path = env::current_dir().unwrap().join("tests/test_data/file.txt");
+        let result = get_file_metadata(path.to_path_buf(), None);
+        let expected = OutputFile {
+            location: format!("file://{}", path.to_string_lossy().into_owned()),
+            basename: "file.txt".to_string(),
+            class: "File".to_string(),
+            checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
+            size: 4,
+            path: path.to_string_lossy().into_owned(),
+            format: None,
+        };
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_get_directory_metadata() {
+        let path = env::current_dir().unwrap().join("tests/test_data");
+        let result = get_diretory_metadata(path.clone());
+        let expected = OutputDirectory {
+            location: format!("file://{}", path.to_string_lossy().into_owned()),
+            basename: path.file_name().unwrap().to_string_lossy().into_owned(),
+            class: "Directory".to_string(),
+            listing: vec![],
+            path: path.to_string_lossy().into_owned(),
+        };
+        assert_eq!(result, expected);
     }
 }
