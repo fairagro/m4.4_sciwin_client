@@ -5,11 +5,12 @@ use crate::{
         parser,
     },
     io::{create_and_write_file, get_qualified_filename},
-    repo::{commit, get_modified_files, open_repo, stage_file},
+    repo::{commit, get_modified_files, stage_file},
     util::{error, highlight_cwl, print_list, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use git2::Repository;
 use std::{env, error::Error, fs::remove_file, path::Path};
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
@@ -55,7 +56,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
 
-    let repo = open_repo(cwd);
+    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
     if !modified.is_empty() {
         println!("Uncommitted changes detected:");
