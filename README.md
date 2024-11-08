@@ -13,7 +13,7 @@ s4n init -a -p <FOLDER/PROJECT NAME>
 ```
 
 ## Creation of CWL Files
-To create CWL CommandLineTools which can be combined to workflows later a prefix command can be used. `s4n tool create` which has `s4n run` as a synonym will execute any given command and creates a CWL CommandLineTool accordingly.
+To create [CWL](https://www.commonwl.org/) CommandLineTools which can be combined to workflows later a prefix command can be used. `s4n tool create` which has `s4n run` as a synonym will execute any given command and creates a CWL CommandLineTool accordingly.
 ```bash
 s4n tool create <COMMAND> [ARGUMENTS]
 ```
