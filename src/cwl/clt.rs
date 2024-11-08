@@ -207,7 +207,7 @@ impl CommandInputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
