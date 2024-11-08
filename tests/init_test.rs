@@ -1,5 +1,5 @@
 use calamine::{open_workbook, Reader, Xlsx};
-use s4n::commands::init::{check_git_installation, create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
+use s4n::commands::init::{create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
 use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
@@ -48,11 +48,11 @@ fn test_init_s4n_without_folder() {
 #[serial]
 fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
-    let temp_dir = env::temp_dir();
-    println!("Temporary directory: {}", temp_dir.display());
+    let temp_dir = tempdir().expect("Failed to create a temporary directory");
+    println!("Temporary directory: {:?}", temp_dir.path());
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
-    env::set_current_dir(temp_dir).unwrap();
+    env::set_current_dir(temp_dir.path()).unwrap();
     println!("Current directory changed to: {}", env::current_dir().unwrap().display());
 
     // test method without folder name and do not create arc folders
@@ -71,12 +71,6 @@ fn test_init_s4n_without_folder_with_arc() {
     assert!(std::path::PathBuf::from("assays").exists());
     assert!(std::path::PathBuf::from("studies").exists());
     assert!(std::path::PathBuf::from("runs").exists());
-}
-
-#[test]
-fn test_check_git_installation() {
-    // Test case: Git is installed and accessible
-    assert!(check_git_installation().is_ok(), "Expected git to be installed and in PATH. Please install git.");
 }
 
 #[test]

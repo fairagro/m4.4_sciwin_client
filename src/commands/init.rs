@@ -1,6 +1,7 @@
 use clap::Args;
+use git2::Repository;
 use rust_xlsxwriter::Workbook;
-use std::{env, fs::{self, File}, path::{Path, PathBuf}, process::{exit, Command}};
+use std::{env, fs::{self, File}, path::{Path, PathBuf}};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -17,7 +18,6 @@ pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Er
 
 pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    check_git_installation()?;
     let is_git_repo_result = is_git_repo(folder);
     if !is_git_repo_result {
         init_git_repo(folder)?;
@@ -31,14 +31,6 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
-    if Command::new("git").output().is_err() {
-        eprintln!("Git is not installed or not in PATH");
-        exit(1);
-    }
-    Ok(())
-}
-
 pub fn is_git_repo(path: Option<&str>) -> bool {
     // Determine the base directory from the provided path or use the current directory
     let base_dir = match path {
@@ -49,12 +41,8 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
         }
     };
 
-    // Build the path to the `.git` directory
-    let git_dir = base_dir.join(".git");
-
-    // Check if the `.git` directory exists
-    let is_repo = git_dir.exists() && git_dir.is_dir();
-    println!("Checking if {} is a git repository: {}", base_dir.display(), is_repo);
+    let is_repo = Repository::open(&base_dir).is_ok();
+    println!("Checking if {:?} is a git repository: {}", base_dir, is_repo);
 
     is_repo
 }
@@ -68,11 +56,8 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     };
 
     fs::create_dir_all(&base_dir)?;
-
-    let git_path = which::which("git").expect("Git not found");
     println!("Current working directory: {}", base_dir.display());
-
-    Command::new(git_path).arg("init").current_dir(&base_dir).output().expect("Failed to execute git init command");
+    Repository::init(&base_dir).expect("Failed to execute git init command");
 
     println!("Git repository initialized successfully");
 
