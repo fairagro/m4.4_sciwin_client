@@ -7,7 +7,7 @@ Most commands need the context of a Git repo to work. Project initialization can
 ```bash
 s4n init -p <FOLDER/PROJECT NAME>
 ```
-Besides the minimal project structure, the creation of an "Annotated Research Context" or ARC is also possible.
+Besides the minimal project structure, the creation of an ["Annotated Research Context"](https://arc-rdm.org/) or ARC is also possible.
 ```bash
 s4n init -a -p <FOLDER/PROJECT NAME>
 ```
