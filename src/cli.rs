@@ -18,6 +18,8 @@ pub enum Commands {
         #[command(subcommand)]
         command: DummyCommands,
     },
+    #[command(about = "Initializes project folder structure and repository")]
+    Init(InitArgs),
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
@@ -29,7 +31,6 @@ pub enum Commands {
     Annotate,
     Execute,
     Sync,
-    Init(InitArgs),
 }
 
 //temporary demo how to use clap, move to commands folder for real commands

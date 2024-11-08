@@ -25,13 +25,13 @@ fn run() -> Result<(), Box<dyn Error>> {
             DummyCommands::Update => todo!(),
             DummyCommands::Delete => todo!(),
         },
+        Commands::Init(args) => handle_init_command(args)?,
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
         Commands::Workflow => todo!(),
         Commands::Annotate => todo!(),
         Commands::Execute => todo!(),
         Commands::Sync => todo!(),
-        Commands::Init(args) => handle_init_command(args)?,
         /*
         Commands::Init(init_args) => {
             let project = init_args.project.clone();
