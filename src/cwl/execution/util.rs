@@ -134,7 +134,10 @@ pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cwl::clt::{CommandLineBinding, CommandOutputBinding};
+    use crate::{
+        cwl::clt::{CommandLineBinding, CommandOutputBinding},
+        io::copy_dir,
+    };
     use serde_yml::value;
     use serial_test::serial;
     use tempfile::tempdir;
@@ -221,5 +224,53 @@ mod tests {
             path: path.to_string_lossy().into_owned(),
         };
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_copy_output_dir() {
+        let dir = tempdir().unwrap();
+        let stage = dir.path().join("tests/test_data/test_dir");
+        let current = env::current_dir().unwrap().join("tests/test_data/test_dir");
+        let cwd = current.to_str().unwrap();
+        copy_dir(cwd, stage.to_str().unwrap()).unwrap();
+
+        let result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
+        let expected = OutputDirectory {
+            location: format!("file://{}", cwd),
+            basename: "test_dir".to_string(),
+            class: "Directory".to_string(),
+            listing: vec![
+                OutputItem::OutputFile(OutputFile {
+                    location: format!("file://{}/file.txt", cwd),
+                    basename: "file.txt".to_string(),
+                    class: "File".to_string(),
+                    checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
+                    size: 4,
+                    path: format!("{}/file.txt", cwd),
+                    format: None,
+                }),
+                OutputItem::OutputFile(OutputFile {
+                    location: format!("file://{}/input.txt", cwd),
+                    basename: "input.txt".to_string(),
+                    class: "File".to_string(),
+                    checksum: "sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string(),
+                    size: 26,
+                    path: format!("{}/input.txt", cwd),
+                    format: None,
+                }),
+            ],
+            path: cwd.to_string(),
+        };
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    pub fn test_resolve_format() {
+        let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
+        let expected = "http://edamontology.org/format_1234";
+
+        assert_eq!(result, expected.to_string())
     }
 }
