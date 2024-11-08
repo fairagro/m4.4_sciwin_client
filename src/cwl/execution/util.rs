@@ -230,8 +230,8 @@ mod tests {
     #[serial]
     pub fn test_copy_output_dir() {
         let dir = tempdir().unwrap();
-        let stage = dir.path().join("tests/test_data/test_dir");
-        let current = env::current_dir().unwrap().join("tests/test_data/test_dir");
+        let stage = dir.path().join("tests").join("test_data").join("test_dir");
+        let current = env::current_dir().unwrap().join("tests").join("test_data").join("test_dir");
         let cwd = current.to_str().unwrap();
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
@@ -240,6 +240,9 @@ mod tests {
             OutputItem::OutputFile(file) => file.basename.clone(),
             _ => String::new(), 
         });
+
+        let file = current.join("file.txt").to_string_lossy().into_owned();
+        let input = current.join("input.txt").to_string_lossy().into_owned();
         
         let expected = OutputDirectory {
             location: format!("file://{}", cwd),
@@ -247,21 +250,21 @@ mod tests {
             class: "Directory".to_string(),
             listing: vec![
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{}/file.txt", cwd),
+                    location: format!("file://{}",file),
                     basename: "file.txt".to_string(),
                     class: "File".to_string(),
                     checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
                     size: 4,
-                    path: format!("{}/file.txt", cwd),
+                    path: file,
                     format: None,
                 }),
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{}/input.txt", cwd),
+                    location: format!("file://{}", input),
                     basename: "input.txt".to_string(),
                     class: "File".to_string(),
                     checksum: "sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string(),
                     size: 26,
-                    path: format!("{}/input.txt", cwd),
+                    path: input,
                     format: None,
                 }),
             ],
