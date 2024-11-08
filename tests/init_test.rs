@@ -4,8 +4,6 @@ use serial_test::serial;
 use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
 
-
-
 #[test]
 #[serial]
 fn test_init_s4n_without_folder() {
