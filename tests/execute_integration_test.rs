@@ -35,7 +35,7 @@ pub fn test_execute_local_with_args() {
         out_dir: None,
         is_quiet: false,
         file: "tests/test_data/echo.cwl".to_string(),
-        args: vec!["--test", "tests/test_data/input_alt.txt"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+        args: ["--test", "tests/test_data/input_alt.txt"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -60,7 +60,7 @@ pub fn test_execute_local_with_file() {
         out_dir: None,
         is_quiet: false,
         file: "tests/test_data/echo.cwl".to_string(),
-        args: vec!["tests/test_data/echo-job.yml"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+        args: ["tests/test_data/echo-job.yml"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
