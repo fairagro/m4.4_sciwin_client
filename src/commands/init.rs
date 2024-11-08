@@ -18,8 +18,7 @@ pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Er
 
 pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    let is_git_repo_result = is_git_repo(folder);
-    if !is_git_repo_result {
+    if !is_git_repo(folder) {
         init_git_repo(folder)?;
     }
     if arc {

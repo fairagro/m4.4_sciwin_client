@@ -62,13 +62,13 @@ fn test_init_s4n_without_folder_with_arc() {
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
 
-    assert!(std::path::PathBuf::from("workflows").exists());
-    assert!(std::path::PathBuf::from("workflows/wf").exists());
-    assert!(std::path::PathBuf::from("workflows/tools").exists());
-    assert!(std::path::PathBuf::from(".git").exists());
-    assert!(std::path::PathBuf::from("assays").exists());
-    assert!(std::path::PathBuf::from("studies").exists());
-    assert!(std::path::PathBuf::from("runs").exists());
+    assert!(PathBuf::from("workflows").exists());
+    assert!(PathBuf::from("workflows/wf").exists());
+    assert!(PathBuf::from("workflows/tools").exists());
+    assert!(PathBuf::from(".git").exists());
+    assert!(PathBuf::from("assays").exists());
+    assert!(PathBuf::from("studies").exists());
+    assert!(PathBuf::from("runs").exists());
 }
 
 #[test]
