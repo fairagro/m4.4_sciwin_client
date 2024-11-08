@@ -1,6 +1,6 @@
 use clap::Args;
 use rust_xlsxwriter::Workbook;
-use std::{env, fs, path::Path, path::PathBuf, process::Command};
+use std::{env, fs::{self, File}, path::{Path, PathBuf}, process::{exit, Command}};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -34,7 +34,7 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
 pub fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
     if Command::new("git").output().is_err() {
         eprintln!("Git is not installed or not in PATH");
-        std::process::exit(1);
+        exit(1);
     }
     Ok(())
 }
@@ -45,7 +45,7 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
         Some(folder) => Path::new(folder).to_path_buf(),
         None => {
             // Get the current working directory
-            std::env::current_dir().expect("Failed to get current directory")
+            env::current_dir().expect("Failed to get current directory")
         }
     };
 
@@ -67,7 +67,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
         None => env::current_dir().expect("Failed to get current directory"),
     };
 
-    std::fs::create_dir_all(&base_dir)?;
+    fs::create_dir_all(&base_dir)?;
 
     let git_path = which::which("git").expect("Git not found");
     println!("Current working directory: {}", base_dir.display());
@@ -77,7 +77,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     println!("Git repository initialized successfully");
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
-    std::fs::File::create(gitignore_path).expect("Failed to create .gitignore file");
+    File::create(gitignore_path).expect("Failed to create .gitignore file");
 
     Ok(())
 }
@@ -133,7 +133,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
         fs::create_dir_all(&base_dir)?;
     }
 
-    let _ = create_investigation_excel_file(base_dir.to_str().unwrap_or(""));
+    create_investigation_excel_file(base_dir.to_str().unwrap_or(""))?;
     // Check and create subdirectories
     let assays_dir = base_dir.join("assays");
     if !assays_dir.exists() {
@@ -167,7 +167,7 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
     let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
 
     // Create the directory if it doesn't exist
-    let _ = std::fs::create_dir_all(excel_path.parent().unwrap());
+    fs::create_dir_all(excel_path.parent().unwrap())?;
     // Create a new workbook
     let mut workbook = Workbook::new();
 
