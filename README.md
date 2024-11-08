@@ -17,6 +17,22 @@ To create [CWL](https://www.commonwl.org/) CommandLineTools which can be combine
 ```bash
 s4n tool create <COMMAND> [ARGUMENTS]
 ```
+The command comes with a lot of different options on how to handle the CWL creation specifically.
+```
+Usage: s4n tool create [OPTIONS] [COMMAND]...
+
+Arguments:
+  [COMMAND]...  Command line call e.g. python script.py [ARGUMENTS]
+
+Options:
+  -n, --name <NAME>                        A name to be used for this tool
+  -c, --container-image <CONTAINER_IMAGE>  An image to pull from e.g. docker hub or path to a Dockerfile
+  -t, --container-tag <CONTAINER_TAG>      The tag for the container when using a Dockerfile
+  -r, --raw                                Outputs the raw CWL contents to terminal
+      --no-commit                          Do not commit at the end of tool creation
+      --no-run                             Do not run given command
+      --clean                              Deletes created outputs after usage
+```
 
 # Build
 ![Rust][rust-image]
