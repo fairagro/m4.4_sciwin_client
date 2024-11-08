@@ -1,3 +1,4 @@
+use super::clt::DefaultValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
@@ -17,11 +18,24 @@ pub enum CWLType {
     Directory,
 }
 
+pub trait PathItem {
+    fn location(&self) -> &String;
+    fn set_location(&mut self, new_location: String);
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
+    #[serde(alias = "path")]
     pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basename: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
 }
 
 impl File {
@@ -29,7 +43,24 @@ impl File {
         File {
             class: String::from("File"),
             location: location.to_string(),
+            secondary_files: None,
+            basename: None,
+            format: None,
         }
+    }
+}
+
+impl PathItem for File {
+    fn set_location(&mut self, new_location: String) {
+        self.location = new_location;
+    }
+
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
+        self.secondary_files.as_mut()
+    }
+
+    fn location(&self) -> &String {
+        &self.location
     }
 }
 
@@ -37,7 +68,12 @@ impl File {
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,
+    #[serde(alias = "path")]
     pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basename: Option<String>,
 }
 
 impl Directory {
@@ -45,6 +81,57 @@ impl Directory {
         Directory {
             class: String::from("Directory"),
             location: location.to_string(),
+            secondary_files: None,
+            basename: None,
         }
     }
+}
+
+impl PathItem for Directory {
+    fn set_location(&mut self, new_location: String) {
+        self.location = new_location;
+    }
+
+    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
+        self.secondary_files.as_mut()
+    }
+
+    fn location(&self) -> &String {
+        &self.location
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvironmentDef {
+    pub env_name: String,
+    pub env_value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OutputFile {
+    pub location: String,
+    pub basename: String,
+    pub class: String,
+    pub checksum: String,
+    pub size: u64,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OutputDirectory {
+    pub location: String,
+    pub basename: String,
+    pub class: String,
+    pub listing: Vec<OutputItem>,
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum OutputItem {
+    OutputFile(OutputFile),
+    OutputDirectory(OutputDirectory),
 }

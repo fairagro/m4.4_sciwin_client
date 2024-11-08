@@ -22,5 +22,7 @@ jobs:
         run: cargo clean
       - name: Build
         run: cargo build --verbose
+      - name: Install CWL Tool
+        run: pip install cwltool
       - name: Run tests
         run: cargo test --verbose

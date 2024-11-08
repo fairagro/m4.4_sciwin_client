@@ -1,15 +1,30 @@
 use crate::cwl::clt::Command;
+use sha1::{Digest, Sha1};
 use std::{
-    fs,
-    io::{Error, Write},
+    fs::{self, File},
+    io::{self, Error, Read, Write},
     path::Path,
+    process::Command as SystemCommand,
+    vec,
 };
-
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
 
     path.file_name().and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
 }
+
+fn get_basename(filename: &str) -> String {
+    let path = Path::new(filename);
+
+    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
+}
+
+fn get_extension(filename: &str) -> String {
+    let path = Path::new(filename);
+
+    path.extension().unwrap_or_default().to_string_lossy().into_owned()
+}
+
 
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
@@ -19,12 +34,41 @@ pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error
     let path = Path::new(filename);
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?
+        fs::create_dir_all(parent)?;
     }
 
     let mut file = fs::File::create_new(filename)?;
     file.write_all(contents.as_bytes())?;
     Ok(())
+}
+
+pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
+    let path = Path::new(to);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?
+    }
+
+    fs::copy(from, to)?;
+    Ok(())
+}
+
+pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
+    let mut files = vec![];
+    fs::create_dir_all(dest)?;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dest_path = Path::new(dest).join(entry.file_name());
+        if src_path.is_dir() {
+            files.extend(copy_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?);
+        } else {
+            copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            files.push(dest_path.to_string_lossy().into_owned())
+        }
+    }
+    Ok(files)
 }
 
 pub fn resolve_path(filename: &str, relative_to: &str) -> String {
@@ -35,7 +79,7 @@ pub fn resolve_path(filename: &str, relative_to: &str) -> String {
         None => relative_path,
     };
 
-    pathdiff::diff_paths(path, base_dir).expect("to be valid").to_string_lossy().into_owned()
+    pathdiff::diff_paths(path, base_dir).expect("path diffs not valid").to_string_lossy().into_owned()
 }
 
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
@@ -56,4 +100,53 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     filename.push_str(".cwl");
 
     get_workflows_folder() + &foldername + "/" + &filename
+}
+
+pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
+    let metadata = std::fs::metadata(path)?;
+    Ok(metadata.len())
+}
+
+pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha1::new();
+
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    hasher.update(&buffer);
+
+    let result = hasher.finalize();
+    Ok(format!("{:x}", result))
+}
+
+pub fn get_shell_command() -> SystemCommand {
+    let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
+    let param = if cfg!(target_os = "windows") { "/C" } else { "-c" };
+    let mut cmd = SystemCommand::new(shell);
+    cmd.arg(param);
+    cmd
+}
+
+pub fn get_file_property(filename: &str, property_name: &str) -> String {
+    match property_name {
+        "size" => get_file_size(filename).unwrap_or(1).to_string(),
+        "basename" => get_basename(filename),
+        "nameroot" => get_filename_without_extension(filename).unwrap(),
+        "nameext" => get_extension(filename),
+        "path" => filename.to_string(),
+        "dirname" => {
+            let path = Path::new(filename);
+            let parent = path.parent().unwrap_or(path).to_string_lossy().into_owned();
+            if parent.is_empty() {
+                return ".".to_string();
+            }
+            parent
+        },
+        _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
+    }
+}
+
+pub fn join_path_string(path: &Path, location: &str) -> String{
+    let new_location = path.join(location);
+    new_location.to_string_lossy().into_owned()
 }

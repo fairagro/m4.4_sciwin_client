@@ -1,4 +1,9 @@
-use crate::commands::{tool::{CreateToolArgs, ToolCommands}, workflow::WorkflowCommands};
+use crate::commands::{
+    execute::ExecuteCommands,
+    init::InitArgs,
+    tool::{CreateToolArgs, ToolCommands},
+    workflow::WorkflowCommands
+};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -10,6 +15,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    #[command(about = "Initializes project folder structure and repository")]
+    Init(InitArgs),
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
@@ -23,6 +30,15 @@ pub enum Commands {
         command: WorkflowCommands
     },
     Annotate,
-    Execute,
+    #[command(about = "Execution of CWL Files locally or on remote servers (\x1b[1msynonym\x1b[0m: s4n ex)")]
+    Execute {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    },    
+    #[command(hide = true)]
+    Ex {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    }, 
     Sync,
 }

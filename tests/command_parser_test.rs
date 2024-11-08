@@ -1,7 +1,9 @@
 mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
+    clt::{
+        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
+    },
     parser::{get_outputs, parse_command_line},
     types::{CWLType, File},
 };
@@ -97,7 +99,7 @@ pub fn test_parse_command_line_testdata() {
 
 #[test]
 pub fn test_cwl_execute_command_single() {
-    let command = "ls -la";
+    let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
     assert!(cwl.execute().is_ok())
@@ -128,7 +130,9 @@ pub fn test_get_outputs() {
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("archive")
-            .with_binding(CommandOutputBinding { glob: "archive.tar.gz".to_string() }),
+            .with_binding(CommandOutputBinding {
+                glob: "archive.tar.gz".to_string(),
+            }),
     ];
 
     let outputs = get_outputs(files);
