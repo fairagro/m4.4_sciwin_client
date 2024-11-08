@@ -2,7 +2,7 @@ use crate::commands::{
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
 };
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
