@@ -1,5 +1,6 @@
 use crate::commands::{
     execute::ExecuteCommands,
+    init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
 };
 use clap::{Parser, Subcommand};
@@ -13,6 +14,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    #[command(about = "Initializes project folder structure and repository")]
+    Init(InitArgs),
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
