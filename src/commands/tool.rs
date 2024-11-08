@@ -61,12 +61,12 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !modified.is_empty() {
         println!("Uncommitted changes detected:");
         print_list(&modified);
-        error("Uncommitted changes detected");
+        return Err(error("Uncommitted changes detected").into());
     }
 
     //parse input string
     if args.command.is_empty() {
-        error("No commandline string given!");
+        return Err(error("No commandline string given!").into());
     }
 
     let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
@@ -75,7 +75,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !args.no_run {
         //execute command
         if cwl.execute().is_err() {
-            error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str());
+            return Err(error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str()).into());
         }
 
         //check files that changed

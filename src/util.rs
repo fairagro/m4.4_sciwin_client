@@ -8,8 +8,8 @@ use syntect::{
 };
 use sysinfo::System;
 
-pub fn error(message: &str) {
-    panic!("❌ {}: {}", "Error".red().bold(), message.red())
+pub fn error(message: &str) -> String{
+    format!("❌ {}: {}", "Error".red().bold(), message.red())
 }
 
 pub fn warn(message: &str) {
