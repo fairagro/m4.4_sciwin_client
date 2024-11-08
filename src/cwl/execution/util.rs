@@ -235,7 +235,12 @@ mod tests {
         let cwd = current.to_str().unwrap();
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
-        let result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
+        let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
+        result.listing.sort_by_key(|item| match item {
+            OutputItem::OutputFile(file) => file.basename.clone(),
+            _ => String::new(), 
+        });
+        
         let expected = OutputDirectory {
             location: format!("file://{}", cwd),
             basename: "test_dir".to_string(),
