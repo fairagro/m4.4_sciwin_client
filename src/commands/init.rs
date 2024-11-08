@@ -1,6 +1,6 @@
 use clap::Args;
 use rust_xlsxwriter::Workbook;
-use std::{env, fs, path::PathBuf, path::Path, process::Command};
+use std::{env, fs, path::Path, path::PathBuf, process::Command};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -11,30 +11,21 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    init_s4n(args.project.clone(), Some(args.arc))?;
+    init_s4n(args.project.clone(), args.arc)?;
     Ok(())
 }
 
-pub fn init_s4n(folder_name: Option<String>, arc: Option<bool>) -> Result<(), Box<dyn std::error::Error>> {
-    let folder = folder_name.as_deref().unwrap_or("").to_string();
-    let _ = create_minimal_folder_structure(Some(&folder));
+pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let folder = folder_name.as_deref();
     check_git_installation()?;
-    if !folder.is_empty() {
-        let is_git_repo_result = is_git_repo(Some(&folder));
-        if !is_git_repo_result {
-            init_git_repo(Some(&folder))?;
-        }
-        if arc.is_some() && arc.unwrap_or(true) {
-            let _ = create_arc_folder_structure(Some(&folder));
-        }
+    let is_git_repo_result = is_git_repo(folder);
+    if !is_git_repo_result {
+        init_git_repo(folder)?;
+    }
+    if arc {
+        create_arc_folder_structure(folder)?;
     } else {
-        let is_git_repo_result = is_git_repo(None);
-        if !is_git_repo_result {
-            init_git_repo(None)?;
-        }
-        if arc.is_some() && arc.unwrap_or(true) {
-            let _ = create_arc_folder_structure(None);
-        }
+        create_minimal_folder_structure(folder)?;
     }
 
     Ok(())
@@ -47,7 +38,6 @@ pub fn check_git_installation() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-
 
 pub fn is_git_repo(path: Option<&str>) -> bool {
     // Determine the base directory from the provided path or use the current directory
@@ -65,10 +55,9 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
     // Check if the `.git` directory exists
     let is_repo = git_dir.exists() && git_dir.is_dir();
     println!("Checking if {} is a git repository: {}", base_dir.display(), is_repo);
-    
+
     is_repo
 }
-
 
 pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     println!("Checking if git repo: {:?}", base_folder);
@@ -154,10 +143,10 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     if !studies_dir.exists() {
         fs::create_dir_all(&studies_dir)?;
     }
-    let workflows_dir = base_dir.join("workflows");
-    if !workflows_dir.exists() {
-        fs::create_dir_all(&workflows_dir)?;
-    }
+    
+    //create workflows folder
+    create_minimal_folder_structure(base_folder)?;
+    
     let runs_dir = base_dir.join("runs");
     if !runs_dir.exists() {
         fs::create_dir_all(&runs_dir)?;

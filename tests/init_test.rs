@@ -22,8 +22,7 @@ fn test_init_s4n_without_folder() {
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
-    let arc: Option<bool> = Some(false);
-
+    let arc = false;
     let result = init_s4n(folder_name, arc);
 
     // Assert results is ok and folders exist/ do not exist
@@ -58,7 +57,7 @@ fn test_init_s4n_without_folder_with_arc() {
 
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
-    let arc: Option<bool> = Some(true);
+    let arc = true;
 
     let result = init_s4n(folder_name, arc);
 
@@ -178,7 +177,7 @@ fn test_create_arc_folder_structure() {
 #[test]
 fn test_init_s4n_with_arc() {
     let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
-    let arc = Some(true);
+    let arc = true;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
@@ -198,7 +197,7 @@ fn test_init_s4n_with_arc() {
 #[test]
 fn test_init_s4n_minimal() {
     let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
-    let arc = None;
+    let arc = false;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
