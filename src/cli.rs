@@ -13,11 +13,6 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    //temporary dummy command to showcase clap usage
-    Dummy {
-        #[command(subcommand)]
-        command: DummyCommands,
-    },
     #[command(about = "Initializes project folder structure and repository")]
     Init(InitArgs),
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
@@ -31,21 +26,4 @@ pub enum Commands {
     Annotate,
     Execute,
     Sync,
-}
-
-//temporary demo how to use clap, move to commands folder for real commands
-#[derive(Debug, Subcommand)]
-pub enum DummyCommands {
-    #[command(about = "Creates a dummy")]
-    Create(CreateDummyArgs),
-    Read,
-    Update,
-    Delete,
-}
-
-#[derive(Args, Debug)]
-pub struct CreateDummyArgs {
-    name: String,
-    #[arg(short = 'o', long = "option")]
-    option: Option<String>,
 }
