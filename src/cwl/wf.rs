@@ -1,5 +1,5 @@
-use super::{clt::CommandLineTool, inputs::CommandInputParameter, requirements::Requirement, types::CWLType};
-use crate::cwl::loader::{load_tool, resolve_filename};
+use super::{clt::CommandLineTool, inputs::CommandInputParameter, requirements::Requirement};
+use crate::cwl::{loader::{load_tool, resolve_filename}, outputs::WorkflowOutputParameter};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, error::Error};
 
@@ -166,19 +166,4 @@ pub struct WorkflowStep {
     pub run: String,
     pub in_: HashMap<String, String>,
     pub out: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct WorkflowOutputParameter {
-    pub id: String,
-    pub type_: CWLType,
-    pub output_source: String,
-}
-
-impl WorkflowOutputParameter {
-    pub fn with_id(&mut self, id: &str) -> &Self {
-        self.id = id.to_string();
-        self
-    }
 }

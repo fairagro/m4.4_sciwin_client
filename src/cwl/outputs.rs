@@ -63,3 +63,18 @@ where
 
     Ok(parameters)
 }
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowOutputParameter {
+    pub id: String,
+    pub type_: CWLType,
+    pub output_source: String,
+}
+
+impl WorkflowOutputParameter {
+    pub fn with_id(&mut self, id: &str) -> &Self {
+        self.id = id.to_string();
+        self
+    }
+}
