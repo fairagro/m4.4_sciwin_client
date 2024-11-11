@@ -1,7 +1,11 @@
 use clap::Args;
 use git2::Repository;
 use rust_xlsxwriter::Workbook;
-use std::{env, fs::{self, File}, path::{Path, PathBuf}};
+use std::{
+    env,
+    fs::{self, File},
+    path::{Path, PathBuf},
+};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -61,8 +65,10 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     println!("Git repository initialized successfully");
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
-    File::create(gitignore_path).expect("Failed to create .gitignore file");
-
+    if !gitignore_path.exists() {
+        File::create(gitignore_path).expect("Failed to create .gitignore file");
+    }
+    
     Ok(())
 }
 
@@ -127,10 +133,10 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     if !studies_dir.exists() {
         fs::create_dir_all(&studies_dir)?;
     }
-    
+
     //create workflows folder
     create_minimal_folder_structure(base_folder)?;
-    
+
     let runs_dir = base_dir.join("runs");
     if !runs_dir.exists() {
         fs::create_dir_all(&runs_dir)?;
