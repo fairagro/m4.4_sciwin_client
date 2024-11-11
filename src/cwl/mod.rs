@@ -8,6 +8,3 @@ pub mod parser;
 pub mod requirements;
 pub mod types;
 pub mod wf;
-
-#[cfg(test)]
-mod cwl_tests;
