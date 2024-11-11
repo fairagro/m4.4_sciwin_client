@@ -1,5 +1,6 @@
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
     types::CWLType,
 };
 

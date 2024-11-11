@@ -1,8 +1,10 @@
 mod common;
 use common::os_path;
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, DefaultValue, DockerRequirement, Entry, InitialWorkDirRequirement, Listing, Requirement},
-    types::{CWLType, File},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    requirements::{DockerRequirement, InitialWorkDirRequirement, Requirement},
+    types::{CWLType, DefaultValue, Entry, File, Listing},
 };
 use serde_yml::Value;
 

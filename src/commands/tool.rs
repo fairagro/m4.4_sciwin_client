@@ -1,8 +1,8 @@
 use crate::{
     cwl::{
-        clt::{DockerRequirement, Requirement},
         format::format_cwl,
         parser,
+        requirements::{DockerRequirement, Requirement},
     },
     io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, stage_file},

@@ -1,7 +1,8 @@
 use crate::{
     cwl::{
-        clt::{CommandInputParameter, CommandOutputParameter, DefaultValue},
-        types::{CWLType, OutputDirectory, OutputFile, OutputItem},
+        inputs::CommandInputParameter,
+        outputs::CommandOutputParameter,
+        types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
     },
     io::{copy_file, get_file_checksum, get_file_size},
 };
@@ -135,7 +136,10 @@ pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io
 mod tests {
     use super::*;
     use crate::{
-        cwl::clt::{CommandLineBinding, CommandOutputBinding},
+        cwl::{
+            inputs::CommandLineBinding,
+            outputs::{CommandOutputBinding, CommandOutputParameter},
+        },
         io::copy_dir,
     };
     use serde_yml::value;
@@ -238,19 +242,19 @@ mod tests {
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
         result.listing.sort_by_key(|item| match item {
             OutputItem::OutputFile(file) => file.basename.clone(),
-            _ => String::new(), 
+            _ => String::new(),
         });
 
         let file = current.join("file.txt").to_string_lossy().into_owned();
         let input = current.join("input.txt").to_string_lossy().into_owned();
-        
+
         let expected = OutputDirectory {
             location: format!("file://{}", cwd),
             basename: "test_dir".to_string(),
             class: "Directory".to_string(),
             listing: vec![
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{}",file),
+                    location: format!("file://{}", file),
                     basename: "file.txt".to_string(),
                     class: "File".to_string(),
                     checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),

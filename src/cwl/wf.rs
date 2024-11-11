@@ -1,7 +1,4 @@
-use super::{
-    clt::{CommandInputParameter, CommandLineTool, Requirement},
-    types::CWLType,
-};
+use super::{clt::CommandLineTool, inputs::CommandInputParameter, requirements::Requirement, types::CWLType};
 use crate::cwl::loader::{load_tool, resolve_filename};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, error::Error};

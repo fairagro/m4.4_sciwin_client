@@ -1,4 +1,8 @@
-use crate::cwl::clt::{CommandLineTool, EnvVarRequirement, EnviromentDefs, Requirement};
+use crate::cwl::{
+    clt::CommandLineTool,
+    requirements::{EnvVarRequirement, Requirement},
+    types::EnviromentDefs,
+};
 use std::env;
 
 pub fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String> {
@@ -40,9 +44,9 @@ pub fn unset_environment_vars(keys: Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
-    use crate::cwl::types::EnvironmentDef;
     use super::*;
+    use crate::cwl::types::EnvironmentDef;
+    use serial_test::serial;
     use std::{collections::HashMap, vec};
 
     #[test]

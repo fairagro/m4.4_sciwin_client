@@ -1,8 +1,9 @@
 use super::{
-    clt::{
-        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
-    },
-    types::{CWLType, Directory, File},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    outputs::{CommandOutputBinding, CommandOutputParameter},
+    requirements::{InitialWorkDirRequirement, Requirement},
+    types::{CWLType, DefaultValue, Directory, File},
 };
 use crate::io::get_filename_without_extension;
 use serde_yml::Value;
