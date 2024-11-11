@@ -95,9 +95,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), 
     println!("Folder structure created successfully:");
     println!("{} (Base)", base_dir.display());
     println!("  ├── workflows");
-    // println!("│   └── wf/");
-    // println!("│   └── tools/");
-
+    
     Ok(())
 }
 
