@@ -45,7 +45,7 @@ mod tests {
     fn test_load_tool() {
         let path = "tests/test_data/echo.cwl";
 
-        let tool_result = load_tool(&path);
+        let tool_result = load_tool(path);
         assert!(tool_result.is_ok());
     }
 
@@ -53,7 +53,7 @@ mod tests {
     fn test_load_workflow() {
         let path = "tests/test_data/test-wf.cwl";
 
-        let wf_result = load_workflow(&path);
+        let wf_result = load_workflow(path);
         assert!(wf_result.is_ok());
     }
 }
