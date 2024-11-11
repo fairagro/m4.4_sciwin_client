@@ -13,6 +13,12 @@ use std::{collections::HashMap, error::Error, fmt::Display, vec};
 pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc: Option<String>,
     #[serde(default)]
     pub base_command: Command,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -46,6 +52,9 @@ pub struct CommandLineTool {
 impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
+            id: None,
+            label: None,
+            doc: None,
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
             base_command: Default::default(),

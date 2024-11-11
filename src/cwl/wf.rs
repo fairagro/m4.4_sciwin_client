@@ -1,19 +1,22 @@
-use std::{collections::HashMap, error::Error};
-
-use serde::{Deserialize, Serialize};
-
-use crate::cwl::loader::{load_tool, resolve_filename};
-
 use super::{
     clt::{CommandInputParameter, CommandLineTool, Requirement},
     types::CWLType,
 };
+use crate::cwl::loader::{load_tool, resolve_filename};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, error::Error};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
     pub class: String,
     pub cwl_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,6 +29,9 @@ pub struct Workflow {
 impl Default for Workflow {
     fn default() -> Self {
         Self {
+            id: None,
+            label: None,
+            doc: None,
             class: String::from("Workflow"),
             cwl_version: String::from("v1.2"),
             requirements: Default::default(),
