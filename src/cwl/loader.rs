@@ -29,3 +29,31 @@ pub fn load_workflow(filename: &str) -> Result<Workflow, Box<dyn Error>> {
     let workflow: Workflow = serde_yml::from_str(&contents)?;
     Ok(workflow)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_filename() {
+        let name = "my-tool";
+        let filename = resolve_filename(name);
+        assert_eq!(filename, "workflows/my-tool/my-tool.cwl".to_string())
+    }
+
+    #[test]
+    fn test_load_tool() {
+        let path = "tests/test_data/echo.cwl";
+
+        let tool_result = load_tool(&path);
+        assert!(tool_result.is_ok());
+    }
+
+    #[test]
+    fn test_load_workflow() {
+        let path = "tests/test_data/test-wf.cwl";
+
+        let wf_result = load_workflow(&path);
+        assert!(wf_result.is_ok());
+    }
+}
