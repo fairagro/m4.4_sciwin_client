@@ -120,7 +120,7 @@ impl Workflow {
     }
 
     /// Adds a connection between two a CommandLineToos. The tools will be registered as step if registered not already.
-    pub fn step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
+    pub fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         //handle from
         let from_parts = from.split('/').collect::<Vec<_>>();
         //check if step already exists and create if not

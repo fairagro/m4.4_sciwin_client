@@ -73,7 +73,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     } else if to_parts[0] == "@outputs" {
         workflow.add_output_connection(&args.from, to_parts[1])?;
     } else {
-        workflow.step_connection(&args.from, &args.to)?;
+        workflow.add_step_connection(&args.from, &args.to)?;
     }
 
     //save workflow
