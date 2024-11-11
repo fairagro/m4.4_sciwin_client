@@ -90,7 +90,7 @@ fn test_create_minimal_folder_structure_invalid() {
 
     println!("Base folder path: {:?}", base_folder);
     //path to file instead of a directory, assert that it fails
-    let result = create_minimal_folder_structure(base_folder);
+    let result = create_minimal_folder_structure(base_folder, false);
     assert!(result.is_err(), "Expected failed initialization");
 }
 
@@ -100,7 +100,7 @@ fn test_create_minimal_folder_structure() {
 
     let base_folder = Some(temp_dir.path().to_str().unwrap());
 
-    let result = create_minimal_folder_structure(base_folder);
+    let result = create_minimal_folder_structure(base_folder, false);
 
     //test if result is ok
     assert!(result.is_ok(), "Expected successful initialization");

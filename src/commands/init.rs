@@ -28,7 +28,7 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
     if arc {
         create_arc_folder_structure(folder)?;
     } else {
-        create_minimal_folder_structure(folder)?;
+        create_minimal_folder_structure(folder, false)?;
     }
 
     Ok(())
@@ -68,11 +68,11 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error
     if !gitignore_path.exists() {
         File::create(gitignore_path).expect("Failed to create .gitignore file");
     }
-    
+
     Ok(())
 }
 
-pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => {
@@ -92,10 +92,12 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), 
         fs::create_dir_all(&workflows_dir)?;
     }
 
-    println!("Folder structure created successfully:");
-    println!("{} (Base)", base_dir.display());
-    println!("  ├── workflows");
-    
+    if !silent {
+        println!("Folder structure created successfully:");
+        println!("{} (Base)", base_dir.display());
+        println!("  ├── workflows");
+    }
+
     Ok(())
 }
 
@@ -125,7 +127,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     }
 
     //create workflows folder
-    create_minimal_folder_structure(base_folder)?;
+    create_minimal_folder_structure(base_folder, true)?;
 
     let runs_dir = base_dir.join("runs");
     if !runs_dir.exists() {
