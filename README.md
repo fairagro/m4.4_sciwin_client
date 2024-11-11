@@ -12,7 +12,7 @@ Besides the minimal project structure, the creation of an ["Annotated Research C
 s4n init -a -p <FOLDER/PROJECT NAME>
 ```
 
-## Creation of CWL Files
+## Creation of CWL CommandLineTools
 To create [CWL](https://www.commonwl.org/) CommandLineTools which can be combined to workflows later a prefix command can be used. `s4n tool create` which has `s4n run` as a synonym will execute any given command and creates a CWL CommandLineTool accordingly.
 ```bash
 s4n tool create <COMMAND> [ARGUMENTS]
@@ -33,6 +33,18 @@ Options:
       --no-run                             Do not run given command
       --clean                              Deletes created outputs after usage
 ```
+
+## Creation of Workflows
+CWL Workflows can be created semi-automatically using `s4n workflow` commands. First of all a workflow needs to be created.
+```bash
+s4n workflow create <NAME>
+```
+After execution of this command a file called `workflows/<NAME>/<NAME>.cwl` will be created. 
+Workflow Steps and Connections can be added using the `s4n workflow connect` command. Connections to In- or Outputs are added using either `@inputs` or `@outputs` as file identifier.
+```bash
+s4n workflow connect <NAME> --from [FILE]/[SLOT] --to [FILE/SLOT]
+```
+For example: `s4n workflow connect demo --from @inputs/speakers --to calculation/speakers` - The Step `calculation` will be added pointing to `workflows/calculation/calculation.cwl`, which will use the newly created input `speakers` as input for its `speakers` input.
 
 ## Execution of CWL Files
 SciWIn-Client comes with its custom CWL Runner (which does not support all `cwltool` can do, yet!) to run the CommandLineTools (Workflows to be added soon!). The command `s4n execute local` can also be triggered using `s4n ex l`.
