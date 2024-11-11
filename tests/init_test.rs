@@ -26,7 +26,7 @@ fn test_init_s4n_without_folder() {
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
 
-    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf"];
+    let expected_dirs = vec!["workflows"];
     //check that other directories are not created
     let unexpected_dirs = vec!["assays", "studies", "runs"];
 
@@ -63,8 +63,6 @@ fn test_init_s4n_without_folder_with_arc() {
     assert!(result.is_ok());
 
     assert!(PathBuf::from("workflows").exists());
-    assert!(PathBuf::from("workflows/wf").exists());
-    assert!(PathBuf::from("workflows/tools").exists());
     assert!(PathBuf::from(".git").exists());
     assert!(PathBuf::from("assays").exists());
     assert!(PathBuf::from("studies").exists());
@@ -83,7 +81,6 @@ fn test_init_git_repo() {
     let git_dir = base_folder.join(".git");
     assert!(git_dir.exists(), "Expected .git directory to be created");
 }
-
 
 #[test]
 fn test_create_minimal_folder_structure_invalid() {
@@ -108,7 +105,7 @@ fn test_create_minimal_folder_structure() {
     //test if result is ok
     assert!(result.is_ok(), "Expected successful initialization");
 
-    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf"];
+    let expected_dirs = vec!["workflows"];
     //assert that folders exist
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
@@ -179,7 +176,7 @@ fn test_init_s4n_with_arc() {
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
-    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf", "assays", "studies", "runs"];
+    let expected_dirs = vec!["workflows", "assays", "studies", "runs"];
 
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
@@ -199,7 +196,7 @@ fn test_init_s4n_minimal() {
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
-    let expected_dirs = vec!["workflows", "workflows/tools", "workflows/wf"];
+    let expected_dirs = vec!["workflows"];
     //check that other directories are not created
     let unexpected_dirs = vec!["assays", "studies", "runs"];
 
@@ -214,7 +211,6 @@ fn test_init_s4n_minimal() {
         assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
     }
 }
-
 
 #[test]
 fn test_is_git_repo() {

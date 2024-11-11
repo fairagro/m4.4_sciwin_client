@@ -91,20 +91,12 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), 
     if !workflows_dir.exists() {
         fs::create_dir_all(&workflows_dir)?;
     }
-    let tools_dir = base_dir.join("workflows").join("tools");
-    if !tools_dir.exists() {
-        fs::create_dir_all(&tools_dir)?;
-    }
-    let wf_dir = base_dir.join("workflows").join("wf");
-    if !wf_dir.exists() {
-        fs::create_dir_all(&wf_dir)?;
-    }
 
     println!("Folder structure created successfully:");
     println!("{} (Base)", base_dir.display());
     println!("  ├── workflows");
-    println!("│   └── wf/");
-    println!("│   └── tools/");
+    // println!("│   └── wf/");
+    // println!("│   └── tools/");
 
     Ok(())
 }
