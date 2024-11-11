@@ -3,7 +3,11 @@ use common::{os_path, with_temp_repository};
 use git2::Repository;
 use s4n::{
     commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
-    cwl::clt::{CommandLineTool, DockerRequirement, Entry, Requirement},
+    cwl::{
+        clt::CommandLineTool,
+        requirements::{DockerRequirement, Requirement},
+        types::Entry,
+    },
     repo::get_modified_files,
 };
 use serial_test::serial;

@@ -1,17 +1,18 @@
-use crate::util::format_command;
 use crate::{
     cwl::{
-        clt::{Argument, Command, CommandLineBinding, CommandLineTool, DefaultValue},
+        clt::{Argument, Command, CommandLineTool},
         execution::{
             environment::{set_tool_environment_vars, unset_environment_vars},
             staging::{stage_required_files, unstage_files},
             util::{evaluate_input_as_string, evaluate_outputs},
             validate::{rewire_paths, set_placeholder_values},
         },
+        inputs::CommandLineBinding,
+        types::DefaultValue,
     },
     error::CommandError,
     io::{create_and_write_file, get_shell_command},
-    util::{get_available_ram, get_processor_count},
+    util::{format_command, get_available_ram, get_processor_count},
 };
 use std::{
     collections::HashMap,
@@ -199,7 +200,7 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
                     } else {
                         args.push(value.to_string())
                     }
-                } else {                    
+                } else {
                     args.push(value.to_string())
                 }
             } else {

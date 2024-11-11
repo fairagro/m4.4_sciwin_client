@@ -2,6 +2,7 @@ use crate::commands::{
     execute::ExecuteCommands,
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
+    workflow::WorkflowCommands
 };
 use clap::{Parser, Subcommand};
 
@@ -23,7 +24,11 @@ pub enum Commands {
     },
     #[command(hide = true)]
     Run(CreateToolArgs),
-    Workflow,
+    #[command(about = "Provides commands to create and work with CWL Workflows")]
+    Workflow{
+        #[command(subcommand)]
+        command: WorkflowCommands
+    },
     Annotate,
     #[command(about = "Execution of CWL Files locally or on remote servers (\x1b[1msynonym\x1b[0m: s4n ex)")]
     Execute {

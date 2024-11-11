@@ -1,11 +1,12 @@
 mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
-    clt::{
-        Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement,
-    },
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    outputs::{CommandOutputBinding, CommandOutputParameter},
     parser::{get_outputs, parse_command_line},
-    types::{CWLType, File},
+    requirements::{InitialWorkDirRequirement, Requirement},
+    types::{CWLType, DefaultValue, File},
 };
 use serde_yml::Value;
 use serial_test::serial;

@@ -1,9 +1,8 @@
-use super::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, DefaultValue},
-    parser::get_inputs,
-    types::CWLType,
+use super::{clt::Command, parser::get_inputs, types::CWLType, types::DefaultValue};
+use crate::cwl::{
+    inputs::{CommandInputParameter, CommandLineBinding},
+    parser::get_base_command,
 };
-use crate::cwl::parser::get_base_command;
 use serde_yml::Value;
 
 //test private cwl api here

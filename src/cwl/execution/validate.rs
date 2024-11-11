@@ -1,7 +1,9 @@
 use crate::{
     cwl::{
-        clt::{Argument, Command, CommandInputParameter, CommandLineTool, DefaultValue, Entry, EnviromentDefs, Requirement},
-        types::{Directory, File},
+        clt::{Argument, Command, CommandLineTool},
+        inputs::CommandInputParameter,
+        requirements::Requirement,
+        types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
     },
     io::get_file_property,
 };

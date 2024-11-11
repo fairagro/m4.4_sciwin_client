@@ -5,6 +5,7 @@ use s4n::{
         execute::handle_execute_commands,
         init::handle_init_command,
         tool::{create_tool, handle_tool_commands},
+        workflow::handle_workflow_commands
     },
     error::{CommandError, ExitCode},
 };
@@ -29,7 +30,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Init(args) => handle_init_command(args)?,
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
-        Commands::Workflow => todo!(),
+        Commands::Workflow { command } => handle_workflow_commands(command)?,
         Commands::Annotate => todo!(),
         Commands::Execute { command } | Commands::Ex { command } => handle_execute_commands(command)?,
         Commands::Sync => todo!(),

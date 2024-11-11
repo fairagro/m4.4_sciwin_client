@@ -1,8 +1,11 @@
 use super::util::evaluate_input;
 use crate::{
     cwl::{
-        clt::{CommandInputParameter, CommandLineTool, CommandOutputParameter, DefaultValue, Entry, Requirement},
-        types::CWLType,
+        clt::CommandLineTool,
+        inputs::CommandInputParameter,
+        outputs::CommandOutputParameter,
+        requirements::Requirement,
+        types::{CWLType, DefaultValue, Entry},
     },
     io::{copy_dir, copy_file, create_and_write_file},
 };
@@ -160,7 +163,8 @@ fn handle_filename(value: &DefaultValue) -> String {
 mod tests {
     use super::*;
     use crate::cwl::{
-        clt::{CommandOutputBinding, InitialWorkDirRequirement},
+        outputs::CommandOutputBinding,
+        requirements::InitialWorkDirRequirement,
         types::{Directory, File},
     };
     use serial_test::serial;
