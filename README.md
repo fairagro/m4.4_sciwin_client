@@ -107,7 +107,7 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 ```
 
 ## 🪂 Contributors
-|Measure 4.4|||
+|[Measure 4.4](https://fairagro.net/tag/measure-4-4/)|||
 |--|--|--|
 |Jens Krumsieck|[:octocat: @jenskrumsieck](https://github.com/JensKrumsieck)|[ORCID: 0000-0001-6242-5846](https://orcid.org/0000-0001-6242-5846)|
 |Antonia Leidel|[:octocat: @aleidel](https://github.com/aleidel)| |
