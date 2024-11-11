@@ -34,7 +34,7 @@ Options:
       --clean                              Deletes created outputs after usage
 ```
 
-## Creation of Workflows
+## Creation of CWL Workflows
 CWL Workflows can be created semi-automatically using `s4n workflow` commands. First of all a workflow needs to be created.
 ```bash
 s4n workflow create <NAME>
