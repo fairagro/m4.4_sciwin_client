@@ -1,6 +1,5 @@
 use super::{deserialize::Identifiable, types::CWLType};
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_yml::Value;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
