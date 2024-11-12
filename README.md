@@ -13,7 +13,7 @@
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/m4.4_sciwin_client)
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/m4.4_sciwin_client](https://github.com/fairagro/m4.4_sciwin_client))
 
-🦀 Take a look at our latest [poster](https://doi.org/10.5281/zenodo.11619213) to find out, why SciWIn will be amazing! 👀
+🦀 Take a look at our latest [poster](https://doi.org/10.5281/zenodo.14098277) to find out, why SciWIn will be amazing! 👀
 
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
