@@ -4,7 +4,7 @@
 ![Rust][rust-image] 
 [![🏗️ Build and Test](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/build.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/build.yml)
 [![🕶️ Nightly Release](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml)
-![Coverage][coverage-badge]
+[![Coverage][coverage-badge]](https://coverage.jenskrumsieck.de/dashboard/fairagro/m4.4_sciwin_client)
 
 ⭐ Star us on GitHub to say "Thank you!" ⭐
 
