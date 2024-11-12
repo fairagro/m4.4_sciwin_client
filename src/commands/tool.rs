@@ -10,7 +10,7 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use std::{env, error::Error, fs::remove_file, path::Path, path::PathBuf, io::Write, fs, io};
+use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
 use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
@@ -31,7 +31,6 @@ pub enum ToolCommands {
     #[command(about = "Remove a tool, e.g. s4n tool rm toolname")]
     Rm(ToolArgs),
 }
-
 
 #[derive(Args, Debug)]
 pub struct CreateToolArgs {
@@ -166,7 +165,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     }
 }
 
-
 pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
@@ -178,53 +176,42 @@ pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
     // Walk recursively through all directories and subdirectories
     for entry in WalkDir::new(&folder_path).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() {
-            // Print the file names, could also print directories or something else
             let file_name = entry.file_name().to_string_lossy();
-            println!("📄 {}", file_name.green().bold());
+            //pnly print cwl files?
+            if file_name.contains(".cwl") {
+                println!("📄 {}", file_name.green().bold());
+            }
         }
     }
     Ok(())
 }
-
-
 
 pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
     let workflows_path = PathBuf::from("workflows");
     for tool in &args.tool {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
-       // Check if the path has an extension
+        // Check if the path has an extension
         if file_path.extension().is_some() {
             // If it has an extension, remove it
-            let file_stem = file_path.file_stem().unwrap_or_default(); 
-            tool_path= workflows_path.join(file_stem);
-        } 
-        
+            let file_stem = file_path.file_stem().unwrap_or_default();
+            tool_path = workflows_path.join(file_stem);
+        }
         // Check if the directory exists
         if tool_path.exists() && tool_path.is_dir() {
-            // Ask for user confirmation
-            print!("Are you sure you want to remove the tool '{}'? (y/n): ", tool.red());
-            io::stdout().flush()?; 
-
-            // Read user input
-            let mut input = String::new();
-            io::stdin().read_line(&mut input)?;
-            let input = input.trim().to_lowercase();
-
-            if input.trim().to_lowercase() == "y" || input.trim().to_lowercase() == "yes" {
-                // Attempt to remove the directory
-                fs::remove_dir_all(&tool_path)?;
-                println!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
-            } else {
-                println!("{}", "Operation canceled. Tool not removed.".green());
-            }
+            // Attempt to remove the directory
+            fs::remove_dir_all(&tool_path)?;
+            println!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
+            let cwd = env::current_dir()?;
+            let repo = open_repo(cwd);
+            commit(&repo, format!("Deletion of `{}`", args.tool.join(" ").as_str()).as_str()).unwrap();
         } else {
             println!("Tool '{}' does not exist.", tool_path.display().to_string().red());
         }
     }
-
-    if args.tool.is_empty(){
-        println!("Please enter a tool or a list of tools. Alternatively remove everything? Do we want that? Ask");
-    } 
+    //we could also remove all tools if no tool is specified but maybe too dangerous
+    if args.tool.is_empty() {
+        println!("Please enter a tool or a list of tools");
+    }
     Ok(())
 }
