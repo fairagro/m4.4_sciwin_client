@@ -1,7 +1,7 @@
-use super::deserialize::{deserialize_list, Identifiable};
 use super::{
     clt::CommandLineTool,
-    inputs::CommandInputParameter,
+    deserialize::{deserialize_list, Identifiable},
+    inputs::{deserialize_inputs, CommandInputParameter},
     loader::{load_tool, resolve_filename},
     outputs::WorkflowOutputParameter,
     requirements::{deserialize_requirements, Requirement},
@@ -28,7 +28,7 @@ pub struct Workflow {
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_requirements")]
     pub hints: Option<Vec<Requirement>>,
-    #[serde(deserialize_with = "deserialize_list")]
+    #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
     #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<WorkflowOutputParameter>,
