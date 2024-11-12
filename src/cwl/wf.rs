@@ -1,5 +1,11 @@
-use super::{clt::CommandLineTool, inputs::CommandInputParameter, requirements::Requirement};
-use crate::cwl::{loader::{load_tool, resolve_filename}, outputs::WorkflowOutputParameter};
+use super::deserialize::{deserialize_list, Identifiable};
+use super::{
+    clt::CommandLineTool,
+    inputs::CommandInputParameter,
+    loader::{load_tool, resolve_filename},
+    outputs::WorkflowOutputParameter,
+    requirements::{deserialize_requirements, Requirement},
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, error::Error};
 
@@ -15,11 +21,18 @@ pub struct Workflow {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_requirements")]
     pub hints: Option<Vec<Requirement>>,
+    #[serde(deserialize_with = "deserialize_list")]
     pub inputs: Vec<CommandInputParameter>,
+    #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<WorkflowOutputParameter>,
+    #[serde(deserialize_with = "deserialize_list")]
     pub steps: Vec<WorkflowStep>,
 }
 
@@ -162,8 +175,18 @@ impl Workflow {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStep {
+    #[serde(default)]
     pub id: String,
     pub run: String,
     pub in_: HashMap<String, String>,
     pub out: Vec<String>,
+}
+impl Identifiable for WorkflowStep {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
 }

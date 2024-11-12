@@ -4,10 +4,12 @@ use crate::{
         execution::runner::run_commandlinetool,
         parser::guess_type,
         types::{CWLType, DefaultValue, Directory, File, PathItem},
+        wf::Workflow,
     },
     io::join_path_string,
 };
 use clap::{Args, Subcommand, ValueEnum};
+use serde_yml::Value;
 use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
@@ -80,11 +82,9 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 );
             }
 
+            //gather inputs
             let contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {}: {}", args.file, e))?;
-            let mut tool: CommandLineTool = serde_yml::from_str(&contents).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
-
             let mut inputs: Option<HashMap<String, DefaultValue>> = None;
-
             let is_file_input = args.args.len() == 1 && !&args.args[0].starts_with("-");
 
             //check for yaml input
@@ -149,7 +149,16 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
+            let cwl_yaml: Value = serde_yml::from_str(&contents).map_err(|e| format!("Could not load YAML: {}", e))?;
+            let class = cwl_yaml.get("class").expect("Could not get class");
+            let is_workflow = class == "Workflow";
+
+            if !is_workflow {
+                let mut tool: CommandLineTool = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
+                run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
+            } else {
+                let mut _workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
+            }
 
             Ok(())
         }

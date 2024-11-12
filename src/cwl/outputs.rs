@@ -1,4 +1,4 @@
-use super::types::CWLType;
+use super::{deserialize::Identifiable, types::CWLType};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::Value;
 
@@ -26,6 +26,16 @@ impl CommandOutputParameter {
     pub fn with_binding(mut self, binding: CommandOutputBinding) -> Self {
         self.output_binding = Some(binding);
         self
+    }
+}
+
+impl Identifiable for CommandOutputParameter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id
     }
 }
 
@@ -67,6 +77,7 @@ where
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowOutputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
     pub output_source: String,
@@ -77,4 +88,43 @@ impl WorkflowOutputParameter {
         self.id = id.to_string();
         self
     }
+}
+
+impl Identifiable for WorkflowOutputParameter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id
+    }
+}
+
+pub fn deserialize_workflow_outputs<'de, D>(deserializer: D) -> Result<Vec<WorkflowOutputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: WorkflowOutputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let mut param: WorkflowOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                param.id = id.to_string();
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(parameters)
 }

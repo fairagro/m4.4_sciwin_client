@@ -1,7 +1,8 @@
 use super::{
+    deserialize::deserialize_list,
     execution::runner::run_command,
-    inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
-    outputs::{deserialize_outputs, CommandOutputParameter},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    outputs::CommandOutputParameter,
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
     types::{DefaultValue, Entry},
 };
@@ -29,9 +30,9 @@ pub struct CommandLineTool {
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
-    #[serde(deserialize_with = "deserialize_inputs")]
+    #[serde(deserialize_with = "deserialize_list")]
     pub inputs: Vec<CommandInputParameter>,
-    #[serde(deserialize_with = "deserialize_outputs")]
+    #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deserialize_requirements")]

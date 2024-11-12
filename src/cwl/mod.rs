@@ -1,4 +1,5 @@
 pub mod clt;
+pub mod deserialize;
 pub mod execution;
 pub mod format;
 pub mod inputs;
