@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use git2::Repository;
 use predicates::prelude::*;
 use s4n::commands::tool::{remove_tool, ToolArgs};
 use serial_test::serial;
@@ -6,8 +7,6 @@ use std::env;
 use std::fs::{create_dir_all, File};
 use std::{fs, vec};
 use tempfile::tempdir;
-use git2::Repository;
-
 
 #[test]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
@@ -44,7 +43,7 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 #[serial]
-fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error>>{
+fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = env::temp_dir().join("rm_existing");
     let workflows_path = temp_dir.as_path().join("workflows");
     let tool_name = "example_tool";
@@ -53,7 +52,7 @@ fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error
 
     // Initialize a repository
     create_dir_all(&temp_dir)?;
-    //SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
+
     let _repo = match Repository::init(&temp_dir) {
         Ok(repo) => repo,
         Err(e) => panic!("Failed to initialize repository: {}", e),
@@ -74,7 +73,7 @@ fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error
 
 #[test]
 #[serial]
-fn test_remove_tool_with_extension() -> Result<(), Box<dyn std::error::Error>>{
+fn test_remove_tool_with_extension() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = env::temp_dir().join("rm_extension");
     println!("Temporary directory: {}", temp_dir.display());
     let workflows_path = temp_dir.as_path().join("workflows");
@@ -88,7 +87,6 @@ fn test_remove_tool_with_extension() -> Result<(), Box<dyn std::error::Error>>{
         Ok(repo) => repo,
         Err(e) => panic!("Failed to initialize repository: {}", e),
     };
-    //SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
 
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("tool_with_ext.cwl"))?;
