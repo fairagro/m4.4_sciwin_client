@@ -1,3 +1,5 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
 use s4n::commands::tool::{remove_tool, ToolArgs};
 use serial_test::serial;
 use std::env;
@@ -5,8 +7,7 @@ use std::fs::{create_dir_all, File};
 use std::io;
 use std::{fs, vec};
 use tempfile::tempdir;
-use assert_cmd::Command;
-use predicates::prelude::*;
+use std::process::Command as SysCommand;
 
 #[test]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,14 +50,18 @@ fn test_remove_existing_tool_directory() -> io::Result<()> {
     let tool_name = "example_tool";
     let tool_path = workflows_path.join(tool_name);
     let original_dir = env::current_dir()?;
+
+    // Initialize a repository
+    create_dir_all(&temp_dir)?;
+    SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("example_tool.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
+
     let args = ToolArgs { tool: vec![tool_name.to_string()] };
     let result = remove_tool(&args);
 
     assert!(result.is_ok());
-    //assert that it was deleted
     assert!(!tool_path.exists());
     env::set_current_dir(&original_dir)?;
     Ok(())
@@ -67,11 +72,14 @@ fn test_remove_existing_tool_directory() -> io::Result<()> {
 fn test_remove_tool_with_extension() -> io::Result<()> {
     let temp_dir = env::temp_dir().join("rm_extension");
     println!("Temporary directory: {}", temp_dir.display());
-
     let workflows_path = temp_dir.as_path().join("workflows");
     let tool_name = "tool_with_ext.cwl";
     let tool_path = workflows_path.join("tool_with_ext");
     let original_dir = env::current_dir()?;
+
+    // Initialize a repository
+    create_dir_all(&temp_dir)?;
+    SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("tool_with_ext.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
@@ -86,7 +94,6 @@ fn test_remove_tool_with_extension() -> io::Result<()> {
     Ok(())
 }
 
-
 #[test]
 #[serial]
 fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
@@ -98,19 +105,20 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(dir.path().join("workflows").join("test2"))?;
     fs::create_dir_all(dir.path().join("workflows").join("test3"))?;
 
-   File::create(dir.path().join("workflows").join("test1/test1.cwl"))?;
-   File::create(dir.path().join("workflows").join("test2/test2.cwl"))?;
-   File::create(dir.path().join("workflows").join("test3/other_file.txt"))?;
+    File::create(dir.path().join("workflows").join("test1/test1.cwl"))?;
+    File::create(dir.path().join("workflows").join("test2/test2.cwl"))?;
+    File::create(dir.path().join("workflows").join("test3/other_file.txt"))?;
 
-   assert!(dir.path().join("workflows").join("test1/test1.cwl").exists(), "test1.cwl was not created!");
-   assert!(dir.path().join("workflows").join("test2/test2.cwl").exists(), "test2.cwl was not created!");
-   assert!(dir.path().join("workflows").join("test3/other_file.txt").exists(), "other_file.txt was not created!");
+    assert!(dir.path().join("workflows").join("test1/test1.cwl").exists(), "test1.cwl was not created!");
+    assert!(dir.path().join("workflows").join("test2/test2.cwl").exists(), "test2.cwl was not created!");
+    assert!(dir.path().join("workflows").join("test3/other_file.txt").exists(), "other_file.txt was not created!");
 
     let original_dir = env::current_dir()?;
     env::set_current_dir(dir.path())?;
 
     let mut cmd = Command::cargo_bin("s4n")?;
-    let output = cmd.arg("tool")
+    let output = cmd
+        .arg("tool")
         .arg("ls")
         .assert()
         .success()
@@ -120,7 +128,7 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
         .get_output()
         .clone();
 
-        println!("Command Output: {}", String::from_utf8_lossy(&output.stdout));
+    println!("Command Output: {}", String::from_utf8_lossy(&output.stdout));
 
     env::set_current_dir(original_dir)?;
 

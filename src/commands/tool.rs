@@ -187,6 +187,8 @@ pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let cwd = env::current_dir()?;
+    let repo = open_repo(cwd);
     let workflows_path = PathBuf::from("workflows");
     for tool in &args.tool {
         let mut tool_path = workflows_path.join(tool);
@@ -202,9 +204,7 @@ pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
             // Attempt to remove the directory
             fs::remove_dir_all(&tool_path)?;
             println!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
-            //let cwd = env::current_dir()?;
-            //let repo = open_repo(cwd);
-            //commit(&repo, format!("Deletion of `{}`", args.tool.join(" ").as_str()).as_str()).unwrap();
+            commit(&repo, format!("Deletion of `{}`", tool.as_str()).as_str()).unwrap();
         } else {
             println!("Tool '{}' does not exist.", tool_path.display().to_string().red());
         }

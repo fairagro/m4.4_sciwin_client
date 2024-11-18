@@ -18,3 +18,5 @@ walkdir = "2.5.0"
 [dev-dependencies]
 serial_test = "3.1.1"
 tempfile = "3.13.0"
+assert_cmd = "2.0.16" 
+predicates = "3.1.2"
