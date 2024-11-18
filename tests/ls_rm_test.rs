@@ -9,6 +9,7 @@ use std::{fs, vec};
 use tempfile::tempdir;
 use std::process::Command as SysCommand;
 
+
 #[test]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = tempdir()?;
@@ -30,7 +31,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn test_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
+fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
     let args = ToolArgs { tool: vec![] };
     let original_dir = env::current_dir()?;
     let output = std::panic::catch_unwind(|| {
@@ -54,6 +55,10 @@ fn test_remove_existing_tool_directory() -> io::Result<()> {
     // Initialize a repository
     create_dir_all(&temp_dir)?;
     SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
+   // SysCommand::new("git").arg("checkout").arg("-b").arg("main").current_dir(&temp_dir).output()?; // Create 'main' branch
+    //SysCommand::new("git").arg("commit").arg("--allow-empty").arg("-m").arg("Initial commit").current_dir(&temp_dir).output()?; // Create an initial commit
+
+
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("example_tool.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
@@ -79,7 +84,12 @@ fn test_remove_tool_with_extension() -> io::Result<()> {
 
     // Initialize a repository
     create_dir_all(&temp_dir)?;
+   // let repo = Repository::init(&temp_dir)?;
     SysCommand::new("git").arg("init").current_dir(&temp_dir).output()?; 
+   // SysCommand::new("git").arg("checkout").arg("-b").arg("main").current_dir(&temp_dir).output()?; // Create 'main' branch
+  //  SysCommand::new("git").arg("commit").arg("--allow-empty").arg("-m").arg("Initial commit").current_dir(&temp_dir).output()?; // Create an initial commit
+
+
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("tool_with_ext.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
