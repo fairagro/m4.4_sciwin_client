@@ -57,7 +57,7 @@ pub struct CreateToolArgs {
 #[derive(Args, Debug)]
 pub struct ToolArgs {
     #[arg(trailing_var_arg = true, help = "Remove a tool")]
-    pub tool: Vec<String>,
+    pub rm_tool: Vec<String>,
 }
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
@@ -190,7 +190,7 @@ pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let repo = open_repo(cwd);
     let workflows_path = PathBuf::from("workflows");
-    for tool in &args.tool {
+    for tool in &args.rm_tool {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
         // Check if the path has an extension
@@ -210,7 +210,7 @@ pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     //we could also remove all tools if no tool is specified but maybe too dangerous
-    if args.tool.is_empty() {
+    if args.rm_tool.is_empty() {
         println!("Please enter a tool or a list of tools");
     }
     Ok(())
