@@ -53,11 +53,7 @@ fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error
     // Initialize a repository
     create_dir_all(&temp_dir)?;
 
-    let _repo = match Repository::init(&temp_dir) {
-        Ok(repo) => repo,
-        Err(e) => panic!("Failed to initialize repository: {}", e),
-    };
-
+    Repository::init(&temp_dir).expect("Failed to execute git init command");
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("example_tool.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
@@ -83,10 +79,7 @@ fn test_remove_tool_with_extension() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize a repository
     create_dir_all(&temp_dir)?;
-    let _repo = match Repository::init(&temp_dir) {
-        Ok(repo) => repo,
-        Err(e) => panic!("Failed to initialize repository: {}", e),
-    };
+    Repository::init(&temp_dir).expect("Failed to execute git init command");
 
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("tool_with_ext.cwl"))?;
