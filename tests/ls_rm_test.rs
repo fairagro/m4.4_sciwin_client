@@ -54,6 +54,18 @@ fn test_remove_existing_tool_directory() -> Result<(), Box<dyn std::error::Error
     create_dir_all(&temp_dir)?;
 
     Repository::init(&temp_dir).expect("Failed to execute git init command");
+    fs::write(temp_dir.join("README.md"), "Initial commit")?;
+    std::process::Command::new("git")
+    .args(&["add", "."])
+    .current_dir(&temp_dir)
+    .status()
+    .expect("Failed to add files");
+    std::process::Command::new("git")
+    .args(&["commit", "-m", "Initial commit"])
+    .current_dir(&temp_dir)
+    .status()
+    .expect("Failed to commit files");
+
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("example_tool.cwl"))?;
     env::set_current_dir(temp_dir.clone()).unwrap();
@@ -80,6 +92,17 @@ fn test_remove_tool_with_extension() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize a repository
     create_dir_all(&temp_dir)?;
     Repository::init(&temp_dir).expect("Failed to execute git init command");
+    fs::write(temp_dir.join("README.md"), "Initial commit")?;
+    std::process::Command::new("git")
+    .args(&["add", "."])
+    .current_dir(&temp_dir)
+    .status()
+    .expect("Failed to add files");
+    std::process::Command::new("git")
+    .args(&["commit", "-m", "Initial commit"])
+    .current_dir(&temp_dir)
+    .status()
+    .expect("Failed to commit files");
 
     create_dir_all(&tool_path)?;
     fs::File::create(tool_path.join("tool_with_ext.cwl"))?;
