@@ -19,14 +19,13 @@ pub fn check_git_user() -> Result<(), git2::Error> {
     Ok(())
 }
 
-
 #[test]
 #[serial]
 fn test_init_s4n_without_folder() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir);
-    check_git_user()?;
+    check_git_user().unwrap();
     // Create a subdirectory in the temporary directory
     std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
 
@@ -64,7 +63,7 @@ fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir.path());
-    check_git_user()?;
+    check_git_user().unwrap();
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
     env::set_current_dir(temp_dir.path()).unwrap();
@@ -183,7 +182,7 @@ fn test_create_arc_folder_structure() {
 #[test]
 fn test_init_s4n_with_arc() {
     let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
-    check_git_user()?;
+    check_git_user().unwrap();
     let arc = true;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
@@ -204,7 +203,7 @@ fn test_init_s4n_with_arc() {
 #[test]
 fn test_init_s4n_minimal() {
     let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
-    check_git_user()?;
+    check_git_user().unwrap();
     let arc = false;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
