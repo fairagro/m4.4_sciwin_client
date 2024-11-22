@@ -20,7 +20,7 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    init_s4n(args.project.clone(), args.arc)?;
+    init_s4n(args.project.clone(), args.arc).map_err(|e| format!("Could not init {}", e))?;
     Ok(())
 }
 
