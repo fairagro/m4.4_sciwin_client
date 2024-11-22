@@ -5,11 +5,10 @@ use std::{
     env,
     fs::{self, File},
     path::{Path, PathBuf},
-    process::exit,
 };
 
 use crate::{
-    repo::{commit, initial_commit, stage_all},
+    repo::{commit, get_modified_files, initial_commit, stage_all},
     util::error,
 };
 
@@ -39,9 +38,9 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
         create_minimal_folder_structure(folder, false)?;
     }
 
-    stage_all(&repo)?;
-
-    if repo.index()?.is_empty() {
+    let files = get_modified_files(&repo);
+    if !files.is_empty() {
+        stage_all(&repo)?;
         if repo.head().is_ok() {
             commit(&repo, "Created Project using `s4n init`")?;
         } else {
@@ -49,8 +48,8 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
         }
     } else {
         eprintln!("{}", error("Nothing to commit"));
-        exit(1);
     }
+
     Ok(())
 }
 
