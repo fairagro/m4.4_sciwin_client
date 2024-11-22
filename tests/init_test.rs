@@ -86,6 +86,7 @@ fn test_init_s4n_without_folder_with_arc() {
 }
 
 #[test]
+#[serial]
 fn test_init_git_repo() {
     let temp_dir = tempfile::tempdir().unwrap();
     let base_folder = temp_dir.path().join("my_repo");
@@ -99,6 +100,7 @@ fn test_init_git_repo() {
 }
 
 #[test]
+#[serial]
 fn test_create_minimal_folder_structure_invalid() {
     //create an invalid file input
     let temp_file = NamedTempFile::new().unwrap();
@@ -111,6 +113,7 @@ fn test_create_minimal_folder_structure_invalid() {
 }
 
 #[test]
+#[serial]
 fn test_create_minimal_folder_structure() {
     let temp_dir = Builder::new().prefix("minimal_folder").tempdir().unwrap();
 
@@ -130,6 +133,7 @@ fn test_create_minimal_folder_structure() {
 }
 
 #[test]
+#[serial]
 fn test_create_investigation_excel_file() {
     //create directory
     let temp_dir = Builder::new().prefix("investigation_excel_test_").tempdir().unwrap();
@@ -151,6 +155,7 @@ fn test_create_investigation_excel_file() {
 }
 
 #[test]
+#[serial]
 fn test_create_arc_folder_structure_invalid() {
     //this test only gives create_arc_folder_structure a file instead of a directory
     let temp_file = NamedTempFile::new().unwrap();
@@ -162,6 +167,7 @@ fn test_create_arc_folder_structure_invalid() {
 }
 
 #[test]
+#[serial]
 fn test_create_arc_folder_structure() {
     let temp_dir = Builder::new().prefix("arc_folder_test").tempdir().unwrap();
 
@@ -180,6 +186,7 @@ fn test_create_arc_folder_structure() {
 }
 
 #[test]
+#[serial]
 fn test_init_s4n_with_arc() {
     let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
     check_git_user().unwrap();
@@ -201,6 +208,7 @@ fn test_init_s4n_with_arc() {
     }
 }
 #[test]
+#[serial]
 fn test_init_s4n_minimal() {
     let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
     check_git_user().unwrap();
@@ -231,6 +239,7 @@ fn test_init_s4n_minimal() {
 }
 
 #[test]
+#[serial]
 fn test_is_git_repo() {
     let repo_dir = Builder::new().prefix("valid_git_repo").tempdir().unwrap();
     let repo_dir_str = repo_dir.path().to_str().unwrap();
