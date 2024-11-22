@@ -192,7 +192,7 @@ fn test_init_s4n_minimal() {
 
     //call method with temp dir
     let result = init_s4n(base_folder, arc);
-
+    println!("{:#?}", result);
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
