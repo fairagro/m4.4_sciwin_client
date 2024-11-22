@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::repo::{commit, initial_commit, stage_all};
+
 #[derive(Args, Debug)]
 pub struct InitArgs {
     #[arg(short = 'p', long = "project", help = "Name of the project")]
@@ -22,15 +24,24 @@ pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Er
 
 pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    if !is_git_repo(folder) {
-        init_git_repo(folder)?;
-    }
+    let repo = if !is_git_repo(folder) {
+        init_git_repo(folder)?
+    } else {
+        Repository::open(folder.unwrap_or_else(|| "."))?
+    };
     if arc {
         create_arc_folder_structure(folder)?;
     } else {
         create_minimal_folder_structure(folder, false)?;
     }
 
+    stage_all(&repo)?;
+
+    if repo.head().is_ok() {
+        commit(&repo, "Created Project using `s4n init`")?;
+    } else {
+        initial_commit(&repo)?;
+    }
     Ok(())
 }
 
@@ -44,32 +55,24 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
         }
     };
 
-    let is_repo = Repository::open(&base_dir).is_ok();
-    println!("Checking if {:?} is a git repository: {}", base_dir, is_repo);
-
-    is_repo
+    Repository::open(&base_dir).is_ok()
 }
 
-pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Checking if git repo: {:?}", base_folder);
-
+pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => env::current_dir().expect("Failed to get current directory"),
     };
 
     fs::create_dir_all(&base_dir)?;
-    println!("Current working directory: {}", base_dir.display());
-    Repository::init(&base_dir).expect("Failed to execute git init command");
-
-    println!("Git repository initialized successfully");
+    let repo = Repository::init(&base_dir).expect("Failed to execute git init command");
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
         File::create(gitignore_path).expect("Failed to create .gitignore file");
     }
 
-    Ok(())
+    Ok(repo)
 }
 
 pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) -> Result<(), Box<dyn std::error::Error>> {
@@ -93,7 +96,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     }
 
     if !silent {
-        println!("Folder structure created successfully:");
+        println!("📂 s4n project initialisation sucessfully:");
         println!("{} (Base)", base_dir.display());
         println!("  ├── workflows");
     }
@@ -134,7 +137,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
         fs::create_dir_all(&runs_dir)?;
     }
 
-    println!("Folder structure created successfully:");
+    println!("📂 s4n project initialisation sucessfully:");
     println!("{} (Base)", base_dir.display());
     println!("  ├── assays");
     println!("  ├── studies");
