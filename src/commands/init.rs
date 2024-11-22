@@ -128,26 +128,16 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
 
     create_investigation_excel_file(base_dir.to_str().unwrap_or(""))?;
     // Check and create subdirectories
-    let assays_dir = base_dir.join("assays");
-    if !assays_dir.exists() {
-        fs::create_dir_all(&assays_dir)?;
+    let dirs = vec!["studies", "assays", "runs"];
+    for dir_name in dirs {
+        let dir = base_dir.join(dir_name);
+        if !dir.exists() {
+            fs::create_dir_all(&dir)?;
+        }
+        File::create(dir.join(".gitkeep"))?;
     }
-    File::create(assays_dir.join(".gitkeep"))?;
-
-    let studies_dir = base_dir.join("studies");
-    if !studies_dir.exists() {
-        fs::create_dir_all(&studies_dir)?;
-    }
-    File::create(studies_dir.join(".gitkeep"))?;
-
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
-
-    let runs_dir = base_dir.join("runs");
-    if !runs_dir.exists() {
-        fs::create_dir_all(&runs_dir)?;
-    }
-    File::create(runs_dir.join(".gitkeep"))?;
 
     println!("📂 s4n project initialisation sucessfully:");
     println!("{} (Base)", base_dir.display());
