@@ -27,7 +27,7 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
     let repo = if !is_git_repo(folder) {
         init_git_repo(folder)?
     } else {
-        Repository::open(folder.unwrap_or_else(|| "."))?
+        Repository::open(folder.unwrap_or("."))?
     };
     if arc {
         create_arc_folder_structure(folder)?;
