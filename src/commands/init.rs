@@ -5,9 +5,13 @@ use std::{
     env,
     fs::{self, File},
     path::{Path, PathBuf},
+    process::exit,
 };
 
-use crate::repo::{commit, initial_commit, stage_all};
+use crate::{
+    repo::{commit, initial_commit, stage_all},
+    util::error,
+};
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
@@ -37,10 +41,15 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
 
     stage_all(&repo)?;
 
-    if repo.head().is_ok() {
-        commit(&repo, "Created Project using `s4n init`")?;
+    if repo.index()?.is_empty() {
+        if repo.head().is_ok() {
+            commit(&repo, "Created Project using `s4n init`")?;
+        } else {
+            initial_commit(&repo)?;
+        }
     } else {
-        initial_commit(&repo)?;
+        eprintln!("{}", error("Nothing to commit"));
+        exit(1);
     }
     Ok(())
 }
