@@ -25,4 +25,4 @@ jobs:
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test -- --nocapture
