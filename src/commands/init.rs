@@ -1,3 +1,7 @@
+use crate::{
+    repo::{commit, get_modified_files, initial_commit, stage_all},
+    util::error,
+};
 use clap::Args;
 use git2::Repository;
 use rust_xlsxwriter::Workbook;
@@ -5,11 +9,6 @@ use std::{
     env,
     fs::{self, File},
     path::{Path, PathBuf},
-};
-
-use crate::{
-    repo::{commit, get_modified_files, initial_commit, stage_all},
-    util::error,
 };
 
 #[derive(Args, Debug)]
@@ -102,6 +101,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     if !workflows_dir.exists() {
         fs::create_dir_all(&workflows_dir)?;
     }
+    File::create(workflows_dir.join(".gitkeep"))?;
 
     if !silent {
         println!("📂 s4n project initialisation sucessfully:");
@@ -132,10 +132,13 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     if !assays_dir.exists() {
         fs::create_dir_all(&assays_dir)?;
     }
+    File::create(assays_dir.join(".gitkeep"))?;
+
     let studies_dir = base_dir.join("studies");
     if !studies_dir.exists() {
         fs::create_dir_all(&studies_dir)?;
     }
+    File::create(studies_dir.join(".gitkeep"))?;
 
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
@@ -144,6 +147,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     if !runs_dir.exists() {
         fs::create_dir_all(&runs_dir)?;
     }
+    File::create(runs_dir.join(".gitkeep"))?;
 
     println!("📂 s4n project initialisation sucessfully:");
     println!("{} (Base)", base_dir.display());
