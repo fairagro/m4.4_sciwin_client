@@ -19,6 +19,7 @@ slugify = "0.1.0"
 syntect = { version = "5.2.0", default-features = false, features = ["regex-fancy", "parsing", "default-themes", "default-syntaxes"] }
 sysinfo = "0.32.0"
 tempfile = "3.13.0"
+whoami = "1.5.2"
 
 [dev-dependencies]
 serial_test = "3.1.1"

@@ -1,8 +1,24 @@
 use calamine::{open_workbook, Reader, Xlsx};
+use git2::Config;
 use s4n::commands::init::{create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
 use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
+
+pub fn check_git_user() -> Result<(), git2::Error> {
+    let mut config = Config::open_default()?;
+    if config.get_string("user.name").is_err() {
+        config.remove_multivar("user.name", ".*").ok();
+        config.set_str("user.name", &whoami::username()).expect("Could not set name");
+    }
+
+    if config.get_string("user.email").is_err() {
+        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
+    }
+
+    Ok(())
+}
+
 
 #[test]
 #[serial]
@@ -10,7 +26,7 @@ fn test_init_s4n_without_folder() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir);
-
+    check_git_user()?;
     // Create a subdirectory in the temporary directory
     std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
 
@@ -48,6 +64,7 @@ fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir.path());
+    check_git_user()?;
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
     env::set_current_dir(temp_dir.path()).unwrap();
@@ -166,6 +183,7 @@ fn test_create_arc_folder_structure() {
 #[test]
 fn test_init_s4n_with_arc() {
     let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
+    check_git_user()?;
     let arc = true;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
@@ -186,6 +204,7 @@ fn test_init_s4n_with_arc() {
 #[test]
 fn test_init_s4n_minimal() {
     let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
+    check_git_user()?;
     let arc = false;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
