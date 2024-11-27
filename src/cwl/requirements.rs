@@ -10,6 +10,8 @@ pub enum Requirement {
     ResourceRequirement(ResourceRequirement),
     EnvVarRequirement(EnvVarRequirement),
     ShellCommandRequirement,
+    SoftwareRequirement,
+    NetworkAccess
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
