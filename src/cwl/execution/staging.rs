@@ -105,7 +105,7 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
 
         let outcoming_file = handle_filename(&incoming_data);
         let outcoming_file_relative = outcoming_file.strip_prefix(&current_dir).unwrap_or(&outcoming_file);
-        let outcoming_file_stripped = outcoming_file_relative.trim_start_matches("../").to_string();
+        let outcoming_file_stripped = outcoming_file_relative.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
