@@ -11,6 +11,7 @@ use crate::{
 };
 use std::{
     collections::HashMap,
+    env,
     error::Error,
     fs,
     path::{Path, PathBuf},
@@ -94,16 +95,21 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
 
         //check exists? otherwise search relative to tool
         let mut incoming_path = Path::new(&incoming_file).to_path_buf();
+
         if !incoming_path.exists() {
             incoming_path = tool_path.join(&incoming_file);
         }
         incoming_file = incoming_path.to_string_lossy().to_string();
 
+        let current_dir = env::current_dir()?.to_string_lossy().into_owned() + "/";
+
         let outcoming_file = handle_filename(&incoming_data);
-        let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
+        let outcoming_file_relative = outcoming_file.strip_prefix(&current_dir).unwrap_or(&outcoming_file);
+        let outcoming_file_stripped = outcoming_file_relative.trim_start_matches("../").to_string();
+
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
-
+        println!("{}", path_str);
         if input.type_ == CWLType::File {
             copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());

@@ -35,7 +35,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
     //TODO: stage in tmpdir
 
-    let mut outputs = HashMap::new();
+    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
             let path = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new(".")).join(step.run.clone());
@@ -46,8 +46,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
             for (key, input) in &step.in_ {
                 let parts = input.split('/').collect::<Vec<_>>();
                 if parts.len() == 2 {
-                    let output = outputs.get(input).expect("haha lol wtf");
-                    println!("{:#?}", output);
+                    step_inputs.insert(key.to_string(), outputs.get(input).unwrap().to_default_value());
                 } else {
                     step_inputs.insert(
                         key.to_string(),
@@ -80,7 +79,6 @@ pub fn run_commandlinetool(
 ) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
-
     //create staging directory
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
@@ -100,13 +98,13 @@ pub fn run_commandlinetool(
         ("cores".to_string(), get_processor_count().to_string()),
         ("ram".to_string(), get_available_ram().to_string()),
     ]);
-
+    
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
-
+    
     //stage files listed in input default values, input values or initial work dir requirements
     let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf())?;
-
+    
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
@@ -119,7 +117,7 @@ pub fn run_commandlinetool(
 
     //set required environment variables
     let home_directory = env::var("HOME").unwrap_or_default();
-    let tmp_directory = env::var("TMPDIR").unwrap_or_default();
+    let tmp_directory = env::temp_dir();
     env::set_var("HOME", &runtime["outdir"]);
     env::set_var("TMPDIR", &runtime["tmpdir"]);
 

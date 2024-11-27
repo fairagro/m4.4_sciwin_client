@@ -246,3 +246,12 @@ pub enum OutputItem {
     OutputFile(OutputFile),
     OutputDirectory(OutputDirectory),
 }
+
+impl OutputItem {
+    pub fn to_default_value(&self) -> DefaultValue {
+        match self {
+            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(&output_file.path)),
+            OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
+        }
+    }
+}
