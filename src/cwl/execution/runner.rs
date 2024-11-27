@@ -15,12 +15,21 @@ use crate::{
     io::{create_and_write_file, get_shell_command},
     util::{format_command, get_available_ram, get_processor_count},
 };
+use colored::Colorize;
 use std::{
-    collections::HashMap, env, error::Error, fs::{self}, path::{Path, PathBuf}, process::Command as SystemCommand
+    collections::HashMap,
+    env,
+    error::Error,
+    fs::{self},
+    path::{Path, PathBuf},
+    process::Command as SystemCommand,
+    time::Instant,
 };
 use tempfile::tempdir;
 
 pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, out_dir: Option<String>) -> Result<(), Box<dyn Error>> {
+    let clock = Instant::now();
+
     let sorted_step_ids = workflow.sort_steps()?;
     let input_values = input_values.unwrap_or_default();
 
@@ -33,20 +42,21 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
-            for (key, input) in &step.in_{
+            for (key, input) in &step.in_ {
                 let parts = input.split('/').collect::<Vec<_>>();
                 if parts.len() == 2 {
                     let _sender = parts[0];
                     let _slot = parts[1];
-
-                }
-                else {
-                    step_inputs.insert(key.to_string(), input_values.get(input).expect(&format!("Could not find correct input `{}`", input)).to_owned());
+                } else {
+                    step_inputs.insert(
+                        key.to_string(),
+                        input_values.get(input).unwrap_or_else(|| panic!("Could not find correct input `{}`", input)).to_owned(),
+                    );
                 }
             }
 
             let mut tool: CommandLineTool = serde_yml::from_str(&file)?;
-            run_commandlinetool(&mut tool, Some(step_inputs), cwl_path, out_dir.clone())?;
+            run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), out_dir.clone())?;
         } else {
             return Err(format!("Could not find step {}", step_id).into());
         }
@@ -54,6 +64,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
     //TODO: copy back files specified in output
 
+    eprintln!("✔️  Workflow {} executed successfully in {:.0?}!", &cwl_path.unwrap_or_default().bold(), clock.elapsed());
     Ok(())
 }
 
@@ -63,6 +74,9 @@ pub fn run_commandlinetool(
     cwl_path: Option<&str>,
     out_dir: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
+    //measure performance
+    let clock = Instant::now();
+
     //create staging directory
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
@@ -126,7 +140,11 @@ pub fn run_commandlinetool(
     //come back to original directory
     env::set_current_dir(current)?;
 
-    eprintln!("✔️  Command Executed with status: success!");
+    eprintln!(
+        "✔️  CommandLineTool {} executed successfully in {:.0?}!",
+        &cwl_path.unwrap_or_default().bold(),
+        clock.elapsed()
+    );
     Ok(())
 }
 

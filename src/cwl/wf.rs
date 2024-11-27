@@ -181,7 +181,7 @@ impl Workflow {
         for step in &self.steps {
             in_degree.entry(step.id.clone()).or_insert(0);
             
-            for (_id, input) in &step.in_ {
+            for input in step.in_.values() {
                 let parts: Vec<&str> = input.split('/').collect();
 
                 if parts.len() == 2 {
