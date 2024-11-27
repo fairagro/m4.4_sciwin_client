@@ -9,6 +9,7 @@ use crate::{
         },
         inputs::CommandLineBinding,
         types::DefaultValue,
+        wf::Workflow,
     },
     error::CommandError,
     io::{create_and_write_file, get_shell_command},
@@ -22,6 +23,24 @@ use std::{
     process::Command as SystemCommand,
 };
 use tempfile::tempdir;
+
+pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, out_dir: Option<String>) -> Result<(), Box<dyn Error>> {
+    let sorted_step_ids = workflow.sort_steps()?;
+
+    let input_values = &mut input_values.unwrap_or_default();
+
+    for step_id in sorted_step_ids {
+        if let Some(step) = workflow.get_step(&step_id) {
+            //run commandline tool
+            println!("Run {}", step.run);
+            
+        } else {
+            return Err(format!("Could not find step {}", step_id).into());
+        }
+    }
+
+    Ok(())
+}
 
 pub fn run_commandlinetool(
     tool: &mut CommandLineTool,

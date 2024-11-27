@@ -1,7 +1,7 @@
 use crate::{
     cwl::{
         clt::CommandLineTool,
-        execution::runner::run_commandlinetool,
+        execution::runner::{run_commandlinetool, run_workflow},
         parser::guess_type,
         types::{CWLType, DefaultValue, Directory, File, PathItem},
         wf::Workflow,
@@ -157,7 +157,8 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 let mut tool: CommandLineTool = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
                 run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
             } else {
-                let mut _workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
+                let mut workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
+                run_workflow(&mut workflow, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
             }
 
             Ok(())

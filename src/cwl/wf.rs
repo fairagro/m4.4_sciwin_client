@@ -7,7 +7,10 @@ use super::{
     requirements::{deserialize_requirements, Requirement},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, error::Error};
+use std::{
+    collections::{HashMap, VecDeque},
+    error::Error,
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -169,6 +172,48 @@ impl Workflow {
         step.in_.insert(to_parts[1].to_string(), from.to_string());
 
         Ok(())
+    }
+
+    pub fn sort_steps(&self) -> Result<Vec<String>, String> {
+        let mut graph: HashMap<String, Vec<String>> = HashMap::new();
+        let mut in_degree: HashMap<String, usize> = HashMap::new();
+
+        for step in &self.steps {
+            in_degree.entry(step.id.clone()).or_insert(0);
+            
+            for (_id, input) in &step.in_ {
+                let parts: Vec<&str> = input.split('/').collect();
+
+                if parts.len() == 2 {
+                    let dependency = parts[0];
+                    graph.entry(dependency.to_string()).or_default().push(step.id.clone());
+                    *in_degree.entry(step.id.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+        let mut queue: VecDeque<String> = in_degree.iter().filter(|&(_, &degree)| degree == 0).map(|(id, _)| id.clone()).collect();
+
+        let mut sorted_steps = Vec::new();
+        while let Some(step) = queue.pop_front() {
+            sorted_steps.push(step.clone());
+
+            if let Some(dependents) = graph.get(&step) {
+                for dependent in dependents {
+                    if let Some(degree) = in_degree.get_mut(dependent) {
+                        *degree -= 1;
+                        if *degree == 0 {
+                            queue.push_back(dependent.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        if sorted_steps.len() != self.steps.len() {
+            return Err("❗ Cycle detected in the workflow".into());
+        }
+
+        Ok(sorted_steps)
     }
 }
 
