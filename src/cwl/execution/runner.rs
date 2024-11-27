@@ -48,10 +48,9 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
                 if parts.len() == 2 {
                     step_inputs.insert(key.to_string(), outputs.get(input).unwrap().to_default_value());
                 } else {
-                    step_inputs.insert(
-                        key.to_string(),
-                        input_values.get(input).unwrap_or_else(|| panic!("Could not find correct input `{}`", input)).to_owned(),
-                    );
+                    if let Some(input) = input_values.get(input) {
+                        step_inputs.insert(key.to_string(), input.to_owned());
+                    }
                 }
             }
 
@@ -98,13 +97,13 @@ pub fn run_commandlinetool(
         ("cores".to_string(), get_processor_count().to_string()),
         ("ram".to_string(), get_available_ram().to_string()),
     ]);
-    
+
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
-    
+
     //stage files listed in input default values, input values or initial work dir requirements
     let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf())?;
-    
+
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
