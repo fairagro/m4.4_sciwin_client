@@ -163,7 +163,7 @@ pub fn test_execute_local_workflow() {
     let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
 
     //set up python venv
-    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output().unwrap();
+    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
     let old_path = env::var("PATH").unwrap();
     let python_path = format!("{}/.venv/{}", dir_str, venv_scripts);
     let new_path = format!("{}{}{}", python_path, path_sep, old_path);
@@ -172,7 +172,7 @@ pub fn test_execute_local_workflow() {
 
     //install packages
     let req_path = format!("{}/requirements.txt", dir_str);
-    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output().unwrap();
+    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
 
     //execute workflow
     let args = LocalExecuteArgs {
@@ -182,7 +182,9 @@ pub fn test_execute_local_workflow() {
         file: format!("{}/workflows/main/main.cwl", dir_str),
         args: vec!["inputs.yml".to_string()],
     };
-    assert!(execute_local(&args).is_ok());
+    let result = execute_local(&args);
+    println!("{:#?}", result);
+    assert!(result.is_ok());
 
     //check if file is written which means wf ran completely
     let results_url = format!("{}/results.svg", dir_str);
