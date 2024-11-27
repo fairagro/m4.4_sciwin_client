@@ -47,10 +47,8 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
                 let parts = input.split('/').collect::<Vec<_>>();
                 if parts.len() == 2 {
                     step_inputs.insert(key.to_string(), outputs.get(input).unwrap().to_default_value());
-                } else {
-                    if let Some(input) = input_values.get(input) {
-                        step_inputs.insert(key.to_string(), input.to_owned());
-                    }
+                } else if let Some(input) = input_values.get(input) {
+                    step_inputs.insert(key.to_string(), input.to_owned());
                 }
             }
 
