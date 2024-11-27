@@ -16,28 +16,43 @@ use crate::{
     util::{format_command, get_available_ram, get_processor_count},
 };
 use std::{
-    collections::HashMap,
-    env,
-    error::Error,
-    path::{Path, PathBuf},
-    process::Command as SystemCommand,
+    collections::HashMap, env, error::Error, fs::{self}, path::{Path, PathBuf}, process::Command as SystemCommand
 };
 use tempfile::tempdir;
 
 pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, out_dir: Option<String>) -> Result<(), Box<dyn Error>> {
     let sorted_step_ids = workflow.sort_steps()?;
+    let input_values = input_values.unwrap_or_default();
 
-    let input_values = &mut input_values.unwrap_or_default();
+    //TODO: stage in tmpdir
 
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
-            //run commandline tool
-            println!("Run {}", step.run);
-            
+            let path = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new(".")).join(step.run.clone());
+            let file = fs::read_to_string(&path).map_err(|e| format!("Unable to find Step {} at {:?}: {}", step.id, path, e))?;
+
+            //map inputs to correct fields
+            let mut step_inputs = HashMap::new();
+            for (key, input) in &step.in_{
+                let parts = input.split('/').collect::<Vec<_>>();
+                if parts.len() == 2 {
+                    let _sender = parts[0];
+                    let _slot = parts[1];
+
+                }
+                else {
+                    step_inputs.insert(key.to_string(), input_values.get(input).expect(&format!("Could not find correct input `{}`", input)).to_owned());
+                }
+            }
+
+            let mut tool: CommandLineTool = serde_yml::from_str(&file)?;
+            run_commandlinetool(&mut tool, Some(step_inputs), cwl_path, out_dir.clone())?;
         } else {
             return Err(format!("Could not find step {}", step_id).into());
         }
     }
+
+    //TODO: copy back files specified in output
 
     Ok(())
 }
