@@ -14,7 +14,7 @@ use std::{
     env,
     error::Error,
     fs,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
 };
 
@@ -101,7 +101,7 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
         }
         incoming_file = incoming_path.to_string_lossy().to_string();
 
-        let current_dir = env::current_dir()?.to_string_lossy().into_owned() + "/";
+        let current_dir = env::current_dir()?.to_string_lossy().into_owned() + MAIN_SEPARATOR_STR;
 
         let outcoming_file = handle_filename(&incoming_data);
         let outcoming_file_relative = outcoming_file.strip_prefix(&current_dir).unwrap_or(&outcoming_file);
