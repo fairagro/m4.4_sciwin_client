@@ -52,12 +52,9 @@ pub fn tool_create_test_inputs_output() {
             no_commit: false,
             no_run: false,
             is_clean: false,
-            inputs: Some(vec!["data/input.txt".to_string()]),
-            outputs: None,
+            inputs: Some(vec!["data/input.txt".to_string(), "data/input2.txt".to_string()]),
+            outputs: Some(vec!["results2.txt".to_string()]),
             command: vec![
-                "data/input2.txt".to_string(),
-                "--outputs".to_string(),
-                "results2.txt".to_string(),
                 "python".to_string(),
                 "scripts/echo2.py".to_string(),
                 "--test".to_string(),
@@ -73,6 +70,7 @@ pub fn tool_create_test_inputs_output() {
 
         //check for files being present
         let output_paths = vec![
+            dir.path().join(Path::new("results.txt")),
             dir.path().join(Path::new("results2.txt")),
             dir.path().join(Path::new("workflows/echo2/echo2.cwl")),
         ];

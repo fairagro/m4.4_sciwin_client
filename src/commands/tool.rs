@@ -43,53 +43,14 @@ pub struct CreateToolArgs {
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
 
-    #[arg(short = 'i', long = "inputs", help = "List of inputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'i', long = "inputs", help = "Inputs for the tool", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
-    //#[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ',', num_args = 1..)] ',' delimiter would work but could not use spaces
-    //separate command with -- easier but user friendly?
-    #[arg(short = 'o', long = "outputs", help = "List of outputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'o', long = "outputs", help = "Outputs for the tool", value_delimiter = ' ')]
     pub outputs: Option<Vec<String>>,
 
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
-
-// parsing doesn't work correctly because there is no argument for actual command, would work without this if command is seperated by -- but that might be inconvient for user
-fn separate_elements(inputs: Option<Vec<String>>, outputs: Option<Vec<String>>, commands: Vec<String>) -> (Vec<String>, Vec<String>, Vec<String>) {
-    // Unwrap inputs and outputs or use empty vectors if None
-    let mut inputs_vec = inputs.unwrap_or_default();
-    let mut outputs_vec = outputs.unwrap_or_default();
-    let mut remaining_commands: Vec<String> = Vec::new();
-
-    let mut after_inputs_flag = false;
-    let mut after_outputs_flag = false;
-
-    for cmd in commands.clone() {
-        if cmd == "--" {
-            after_outputs_flag = true;
-            continue; // Skip "--outputs" flag itself
-        }
-        else if cmd == "--outputs" || cmd == "-o" {
-            after_inputs_flag = true;
-            continue; // Skip "--outputs" flag itself
-        }
-        //ask user to add -- before command if you use mulitple input files and have file like Dockerfile as a argument (if it is not the first arg) or -i flags
-        if !(after_outputs_flag || !cmd.contains('.') && !cmd.contains('/') && !cmd.contains('\\') && !commands.contains(&"--".to_string())) {
-            if after_inputs_flag {
-                outputs_vec.push(cmd);
-            } else if !after_outputs_flag {
-                inputs_vec.push(cmd);
-            }
-        } else {
-            remaining_commands.push(cmd);
-            after_outputs_flag = true;
-        }
-    }
-
-    // Return all three vectors
-    (inputs_vec, outputs_vec, remaining_commands)
-}
-
 
 // problem: flag is only in actual command call not in defined inputs, match to command and add flag
 fn add_flags_to_inputs_outputs(command: Vec<String>, inputs: Vec<String>, outputs: Vec<String>) -> (Vec<String>, Vec<String>) {
@@ -128,10 +89,12 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let mut cwl;
     let updated_inputs;
     let mut updated_outputs = args.outputs.clone().unwrap_or_default();
-    let (inputs, outputs, commands) = separate_elements(args.inputs.clone(), args.outputs.clone(), args.command.clone());
+    let inputs = args.inputs.clone().unwrap_or_default(); 
+    let outputs = args.outputs.clone().unwrap_or_default(); 
+
     if !inputs.is_empty() || !outputs.is_empty() {
-        (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(commands.clone(), inputs.clone(), outputs.clone());
-        cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
+        (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(args.command.clone(), inputs, outputs.clone());
+        cwl = parser::parse_command_line_inputs(args.command.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
     } 
     else {
         let modified = get_modified_files(&repo);
@@ -179,8 +142,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             }
         }
         //if no --outputs provided infer output from git even if --inputs provided
-        if outputs.is_empty() && !args.command.contains(&"--outputs".to_string()){
-            println!("outputs is empty");
+        if outputs.is_empty(){
             //could check here if an output file matches an input string
             cwl = cwl.with_outputs(parser::get_outputs(files));
         } else {
