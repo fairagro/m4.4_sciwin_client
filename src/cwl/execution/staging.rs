@@ -109,7 +109,7 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
 
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
-        println!("{}", path_str);
+        
         if input.type_ == CWLType::File {
             copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());

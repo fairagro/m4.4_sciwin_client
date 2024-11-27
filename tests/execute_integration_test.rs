@@ -1,6 +1,14 @@
-use s4n::commands::execute::{execute_local, LocalExecuteArgs, Runner};
+use s4n::{
+    commands::execute::{execute_local, LocalExecuteArgs, Runner},
+    io::copy_dir,
+};
 use serial_test::serial;
-use std::{fs, path::Path};
+use std::{
+    env,
+    fs::{self},
+    path::Path,
+    process::Command,
+};
 use tempfile::tempdir;
 
 #[test]
@@ -135,4 +143,53 @@ pub fn test_execute_local_cwltool() {
         assert!(file.exists());
         fs::remove_file(file).unwrap();
     }
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow() {
+    let folder = "./tests/test_data/hello_world";
+
+    let dir = tempdir().unwrap();
+    let dir_str = &dir.path().to_string_lossy();
+    copy_dir(folder, dir_str).unwrap();
+
+    let current_dir = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+
+    //windows stuff
+    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
+    let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
+
+    //set up python venv
+    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output().unwrap();
+    let old_path = env::var("PATH").unwrap();
+    let python_path = format!("{}/.venv/{}", dir_str, venv_scripts);
+    let new_path = format!("{}{}{}", python_path, path_sep, old_path);
+    //modify path variable
+    env::set_var("PATH", new_path);
+
+    //install packages
+    let req_path = format!("{}/requirements.txt", dir_str);
+    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output().unwrap();
+
+    //execute workflow
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: None,
+        is_quiet: false,
+        file: format!("{}/workflows/main/main.cwl", dir_str),
+        args: vec!["inputs.yml".to_string()],
+    };
+    assert!(execute_local(&args).is_ok());
+
+    //check if file is written which means wf ran completely
+    let results_url = format!("{}/results.svg", dir_str);
+    let path = Path::new(&results_url);
+    assert!(path.exists());
+
+    //reset
+    env::set_var("PATH", old_path);
+    env::set_current_dir(current_dir).unwrap();
 }
