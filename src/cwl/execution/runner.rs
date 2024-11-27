@@ -8,7 +8,7 @@ use crate::{
             validate::{rewire_paths, set_placeholder_values},
         },
         inputs::CommandLineBinding,
-        types::DefaultValue,
+        types::{DefaultValue, OutputItem},
         wf::Workflow,
     },
     error::CommandError,
@@ -35,6 +35,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
     //TODO: stage in tmpdir
 
+    let mut outputs = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
             let path = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new(".")).join(step.run.clone());
@@ -45,8 +46,8 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
             for (key, input) in &step.in_ {
                 let parts = input.split('/').collect::<Vec<_>>();
                 if parts.len() == 2 {
-                    let _sender = parts[0];
-                    let _slot = parts[1];
+                    let output = outputs.get(input).expect("haha lol wtf");
+                    println!("{:#?}", output);
                 } else {
                     step_inputs.insert(
                         key.to_string(),
@@ -56,7 +57,10 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
             }
 
             let mut tool: CommandLineTool = serde_yml::from_str(&file)?;
-            run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), out_dir.clone())?;
+            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), out_dir.clone())?;
+            for (key, value) in tool_outputs {
+                outputs.insert(format!("{}/{}", step.id, key), value);
+            }
         } else {
             return Err(format!("Could not find step {}", step_id).into());
         }
@@ -73,7 +77,7 @@ pub fn run_commandlinetool(
     input_values: Option<HashMap<String, DefaultValue>>,
     cwl_path: Option<&str>,
     out_dir: Option<String>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
 
@@ -132,7 +136,7 @@ pub fn run_commandlinetool(
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
 
     //evaluate output files
-    evaluate_outputs(&tool.outputs, output_directory)?;
+    let outputs = evaluate_outputs(&tool.outputs, output_directory)?;
 
     //unset environment variables
     unset_environment_vars(environment_variables);
@@ -145,7 +149,7 @@ pub fn run_commandlinetool(
         &cwl_path.unwrap_or_default().bold(),
         clock.elapsed()
     );
-    Ok(())
+    Ok(outputs)
 }
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {

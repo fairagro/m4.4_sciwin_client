@@ -40,16 +40,16 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
 }
 
 ///Copies back requested outputs and writes to commandline
-pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //copy back requested output
-    let mut outputs: HashMap<&String, OutputItem> = HashMap::new();
+    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for output in tool_outputs {
         if output.type_ == CWLType::File {
             if let Some(binding) = &output.output_binding {
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(&output.id, OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
             if let Some(binding) = &output.output_binding {
@@ -68,14 +68,14 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
                 fs::create_dir_all(dir)?;
 
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                outputs.insert(&output.id, OutputItem::OutputDirectory(out_dir));
+                outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
             }
         }
     }
     //print output metadata
     let json = serde_json::to_string_pretty(&outputs)?;
     println!("{}", json);
-    Ok(())
+    Ok(outputs)
 }
 
 fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
