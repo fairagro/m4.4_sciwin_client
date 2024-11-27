@@ -43,11 +43,11 @@ pub struct CreateToolArgs {
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
 
-    #[arg(long = "inputs", help = "List of inputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'i', long = "inputs", help = "List of inputs for the tool", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
     //#[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ',', num_args = 1..)] ',' delimiter would work but could not use spaces
     //separate command with -- easier but user friendly?
-    #[arg(long = "outputs", help = "List of outputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'o', long = "outputs", help = "List of outputs for the tool", value_delimiter = ' ')]
     pub outputs: Option<Vec<String>>,
 
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
@@ -69,15 +69,11 @@ fn separate_elements(inputs: Option<Vec<String>>, outputs: Option<Vec<String>>, 
             after_outputs_flag = true;
             continue; // Skip "--outputs" flag itself
         }
-        else if cmd == "--outputs" {
+        else if cmd == "--outputs" || cmd == "-o" {
             after_inputs_flag = true;
             continue; // Skip "--outputs" flag itself
         }
-        //this is an assumption that can be wrong (file contains either . or /) and command doesn't 
-        // Dockerfile has no ending and if it is in base folder it would parse it as a command, other commands might include . or /
-        //ask user to add -- before command if you use mulitple input files and have Dockerfile as a argument (if it is not the first arg)
-        //if ((cmd.contains('.') || cmd.contains('/')||cmd.contains('\\')) && !after_outputs_flag) ||(commands.contains(&"--".to_string()) && !after_outputs_flag) {
-        //if  !after_outputs_flag {
+        //ask user to add -- before command if you use mulitple input files and have file like Dockerfile as a argument (if it is not the first arg) or -i flags
         if !(after_outputs_flag || !cmd.contains('.') && !cmd.contains('/') && !cmd.contains('\\') && !commands.contains(&"--".to_string())) {
             if after_inputs_flag {
                 outputs_vec.push(cmd);
@@ -133,9 +129,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let updated_inputs;
     let mut updated_outputs = args.outputs.clone().unwrap_or_default();
     let (inputs, outputs, commands) = separate_elements(args.inputs.clone(), args.outputs.clone(), args.command.clone());
-    println!("inputs {:?}", inputs);
-    println!("outputs {:?}", outputs);
-    println!("commands {:?}", commands);
     if !inputs.is_empty() || !outputs.is_empty() {
         (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(commands.clone(), inputs.clone(), outputs.clone());
         cwl = parser::parse_command_line_inputs(commands.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
