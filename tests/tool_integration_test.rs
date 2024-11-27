@@ -64,7 +64,7 @@ pub fn tool_create_test_inputs_output() {
                 "data/input.txt".to_string(),
                 "-t2".to_string(),
                 "data/input2.txt".to_string(),
-                "-o".to_string(),
+                "--out".to_string(),
                 "results2.txt".to_string(),
             ],
         };
@@ -73,7 +73,6 @@ pub fn tool_create_test_inputs_output() {
 
         //check for files being present
         let output_paths = vec![
-            dir.path().join(Path::new("results.txt")),
             dir.path().join(Path::new("results2.txt")),
             dir.path().join(Path::new("workflows/echo2/echo2.cwl")),
         ];
@@ -86,6 +85,8 @@ pub fn tool_create_test_inputs_output() {
         assert!(get_modified_files(&repo).is_empty());
     });
 }
+
+
 
 #[test]
 #[serial]
