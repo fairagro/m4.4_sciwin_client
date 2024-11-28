@@ -10,6 +10,7 @@ use s4n::repo::{get_modified_files, open_repo};
 mod common;
 use common::with_temp_repository;
 use std::io::Write;
+use std::path::Path; 
 
 #[test]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,11 +23,9 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
         rm_tool: vec!["non_existing_tool".to_string()],
     };
 
-    // Call remove_tool and verify no directory was removed
     let result = remove_tool(&args);
 
-    // Check that the function executed without error, even though the tool doesn't exist
-    assert!(result.is_ok(), "Function should handle non-existing tool gracefully");
+    assert!(result.is_ok(), "Function should handle non-existing tool");
     env::set_current_dir(&original_dir)?;
     Ok(())
 }
@@ -38,8 +37,7 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
     });
-    // Assert that the function ran successfully
-    assert!(output.is_ok(), "Function should handle empty tool list gracefully");
+    assert!(output.is_ok(), "Function should handle empty tool list");
     env::set_current_dir(&original_dir)?;
     Ok(())
 }
@@ -48,9 +46,8 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
 #[serial]
 pub fn tool_remove_test() {
     with_temp_repository(|dir| {
-        // Create a tool to be removed later
         let tool_create_args = CreateToolArgs {
-            name: Some("echo".to_string()), // tool name
+            name: Some("echo".to_string()), 
             container_image: None,
             container_tag: None,
             is_raw: false,
@@ -61,21 +58,15 @@ pub fn tool_remove_test() {
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());
+        assert!(dir.path().join(Path::new("workflows/echo")).exists()); 
 
-        // Check if the tool was created
-        assert!(dir.path().join("workflows/echo").exists()); // tool folder created
-
-        // Now remove the tool
         let tool_remove_args = RmArgs {
-            rm_tool: vec!["echo".to_string()], // tool to remove
+            rm_tool: vec!["echo".to_string()], 
         };
         let cmd_remove = ToolCommands::Rm(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
+        assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
 
-        // Check if the tool was removed
-        assert!(!dir.path().join("workflows/echo").exists()); // tool folder should be removed
-
-        // Check if there are no uncommitted changes after removal
         let repo = open_repo(dir.path());
         assert!(get_modified_files(&repo).is_empty());
     });
@@ -85,9 +76,8 @@ pub fn tool_remove_test() {
 #[serial]
 pub fn tool_remove_test_extension() {
     with_temp_repository(|dir| {
-        // Create a tool to be removed later
         let tool_create_args = CreateToolArgs {
-            name: Some("echo".to_string()), // tool name
+            name: Some("echo".to_string()), 
             container_image: None,
             container_tag: None,
             is_raw: false,
@@ -98,21 +88,19 @@ pub fn tool_remove_test_extension() {
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());
+        assert!(dir.path().join(Path::new("workflows/echo")).exists()); 
 
-        // Check if the tool was created
-        assert!(dir.path().join("workflows/echo").exists()); // tool folder created
-
-        // Now remove the tool
+        // remove the tool
         let tool_remove_args = RmArgs {
-            rm_tool: vec!["echo.cwl".to_string()], // tool to remove
+            rm_tool: vec!["echo.cwl".to_string()],
         };
         let cmd_remove = ToolCommands::Rm(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
 
-        // Check if the tool was removed
-        assert!(!dir.path().join("workflows/echo").exists()); // tool folder should be removed
+        // check if the tool was removed
+        assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
 
-        // Check if there are no uncommitted changes after removal
+        // check if there are no uncommitted changes after removal
         let repo = open_repo(dir.path());
         assert!(get_modified_files(&repo).is_empty());
     });
@@ -130,13 +118,13 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(dir.path().join("workflows").join("test2"))?;
     fs::create_dir_all(dir.path().join("workflows").join("test3"))?;
 
-    File::create(dir.path().join("workflows").join("test1/test1.cwl"))?;
-    File::create(dir.path().join("workflows").join("test2/test2.cwl"))?;
-    File::create(dir.path().join("workflows").join("test3/other_file.txt"))?;
+    File::create(dir.path().join(Path::new("workflows/test1/test1.cwl")))?;
+    File::create(dir.path().join(Path::new("workflows/test2/test2.cwl")))?;
+    File::create(dir.path().join(Path::new("workflows/test3/other_file.txt")))?;
 
-    assert!(dir.path().join("workflows").join("test1/test1.cwl").exists(), "test1.cwl was not created!");
-    assert!(dir.path().join("workflows").join("test2/test2.cwl").exists(), "test2.cwl was not created!");
-    assert!(dir.path().join("workflows").join("test3/other_file.txt").exists(), "other_file.txt was not created!");
+    assert!(dir.path().join(dir.path().join(Path::new("workflows/test1/test1.cwl"))).exists(), "test1.cwl was not created!");
+    assert!(dir.path().join(dir.path().join(Path::new("workflows/test2/test2.cwl"))).exists(), "test2.cwl was not created!");
+    assert!(dir.path().join(dir.path().join(Path::new("workflows/test3/other_file.txt"))).exists(), "other_file.txt was not created!");
 
     let original_dir = env::current_dir()?;
     env::set_current_dir(dir.path())?;
@@ -164,12 +152,11 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 #[serial]
 fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a temporary directory for the test
     let temp_dir = tempdir()?;
     let workflows_dir = temp_dir.path().join("workflows");
     fs::create_dir(&workflows_dir)?;
 
-    // Create dummy CWL files
+    // dummy CWL files, they only have inputs and outputs
     let cwl_content_1 = r#"
     inputs:
       - id: speakers
@@ -201,7 +188,6 @@ fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
         file.write_all(cwl_content_2.as_bytes())?;
     }
 
-    // Set the current directory to the temporary directory
     let original_cwd = env::current_dir()?;
     env::set_current_dir(&temp_dir)?;
 
@@ -217,10 +203,11 @@ fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
         .stdout(predicate::str::contains("population"))
         .stdout(predicate::str::contains("plot.cwl"))
         .stdout(predicate::str::contains("results"))
+        .stdout(predicate::str::contains("data"))
+        .stdout(predicate::str::contains("chart"))
         .get_output()
         .clone();
 
-    // Restore the original working directory
     env::set_current_dir(original_cwd)?;
 
   
