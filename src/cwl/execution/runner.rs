@@ -4,7 +4,7 @@ use crate::{
         execution::{
             environment::{set_tool_environment_vars, unset_environment_vars},
             staging::{stage_required_files, unstage_files},
-            util::{evaluate_input_as_string, evaluate_outputs},
+            util::{evaluate_input, evaluate_input_as_string, evaluate_outputs},
             validate::{rewire_paths, set_placeholder_values},
         },
         inputs::CommandLineBinding,
@@ -63,6 +63,22 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
     }
 
     //TODO: copy back files specified in output
+
+    //TODO: report about outputs written
+    let mut output_values = HashMap::new();
+    let input_values_ = Some(input_values);
+    for output in &workflow.outputs {
+        let source = &output.output_source;
+        if let Some(value) = outputs.get(source) {
+            output_values.insert(&output.id, value.clone());
+        } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
+            let result = evaluate_input(input, &input_values_)?;
+            let value = OutputItem::OutputString(result.as_value_string());
+            output_values.insert(&output.id, value);
+        }
+    }
+    let json = serde_json::to_string_pretty(&output_values)?;
+    println!("{}", json);
 
     eprintln!("✔️  Workflow {} executed successfully in {:.0?}!", &cwl_path.unwrap_or_default().bold(), clock.elapsed());
     Ok(())

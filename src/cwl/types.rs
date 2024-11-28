@@ -223,7 +223,7 @@ pub struct EnvironmentDef {
     pub env_value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputFile {
     pub location: String,
     pub basename: String,
@@ -235,7 +235,7 @@ pub struct OutputFile {
     pub format: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputDirectory {
     pub location: String,
     pub basename: String,
@@ -244,7 +244,7 @@ pub struct OutputDirectory {
     pub path: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum OutputItem {
     OutputFile(OutputFile),

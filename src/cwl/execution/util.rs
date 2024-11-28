@@ -7,8 +7,7 @@ use crate::{
     io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix},
 };
 use std::{
-    collections::HashMap,
-    env,
+    collections::HashMap, env,
     error::Error,
     fs,
     path::{Path, PathBuf},
@@ -29,6 +28,8 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
                 Err("CWLType is not matching input type")?;
             }
             return Ok(value.clone());
+        } else if let Some(default_) = &input.default {
+            return Ok(default_.clone());
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
@@ -171,7 +172,7 @@ mod tests {
         },
         io::copy_dir,
     };
-    use serde_yml::value;
+    use serde_yml::{value, Value};
     use serial_test::serial;
     use tempfile::tempdir;
 
@@ -201,6 +202,31 @@ mod tests {
         let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
 
         assert_eq!(evaluation, values["test"].as_value_string());
+    }
+
+    #[test]
+    pub fn test_evaluate_input_empty_values() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let values = HashMap::new();
+        let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
+
+        assert_eq!(evaluation, "Nice".to_string());
+    }
+
+    #[test]
+    pub fn test_evaluate_input_no_values() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let evaluation = evaluate_input_as_string(&input, &None).unwrap();
+
+        assert_eq!(evaluation, "Nice".to_string());
     }
 
     #[test]
