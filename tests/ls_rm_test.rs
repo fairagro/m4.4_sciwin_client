@@ -1,6 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use s4n::commands::tool::{remove_tool, ToolArgs, CreateToolArgs, handle_tool_commands, ToolCommands};
+use s4n::commands::tool::{remove_tool, RmArgs, CreateToolArgs, handle_tool_commands, ToolCommands};
 use serial_test::serial;
 use std::env;
 use std::fs::File;
@@ -9,6 +9,7 @@ use tempfile::tempdir;
 use s4n::repo::{get_modified_files, open_repo};
 mod common;
 use common::with_temp_repository;
+use std::io::Write;
 
 #[test]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,7 +18,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     let original_dir = env::current_dir()?;
     fs::create_dir(&workflows_path)?;
     //doesn't exist
-    let args = ToolArgs {
+    let args = RmArgs {
         rm_tool: vec!["non_existing_tool".to_string()],
     };
 
@@ -32,7 +33,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
-    let args = ToolArgs { rm_tool: vec![] };
+    let args = RmArgs { rm_tool: vec![] };
     let original_dir = env::current_dir()?;
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
@@ -65,7 +66,7 @@ pub fn tool_remove_test() {
         assert!(dir.path().join("workflows/echo").exists()); // tool folder created
 
         // Now remove the tool
-        let tool_remove_args = ToolArgs {
+        let tool_remove_args = RmArgs {
             rm_tool: vec!["echo".to_string()], // tool to remove
         };
         let cmd_remove = ToolCommands::Rm(tool_remove_args);
@@ -102,7 +103,7 @@ pub fn tool_remove_test_extension() {
         assert!(dir.path().join("workflows/echo").exists()); // tool folder created
 
         // Now remove the tool
-        let tool_remove_args = ToolArgs {
+        let tool_remove_args = RmArgs {
             rm_tool: vec!["echo.cwl".to_string()], // tool to remove
         };
         let cmd_remove = ToolCommands::Rm(tool_remove_args);
@@ -155,6 +156,74 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
     println!("Command Output: {}", String::from_utf8_lossy(&output.stdout));
 
     env::set_current_dir(original_dir)?;
+
+    Ok(())
+}
+
+
+#[test]
+#[serial]
+fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a temporary directory for the test
+    let temp_dir = tempdir()?;
+    let workflows_dir = temp_dir.path().join("workflows");
+    fs::create_dir(&workflows_dir)?;
+
+    // Create dummy CWL files
+    let cwl_content_1 = r#"
+    inputs:
+      - id: speakers
+        type: string
+      - id: population
+        type: int
+    outputs:
+      - id: results
+        type: File
+    "#;
+    let cwl_content_2 = r#"
+    inputs:
+      - id: data
+        type: File
+    outputs:
+      - id: chart
+        type: File
+    "#;
+
+    let cwl_file_1 = workflows_dir.join("calculation.cwl");
+    let cwl_file_2 = workflows_dir.join("plot.cwl");
+
+    {
+        let mut file = File::create(&cwl_file_1)?;
+        file.write_all(cwl_content_1.as_bytes())?;
+    }
+    {
+        let mut file = File::create(&cwl_file_2)?;
+        file.write_all(cwl_content_2.as_bytes())?;
+    }
+
+    // Set the current directory to the temporary directory
+    let original_cwd = env::current_dir()?;
+    env::set_current_dir(&temp_dir)?;
+
+    let mut cmd = Command::cargo_bin("s4n")?;
+    let _output = cmd
+        .arg("tool")
+        .arg("ls")
+        .arg("-a")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("calculation.cwl"))
+        .stdout(predicate::str::contains("speakers"))
+        .stdout(predicate::str::contains("population"))
+        .stdout(predicate::str::contains("plot.cwl"))
+        .stdout(predicate::str::contains("results"))
+        .get_output()
+        .clone();
+
+    // Restore the original working directory
+    env::set_current_dir(original_cwd)?;
+
+  
 
     Ok(())
 }

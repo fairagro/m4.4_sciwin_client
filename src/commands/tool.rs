@@ -12,11 +12,13 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
 use walkdir::WalkDir;
+use serde_yml::Value;
+use prettytable::{Table, Row, Cell};
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
-        ToolCommands::Ls => list_tools()?,
+        ToolCommands::Ls(args) => list_tools(args)?,
         ToolCommands::Rm(args) => remove_tool(args)?,
     }
     Ok(())
@@ -27,9 +29,9 @@ pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
     #[command(about = "Lists all tools")]
-    Ls,
+    Ls(LsArgs),
     #[command(about = "Remove a tool, e.g. s4n tool rm toolname")]
-    Rm(ToolArgs),
+    Rm(RmArgs),
 }
 
 #[derive(Args, Debug)]
@@ -55,9 +57,15 @@ pub struct CreateToolArgs {
 }
 
 #[derive(Args, Debug)]
-pub struct ToolArgs {
+pub struct RmArgs {
     #[arg(trailing_var_arg = true, help = "Remove a tool")]
     pub rm_tool: Vec<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct LsArgs {
+    #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
+    pub list_all: bool,
 }
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
@@ -165,28 +173,86 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn list_tools() -> Result<(), Box<dyn std::error::Error>> {
+pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
-    println!("📂 The following tools were found in {}", cwd.to_str().unwrap().blue().bold());
+    println!(
+        "📂 Scanning for tools in: {}",
+        cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold()
+    );
 
     // Build the path to the "workflows" folder
     let folder_path = cwd.join("workflows");
+
+    // Create a table
+    let mut table = Table::new();
+
+    // Add table headers
+    table.add_row(Row::new(vec![
+        Cell::new("Tool").style_spec("bFg"),
+        Cell::new("Inputs").style_spec("bFg"),
+        Cell::new("Outputs").style_spec("bFg"),
+    ]));
 
     // Walk recursively through all directories and subdirectories
     for entry in WalkDir::new(&folder_path).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() {
             let file_name = entry.file_name().to_string_lossy();
-            //pnly print cwl files?
-            if file_name.contains(".cwl") {
-                println!("📄 {}", file_name.green().bold());
+
+            // Only process .cwl files
+            if file_name.ends_with(".cwl") {
+                let tool_name = file_name.to_string();
+
+                if args.list_all{
+                    let mut inputs_list = Vec::new();
+                    let mut outputs_list = Vec::new();
+
+                    // Read the contents of the file
+                    let file_path = entry.path();
+                    if let Ok(content) = fs::read_to_string(file_path) {
+                        // Parse content
+                        if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
+                            // Extract inputs
+                            if let Some(inputs) = parsed_yaml.get("inputs") {
+                                for input in inputs.as_sequence().unwrap_or(&vec![]) {
+                                    if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
+                                        inputs_list.push(id.to_string());
+                                    }
+                                }
+                            }
+                            // Extract outputs
+                            if let Some(outputs) = parsed_yaml.get("outputs") {
+                                for output in outputs.as_sequence().unwrap_or(&vec![]) {
+                                    if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
+                                        outputs_list.push(id.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // add row to the table
+                    table.add_row(Row::new(vec![
+                        Cell::new(&tool_name).style_spec("bFg"),
+                        Cell::new(&inputs_list.join(", ")),
+                        Cell::new(&outputs_list.join(", ")),
+                    ]));
+                    
+                }
+                else {
+                    println!("📄 {}", file_name.green().bold());
+                }
             }
         }
+    }
+    // Print the table
+    if args.list_all{
+        table.printstd();
     }
     Ok(())
 }
 
-pub fn remove_tool(args: &ToolArgs) -> Result<(), Box<dyn std::error::Error>> {
+pub fn remove_tool(args: &RmArgs) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let repo = open_repo(cwd);
     let workflows_path = PathBuf::from("workflows");
