@@ -131,7 +131,7 @@ pub fn run_commandlinetool(
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
 
     //evaluate output files
-    let outputs = evaluate_outputs(&tool.outputs, output_directory)?;
+    let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
 
     //unset environment variables
     unset_environment_vars(environment_variables);

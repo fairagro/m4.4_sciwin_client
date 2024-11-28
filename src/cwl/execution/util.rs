@@ -40,7 +40,12 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
 }
 
 ///Copies back requested outputs and writes to commandline
-pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+pub fn evaluate_outputs(
+    tool_outputs: &Vec<CommandOutputParameter>,
+    initial_dir: &PathBuf,
+    tool_stdout: &Option<String>,
+    tool_stderr: &Option<String>,
+) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //copy back requested output
     let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for output in tool_outputs {
@@ -51,22 +56,23 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
                 eprintln!("📜 Wrote output file: {:?}", path);
                 outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             } else {
-                let mut file_prefix = output.id.clone();
-                file_prefix += if output.type_ == CWLType::Stdout {
-                    "_stdout"
-                } else if output.type_ == CWLType::Stderr {
-                    "_stderr"
-                } else {
-                    ""
+                let filename = match output.type_ {
+                    CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
+                    CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
+                    _ => {
+                        let mut file_prefix = output.id.clone();
+                        file_prefix += match output.type_ {
+                            CWLType::Stdout => "_stdout",
+                            CWLType::Stderr => "_stderr",
+                            _ => "",
+                        };
+                        &get_first_file_with_prefix(".", &file_prefix).unwrap_or_default()
+                    }
                 };
-
-                let found_file = get_first_file_with_prefix(".", &file_prefix);
-                if let Some(filename) = found_file {
-                    let path = &initial_dir.join(&filename);
-                    fs::copy(&filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
-                    eprintln!("📜 Wrote output file: {:?}", path);
-                    outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
-                }
+                let path = &initial_dir.join(filename);
+                fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                eprintln!("📜 Wrote output file: {:?}", path);
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
             if let Some(binding) = &output.output_binding {
@@ -208,7 +214,7 @@ mod tests {
         fs::copy("tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
         env::set_current_dir(dir.path()).unwrap();
 
-        let result = evaluate_outputs(&vec![output], &current);
+        let result = evaluate_outputs(&vec![output], &current, &None, &None);
         assert!(result.is_ok());
 
         env::set_current_dir(current).unwrap();
