@@ -200,8 +200,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
             let file_name = entry.file_name().to_string_lossy();
 
             // Only process .cwl files
-            if file_name.ends_with(".cwl") {
-                let tool_name = file_name.to_string();
+            if let Some(tool_name) = file_name.strip_suffix(".cwl") {
 
                 if args.list_all{
                     let mut inputs_list = Vec::new();
@@ -216,7 +215,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
                             if let Some(inputs) = parsed_yaml.get("inputs") {
                                 for input in inputs.as_sequence().unwrap_or(&vec![]) {
                                     if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                                        inputs_list.push(id.to_string());
+                                        inputs_list.push(format!("{}/{}", tool_name, id));
                                     }
                                 }
                             }
@@ -224,7 +223,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
                             if let Some(outputs) = parsed_yaml.get("outputs") {
                                 for output in outputs.as_sequence().unwrap_or(&vec![]) {
                                     if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
-                                        outputs_list.push(id.to_string());
+                                        outputs_list.push(format!("{}/{}", tool_name, id));
                                     }
                                 }
                             }
@@ -233,7 +232,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
 
                     // add row to the table
                     table.add_row(Row::new(vec![
-                        Cell::new(&tool_name).style_spec("bFg"),
+                        Cell::new(tool_name).style_spec("bFg"),
                         Cell::new(&inputs_list.join(", ")),
                         Cell::new(&outputs_list.join(", ")),
                     ]));
