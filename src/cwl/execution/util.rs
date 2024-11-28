@@ -4,7 +4,7 @@ use crate::{
         outputs::CommandOutputParameter,
         types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
     },
-    io::{copy_file, get_file_checksum, get_file_size},
+    io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix},
 };
 use std::{
     collections::HashMap,
@@ -44,12 +44,29 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
     //copy back requested output
     let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for output in tool_outputs {
-        if output.type_ == CWLType::File {
+        if output.type_ == CWLType::File || output.type_ == CWLType::Stdout || output.type_ == CWLType::Stderr {
             if let Some(binding) = &output.output_binding {
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
                 outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+            } else {
+                let mut file_prefix = output.id.clone();
+                file_prefix += if output.type_ == CWLType::Stdout {
+                    "_stdout"
+                } else if output.type_ == CWLType::Stderr {
+                    "_stderr"
+                } else {
+                    ""
+                };
+
+                let found_file = get_first_file_with_prefix(".", &file_prefix);
+                if let Some(filename) = found_file {
+                    let path = &initial_dir.join(&filename);
+                    fs::copy(&filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                    eprintln!("📜 Wrote output file: {:?}", path);
+                    outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+                }
             }
         } else if output.type_ == CWLType::Directory {
             if let Some(binding) = &output.output_binding {

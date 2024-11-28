@@ -9,6 +9,7 @@ colored = "2.1.0"
 fancy-regex = "0.11.0"
 git2 = { version = "0.19.0", features = ["vendored-openssl"] }
 pathdiff = "0.2.1"
+rand = "0.8.5"
 rust_xlsxwriter = "0.78.0"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.132"

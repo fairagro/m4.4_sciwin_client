@@ -4,7 +4,7 @@ use super::{
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
     outputs::CommandOutputParameter,
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
-    types::{DefaultValue, Entry},
+    types::{CWLType, DefaultValue, Entry},
 };
 use crate::io::resolve_path;
 use core::fmt;
@@ -160,6 +160,14 @@ impl CommandLineTool {
         } else {
             1
         }
+    }
+    
+    pub fn has_stdout_output(&self) -> bool {
+        self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stdout))
+    }
+
+    pub fn has_stderr_output(&self) -> bool {
+        self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stderr))
     }
 }
 

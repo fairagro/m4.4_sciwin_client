@@ -8,11 +8,11 @@ use crate::{
             validate::{rewire_paths, set_placeholder_values},
         },
         inputs::CommandLineBinding,
-        types::{DefaultValue, OutputItem},
+        types::{CWLType, DefaultValue, OutputItem},
         wf::Workflow,
     },
     error::CommandError,
-    io::{create_and_write_file, get_shell_command},
+    io::{create_and_write_file, get_random_filename, get_shell_command},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use colored::Colorize;
@@ -156,21 +156,37 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
 
     //handle redirection of stdout
     if !output.stdout.is_empty() {
+        let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
-            let out = &String::from_utf8_lossy(&output.stdout);
             create_and_write_file(stdout, out)?;
+        } else if tool.has_stdout_output() {
+            let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
+            let filename = if let Some(binding) = &output.output_binding {
+                &binding.glob
+            } else {
+                &get_random_filename(&format!("{}_stdout", output.id), "out")
+            };
+            create_and_write_file(filename, out)?;
         } else {
-            eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+            eprintln!("{}", out);
         }
     }
 
     //handle redirection of stderr
     if !output.stderr.is_empty() {
+        let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
-            let out = &String::from_utf8_lossy(&output.stderr);
             create_and_write_file(stderr, out)?;
+        } else if tool.has_stderr_output() {
+            let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
+            let filename = if let Some(binding) = &output.output_binding {
+                &binding.glob
+            } else {
+                &get_random_filename(&format!("{}_stderr", output.id), "out")
+            };
+            create_and_write_file(filename, out)?;
         } else {
-            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
+            eprintln!("❌ {}", out);
         }
     }
 

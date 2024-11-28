@@ -1,4 +1,5 @@
 use crate::cwl::clt::Command;
+use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
@@ -24,7 +25,6 @@ fn get_extension(filename: &str) -> String {
 
     path.extension().unwrap_or_default().to_string_lossy().into_owned()
 }
-
 
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
@@ -141,12 +141,35 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
                 return ".".to_string();
             }
             parent
-        },
+        }
         _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
 }
 
-pub fn join_path_string(path: &Path, location: &str) -> String{
+pub fn join_path_string(path: &Path, location: &str) -> String {
     let new_location = path.join(location);
     new_location.to_string_lossy().into_owned()
+}
+
+pub fn get_random_filename(prefix: &str, extension: &str) -> String {
+    let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
+    format!("{}_{}.{}", prefix, rnd, extension)
+}
+
+pub fn get_first_file_with_prefix(location: &str, prefix: &str) -> Option<String> {
+    let path = Path::new(location);
+
+    if path.is_dir() {
+        for entry in fs::read_dir(path).unwrap() {
+            let entry = entry.unwrap();
+            let filename = entry.file_name();
+            let filename_str = filename.to_string_lossy();
+
+            if filename_str.starts_with(prefix) {
+                return Some(filename_str.into_owned());
+            }
+        }
+    }
+
+    None
 }
