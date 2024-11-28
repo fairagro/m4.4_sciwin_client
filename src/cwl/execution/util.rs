@@ -93,6 +93,12 @@ pub fn evaluate_outputs(
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
                 outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
             }
+        } else if output.type_ == CWLType::String {
+            //string and has binding -> read file
+            if let Some(binding) = &output.output_binding {
+                let contents = fs::read_to_string(&binding.glob)?;
+                outputs.insert(output.id.clone(), OutputItem::OutputString(contents));
+            }
         }
     }
     //print output metadata

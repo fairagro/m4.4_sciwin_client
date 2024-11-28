@@ -249,6 +249,7 @@ pub struct OutputDirectory {
 pub enum OutputItem {
     OutputFile(OutputFile),
     OutputDirectory(OutputDirectory),
+    OutputString(String),
 }
 
 impl OutputItem {
@@ -256,6 +257,7 @@ impl OutputItem {
         match self {
             OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(&output_file.path)),
             OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
+            OutputItem::OutputString(output_string) => DefaultValue::Any(Value::String(output_string.to_string())),
         }
     }
 }
