@@ -1,3 +1,4 @@
+use urlencoding::decode;
 use super::util::evaluate_input;
 use crate::{
     cwl::{
@@ -92,6 +93,8 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
         }
         let incoming_data = evaluate_input(input, input_values)?;
         let mut incoming_file = incoming_data.as_value_string();
+        //decode special characters
+        incoming_file = decode(&incoming_file).unwrap().to_string();
 
         //check exists? otherwise search relative to tool
         let mut incoming_path = Path::new(&incoming_file).to_path_buf();
