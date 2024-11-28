@@ -12,7 +12,7 @@ use crate::{
         wf::Workflow,
     },
     error::CommandError,
-    io::{create_and_write_file, get_random_filename, get_shell_command, set_print_output},
+    io::{create_and_write_file, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use colored::Colorize;
@@ -50,8 +50,9 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
                 let parts = input.split('/').collect::<Vec<_>>();
                 if parts.len() == 2 {
                     step_inputs.insert(key.to_string(), outputs.get(input).unwrap().to_default_value());
-                } else if let Some(input) = input_values.get(input) {
-                    step_inputs.insert(key.to_string(), input.to_owned());
+                } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *input) {
+                    let value = evaluate_input(input, &Some(input_values.clone()))?;
+                    step_inputs.insert(key.to_string(), value.to_owned());
                 }
             }
 
@@ -96,6 +97,9 @@ pub fn run_commandlinetool(
 ) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
+    if !print_output() {
+        eprintln!("🚲 Executing CommandLineTool {} ...", &cwl_path.unwrap_or_default().bold());
+    }
     //create staging directory
     let dir = tempdir()?;
     eprintln!("📁 Created staging directory: {:?}", dir.path());
