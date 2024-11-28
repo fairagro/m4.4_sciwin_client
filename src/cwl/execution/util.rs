@@ -4,10 +4,11 @@ use crate::{
         outputs::CommandOutputParameter,
         types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
     },
-    io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix},
+    io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output},
 };
 use std::{
-    collections::HashMap, env,
+    collections::HashMap,
+    env,
     error::Error,
     fs,
     path::{Path, PathBuf},
@@ -102,9 +103,11 @@ pub fn evaluate_outputs(
             }
         }
     }
-    //print output metadata
-    let json = serde_json::to_string_pretty(&outputs)?;
-    println!("{}", json);
+    if print_output() {
+        //print output metadata
+        let json = serde_json::to_string_pretty(&outputs)?;
+        println!("{}", json);
+    }
     Ok(outputs)
 }
 

@@ -12,7 +12,7 @@ use crate::{
         wf::Workflow,
     },
     error::CommandError,
-    io::{create_and_write_file, get_random_filename, get_shell_command},
+    io::{create_and_write_file, get_random_filename, get_shell_command, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use colored::Colorize;
@@ -34,6 +34,9 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
     let input_values = input_values.unwrap_or_default();
 
     //TODO: stage in tmpdir
+
+    //prevent tool from outputting
+    set_print_output(false);
 
     let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for step_id in sorted_step_ids {
@@ -64,7 +67,8 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
     //TODO: copy back files specified in output
 
-    //TODO: report about outputs written
+    set_print_output(true);
+
     let mut output_values = HashMap::new();
     let input_values_ = Some(input_values);
     for output in &workflow.outputs {

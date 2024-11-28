@@ -2,6 +2,7 @@ use crate::cwl::clt::Command;
 use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
+    cell::RefCell,
     fs::{self, File},
     io::{self, Error, Read, Write},
     path::Path,
@@ -172,4 +173,16 @@ pub fn get_first_file_with_prefix(location: &str, prefix: &str) -> Option<String
     }
 
     None
+}
+
+thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });
+
+pub fn set_print_output(value: bool) {
+    PRINT_OUTPUT.with(|print_output| {
+        *print_output.borrow_mut() = value;
+    });
+}
+
+pub fn print_output() -> bool {
+    PRINT_OUTPUT.with(|print_output| *print_output.borrow())
 }
