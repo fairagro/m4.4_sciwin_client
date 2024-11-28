@@ -5,11 +5,12 @@ use crate::{
         parser,
     },
     io::{create_and_write_file, get_qualified_filename},
-    repo::{commit, get_modified_files, open_repo, stage_file},
+    repo::{commit, get_modified_files, stage_file},
     util::{error, highlight_cwl, print_list, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use git2::Repository;
 use std::{env, error::Error, fs::remove_file, path::Path};
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
@@ -81,33 +82,35 @@ fn add_flags_to_inputs_outputs(command: Vec<String>, inputs: Vec<String>, output
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
+    //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
-    let repo = open_repo(&cwd);
+    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
+    
+    let modified = get_modified_files(&repo);
+    if !modified.is_empty() {
+        println!("Uncommitted changes detected:");
+        print_list(&modified);
+        error("Uncommitted changes detected");
+    }
+    //parse input string
+    if args.command.is_empty() {
+        error("No commandline string given!");
+    }
+
     let mut cwl;
     let updated_inputs;
     let mut updated_outputs = args.outputs.clone().unwrap_or_default();
     let inputs = args.inputs.clone().unwrap_or_default(); 
     let outputs = args.outputs.clone().unwrap_or_default(); 
-
+    
     if !inputs.is_empty() || !outputs.is_empty() {
         (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(args.command.clone(), inputs, outputs.clone());
         cwl = parser::parse_command_line_inputs(args.command.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
     } 
     else {
-        let modified = get_modified_files(&repo);
-        if !modified.is_empty() {
-            println!("Uncommitted changes detected:");
-            print_list(&modified);
-            error("Uncommitted changes detected");
-        }
-        //parse input string
-        if args.command.is_empty() {
-            error("No commandline string given!");
-        }
-
         cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
     }
 
