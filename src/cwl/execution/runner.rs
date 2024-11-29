@@ -4,7 +4,7 @@ use crate::{
         execution::{
             environment::{set_tool_environment_vars, unset_environment_vars},
             staging::{stage_required_files, unstage_files},
-            util::{evaluate_input, evaluate_input_as_string, evaluate_outputs},
+            util::{evaluate_input, evaluate_input_as_string, evaluate_outputs, preprocess_cwl},
             validate::{rewire_paths, set_placeholder_values},
         },
         inputs::{CommandLineBinding, WorkflowStepInput},
@@ -79,7 +79,8 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
                 }
             }
 
-            let mut tool: CommandLineTool = serde_yml::from_str(&file)?;
+            let preprocessed_file = preprocess_cwl(&file, &path.to_string_lossy());
+            let mut tool: CommandLineTool = serde_yml::from_str(&preprocessed_file)?;
             let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), out_dir.clone())?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);

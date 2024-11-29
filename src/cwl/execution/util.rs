@@ -1,3 +1,5 @@
+use fancy_regex::Regex;
+
 use crate::{
     cwl::{
         inputs::CommandInputParameter,
@@ -7,11 +9,7 @@ use crate::{
     io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output},
 };
 use std::{
-    collections::HashMap,
-    env,
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
+    collections::HashMap, env, error::Error, fs, iter::repeat, path::{Path, PathBuf}
 };
 
 ///Either gets the default value for input or the provided one (preferred)
@@ -163,6 +161,33 @@ pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io
         }
     }
     Ok(dir)
+}
+
+pub fn preprocess_cwl(contents: &str, path: &str) -> String {
+    let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
+    import_regex.replace_all(&contents, |captures: &fancy_regex::Captures| {
+        let filename = captures.name("file").map_or("", |m| m.as_str());
+        let indent = captures.name("indent").map_or("", |m| m.as_str());
+        let indent_level: String = repeat(' ').take(indent.len()).collect();
+        let path = Path::new(path)
+            .parent()
+            .map(|parent| parent.join(filename))
+            .unwrap_or_else(|| Path::new(filename).to_path_buf());
+
+        match fs::read_to_string(&path) {
+            Ok(contents) => {
+                let mut lines = contents.lines();
+                let first_line = lines.next().unwrap_or_default();
+                let mut result = format!("{}{}", indent, first_line);
+                for line in lines {
+                    result.push('\n');
+                    result.push_str(&format!("{}{}", indent_level, line));
+                }
+                result
+            }
+            Err(_) => format!("{{\"error\": \"failed to load {}\"}}", filename),
+        }
+    }).to_string()
 }
 
 #[cfg(test)]

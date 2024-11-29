@@ -1,7 +1,10 @@
 use crate::{
     cwl::{
         clt::CommandLineTool,
-        execution::runner::{run_commandlinetool, run_workflow},
+        execution::{
+            runner::{run_commandlinetool, run_workflow},
+            util::preprocess_cwl,
+        },
         parser::guess_type,
         types::{CWLType, DefaultValue, Directory, File, PathItem},
         wf::Workflow,
@@ -150,7 +153,10 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            let cwl_yaml: Value = serde_yml::from_str(&contents).map_err(|e| format!("Could not load YAML: {}", e))?;
+            //preprocess cwl import statements
+            let preprocessed_contents = preprocess_cwl(&contents, &args.file);
+
+            let cwl_yaml: Value = serde_yml::from_str(&preprocessed_contents).map_err(|e| format!("Could not load YAML: {}", e))?;
             let class = cwl_yaml.get("class").expect("Could not get class");
             let is_workflow = class == "Workflow";
 

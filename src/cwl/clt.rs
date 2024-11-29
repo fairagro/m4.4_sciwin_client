@@ -1,8 +1,7 @@
 use super::{
-    deserialize::deserialize_list,
     execution::runner::run_command,
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
-    outputs::CommandOutputParameter,
+    outputs::{deserialize_outputs, CommandOutputParameter},
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
     types::{CWLType, DefaultValue, Entry},
 };
@@ -32,7 +31,7 @@ pub struct CommandLineTool {
     pub stderr: Option<String>,
     #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
-    #[serde(deserialize_with = "deserialize_list")]
+    #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deserialize_requirements")]
@@ -161,7 +160,7 @@ impl CommandLineTool {
             1
         }
     }
-    
+
     pub fn has_stdout_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stdout))
     }

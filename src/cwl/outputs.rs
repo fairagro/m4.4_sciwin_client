@@ -1,5 +1,6 @@
 use super::{deserialize::Identifiable, types::CWLType};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_yml::Value;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +38,47 @@ impl Identifiable for CommandOutputParameter {
         self.id = id
     }
 }
+
+
+pub fn deserialize_outputs<'de, D>(deserializer: D) -> Result<Vec<CommandOutputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: CommandOutputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let param = match value {
+                    Value::String(type_str) => {
+                        let type_ = serde_yml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                        CommandOutputParameter::default().with_id(id).with_type(type_)
+                    }
+                    _ => {
+                        let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                        param.id = id.to_string();
+                        param
+                    }
+                };
+
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+    };
+
+    Ok(parameters)
+}
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
