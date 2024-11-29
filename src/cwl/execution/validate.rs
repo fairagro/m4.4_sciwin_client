@@ -192,7 +192,7 @@ fn set_placeholder_values_in_string(
             if suffix == "dirname" {
                 if let Some(diff) = diff_paths(&input_value, &runtime["tooldir"]) {
                     if let Some(diff_str) = diff.to_str() {
-                        input_value = format!(".{}", input_value.trim_start_matches(diff_str));
+                        input_value = format!("./{}", input_value.trim_start_matches(diff_str));
                     }
                 }
             }
