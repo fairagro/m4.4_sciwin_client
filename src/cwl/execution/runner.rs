@@ -12,7 +12,7 @@ use crate::{
         wf::Workflow,
     },
     error::CommandError,
-    io::{create_and_write_file, get_random_filename, get_shell_command, print_output, set_print_output},
+    io::{create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use colored::Colorize;
@@ -147,7 +147,7 @@ pub fn run_commandlinetool(
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf())?;
+    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf(), &output_directory.to_string_lossy())?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
@@ -157,7 +157,7 @@ pub fn run_commandlinetool(
 
     //rewire files in tool to staged ones
     let mut input_values = input_values;
-    rewire_paths(tool, &mut input_values, &staged_files);
+    rewire_paths(tool, &mut input_values, &staged_files, &output_directory.to_string_lossy());
 
     //set required environment variables
     let home_directory = env::var("HOME").unwrap_or_default();
@@ -205,7 +205,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     if !output.stdout.is_empty() {
         let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
-            create_and_write_file(stdout, out)?;
+            create_and_write_file_forced(stdout, out)?;
         } else if tool.has_stdout_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {
@@ -213,17 +213,16 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
             } else {
                 &get_random_filename(&format!("{}_stdout", output.id), "out")
             };
-            create_and_write_file(filename, out)?;
+            create_and_write_file_forced(filename, out)?;
         } else {
             eprintln!("{}", out);
         }
     }
-
     //handle redirection of stderr
     if !output.stderr.is_empty() {
         let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
-            create_and_write_file(stderr, out)?;
+            create_and_write_file_forced(stderr, out)?;
         } else if tool.has_stderr_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {
@@ -231,7 +230,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
             } else {
                 &get_random_filename(&format!("{}_stderr", output.id), "out")
             };
-            create_and_write_file(filename, out)?;
+            create_and_write_file_forced(filename, out)?;
         } else {
             eprintln!("❌ {}", out);
         }

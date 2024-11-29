@@ -5,7 +5,7 @@ use std::{
     cell::RefCell,
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::Path,
+    path::{Path, MAIN_SEPARATOR_STR},
     process::Command as SystemCommand,
     vec,
 };
@@ -39,6 +39,18 @@ pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error
     }
 
     let mut file = fs::File::create_new(filename)?;
+    file.write_all(contents.as_bytes())?;
+    Ok(())
+}
+
+pub fn create_and_write_file_forced(filename: &str, contents: &str) -> Result<(), Error> {
+    let path = Path::new(filename);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mut file = fs::File::create(filename)?; //here ist the difference
     file.write_all(contents.as_bytes())?;
     Ok(())
 }
@@ -173,6 +185,15 @@ pub fn get_first_file_with_prefix(location: &str, prefix: &str) -> Option<String
     }
 
     None
+}
+
+pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
+    let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
+        &format!("{}{}", dir, MAIN_SEPARATOR_STR)
+    } else {
+        dir
+    };
+    path.strip_prefix(prefix).unwrap_or(&path)
 }
 
 thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });

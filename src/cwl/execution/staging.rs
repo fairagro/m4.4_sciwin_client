@@ -1,4 +1,3 @@
-use urlencoding::decode;
 use super::util::evaluate_input;
 use crate::{
     cwl::{
@@ -8,24 +7,30 @@ use crate::{
         requirements::Requirement,
         types::{CWLType, DefaultValue, Entry},
     },
-    io::{copy_dir, copy_file, create_and_write_file},
+    io::{copy_dir, copy_file, create_and_write_file, make_relative_to},
 };
 use std::{
     collections::HashMap,
-    env,
     error::Error,
     fs,
     path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
 };
+use urlencoding::decode;
 
-pub fn stage_required_files(tool: &CommandLineTool, input_values: &Option<HashMap<String, DefaultValue>>, tool_path: &Path, path: PathBuf) -> Result<Vec<String>, Box<dyn Error>> {
+pub fn stage_required_files(
+    tool: &CommandLineTool,
+    input_values: &Option<HashMap<String, DefaultValue>>,
+    tool_path: &Path,
+    path: PathBuf,
+    out_dir: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files: Vec<String> = vec![];
     //stage requirements
     staged_files.extend(stage_requirements(&tool.requirements, tool_path, &path)?);
 
     //stage inputs
-    staged_files.extend(stage_input_files(&tool.inputs, input_values, tool_path, &path)?);
+    staged_files.extend(stage_input_files(&tool.inputs, input_values, tool_path, &path, out_dir)?);
 
     Ok(staged_files)
 }
@@ -83,7 +88,13 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
     Ok(staged_files)
 }
 
-fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<HashMap<String, DefaultValue>>, tool_path: &Path, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn stage_input_files(
+    inputs: &[CommandInputParameter],
+    input_values: &Option<HashMap<String, DefaultValue>>,
+    tool_path: &Path,
+    path: &Path,
+    out_dir: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files = vec![];
 
     for input in inputs {
@@ -104,15 +115,13 @@ fn stage_input_files(inputs: &[CommandInputParameter], input_values: &Option<Has
         }
         incoming_file = incoming_path.to_string_lossy().to_string();
 
-        let current_dir = env::current_dir()?.to_string_lossy().into_owned() + MAIN_SEPARATOR_STR;
-
         let outcoming_file = handle_filename(&incoming_data);
-        let outcoming_file_relative = outcoming_file.strip_prefix(&current_dir).unwrap_or(&outcoming_file);
+        let outcoming_file_relative = make_relative_to(&outcoming_file, out_dir);
         let outcoming_file_stripped = outcoming_file_relative.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
-        
+
         if input.type_ == CWLType::File {
             copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());
@@ -231,7 +240,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), "").unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -252,7 +261,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), "").unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -272,7 +281,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), "").unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -291,7 +300,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), "").unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -314,7 +323,7 @@ mod tests {
             glob: "tests/test_data/input.txt".to_string(),
         });
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), "").unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there
