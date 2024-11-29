@@ -114,3 +114,25 @@ where
 
     Ok(parameters)
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum WorkflowStepInput {
+    String(String),
+    Parameter(WorkflowStepInutParameter),
+}
+
+impl Default for WorkflowStepInput {
+    fn default() -> Self {
+        WorkflowStepInput::String(String::default())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowStepInutParameter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<DefaultValue>,
+}

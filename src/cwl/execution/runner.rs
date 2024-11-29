@@ -7,7 +7,7 @@ use crate::{
             util::{evaluate_input, evaluate_input_as_string, evaluate_outputs},
             validate::{rewire_paths, set_placeholder_values},
         },
-        inputs::CommandLineBinding,
+        inputs::{CommandLineBinding, WorkflowStepInput},
         types::{CWLType, DefaultValue, OutputItem},
         wf::Workflow,
     },
@@ -46,13 +46,36 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
+
             for (key, input) in &step.in_ {
-                let parts = input.split('/').collect::<Vec<_>>();
-                if parts.len() == 2 {
-                    step_inputs.insert(key.to_string(), outputs.get(input).unwrap().to_default_value());
-                } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *input) {
-                    let value = evaluate_input(input, &Some(input_values.clone()))?;
-                    step_inputs.insert(key.to_string(), value.to_owned());
+                match input {
+                    WorkflowStepInput::String(in_string) => {
+                        let parts: Vec<&str> = in_string.split('/').collect();
+                        if parts.len() == 2 {
+                            step_inputs.insert(key.to_string(), outputs.get(in_string).unwrap().to_default_value());
+                        } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
+                            let value = evaluate_input(input, &Some(input_values.clone()))?;
+                            step_inputs.insert(key.to_string(), value.to_owned());
+                        }
+                    }
+                    WorkflowStepInput::Parameter(parameter) => {
+                        let source = parameter.source.clone().unwrap_or_default();
+                        let source_parts: Vec<&str> = source.split('/').collect();
+                        if source_parts.len() == 2 {
+                            //handle default
+                            if let Some(out_value) = outputs.get(&source) {
+                                step_inputs.insert(key.to_string(), out_value.to_default_value());
+                            } else if let Some(default) = &parameter.default {
+                                step_inputs.insert(key.to_string(), default.to_owned());
+                            }
+                        } else if let Some(default) = &parameter.default {
+                            step_inputs.insert(key.to_string(), default.to_owned());
+                        }
+                        if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
+                            let value = evaluate_input(input, &Some(input_values.clone()))?;
+                            step_inputs.insert(key.to_string(), value.to_owned());
+                        }
+                    }
                 }
             }
 

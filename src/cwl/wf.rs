@@ -1,7 +1,7 @@
 use super::{
     clt::CommandLineTool,
     deserialize::{deserialize_list, Identifiable},
-    inputs::{deserialize_inputs, CommandInputParameter},
+    inputs::{deserialize_inputs, CommandInputParameter, WorkflowStepInput},
     loader::{load_tool, resolve_filename},
     outputs::WorkflowOutputParameter,
     requirements::{deserialize_requirements, Requirement},
@@ -107,7 +107,7 @@ impl Workflow {
             .find(|step| step.id == to_parts[0])
             .unwrap()
             .in_
-            .insert(to_parts[1].to_string(), from_input.to_owned());
+            .insert(to_parts[1].to_string(), WorkflowStepInput::String(from_input.to_owned()));
 
         println!("➕ Added or updated connection from inputs.{} to {} in workflow", from_input, to);
 
@@ -169,7 +169,7 @@ impl Workflow {
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
-        step.in_.insert(to_parts[1].to_string(), from.to_string());
+        step.in_.insert(to_parts[1].to_string(), WorkflowStepInput::String(from.to_string()));
 
         Ok(())
     }
@@ -180,9 +180,18 @@ impl Workflow {
 
         for step in &self.steps {
             in_degree.entry(step.id.clone()).or_insert(0);
-            
+
             for input in step.in_.values() {
-                let parts: Vec<&str> = input.split('/').collect();
+                let parts: Vec<&str> = match input {
+                    WorkflowStepInput::String(string) => string.split('/').collect(),
+                    WorkflowStepInput::Parameter(parameter) => {
+                        if let Some(source) = &parameter.source {
+                            source.split('/').collect()
+                        } else {
+                            vec![]
+                        }
+                    }
+                };
 
                 if parts.len() == 2 {
                     let dependency = parts[0];
@@ -223,7 +232,7 @@ pub struct WorkflowStep {
     #[serde(default)]
     pub id: String,
     pub run: String,
-    pub in_: HashMap<String, String>,
+    pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
 }
 impl Identifiable for WorkflowStep {
