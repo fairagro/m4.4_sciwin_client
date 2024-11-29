@@ -193,7 +193,7 @@ pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
     } else {
         dir
     };
-    path.strip_prefix(prefix).unwrap_or(&path)
+    path.strip_prefix(prefix).unwrap_or(path)
 }
 
 thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });

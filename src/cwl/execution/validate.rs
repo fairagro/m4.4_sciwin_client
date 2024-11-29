@@ -82,7 +82,7 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
         if let Some(default) = &mut input.default {
             let mut new_default = default.clone();
             for staged_file in staged_files {
-                new_default = rewire_default_value(new_default, staged_file, &home_dir)
+                new_default = rewire_default_value(new_default, staged_file, home_dir)
             }
             *default = new_default;
         }
@@ -92,7 +92,7 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
             if let Some(existing_value) = values.get(&input.id) {
                 let mut new_value = existing_value.clone();
                 for staged_file in staged_files {
-                    new_value = rewire_default_value(new_value.clone(), staged_file, &home_dir);
+                    new_value = rewire_default_value(new_value.clone(), staged_file, home_dir);
                 }
                 values.insert(input.id.clone(), new_value);
             }
@@ -103,7 +103,7 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
 fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &str) -> DefaultValue {
     match value {
         DefaultValue::File(file) => {
-            let location = make_relative_to(&file.location, &home_dir).trim_start_matches("../");
+            let location = make_relative_to(&file.location, home_dir).trim_start_matches("../");
             let test = env::current_dir().unwrap().join(location);
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {
@@ -117,7 +117,7 @@ fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &st
             }
         }
         DefaultValue::Directory(directory) => {
-            let location = make_relative_to(&directory.location, &home_dir).trim_start_matches("../");
+            let location = make_relative_to(&directory.location, home_dir).trim_start_matches("../");
             let test = env::current_dir().unwrap().join(location);
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {
