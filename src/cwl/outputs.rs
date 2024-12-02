@@ -1,4 +1,4 @@
-use super::types::CWLType;
+use super::{deserialize::Identifiable, types::CWLType};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::Value;
 
@@ -29,11 +29,16 @@ impl CommandOutputParameter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CommandOutputBinding {
-    pub glob: String,
+impl Identifiable for CommandOutputParameter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id
+    }
 }
+
 
 pub fn deserialize_outputs<'de, D>(deserializer: D) -> Result<Vec<CommandOutputParameter>, D::Error>
 where
@@ -53,8 +58,18 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
-                param.id = id.to_string();
+                let param = match value {
+                    Value::String(type_str) => {
+                        let type_ = serde_yml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                        CommandOutputParameter::default().with_id(id).with_type(type_)
+                    }
+                    _ => {
+                        let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                        param.id = id.to_string();
+                        param
+                    }
+                };
+
                 Ok(param)
             })
             .collect::<Result<Vec<_>, _>>()?,
@@ -64,9 +79,17 @@ where
     Ok(parameters)
 }
 
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandOutputBinding {
+    pub glob: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowOutputParameter {
+    #[serde(default)]
     pub id: String,
     pub type_: CWLType,
     pub output_source: String,
@@ -76,5 +99,15 @@ impl WorkflowOutputParameter {
     pub fn with_id(&mut self, id: &str) -> &Self {
         self.id = id.to_string();
         self
+    }
+}
+
+impl Identifiable for WorkflowOutputParameter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id
     }
 }

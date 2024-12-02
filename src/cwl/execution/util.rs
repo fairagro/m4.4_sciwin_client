@@ -1,10 +1,12 @@
+use fancy_regex::Regex;
+
 use crate::{
     cwl::{
         inputs::CommandInputParameter,
         outputs::CommandOutputParameter,
         types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
     },
-    io::{copy_file, get_file_checksum, get_file_size},
+    io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output},
 };
 use std::{
     collections::HashMap,
@@ -29,6 +31,8 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
                 Err("CWLType is not matching input type")?;
             }
             return Ok(value.clone());
+        } else if let Some(default_) = &input.default {
+            return Ok(default_.clone());
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
@@ -40,16 +44,39 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
 }
 
 ///Copies back requested outputs and writes to commandline
-pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn evaluate_outputs(
+    tool_outputs: &Vec<CommandOutputParameter>,
+    initial_dir: &PathBuf,
+    tool_stdout: &Option<String>,
+    tool_stderr: &Option<String>,
+) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
     //copy back requested output
-    let mut outputs: HashMap<&String, OutputItem> = HashMap::new();
+    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for output in tool_outputs {
-        if output.type_ == CWLType::File {
+        if output.type_ == CWLType::File || output.type_ == CWLType::Stdout || output.type_ == CWLType::Stderr {
             if let Some(binding) = &output.output_binding {
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(&output.id, OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+            } else {
+                let filename = match output.type_ {
+                    CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
+                    CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
+                    _ => {
+                        let mut file_prefix = output.id.clone();
+                        file_prefix += match output.type_ {
+                            CWLType::Stdout => "_stdout",
+                            CWLType::Stderr => "_stderr",
+                            _ => "",
+                        };
+                        &get_first_file_with_prefix(".", &file_prefix).unwrap_or_default()
+                    }
+                };
+                let path = &initial_dir.join(filename);
+                fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                eprintln!("📜 Wrote output file: {:?}", path);
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
             if let Some(binding) = &output.output_binding {
@@ -68,14 +95,22 @@ pub fn evaluate_outputs(tool_outputs: &Vec<CommandOutputParameter>, initial_dir:
                 fs::create_dir_all(dir)?;
 
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                outputs.insert(&output.id, OutputItem::OutputDirectory(out_dir));
+                outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
+            }
+        } else if output.type_ == CWLType::String {
+            //string and has binding -> read file
+            if let Some(binding) = &output.output_binding {
+                let contents = fs::read_to_string(&binding.glob)?;
+                outputs.insert(output.id.clone(), OutputItem::OutputString(contents));
             }
         }
     }
-    //print output metadata
-    let json = serde_json::to_string_pretty(&outputs)?;
-    println!("{}", json);
-    Ok(())
+    if print_output() {
+        //print output metadata
+        let json = serde_json::to_string_pretty(&outputs)?;
+        println!("{}", json);
+    }
+    Ok(outputs)
 }
 
 fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
@@ -132,6 +167,35 @@ pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io
     Ok(dir)
 }
 
+pub fn preprocess_cwl(contents: &str, path: &str) -> String {
+    let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
+    import_regex
+        .replace_all(contents, |captures: &fancy_regex::Captures| {
+            let filename = captures.name("file").map_or("", |m| m.as_str());
+            let indent = captures.name("indent").map_or("", |m| m.as_str());
+            let indent_level: String = " ".repeat(indent.len());
+            let path = Path::new(path)
+                .parent()
+                .map(|parent| parent.join(filename))
+                .unwrap_or_else(|| Path::new(filename).to_path_buf());
+
+            match fs::read_to_string(&path) {
+                Ok(contents) => {
+                    let mut lines = contents.lines();
+                    let first_line = lines.next().unwrap_or_default();
+                    let mut result = format!("{}{}", indent, first_line);
+                    for line in lines {
+                        result.push('\n');
+                        result.push_str(&format!("{}{}", indent_level, line));
+                    }
+                    result
+                }
+                Err(_) => format!("{{\"error\": \"failed to load {}\"}}", filename),
+            }
+        })
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,7 +206,7 @@ mod tests {
         },
         io::copy_dir,
     };
-    use serde_yml::value;
+    use serde_yml::{value, Value};
     use serial_test::serial;
     use tempfile::tempdir;
 
@@ -175,6 +239,31 @@ mod tests {
     }
 
     #[test]
+    pub fn test_evaluate_input_empty_values() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let values = HashMap::new();
+        let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
+
+        assert_eq!(evaluation, "Nice".to_string());
+    }
+
+    #[test]
+    pub fn test_evaluate_input_no_values() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let evaluation = evaluate_input_as_string(&input, &None).unwrap();
+
+        assert_eq!(evaluation, "Nice".to_string());
+    }
+
+    #[test]
     #[serial]
     pub fn test_evaluate_outputs() {
         let dir = tempdir().unwrap();
@@ -191,7 +280,7 @@ mod tests {
         fs::copy("tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
         env::set_current_dir(dir.path()).unwrap();
 
-        let result = evaluate_outputs(&vec![output], &current);
+        let result = evaluate_outputs(&vec![output], &current, &None, &None);
         assert!(result.is_ok());
 
         env::set_current_dir(current).unwrap();

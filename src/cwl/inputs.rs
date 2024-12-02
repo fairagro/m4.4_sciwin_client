@@ -1,4 +1,7 @@
-use super::{types::CWLType, types::DefaultValue};
+use super::{
+    deserialize::Identifiable,
+    types::{CWLType, DefaultValue},
+};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::Value;
 
@@ -35,6 +38,16 @@ impl CommandInputParameter {
     pub fn with_binding(mut self, binding: CommandLineBinding) -> Self {
         self.input_binding = Some(binding);
         self
+    }
+}
+
+impl Identifiable for CommandInputParameter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id
     }
 }
 
@@ -100,4 +113,26 @@ where
     };
 
     Ok(parameters)
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum WorkflowStepInput {
+    String(String),
+    Parameter(WorkflowStepInputParameter),
+}
+
+impl Default for WorkflowStepInput {
+    fn default() -> Self {
+        WorkflowStepInput::String(String::default())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowStepInputParameter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<DefaultValue>,
 }

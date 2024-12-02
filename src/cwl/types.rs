@@ -18,6 +18,10 @@ pub enum CWLType {
     File,
     #[serde(rename = "Directory")]
     Directory,
+    #[serde(rename = "Any")]
+    Any,
+    Stdout,
+    Stderr,
 }
 
 #[derive(Serialize, Debug, PartialEq, Clone)]
@@ -219,7 +223,7 @@ pub struct EnvironmentDef {
     pub env_value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputFile {
     pub location: String,
     pub basename: String,
@@ -231,7 +235,7 @@ pub struct OutputFile {
     pub format: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputDirectory {
     pub location: String,
     pub basename: String,
@@ -240,9 +244,20 @@ pub struct OutputDirectory {
     pub path: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum OutputItem {
     OutputFile(OutputFile),
     OutputDirectory(OutputDirectory),
+    OutputString(String),
+}
+
+impl OutputItem {
+    pub fn to_default_value(&self) -> DefaultValue {
+        match self {
+            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(&output_file.path)),
+            OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
+            OutputItem::OutputString(output_string) => DefaultValue::Any(Value::String(output_string.to_string())),
+        }
+    }
 }

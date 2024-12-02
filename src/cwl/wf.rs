@@ -1,7 +1,16 @@
-use super::{clt::CommandLineTool, inputs::CommandInputParameter, requirements::Requirement};
-use crate::cwl::{loader::{load_tool, resolve_filename}, outputs::WorkflowOutputParameter};
+use super::{
+    clt::CommandLineTool,
+    deserialize::{deserialize_list, Identifiable},
+    inputs::{deserialize_inputs, CommandInputParameter, WorkflowStepInput},
+    loader::{load_tool, resolve_filename},
+    outputs::WorkflowOutputParameter,
+    requirements::{deserialize_requirements, Requirement},
+};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, error::Error};
+use std::{
+    collections::{HashMap, VecDeque},
+    error::Error,
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -15,11 +24,18 @@ pub struct Workflow {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_requirements")]
     pub hints: Option<Vec<Requirement>>,
+    #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
+    #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<WorkflowOutputParameter>,
+    #[serde(deserialize_with = "deserialize_list")]
     pub steps: Vec<WorkflowStep>,
 }
 
@@ -91,7 +107,7 @@ impl Workflow {
             .find(|step| step.id == to_parts[0])
             .unwrap()
             .in_
-            .insert(to_parts[1].to_string(), from_input.to_owned());
+            .insert(to_parts[1].to_string(), WorkflowStepInput::String(from_input.to_owned()));
 
         println!("➕ Added or updated connection from inputs.{} to {} in workflow", from_input, to);
 
@@ -153,17 +169,78 @@ impl Workflow {
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
-        step.in_.insert(to_parts[1].to_string(), from.to_string());
+        step.in_.insert(to_parts[1].to_string(), WorkflowStepInput::String(from.to_string()));
 
         Ok(())
+    }
+
+    pub fn sort_steps(&self) -> Result<Vec<String>, String> {
+        let mut graph: HashMap<String, Vec<String>> = HashMap::new();
+        let mut in_degree: HashMap<String, usize> = HashMap::new();
+
+        for step in &self.steps {
+            in_degree.entry(step.id.clone()).or_insert(0);
+
+            for input in step.in_.values() {
+                let parts: Vec<&str> = match input {
+                    WorkflowStepInput::String(string) => string.split('/').collect(),
+                    WorkflowStepInput::Parameter(parameter) => {
+                        if let Some(source) = &parameter.source {
+                            source.split('/').collect()
+                        } else {
+                            vec![]
+                        }
+                    }
+                };
+
+                if parts.len() == 2 {
+                    let dependency = parts[0];
+                    graph.entry(dependency.to_string()).or_default().push(step.id.clone());
+                    *in_degree.entry(step.id.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+        let mut queue: VecDeque<String> = in_degree.iter().filter(|&(_, &degree)| degree == 0).map(|(id, _)| id.clone()).collect();
+
+        let mut sorted_steps = Vec::new();
+        while let Some(step) = queue.pop_front() {
+            sorted_steps.push(step.clone());
+
+            if let Some(dependents) = graph.get(&step) {
+                for dependent in dependents {
+                    if let Some(degree) = in_degree.get_mut(dependent) {
+                        *degree -= 1;
+                        if *degree == 0 {
+                            queue.push_back(dependent.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        if sorted_steps.len() != self.steps.len() {
+            return Err("❗ Cycle detected in the workflow".into());
+        }
+
+        Ok(sorted_steps)
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStep {
+    #[serde(default)]
     pub id: String,
     pub run: String,
-    pub in_: HashMap<String, String>,
+    pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
+}
+impl Identifiable for WorkflowStep {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
 }

@@ -1,9 +1,11 @@
 use crate::cwl::clt::Command;
+use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
+    cell::RefCell,
     fs::{self, File},
     io::{self, Error, Read, Write},
-    path::Path,
+    path::{Path, MAIN_SEPARATOR_STR},
     process::Command as SystemCommand,
     vec,
 };
@@ -25,7 +27,6 @@ fn get_extension(filename: &str) -> String {
     path.extension().unwrap_or_default().to_string_lossy().into_owned()
 }
 
-
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
 }
@@ -38,6 +39,18 @@ pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error
     }
 
     let mut file = fs::File::create_new(filename)?;
+    file.write_all(contents.as_bytes())?;
+    Ok(())
+}
+
+pub fn create_and_write_file_forced(filename: &str, contents: &str) -> Result<(), Error> {
+    let path = Path::new(filename);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mut file = fs::File::create(filename)?; //here ist the difference
     file.write_all(contents.as_bytes())?;
     Ok(())
 }
@@ -141,12 +154,56 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
                 return ".".to_string();
             }
             parent
-        },
+        }
         _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
     }
 }
 
-pub fn join_path_string(path: &Path, location: &str) -> String{
+pub fn join_path_string(path: &Path, location: &str) -> String {
     let new_location = path.join(location);
     new_location.to_string_lossy().into_owned()
+}
+
+pub fn get_random_filename(prefix: &str, extension: &str) -> String {
+    let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
+    format!("{}_{}.{}", prefix, rnd, extension)
+}
+
+pub fn get_first_file_with_prefix(location: &str, prefix: &str) -> Option<String> {
+    let path = Path::new(location);
+
+    if path.is_dir() {
+        for entry in fs::read_dir(path).unwrap() {
+            let entry = entry.unwrap();
+            let filename = entry.file_name();
+            let filename_str = filename.to_string_lossy();
+
+            if filename_str.starts_with(prefix) {
+                return Some(filename_str.into_owned());
+            }
+        }
+    }
+
+    None
+}
+
+pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
+    let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
+        &format!("{}{}", dir, MAIN_SEPARATOR_STR)
+    } else {
+        dir
+    };
+    path.strip_prefix(prefix).unwrap_or(path)
+}
+
+thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });
+
+pub fn set_print_output(value: bool) {
+    PRINT_OUTPUT.with(|print_output| {
+        *print_output.borrow_mut() = value;
+    });
+}
+
+pub fn print_output() -> bool {
+    PRINT_OUTPUT.with(|print_output| *print_output.borrow())
 }

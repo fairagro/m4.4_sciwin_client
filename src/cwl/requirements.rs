@@ -10,6 +10,14 @@ pub enum Requirement {
     ResourceRequirement(ResourceRequirement),
     EnvVarRequirement(EnvVarRequirement),
     ShellCommandRequirement,
+    //as dummys, not used at this point
+    SoftwareRequirement,
+    NetworkAccess,
+    InlineJavascriptRequirement,
+    MultipleInputFeatureRequirement,
+    SubworkflowFeatureRequirement,
+    StepInputExpressionRequirement,
+    ToolTimeLimit
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
