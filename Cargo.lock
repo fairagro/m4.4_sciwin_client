@@ -1083,7 +1083,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
  "zerocopy",
- ]
+]
 
 [[package]]
 name = "predicates"
@@ -1233,7 +1233,7 @@ checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
 dependencies = [
  "getrandom",
  "libredox",
- "thiserror",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1310,9 +1310,9 @@ dependencies = [
  "fancy-regex",
  "git2",
  "pathdiff",
- "rand",
  "predicates",
  "prettytable-rs",
+ "rand",
  "rust_xlsxwriter",
  "serde",
  "serde_json",
