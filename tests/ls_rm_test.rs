@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use git2::Repository;
 use predicates::prelude::*;
 use s4n::commands::tool::{remove_tool, RmArgs, CreateToolArgs, handle_tool_commands, ToolCommands};
 use serial_test::serial;
@@ -6,7 +7,7 @@ use std::env;
 use std::fs::File;
 use std::{fs, vec};
 use tempfile::tempdir;
-use s4n::repo::{get_modified_files, open_repo};
+use s4n::repo::get_modified_files;
 mod common;
 use common::with_temp_repository;
 use std::io::Write;
@@ -67,7 +68,7 @@ pub fn tool_remove_test() {
         assert!(handle_tool_commands(&cmd_remove).is_ok());
         assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
 
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -101,7 +102,7 @@ pub fn tool_remove_test_extension() {
         assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
 
         // check if there are no uncommitted changes after removal
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }

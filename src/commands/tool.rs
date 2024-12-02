@@ -254,7 +254,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
 
 pub fn remove_tool(args: &RmArgs) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
-    let repo = open_repo(cwd);
+    let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");
     for tool in &args.rm_tool {
         let mut tool_path = workflows_path.join(tool);
