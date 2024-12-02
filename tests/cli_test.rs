@@ -35,7 +35,10 @@ pub fn test_cli_s4n_workflow() {
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
-    let restore = setup_python(&dir_str);
+    let (newpath, restore) = setup_python(dir_str);
+    
+    //modify path variable
+    env::set_var("PATH", newpath);
 
     check_git_user().unwrap();
 

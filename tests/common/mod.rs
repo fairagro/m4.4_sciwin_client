@@ -9,7 +9,7 @@ use std::{
 use tempfile::{tempdir, TempDir};
 
 #[allow(dead_code)]
-pub fn setup_python(dir_str: &str) -> String {
+pub fn setup_python(dir_str: &str) -> (String, String) {
     //windows stuff
     let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
     let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
@@ -20,14 +20,12 @@ pub fn setup_python(dir_str: &str) -> String {
     let old_path = env::var("PATH").unwrap();
     let python_path = format!("{}/.venv/{}", dir_str, venv_scripts);
     let new_path = format!("{}{}{}", python_path, path_sep, old_path);
-    //modify path variable
-    env::set_var("PATH", new_path);
 
     //install packages
     let req_path = format!("{}/requirements.txt", dir_str);
     let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
 
-    old_path
+    (new_path, old_path)
 }
 
 #[allow(dead_code)]

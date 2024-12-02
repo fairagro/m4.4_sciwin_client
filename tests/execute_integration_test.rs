@@ -157,7 +157,10 @@ pub fn test_execute_local_workflow() {
 
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
-    let restore = setup_python(dir_str);
+    let (newpath, restore) = setup_python(dir_str);
+    
+    //modify path variable
+    env::set_var("PATH", newpath);
 
     //execute workflow
     let args = LocalExecuteArgs {
