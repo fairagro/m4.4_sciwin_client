@@ -69,6 +69,31 @@ impl Workflow {
         self.outputs.iter().map(|s| s.id.clone()).collect::<Vec<_>>().contains(&id.to_string())
     }
 
+    pub fn has_step_input(&self, id: &str) -> bool {
+        self.steps.iter().any(|step| {
+            step.in_.clone().into_values().any(|val| {
+                let src = match val {
+                    WorkflowStepInput::String(str) => str,
+                    WorkflowStepInput::Parameter(par) => par.source.unwrap_or_default(),
+                };
+                src == id
+            })
+        })
+    }
+
+    pub fn has_step_output(&self, output_source: &str) -> bool {
+        let parts = output_source.split('/').collect::<Vec<_>>();
+        if parts.len() != 2 {
+            return false;
+        }
+        let step = self.get_step(parts[0]);
+        if step.is_none() {
+            return false;
+        }
+
+        step.unwrap().out.iter().any(|output| output == parts[1])
+    }
+
     pub fn get_step(&self, id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|s| s.id == *id)
     }
