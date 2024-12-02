@@ -101,7 +101,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     Ok(())
 }
 
-fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     //get workflow
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
     let repo = Repository::open(".")?;
@@ -112,7 +112,7 @@ fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
     let path = Path::new(&filename).parent().unwrap_or(Path::new("."));
     let workflow = load_workflow(&filename)?;

@@ -4,8 +4,34 @@ use std::{
     env::{self},
     fs::{copy, create_dir_all},
     path::{Path, PathBuf},
+    process::Command,
 };
 use tempfile::{tempdir, TempDir};
+
+#[allow(dead_code)]
+pub fn setup_python() -> String {
+    let current = env::current_dir().unwrap();
+    let dir_str = &current.to_string_lossy();
+
+    //windows stuff
+    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
+    let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
+
+    //set up python venv
+    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
+    let old_path = env::var("PATH").unwrap();
+    let python_path = format!("{}/.venv/{}", dir_str, venv_scripts);
+    let new_path = format!("{}{}{}", python_path, path_sep, old_path);
+    //modify path variable
+    env::set_var("PATH", new_path);
+
+    //install packages
+    let req_path = format!("{}/requirements.txt", dir_str);
+    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
+
+    old_path
+}
 
 /// Sets up a temporary repository with test data
 #[allow(dead_code)]

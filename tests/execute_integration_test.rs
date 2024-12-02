@@ -1,3 +1,5 @@
+mod common;
+use common::setup_python;
 use s4n::{
     commands::execute::{execute_local, LocalExecuteArgs, Runner},
     io::copy_dir,
@@ -7,7 +9,6 @@ use std::{
     env,
     fs::{self},
     path::Path,
-    process::Command,
 };
 use tempfile::tempdir;
 
@@ -157,22 +158,7 @@ pub fn test_execute_local_workflow() {
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
 
-    //windows stuff
-    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
-    let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
-    let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
-
-    //set up python venv
-    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
-    let old_path = env::var("PATH").unwrap();
-    let python_path = format!("{}/.venv/{}", dir_str, venv_scripts);
-    let new_path = format!("{}{}{}", python_path, path_sep, old_path);
-    //modify path variable
-    env::set_var("PATH", new_path);
-
-    //install packages
-    let req_path = format!("{}/requirements.txt", dir_str);
-    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
+    let restore = setup_python();
 
     //execute workflow
     let args = LocalExecuteArgs {
@@ -192,6 +178,6 @@ pub fn test_execute_local_workflow() {
     assert!(path.exists());
 
     //reset
-    env::set_var("PATH", old_path);
+    env::set_var("PATH", restore);
     env::set_current_dir(current_dir).unwrap();
 }
