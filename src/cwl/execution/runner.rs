@@ -12,7 +12,7 @@ use crate::{
         wf::Workflow,
     },
     error::CommandError,
-    io::{create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
+    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use colored::Colorize;
@@ -33,7 +33,10 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
     let sorted_step_ids = workflow.sort_steps()?;
     let input_values = input_values.unwrap_or_default();
 
-    //TODO: stage in tmpdir
+    let dir = tempdir()?;
+    let tmp_path = dir.path().to_string_lossy().into_owned();
+    let current = env::current_dir()?;
+    let output_directory = if let Some(out) = out_dir { out } else { current.to_string_lossy().into_owned() };
 
     //prevent tool from outputting
     set_print_output(false);
@@ -81,7 +84,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
 
             let preprocessed_file = preprocess_cwl(&file, &path.to_string_lossy());
             let mut tool: CommandLineTool = serde_yml::from_str(&preprocessed_file)?;
-            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), out_dir.clone())?;
+            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), Some(tmp_path.clone()))?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
@@ -90,15 +93,32 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
         }
     }
 
-    //TODO: copy back files specified in output
-
     set_print_output(true);
 
     let mut output_values = HashMap::new();
     let input_values_ = Some(input_values);
     for output in &workflow.outputs {
         let source = &output.output_source;
-        if let Some(value) = outputs.get(source) {
+        if let Some(value) = &outputs.get(source) {
+            let value = match value {
+                OutputItem::OutputFile(file) => {
+                    let new_loc = Path::new(&file.path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_file(&file.path, &new_loc)?;
+                    let mut file = file.clone();
+                    file.path = new_loc.to_string();
+                    file.location = format!("file://{}", new_loc);
+                    OutputItem::OutputFile(file)
+                }
+                OutputItem::OutputDirectory(dir) => {
+                    let new_loc = Path::new(&dir.path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_dir(&dir.path, &new_loc)?;
+                    let mut dir = dir.clone();
+                    dir.path = new_loc.to_string();
+                    dir.location = format!("file://{}", new_loc);
+                    OutputItem::OutputDirectory(dir)
+                }
+                OutputItem::OutputString(str) => OutputItem::OutputString(str.to_string()),
+            };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
             let result = evaluate_input(input, &input_values_)?;
