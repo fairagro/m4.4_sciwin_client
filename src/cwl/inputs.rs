@@ -119,7 +119,7 @@ where
 #[serde(untagged)]
 pub enum WorkflowStepInput {
     String(String),
-    Parameter(WorkflowStepInutParameter),
+    Parameter(WorkflowStepInputParameter),
 }
 
 impl Default for WorkflowStepInput {
@@ -130,7 +130,7 @@ impl Default for WorkflowStepInput {
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WorkflowStepInutParameter {
+pub struct WorkflowStepInputParameter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
