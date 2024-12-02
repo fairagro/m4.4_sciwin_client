@@ -1,5 +1,6 @@
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
     types::CWLType,
 };
 
@@ -58,8 +59,11 @@ pub fn create_simple_cwl() {
             input_binding: Some(CommandLineBinding {
                 prefix: Some("-la".to_string()),
                 position: None,
+                value_from: None,
+                shell_quote: None,
             }),
             default: None,
+            format: None,
         }])
         .with_outputs(vec![]);
     let result = serde_yml::to_string(&tool);

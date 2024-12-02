@@ -1,9 +1,14 @@
 mod common;
 use common::{os_path, with_temp_repository};
+use git2::Repository;
 use s4n::{
     commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
-    cwl::clt::{CommandLineTool, DockerRequirement, Entry, Requirement},
-    repo::{get_modified_files, open_repo},
+    cwl::{
+        clt::CommandLineTool,
+        requirements::{DockerRequirement, Requirement},
+        types::Entry,
+    },
+    repo::get_modified_files,
 };
 use serial_test::serial;
 use std::{fs::read_to_string, path::Path};
@@ -32,7 +37,7 @@ pub fn tool_create_test() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -57,7 +62,7 @@ pub fn tool_create_test_is_raw() {
         assert!(dir.path().join(Path::new("results.txt")).exists());
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -85,7 +90,7 @@ pub fn tool_create_test_no_commit() {
             assert!(output_path.exists());
         }
         //as we did not commit there must be files (exactly 2, the cwl file and the results.txt)
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert_eq!(get_modified_files(&repo).len(), 2);
     });
 }
@@ -109,7 +114,7 @@ pub fn tool_create_test_no_run() {
         assert!(dir.path().join(Path::new("workflows/echo/echo.cwl")).exists());
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -134,7 +139,7 @@ pub fn tool_create_test_is_clean() {
         assert!(!dir.path().join(Path::new("results.txt")).exists()); //no result is left as it is cleaned
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -171,7 +176,7 @@ pub fn tool_create_test_container_image() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -209,7 +214,7 @@ pub fn tool_create_test_dockerfile() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }

@@ -1,31 +1,76 @@
-use super::types::{CWLType, Directory, File};
+use super::{
+    execution::runner::run_command,
+    inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
+    outputs::{deserialize_outputs, CommandOutputParameter},
+    requirements::{deserialize_requirements, DockerRequirement, Requirement},
+    types::{DefaultValue, Entry},
+};
 use crate::io::resolve_path;
-use colored::Colorize;
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, io, process::Command as SystemCommand};
+use std::{error::Error, fmt::Display};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub class: String,
     pub cwl_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc: Option<String>,
+    #[serde(default)]
     pub base_command: Command,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
+    #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
+    pub hints: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<Argument>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permanent_fail_codes: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temporary_fail_codes: Option<Vec<i32>>,
 }
 
 impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
+            id: None,
+            label: None,
+            doc: None,
             class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
-            base_command: Command::Single("echo".to_string()),
+            base_command: Default::default(),
+            stdin: Default::default(),
+            stdout: Default::default(),
+            stderr: Default::default(),
             inputs: Default::default(),
             outputs: Default::default(),
             requirements: Default::default(),
+            hints: Default::default(),
+            arguments: Default::default(),
+            success_codes: None,
+            permanent_fail_codes: None,
+            temporary_fail_codes: None,
         }
     }
 }
@@ -59,56 +104,8 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> io::Result<()> {
-        let cmd = match &self.base_command {
-            Command::Single(cmd) => cmd,
-            Command::Multiple(vec) => &vec[0],
-        };
-
-        let mut command = SystemCommand::new(cmd);
-        if let Command::Multiple(ref vec) = &self.base_command {
-            for cmd in &vec[1..] {
-                command.arg(cmd);
-            }
-        }
-        for input in &self.inputs {
-            if let Some(binding) = &input.input_binding {
-                if let Some(prefix) = &binding.prefix {
-                    command.arg(prefix);
-                }
-            }
-            if let Some(default_) = &input.default {
-                let value = match &default_ {
-                    DefaultValue::File(file) => &file.location,
-                    DefaultValue::Directory(dir) => &dir.location,
-                    DefaultValue::Any(value) => match value {
-                        serde_yml::Value::Bool(_) => &String::from(""), // do not remove!
-                        _ => &serde_yml::to_string(value).unwrap().trim_end().to_string(),
-                    },
-                };
-                command.arg(value);
-            }
-        }
-
-        //debug print command
-        if cfg!(debug_assertions) {
-            let cmd = format!(
-                "{} {}",
-                command.get_program().to_str().unwrap(),
-                command.get_args().map(|arg| arg.to_string_lossy()).collect::<Vec<_>>().join(" ")
-            );
-            println!("▶️  Executing command: {}", cmd.green().bold());
-        }
-
-        let output = command.output()?;
-
-        //report from stdout/stderr
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-        if !output.stderr.is_empty() {
-            eprintln!("❌ {}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        Ok(())
+    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
+        run_command(self, None)
     }
 
     pub fn save(&mut self, path: &str) -> String {
@@ -143,6 +140,33 @@ impl CommandLineTool {
         }
         self.to_string()
     }
+
+    pub fn get_output_ids(&self) -> Vec<String> {
+        self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
+    }
+
+    pub fn has_shell_command_requirement(&self) -> bool {
+        if let Some(requirements) = &self.requirements {
+            requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
+        } else {
+            false
+        }
+    }
+
+    pub fn get_error_code(&self) -> i32 {
+        if let Some(code) = &self.permanent_fail_codes {
+            code[0]
+        } else {
+            1
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum Argument {
+    String(String),
+    Binding(CommandLineBinding),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -152,167 +176,75 @@ pub enum Command {
     Multiple(Vec<String>),
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CommandInputParameter {
-    pub id: String,
-    pub type_: CWLType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub default: Option<DefaultValue>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_binding: Option<CommandLineBinding>,
-}
-
-impl CommandInputParameter {
-    pub fn with_id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-        self
-    }
-
-    pub fn with_type(mut self, t: CWLType) -> Self {
-        self.type_ = t;
-        self
-    }
-
-    pub fn with_default_value(mut self, f: DefaultValue) -> Self {
-        self.default = Some(f);
-        self
-    }
-
-    pub fn with_binding(mut self, binding: CommandLineBinding) -> Self {
-        self.input_binding = Some(binding);
-        self
+impl Default for Command {
+    fn default() -> Self {
+        Command::Single(String::new())
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum DefaultValue {
-    File(File),
-    Directory(Directory),
-    Any(serde_yml::Value),
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cwl::{
+        requirements::InitialWorkDirRequirement,
+        types::{CWLType, File, Listing},
+    };
+    use serde_yml::Value;
+    use std::path::Path;
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CommandLineBinding {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prefix: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub position: Option<usize>,
-}
-
-impl CommandLineBinding {
-    pub fn with_prefix(mut self, prefix: &String) -> Self {
-        self.prefix = Some(prefix.to_string());
-        self
-    }
-
-    pub fn with_position(mut self, position: usize) -> Self {
-        self.position = Some(position);
-        self
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CommandOutputParameter {
-    pub id: String,
-    pub type_: CWLType,
-    pub output_binding: Option<CommandOutputBinding>,
-}
-
-impl CommandOutputParameter {
-    pub fn with_id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-        self
-    }
-    pub fn with_type(mut self, type_: CWLType) -> Self {
-        self.type_ = type_;
-        self
-    }
-    pub fn with_binding(mut self, binding: CommandOutputBinding) -> Self {
-        self.output_binding = Some(binding);
-        self
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CommandOutputBinding {
-    pub glob: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(tag = "class")]
-pub enum Requirement {
-    InitialWorkDirRequirement(InitialWorkDirRequirement),
-    DockerRequirement(DockerRequirement),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct InitialWorkDirRequirement {
-    pub listing: Vec<Listing>,
-}
-
-impl InitialWorkDirRequirement {
-    pub fn from_file(filename: &str) -> Self {
-        InitialWorkDirRequirement {
-            listing: vec![Listing {
-                entryname: filename.to_string(),
-                entry: Entry::from_file(filename),
-            }],
+    pub fn os_path(path: &str) -> String {
+        if cfg!(target_os = "windows") {
+            Path::new(path).to_string_lossy().replace("/", "\\")
+        } else {
+            path.to_string()
         }
     }
-}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum DockerRequirement {
-    DockerPull(String),
-    #[serde(untagged)]
-    DockerFile {
-        #[serde(rename = "dockerFile")]
-        docker_file: Entry,
-        #[serde(rename = "dockerImageId")]
-        docker_image_id: String,
-    },
-}
+    #[test]
+    pub fn test_cwl_save() {
+        let inputs = vec![
+            CommandInputParameter::default()
+                .with_id("positional1")
+                .with_default_value(DefaultValue::File(File::from_location(&"test_data/input.txt".to_string())))
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_position(0)),
+            CommandInputParameter::default()
+                .with_id("option1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
+        ];
+        let mut clt = CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "test/script.py".to_string()]))
+            .with_inputs(inputs)
+            .with_requirements(vec![
+                Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("test/script.py")),
+                Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
+            ]);
 
-impl DockerRequirement {
-    pub fn from_file(filename: &str, tag: &str) -> Self {
-        DockerRequirement::DockerFile {
-            docker_file: Entry::from_file(filename),
-            docker_image_id: tag.to_string(),
-        }
+        clt.save("workflows/tool/tool.cwl");
+
+        //check if paths are rewritten upon tool saving
+
+        assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt")))));
+        let requirements = &clt.requirements.unwrap();
+        let req_0 = &requirements[0];
+        let req_1 = &requirements[1];
+        assert_eq!(
+            *req_0,
+            Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
+                listing: vec![Listing {
+                    entry: Entry::from_file(&os_path("../../test/script.py")),
+                    entryname: "test/script.py".to_string()
+                }]
+            })
+        );
+        assert_eq!(
+            *req_1,
+            Requirement::DockerRequirement(DockerRequirement::DockerFile {
+                docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
+                docker_image_id: "test".to_string()
+            })
+        );
     }
-    pub fn from_pull(image_id: &str) -> Self {
-        DockerRequirement::DockerPull(image_id.to_string())
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Listing {
-    pub entryname: String,
-    pub entry: Entry,
-}
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum Entry {
-    Source(String),
-    Include(Include),
-}
-
-impl Entry {
-    pub fn from_file(path: &str) -> Entry {
-        Entry::Include(Include { include: path.to_string() })
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct Include {
-    #[serde(rename = "$include")]
-    pub include: String,
 }

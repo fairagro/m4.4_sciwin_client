@@ -1,13 +1,6 @@
 use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
 use std::path::Path;
 
-pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
-    match Repository::open(path) {
-        Ok(repo) => repo,
-        Err(e) => panic!("❌ Failed to open repository {}", e),
-    }
-}
-
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);
