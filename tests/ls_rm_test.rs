@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::Path; 
 
 #[test]
+#[serial]
 fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = tempdir()?;
     let workflows_path = temp_dir.path().join("workflows");
@@ -32,6 +33,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+#[serial]
 fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
     let args = RmArgs { rm_tool: vec![] };
     let original_dir = env::current_dir()?;
