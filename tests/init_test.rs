@@ -1,23 +1,10 @@
+mod common;
 use calamine::{open_workbook, Reader, Xlsx};
-use git2::Config;
+use common::check_git_user;
 use s4n::commands::init::{create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
 use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
-
-pub fn check_git_user() -> Result<(), git2::Error> {
-    let mut config = Config::open_default()?;
-    if config.get_string("user.name").is_err() {
-        config.remove_multivar("user.name", ".*").ok();
-        config.set_str("user.name", &whoami::username()).expect("Could not set name");
-    }
-
-    if config.get_string("user.email").is_err() {
-        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
-    }
-
-    Ok(())
-}
 
 #[test]
 #[serial]

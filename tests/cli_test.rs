@@ -1,5 +1,5 @@
 mod common;
-use common::setup_python;
+use common::{check_git_user, setup_python};
 use s4n::{
     commands::{
         execute::{execute_local, LocalExecuteArgs, Runner},
@@ -35,7 +35,9 @@ pub fn test_cli_s4n_workflow() {
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
-    let restore = setup_python();
+    let restore = setup_python(&dir_str);
+
+    check_git_user().unwrap();
 
     //init project
     init_s4n(None, false).expect("Could not init s4n");

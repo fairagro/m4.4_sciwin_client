@@ -1,4 +1,4 @@
-use git2::Repository;
+use git2::{Config, Repository};
 use s4n::repo::{initial_commit, stage_all};
 use std::{
     env::{self},
@@ -9,10 +9,7 @@ use std::{
 use tempfile::{tempdir, TempDir};
 
 #[allow(dead_code)]
-pub fn setup_python() -> String {
-    let current = env::current_dir().unwrap();
-    let dir_str = &current.to_string_lossy();
-
+pub fn setup_python(dir_str: &str) -> String {
     //windows stuff
     let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
     let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
@@ -31,6 +28,21 @@ pub fn setup_python() -> String {
     let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
 
     old_path
+}
+
+#[allow(dead_code)]
+pub fn check_git_user() -> Result<(), git2::Error> {
+    let mut config = Config::open_default()?;
+    if config.get_string("user.name").is_err() {
+        config.remove_multivar("user.name", ".*").ok();
+        config.set_str("user.name", &whoami::username()).expect("Could not set name");
+    }
+
+    if config.get_string("user.email").is_err() {
+        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
+    }
+
+    Ok(())
 }
 
 /// Sets up a temporary repository with test data
