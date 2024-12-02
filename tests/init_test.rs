@@ -1,8 +1,23 @@
 use calamine::{open_workbook, Reader, Xlsx};
+use git2::Config;
 use s4n::commands::init::{create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
 use std::{env, path::PathBuf};
 use tempfile::{tempdir, Builder, NamedTempFile};
+
+pub fn check_git_user() -> Result<(), git2::Error> {
+    let mut config = Config::open_default()?;
+    if config.get_string("user.name").is_err() {
+        config.remove_multivar("user.name", ".*").ok();
+        config.set_str("user.name", &whoami::username()).expect("Could not set name");
+    }
+
+    if config.get_string("user.email").is_err() {
+        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
+    }
+
+    Ok(())
+}
 
 #[test]
 #[serial]
@@ -10,7 +25,7 @@ fn test_init_s4n_without_folder() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir);
-
+    check_git_user().unwrap();
     // Create a subdirectory in the temporary directory
     std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
 
@@ -48,6 +63,7 @@ fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
     println!("Temporary directory: {:?}", temp_dir.path());
+    check_git_user().unwrap();
 
     // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
     env::set_current_dir(temp_dir.path()).unwrap();
@@ -70,6 +86,7 @@ fn test_init_s4n_without_folder_with_arc() {
 }
 
 #[test]
+#[serial]
 fn test_init_git_repo() {
     let temp_dir = tempfile::tempdir().unwrap();
     let base_folder = temp_dir.path().join("my_repo");
@@ -83,6 +100,7 @@ fn test_init_git_repo() {
 }
 
 #[test]
+#[serial]
 fn test_create_minimal_folder_structure_invalid() {
     //create an invalid file input
     let temp_file = NamedTempFile::new().unwrap();
@@ -95,6 +113,7 @@ fn test_create_minimal_folder_structure_invalid() {
 }
 
 #[test]
+#[serial]
 fn test_create_minimal_folder_structure() {
     let temp_dir = Builder::new().prefix("minimal_folder").tempdir().unwrap();
 
@@ -114,6 +133,7 @@ fn test_create_minimal_folder_structure() {
 }
 
 #[test]
+#[serial]
 fn test_create_investigation_excel_file() {
     //create directory
     let temp_dir = Builder::new().prefix("investigation_excel_test_").tempdir().unwrap();
@@ -135,6 +155,7 @@ fn test_create_investigation_excel_file() {
 }
 
 #[test]
+#[serial]
 fn test_create_arc_folder_structure_invalid() {
     //this test only gives create_arc_folder_structure a file instead of a directory
     let temp_file = NamedTempFile::new().unwrap();
@@ -146,6 +167,7 @@ fn test_create_arc_folder_structure_invalid() {
 }
 
 #[test]
+#[serial]
 fn test_create_arc_folder_structure() {
     let temp_dir = Builder::new().prefix("arc_folder_test").tempdir().unwrap();
 
@@ -164,8 +186,10 @@ fn test_create_arc_folder_structure() {
 }
 
 #[test]
+#[serial]
 fn test_init_s4n_with_arc() {
     let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
+    check_git_user().unwrap();
     let arc = true;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
@@ -184,15 +208,17 @@ fn test_init_s4n_with_arc() {
     }
 }
 #[test]
+#[serial]
 fn test_init_s4n_minimal() {
     let temp_dir = Builder::new().prefix("init_without_arc_test").tempdir().unwrap();
+    check_git_user().unwrap();
     let arc = false;
 
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
     //call method with temp dir
     let result = init_s4n(base_folder, arc);
-
+    println!("{:#?}", result);
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
@@ -213,6 +239,7 @@ fn test_init_s4n_minimal() {
 }
 
 #[test]
+#[serial]
 fn test_is_git_repo() {
     let repo_dir = Builder::new().prefix("valid_git_repo").tempdir().unwrap();
     let repo_dir_str = repo_dir.path().to_str().unwrap();

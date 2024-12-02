@@ -1,14 +1,16 @@
 use crate::{
     cwl::{format::format_cwl, loader::load_workflow, wf::Workflow},
-    io::{create_and_write_file, get_workflows_folder},
+    io::{create_and_write_file, get_workflows_folder}, repo::{commit, stage_file},
 };
 use clap::{Args, Subcommand};
+use git2::Repository;
 use std::{error::Error, fs, io::Write, path::Path};
 
 pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
     match command {
         WorkflowCommands::Create(args) => create_workflow(args)?,
         WorkflowCommands::Connect(args) => connect_workflow_nodes(args)?,
+        WorkflowCommands::Save(args) => save_workflow(args)?,
     }
     Ok(())
 }
@@ -19,6 +21,8 @@ pub enum WorkflowCommands {
     Create(CreateWorkflowArgs),
     #[command(about = "Connects a workflow node")]
     Connect(ConnectWorkflowArgs),
+    #[command(about = "Saves a workflow")]
+    Save(CreateWorkflowArgs),
 }
 
 #[derive(Args, Debug)]
@@ -83,5 +87,16 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     file.write_all(yaml.as_bytes())?;
     println!("✔️  Updated Workflow {}!", filename);
 
+    Ok(())
+}
+
+fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+    //get workflow
+    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
+    let repo = Repository::open(".")?;
+    stage_file(&repo, &filename)?;
+    let msg = &format!("✅ Saved workflow {}", args.name);
+    println!("{}", msg);
+    commit(&repo, msg)?;
     Ok(())
 }

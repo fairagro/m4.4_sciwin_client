@@ -1,3 +1,7 @@
+use crate::{
+    repo::{commit, get_modified_files, initial_commit, stage_all},
+    util::error,
+};
 use clap::Args;
 use git2::Repository;
 use rust_xlsxwriter::Workbook;
@@ -16,19 +20,33 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    init_s4n(args.project.clone(), args.arc)?;
+    init_s4n(args.project.clone(), args.arc).map_err(|e| format!("Could not init {}", e))?;
     Ok(())
 }
 
 pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    if !is_git_repo(folder) {
-        init_git_repo(folder)?;
-    }
+    let repo = if !is_git_repo(folder) {
+        init_git_repo(folder)?
+    } else {
+        Repository::open(folder.unwrap_or("."))?
+    };
     if arc {
         create_arc_folder_structure(folder)?;
     } else {
         create_minimal_folder_structure(folder, false)?;
+    }
+
+    let files = get_modified_files(&repo);
+    if !files.is_empty() {
+        stage_all(&repo)?;
+        if repo.head().is_ok() {
+            commit(&repo, "Created Project using `s4n init`")?;
+        } else {
+            initial_commit(&repo)?;
+        }
+    } else {
+        eprintln!("{}", error("Nothing to commit"));
     }
 
     Ok(())
@@ -44,32 +62,24 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
         }
     };
 
-    let is_repo = Repository::open(&base_dir).is_ok();
-    println!("Checking if {:?} is a git repository: {}", base_dir, is_repo);
-
-    is_repo
+    Repository::open(&base_dir).is_ok()
 }
 
-pub fn init_git_repo(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Checking if git repo: {:?}", base_folder);
-
+pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => env::current_dir().expect("Failed to get current directory"),
     };
 
     fs::create_dir_all(&base_dir)?;
-    println!("Current working directory: {}", base_dir.display());
-    Repository::init(&base_dir).expect("Failed to execute git init command");
-
-    println!("Git repository initialized successfully");
+    let repo = Repository::init(&base_dir).expect("Failed to execute git init command");
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
         File::create(gitignore_path).expect("Failed to create .gitignore file");
     }
 
-    Ok(())
+    Ok(repo)
 }
 
 pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) -> Result<(), Box<dyn std::error::Error>> {
@@ -91,9 +101,10 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     if !workflows_dir.exists() {
         fs::create_dir_all(&workflows_dir)?;
     }
+    File::create(workflows_dir.join(".gitkeep"))?;
 
     if !silent {
-        println!("Folder structure created successfully:");
+        println!("📂 s4n project initialisation sucessfully:");
         println!("{} (Base)", base_dir.display());
         println!("  ├── workflows");
     }
@@ -117,24 +128,18 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
 
     create_investigation_excel_file(base_dir.to_str().unwrap_or(""))?;
     // Check and create subdirectories
-    let assays_dir = base_dir.join("assays");
-    if !assays_dir.exists() {
-        fs::create_dir_all(&assays_dir)?;
+    let dirs = vec!["studies", "assays", "runs"];
+    for dir_name in dirs {
+        let dir = base_dir.join(dir_name);
+        if !dir.exists() {
+            fs::create_dir_all(&dir)?;
+        }
+        File::create(dir.join(".gitkeep"))?;
     }
-    let studies_dir = base_dir.join("studies");
-    if !studies_dir.exists() {
-        fs::create_dir_all(&studies_dir)?;
-    }
-
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
 
-    let runs_dir = base_dir.join("runs");
-    if !runs_dir.exists() {
-        fs::create_dir_all(&runs_dir)?;
-    }
-
-    println!("Folder structure created successfully:");
+    println!("📂 s4n project initialisation sucessfully:");
     println!("{} (Base)", base_dir.display());
     println!("  ├── assays");
     println!("  ├── studies");
