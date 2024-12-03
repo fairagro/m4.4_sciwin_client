@@ -158,7 +158,7 @@ pub fn test_execute_local_workflow() {
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
     let (newpath, restore) = setup_python(dir_str);
-    
+
     //modify path variable
     env::set_var("PATH", newpath);
 
@@ -182,4 +182,57 @@ pub fn test_execute_local_workflow() {
     //reset
     env::set_var("PATH", restore);
     env::set_current_dir(current_dir).unwrap();
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_tool_default_cwl() {
+    let path = "tests/test_data/default.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();
+    let out_file = format!("{}/file.wtf", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec![],
+    };
+    let args_override = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec!["--file1".to_string(), "tests/test_data/input.txt".to_string()],
+    };
+
+    assert!(execute_local(&args).is_ok());
+    assert!(fs::exists(&out_file).unwrap());
+    let contents = fs::read_to_string(&out_file).unwrap();
+    assert_eq!(contents, "File".to_string());
+
+    assert!(execute_local(&args_override).is_ok());
+    assert!(fs::exists(&out_file).unwrap());
+    let contents = fs::read_to_string(&out_file).unwrap();
+    assert_eq!(contents, "Hello fellow CWL-enjoyers!".to_string());
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow_no_steps() {
+    //has no steps, do not complain!
+    let path = "tests/test_data/wf_inout.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec![],
+    };
+
+    assert!(execute_local(&args).is_ok());
 }
