@@ -113,7 +113,7 @@ pub fn evaluate_outputs(
     Ok(outputs)
 }
 
-fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
+pub fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
     let basename = path.file_name().and_then(|n| n.to_str()).unwrap().to_string();
     let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
     let checksum = format!("sha1${}", get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path)));
@@ -138,7 +138,7 @@ fn resolve_format(format: Option<String>) -> Option<String> {
     }
 }
 
-fn get_diretory_metadata(path: PathBuf) -> OutputDirectory {
+pub fn get_diretory_metadata(path: PathBuf) -> OutputDirectory {
     OutputDirectory {
         location: format!("file://{}", path.display()),
         basename: path.file_name().unwrap().to_string_lossy().into_owned(),

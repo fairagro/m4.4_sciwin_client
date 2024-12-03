@@ -4,7 +4,7 @@ use crate::{
         execution::{
             environment::{set_tool_environment_vars, unset_environment_vars},
             staging::{stage_required_files, unstage_files},
-            util::{evaluate_input, evaluate_input_as_string, evaluate_outputs, preprocess_cwl},
+            util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
             validate::{rewire_paths, set_placeholder_values},
         },
         inputs::{CommandLineBinding, WorkflowStepInput},
@@ -27,7 +27,12 @@ use std::{
 };
 use tempfile::tempdir;
 
-pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String, DefaultValue>>, cwl_path: Option<&str>, out_dir: Option<String>) -> Result<(), Box<dyn Error>> {
+pub fn run_workflow(
+    workflow: &mut Workflow,
+    input_values: Option<HashMap<String, DefaultValue>>,
+    cwl_path: Option<&str>,
+    out_dir: Option<String>,
+) -> Result<(), Box<dyn Error>> {
     let clock = Instant::now();
 
     let sorted_step_ids = workflow.sort_steps()?;
@@ -36,7 +41,13 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
     let dir = tempdir()?;
     let tmp_path = dir.path().to_string_lossy().into_owned();
     let current = env::current_dir()?;
-    let output_directory = if let Some(out) = out_dir { out } else { current.to_string_lossy().into_owned() };
+    let output_directory = if let Some(out) = out_dir {
+        out
+    } else {
+        current.to_string_lossy().into_owned()
+    };
+
+    let workflow_folder = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new("."));
 
     //prevent tool from outputting
     set_print_output(false);
@@ -44,7 +55,7 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
     let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
-            let path = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new(".")).join(step.run.clone());
+            let path = workflow_folder.join(step.run.clone());
             let file = fs::read_to_string(&path).map_err(|e| format!("Unable to find Step {} at {:?}: {}", step.id, path, e))?;
 
             //map inputs to correct fields
@@ -122,14 +133,33 @@ pub fn run_workflow(workflow: &mut Workflow, input_values: Option<HashMap<String
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
             let result = evaluate_input(input, &input_values_)?;
-            let value = OutputItem::OutputString(result.as_value_string());
+            let value = match &result {
+                DefaultValue::File(file) => {
+                    let dest = format!("{}/{}", output_directory, file.location);
+                    fs::copy(format!("{}/{}", &workflow_folder.to_string_lossy(), file.location.clone()), &dest)
+                        .map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    OutputItem::OutputFile(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
+                }
+                DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
+                    copy_output_dir(
+                        &format!("{}/{}", &workflow_folder.to_string_lossy(), &directory.location),
+                        &format!("{}/{}", &output_directory, &directory.location),
+                    )
+                    .map_err(|e| format!("Could not provide output directory: {}", e))?,
+                ),
+                DefaultValue::Any(_) => OutputItem::OutputString(result.as_value_string()),
+            };
             output_values.insert(&output.id, value);
         }
     }
     let json = serde_json::to_string_pretty(&output_values)?;
     println!("{}", json);
 
-    eprintln!("✔️  Workflow {} executed successfully in {:.0?}!", &cwl_path.unwrap_or_default().bold(), clock.elapsed());
+    eprintln!(
+        "✔️  Workflow {} executed successfully in {:.0?}!",
+        &cwl_path.unwrap_or_default().bold(),
+        clock.elapsed()
+    );
     Ok(())
 }
 
@@ -153,11 +183,18 @@ pub fn run_commandlinetool(
     let output_directory = if let Some(out) = out_dir { &PathBuf::from(out) } else { &current };
 
     //set tool path. all paths are given relative to the tool
-    let tool_path = if let Some(file) = cwl_path { Path::new(file).parent().unwrap() } else { Path::new(".") };
+    let tool_path = if let Some(file) = cwl_path {
+        Path::new(file).parent().unwrap()
+    } else {
+        Path::new(".")
+    };
 
     //build runtime object
     let runtime = HashMap::from([
-        ("tooldir".to_string(), tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned()),
+        (
+            "tooldir".to_string(),
+            tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned(),
+        ),
         ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
         ("tmpdir".to_string(), dir.path().to_string_lossy().into_owned()),
         ("cores".to_string(), get_processor_count().to_string()),
@@ -168,7 +205,13 @@ pub fn run_commandlinetool(
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path().to_path_buf(), &output_directory.to_string_lossy())?;
+    let staged_files = stage_required_files(
+        tool,
+        &input_values,
+        tool_path,
+        dir.path().to_path_buf(),
+        &output_directory.to_string_lossy(),
+    )?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
@@ -449,6 +492,9 @@ stdout: output.txt"#;
         let shell = shell_cmd.get_program().to_string_lossy();
         let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
 
-        assert_eq!(format_command(&cmd), format!("{} {} cd $(inputs.indir.path) && find . | sort", shell, c_arg))
+        assert_eq!(
+            format_command(&cmd),
+            format!("{} {} cd $(inputs.indir.path) && find . | sort", shell, c_arg)
+        )
     }
 }

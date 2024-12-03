@@ -236,3 +236,68 @@ pub fn test_execute_local_workflow_no_steps() {
 
     assert!(execute_local(&args).is_ok());
 }
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow_in_param() {
+    let path = "tests/test_data/test-wf_features.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();
+    let out_file = format!("{}/file.wtf", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec!["--pop".to_string(), "tests/test_data/input.txt".to_string()],
+    };
+
+    assert!(execute_local(&args).is_ok());
+    assert!(fs::exists(&out_file).unwrap());
+    let contents = fs::read_to_string(&out_file).unwrap();
+    assert_eq!(contents, "Hello fellow CWL-enjoyers!".to_string());
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow_dir_out() {
+    //has no steps, do not complain!
+    let path = "tests/test_data/wf_inout_dir.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();    
+    let out_path = format!("{}/test_dir", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec![],
+    };
+
+    assert!(execute_local(&args).is_ok());    
+    assert!(fs::exists(format!("{}/file.txt", out_path)).unwrap());
+    assert!(fs::exists(format!("{}/input.txt", out_path)).unwrap());
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow_file_out() {
+    //has no steps, do not complain!
+    let path = "tests/test_data/wf_inout_file.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();    
+    let out_path = format!("{}/file.txt", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec![],
+    };
+
+    assert!(execute_local(&args).is_ok());    
+    assert!(fs::exists(out_path).unwrap());
+}
