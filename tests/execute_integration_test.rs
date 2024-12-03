@@ -45,7 +45,10 @@ pub fn test_execute_local_with_args() {
         out_dir: None,
         is_quiet: false,
         file: "tests/test_data/echo.cwl".to_string(),
-        args: ["--test", "tests/test_data/input_alt.txt"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+        args: ["--test", "tests/test_data/input_alt.txt"]
+            .iter()
+            .map(|a| a.to_string())
+            .collect::<Vec<_>>(),
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -265,7 +268,7 @@ pub fn test_execute_local_workflow_dir_out() {
     //has no steps, do not complain!
     let path = "tests/test_data/wf_inout_dir.cwl";
     let dir = tempdir().unwrap();
-    let out_dir = dir.path().to_string_lossy().into_owned();    
+    let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/test_dir", &out_dir);
 
     let args = LocalExecuteArgs {
@@ -276,7 +279,7 @@ pub fn test_execute_local_workflow_dir_out() {
         args: vec![],
     };
 
-    assert!(execute_local(&args).is_ok());    
+    assert!(execute_local(&args).is_ok());
     assert!(fs::exists(format!("{}/file.txt", out_path)).unwrap());
     assert!(fs::exists(format!("{}/input.txt", out_path)).unwrap());
 }
@@ -287,7 +290,7 @@ pub fn test_execute_local_workflow_file_out() {
     //has no steps, do not complain!
     let path = "tests/test_data/wf_inout_file.cwl";
     let dir = tempdir().unwrap();
-    let out_dir = dir.path().to_string_lossy().into_owned();    
+    let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/file.txt", &out_dir);
 
     let args = LocalExecuteArgs {
@@ -298,6 +301,26 @@ pub fn test_execute_local_workflow_file_out() {
         args: vec![],
     };
 
-    assert!(execute_local(&args).is_ok());    
+    assert!(execute_local(&args).is_ok());
+    assert!(fs::exists(out_path).unwrap());
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_workflow_directory_out() {
+    let path = "tests/test_data/mkdir_wf.cwl";
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();
+    let out_path = format!("{}/test_directory", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir.clone()),
+        is_quiet: true,
+        file: path.to_string(),
+        args: vec!["--dirname".to_string(), "test_directory".to_string()],
+    };
+
+    assert!(execute_local(&args).is_ok());
     assert!(fs::exists(out_path).unwrap());
 }

@@ -46,7 +46,7 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
 ///Copies back requested outputs and writes to commandline
 pub fn evaluate_outputs(
     tool_outputs: &Vec<CommandOutputParameter>,
-    initial_dir: &PathBuf,
+    initial_dir: &Path,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
 ) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
@@ -79,9 +79,9 @@ pub fn evaluate_outputs(
                 outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
-            if let Some(binding) = &output.output_binding {
+            if let Some(binding) = &output.output_binding {   
                 let dir = if &binding.glob != "." {
-                    initial_dir
+                    &initial_dir.join(&binding.glob)
                 } else {
                     let working_dir = env::current_dir()?;
                     let raw_basename = working_dir.file_name().unwrap().to_string_lossy();
@@ -93,7 +93,6 @@ pub fn evaluate_outputs(
                     &initial_dir.join(&glob_name)
                 };
                 fs::create_dir_all(dir)?;
-
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
                 outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
             }
