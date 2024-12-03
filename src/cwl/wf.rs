@@ -269,3 +269,50 @@ impl Identifiable for WorkflowStep {
         self.id = id;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::cwl::loader::load_workflow;
+
+    #[test]
+    fn test_workflow_has_step() {
+        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+
+        assert!(workflow.has_step("calculation"));
+        assert!(workflow.has_step("plot"));
+        assert!(!workflow.has_step("bogus"));
+    }
+
+    #[test]
+    fn test_workflow_has_input() {
+        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+
+        assert!(workflow.has_input("population"));
+        assert!(workflow.has_input("speakers"));
+        assert!(!workflow.has_input("bogus"));
+    }
+
+    #[test]
+    fn test_workflow_has_output() {
+        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+
+        assert!(workflow.has_output("out"));
+        assert!(!workflow.has_output("bogus"));
+    }
+
+    #[test]
+    fn test_workflow_has_step_input() {
+        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+
+        assert!(workflow.has_step_input("calculation/results"));
+        assert!(!workflow.has_step_input("plot/results"));
+    }
+
+    #[test]
+    fn test_workflow_has_step_output() {
+        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+
+        assert!(workflow.has_step_output("calculation/results"));
+        assert!(!workflow.has_step_output("calculation/bogus"));
+    }
+}
