@@ -1,4 +1,4 @@
-name: 🏗️ Build and Test
+name: 📎🏗️🦺 Continous Integration
 
 on:
   push:
@@ -10,13 +10,37 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  clippy_check:
+    name: 📎 Clippy
+    # Make sure CI fails on all warnings, including Clippy lints
+    env:
+      RUSTFLAGS: "-Dwarnings"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Run Clippy
+        run: |
+          rustup component add clippy
+          cargo clippy --all-targets --all-features
   build:
+    name: 🏗️ Build and Test
     strategy:
       matrix:
         os: ["windows-latest", "ubuntu-latest", "macos-latest"]
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Cleanup residues
         run: cargo clean
@@ -26,3 +50,26 @@ jobs:
         run: pip install cwltool
       - name: Run tests
         run: cargo test -- --nocapture
+  coverage:
+    name: 🦺 Coverage
+    runs-on: ubuntu-latest
+    steps:        
+      - uses: actions/checkout@v4
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Tarpaulin 📈
+        run: cargo install cargo-tarpaulin  
+      - name: Install CWL Tool
+        run: pip install cwltool
+      - name: Run coverage
+        run: cargo tarpaulin --out Xml
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cobertura.xml
+          fail_ci_if_error: true
+          name: m4.4_sciwin_client
