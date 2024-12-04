@@ -18,6 +18,7 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dy
     match command {
         WorkflowCommands::Create(args) => create_workflow(args)?,
         WorkflowCommands::Connect(args) => connect_workflow_nodes(args)?,
+        WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args)?,
         WorkflowCommands::Save(args) => save_workflow(args)?,
         WorkflowCommands::Status(args) => get_workflow_status(args)?,
     }
@@ -30,6 +31,8 @@ pub enum WorkflowCommands {
     Create(CreateWorkflowArgs),
     #[command(about = "Connects a workflow node")]
     Connect(ConnectWorkflowArgs),
+    #[command(about = "Disconnects a workflow node")]
+    Disconnect(ConnectWorkflowArgs),
     #[command(about = "Saves a workflow")]
     Save(CreateWorkflowArgs),
     #[command(about = "Shows socket status of workflow")]
@@ -92,6 +95,32 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     }
 
     //save workflow
+    let mut yaml = serde_yml::to_string(&workflow)?;
+    yaml = format_cwl(&yaml)?;
+    let mut file = fs::File::create(&filename)?;
+    file.write_all(yaml.as_bytes())?;
+    println!("✔️  Updated Workflow {}!", filename);
+
+    Ok(())
+}
+
+pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn Error>> {
+    // Get the workflow
+    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
+    let mut workflow = load_workflow(&filename)?;
+
+    let from_parts = args.from.split('/').collect::<Vec<_>>();
+    let to_parts = args.to.split('/').collect::<Vec<_>>();
+
+    if from_parts[0] == "@inputs" {
+        workflow.remove_input_connection(from_parts[1], &args.to)?;
+    } else if to_parts[0] == "@outputs" {
+        workflow.remove_output_connection(to_parts[1])?;
+    } else {
+        workflow.remove_step_connection(&args.from, &args.to)?;
+    }
+
+    // save workflow
     let mut yaml = serde_yml::to_string(&workflow)?;
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;

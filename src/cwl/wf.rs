@@ -199,6 +199,73 @@ impl Workflow {
         Ok(())
     }
 
+    /// Removes a connection between two CommandLineTools by removing input from tool_y that is also output of tool_x.
+    pub fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
+        let from_parts = from.split('/').collect::<Vec<_>>();
+        let to_parts = to.split('/').collect::<Vec<_>>();
+        if from_parts.len() != 2 {
+            return Err(format!("❌ Invalid '--from' format: {}. Please use tool/parameter or @inputs/parameter.", from).into());
+        }
+        if to_parts.len() != 2 {
+            return Err(format!("❌ Invalid '--to' format: {}. Please use tool/parameter or @outputs/parameter.", to).into());
+        }
+        if !self.has_step(to_parts[0]) {
+            return Err(format!("❌ Step {} not found!", to_parts[0]).into());
+        }
+        let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]);
+        // If the step is found, try to remove the connection by removing input from tool_y that uses output of tool_x
+        //Input is empty, change that?
+        if let Some(step) = step {
+            if step.in_.remove(to_parts[1]).is_some() {
+                println!("🔗 Successfully disconnected {} from {}", from, to);
+            } else {
+                println!(
+                    "⚠️ No connection found between {} and {}. Nothing to disconnect.", from, to);
+            }
+            Ok(())
+        } else {
+            Err(format!("❌ Failed to find step {} in workflow!", to_parts[0]).into())
+        }
+    }
+    
+    /// Removes an input from inputs and removes it from CommandLineTool input.
+    pub fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
+        let to_parts = to.split('/').collect::<Vec<_>>();
+        if to_parts.len() != 2 {
+            return Err(format!("❌ Invalid 'to' format for input connection: {} to:{}", from_input, to).into());
+        }
+        if let Some(index) = self.inputs.iter().position(|s| s.id == *from_input.to_string())
+        {
+            self.inputs.remove(index);
+        }
+        if let Some(step) = self.steps.iter_mut().find(|s| s.id == to_parts[0]) {
+            if step.in_.remove(to_parts[1]).is_some() {
+                println!("➖ Successfully disconnected input {} from {}", from_input, to);
+            } else {
+                println!("⚠️ No input connection found for {} to disconnect.", from_input);
+            }
+        } else {
+            return Err(format!("❌ Step {} not found in workflow!", to_parts[0]).into());
+        }
+
+        Ok(())
+    }
+    /// Removes a connection between an output and a CommandLineTool.
+    pub fn remove_output_connection(&mut self, to_output: &str) -> Result<(), Box<dyn Error>> {
+        if let Some(index) = self.outputs.iter().position(|o| o.id == to_output) {
+            // Remove the output connection, only removes outputs so far better to change that to also remove output of step?
+            self.outputs.remove(index);
+            println!(
+                "➖ Removed connection to outputs.{} from workflow!",
+                to_output
+            );
+        } else {
+            return Err(format!("No output connection found for '{}'", to_output).into());
+        }
+
+        Ok(())
+    }
+
     pub fn sort_steps(&self) -> Result<Vec<String>, String> {
         let mut graph: HashMap<String, Vec<String>> = HashMap::new();
         let mut in_degree: HashMap<String, usize> = HashMap::new();
