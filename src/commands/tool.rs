@@ -73,11 +73,16 @@ fn add_flags_to_inputs_outputs(command: Vec<String>, inputs: Vec<String>, output
         }
     }
 
-    let updated_outputs: Vec<String> = outputs
-        .into_iter()
-        .filter(|output| !updated_inputs.contains(output))
-        .collect();
-    (updated_inputs, updated_outputs)
+    let updated_outputs: Vec<String> = outputs.clone().into_iter().filter(|output| !updated_inputs.contains(output)).collect();
+    if updated_inputs.len() >= inputs.len() && updated_outputs.len() >= outputs.len() {
+        (updated_inputs, updated_outputs)
+    } else if inputs.len() > updated_inputs.len() && updated_outputs.len() >= outputs.len() {
+        (inputs, updated_outputs)
+    } else if updated_inputs.len() >= inputs.len() && outputs.len() > updated_outputs.len() {
+        (updated_inputs, outputs)
+    } else {
+        (inputs, outputs)
+    }
 }
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
@@ -88,7 +93,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
-    
+
     let modified = get_modified_files(&repo);
     if !modified.is_empty() {
         println!("Uncommitted changes detected:");
@@ -103,14 +108,13 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let mut cwl;
     let updated_inputs;
     let mut updated_outputs = args.outputs.clone().unwrap_or_default();
-    let inputs = args.inputs.clone().unwrap_or_default(); 
-    let outputs = args.outputs.clone().unwrap_or_default(); 
-    
+    let inputs = args.inputs.clone().unwrap_or_default();
+    let outputs = args.outputs.clone().unwrap_or_default();
+
     if !inputs.is_empty() || !outputs.is_empty() {
         (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(args.command.clone(), inputs, outputs.clone());
         cwl = parser::parse_command_line_inputs(args.command.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
-    } 
-    else {
+    } else {
         cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
     }
 
@@ -145,7 +149,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             }
         }
         //if no --outputs provided infer output from git even if --inputs provided
-        if outputs.is_empty(){
+        if outputs.is_empty() {
             //could check here if an output file matches an input string
             cwl = cwl.with_outputs(parser::get_outputs(files));
         } else {
