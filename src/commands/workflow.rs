@@ -115,7 +115,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     if from_parts[0] == "@inputs" {
         workflow.remove_input_connection(from_parts[1], &args.to)?;
     } else if to_parts[0] == "@outputs" {
-        workflow.remove_output_connection(to_parts[1])?;
+        workflow.remove_output_connection(&args.from, to_parts[1])?;
     } else {
         workflow.remove_step_connection(&args.from, &args.to)?;
     }

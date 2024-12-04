@@ -1,5 +1,5 @@
 use s4n::{
-    commands::workflow::{connect_workflow_nodes, create_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
+    commands::workflow::{connect_workflow_nodes, disconnect_workflow_nodes, create_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
     cwl::loader::load_workflow,
     io::create_and_write_file,
 };
@@ -67,8 +67,8 @@ pub fn test_workflow() {
             to: "@outputs/out".to_string(),
         },
     ];
-    for c in connect_args {
-        let result = connect_workflow_nodes(&c);
+    for c in &connect_args {
+        let result = connect_workflow_nodes(c);
         assert!(result.is_ok())
     }
 
@@ -80,6 +80,31 @@ pub fn test_workflow() {
 
     assert!(workflow.has_step("calculation"));
     assert!(workflow.has_step("plot"));
+
+    assert!(workflow.has_step_input("speakers"));
+    assert!(workflow.has_step_input("pop"));
+    assert!(workflow.has_step_input("calculation/results"));
+    assert!(workflow.has_step_output("plot/results"));
+
+    for c in connect_args {
+        let result = disconnect_workflow_nodes(&c);
+        assert!(result.is_ok());
+    }
+
+    // Reload the workflow and validate disconnections
+    let workflow = load_workflow("workflows/test/test.cwl").unwrap();
+
+    assert!(!workflow.has_input("speakers"));
+    assert!(!workflow.has_input("pop"));
+    assert!(!workflow.has_output("out"));
+
+    assert!(workflow.has_step("calculation"));
+    assert!(workflow.has_step("plot"));
+
+    assert!(!workflow.has_step_input("speakers"));
+    assert!(!workflow.has_step_input("pop"));
+    assert!(!workflow.has_step_input("calculation/results"));
+    assert!(!workflow.has_step_output("plot/results"));
 
     env::set_current_dir(current).unwrap();
 }
