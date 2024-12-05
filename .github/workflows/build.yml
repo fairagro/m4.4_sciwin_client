@@ -27,7 +27,14 @@ jobs:
       - name: Run Clippy
         run: |
           rustup component add clippy
-          cargo clippy --all-targets --all-features
+          cargo install clippy-sarif sarif-fmt
+          cargo clippy --all-targets --all-features --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+      - name: Upload Code Analysis to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: rust-clippy-resulsts.sarif
+          wait-for-processing: true
   build:
     name: 🏗️ Build and Test
     strategy:
@@ -67,12 +74,3 @@ jobs:
         run: pip install cwltool
       - name: Run coverage
         run: cargo tarpaulin --out Xml
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./cobertura.xml
-          slug: fairagro/m4.4_sciwin_client
-          flags: unlisted
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          name: m4.4_sciwin_client
