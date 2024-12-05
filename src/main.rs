@@ -27,7 +27,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
 
     match &args.command {
-        Commands::Init(args) => handle_init_command(args)?,
+        Commands::Init(args) => handle_init_command(&args)?,
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
         Commands::Workflow { command } => handle_workflow_commands(command)?,
