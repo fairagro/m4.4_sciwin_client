@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
-          targets: ${{ matrix.target }}     
+          targets: ${{ matrix.target }}
       - name: Install cross
         if: ${{ startsWith(matrix.command, 'cross') }}
         run: cargo install cross --git https://github.com/cross-rs/cross
@@ -60,6 +60,12 @@ jobs:
               SUFFIX=""
           fi
           echo "path=target/${{ matrix.target }}/release/s4n$SUFFIX" >> $GITHUB_OUTPUT
+      - name: Set slugified reference name
+        id: slugify
+        run: |
+          ref_name="${GITHUB_REF##*/}"
+          slugified_ref_name=$(echo "$ref_name" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//;s/-$//')
+          echo "slugified_ref_name=$slugified_ref_name" >> $GITHUB_ENV
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
