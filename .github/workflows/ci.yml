@@ -18,6 +18,7 @@ jobs:
       actions: read
     uses: ./.github/workflows/clippy.yml
   build:
+    needs: rust_checks
     name: 🏗️ Build and Test    
     uses: ./.github/workflows/build.yml    
   coverage:
@@ -28,5 +29,6 @@ jobs:
       actions: read
     uses: ./.github/workflows/tarpaulin.yml    
   nightly:
+    needs: build # we will not try to make nightly if build fails!
     name: 🕶️ Nightly Release
     uses: ./.github/workflows/nightly.yml
