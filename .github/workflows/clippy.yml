@@ -4,7 +4,7 @@ on:
 
 jobs:
   clippy_check:
-    name: 📎 Clippy
+    name: 📎 Check
     runs-on: ubuntu-latest
     # Make sure CI fails on all warnings, including Clippy lints
     env:

@@ -18,73 +18,12 @@ jobs:
       actions: read
     uses: ./.github/workflows/clippy.yml
   build:
-    name: 🏗️ Build and Test
-    strategy:
-      matrix:
-        os: ["windows-latest", "ubuntu-latest", "macos-latest"]
-    runs-on: ${{matrix.os}}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache Cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Cleanup residues
-        run: cargo clean
-      - name: Build
-        run: cargo build --verbose
-      - name: Install CWL Tool
-        run: pip install cwltool
-      - name: Run tests
-        run: cargo test -- --nocapture
+    name: 🏗️ Build and Test    
+    uses: ./.github/workflows/build.yml    
   coverage:
     name: 🦺 Coverage
     permissions:
       contents: read
       pull-requests: write
       actions: read
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache Cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Install Tarpaulin 📈
-        run: cargo install cargo-tarpaulin
-      - name: Install CWL Tool
-        run: pip install cwltool
-      - name: Run coverage
-        run: cargo tarpaulin --out Xml --skip-clean
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: cobertura.xml
-
-      - name: Code Coverage Summary Report
-        if: github.event_name == 'pull_request'
-        uses: irongut/CodeCoverageSummary@v1.3.0
-        with:
-          filename: "cobertura.xml"
-          badge: true
-          format: "markdown"
-          output: "both"
-
-      - name: Add Coverage PR Comment
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          recreate: true
-          path: code-coverage-results.md
-
-      - name: Write to Job Summary
-        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/tarpaulin.yml    
