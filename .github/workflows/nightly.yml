@@ -68,7 +68,9 @@ jobs:
           echo "slugified_ref_name=$slugified_ref_name" >> $GITHUB_ENV
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
+        env:
+          slugified_ref_name: ${{ env.slugified_ref_name }}
         with:
-          name: s4n-${{github.ref_name}}-${{matrix.name}}
+          name: s4n-${{env.slugified_ref_name}}-${{matrix.name}}
           path: |
             ${{ steps.archive.outputs.path }}
