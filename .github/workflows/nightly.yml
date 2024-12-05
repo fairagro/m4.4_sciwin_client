@@ -1,9 +1,7 @@
 name: 🕶️ Nightly Release
 
 on:
-  push:
-    branches: ["main"]
-  workflow_dispatch:
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
