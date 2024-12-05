@@ -2,7 +2,7 @@ name: 🦀 Continuous Integration
 
 on:
   push:
-    branches: ["main", "feature/**"]
+    branches: ["main"]
   pull_request:
     branches: ["main"]
 
@@ -29,5 +29,4 @@ jobs:
     uses: ./.github/workflows/tarpaulin.yml    
   nightly:
     name: 🕶️ Nightly Release
-    if: github.event_name == 'push' && github.action_ref == 'refs/heads/main'
     uses: ./.github/workflows/nightly.yml
