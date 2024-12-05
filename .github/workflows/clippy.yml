@@ -4,7 +4,7 @@ on:
 
 jobs:
   clippy_check:
-    name: 📎 Check
+    name: 📎 Check & Fix
     runs-on: ubuntu-latest
     # Make sure CI fails on all warnings, including Clippy lints
     env:
@@ -22,9 +22,19 @@ jobs:
       - name: Run Clippy
         run: |
           rustup component add clippy
-          cargo clippy --all-targets --all-features
+          cargo clippy --all-targets --all-features --fix
+      - name: Configure Git
+        run: |
+          git config user.name "📎 Clippy"
+          git config user.email "action@github.com"
+      - name: Commit
+        run: |
+          git add .
+          git commit -m "📎 It looks like you're writing some code. Would you like help? I fixed some issues for you"
+          git push
   codeql:
     name: 🔒 CodeQL Check
+    needs: clippy_check
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -17,7 +17,7 @@ use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
-        ExecuteCommands::Local(args) | ExecuteCommands::L(args) => execute_local(args)?,
+        ExecuteCommands::Local(args) | ExecuteCommands::L(args) => execute_local(&args)?,
     }
     Ok(())
 }
