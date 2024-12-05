@@ -38,7 +38,7 @@ pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error
         fs::create_dir_all(parent)?;
     }
 
-    let mut file = fs::File::create_new(filename)?;
+    let mut file = fs::File::create_new(&filename)?;
     file.write_all(contents.as_bytes())?;
     Ok(())
 }
