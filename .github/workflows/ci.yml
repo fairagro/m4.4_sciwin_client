@@ -18,7 +18,6 @@ jobs:
       actions: read
     uses: ./.github/workflows/clippy.yml
   build:
-    needs: rust_checks
     name: 🏗️ Build and Test    
     uses: ./.github/workflows/build.yml    
   coverage:
