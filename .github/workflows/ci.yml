@@ -12,6 +12,10 @@ env:
 jobs:
   rust_checks:
     name: 📎 Clippy
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     uses: ./.github/workflows/clippy.yml
   build:
     name: 🏗️ Build and Test
