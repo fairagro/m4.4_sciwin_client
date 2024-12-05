@@ -16,6 +16,10 @@ jobs:
     env:
       RUSTFLAGS: "-Dwarnings"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: Cache Cargo
@@ -60,7 +64,7 @@ jobs:
   coverage:
     name: 🦺 Coverage
     runs-on: ubuntu-latest
-    steps:        
+    steps:
       - uses: actions/checkout@v4
       - name: Cache Cargo
         uses: actions/cache@v3
@@ -69,7 +73,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install Tarpaulin 📈
-        run: cargo install cargo-tarpaulin  
+        run: cargo install cargo-tarpaulin
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run coverage
