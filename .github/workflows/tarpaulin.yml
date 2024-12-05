@@ -37,6 +37,8 @@ jobs:
         with:
           filename: "cobertura.xml"
           badge: true
+          hide_branch_rate: false
+          hide_complexity: true # as it is not supported by tarpaulin
           format: "markdown"
           output: "both"
 
