@@ -25,7 +25,6 @@ jobs:
           cargo clippy --all-targets --all-features 
   codeql:
     name: 🔒 CodeQL Check
-    needs: clippy_check
     runs-on: ubuntu-latest
     permissions:
       contents: read
