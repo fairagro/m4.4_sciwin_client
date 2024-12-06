@@ -75,3 +75,4 @@ jobs:
           name: s4n-${{env.slugified_ref_name}}-${{matrix.name}}
           path: |
             ${{ steps.archive.outputs.path }}
+          retention-days: 7
