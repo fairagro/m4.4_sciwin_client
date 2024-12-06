@@ -28,6 +28,6 @@ jobs:
       actions: read
     uses: ./.github/workflows/tarpaulin.yml    
   nightly:
-    needs: build # we will not try to make nightly if build fails!
+    needs: [build, rust_checks, coverage] # make nightly only if everything is ok!
     name: 🕶️ Nightly Release
     uses: ./.github/workflows/nightly.yml
