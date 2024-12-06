@@ -65,14 +65,12 @@ jobs:
         run: |
           ref_name="${{github.ref_name}}"
           slugified=$(echo "$ref_name" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]/-/g' -e 's/-\+/-/g' -e 's/^-//' -e 's/-$//')
-          echo "slugified_ref_name=$slugified_ref_name" >> $GITHUB_ENV
+          echo "slugified_ref_name=$slugified_ref_name" >> $GITHUB_OUTPUT
         shell: bash
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
-        env:
-          slugified_ref_name: ${{ env.slugified_ref_name }}
         with:
-          name: s4n-${{env.slugified_ref_name}}-${{matrix.name}}
+          name: s4n-${{ steps.slugify.outputs.slugified_ref_name }}-${{matrix.name}}
           path: |
             ${{ steps.archive.outputs.path }}
           retention-days: 7
