@@ -2,9 +2,8 @@
 # SciWIn Client - Scientific Workflow Infrastructure<!-- omit from toc -->
 
 ![Rust][rust-image] 
-[![🏗️ Build and Test](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/build.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/build.yml)
+[![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
 [![🕶️ Nightly Release](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml)
-[![Coverage][coverage-badge]](https://coverage.jenskrumsieck.de/dashboard/fairagro/m4.4_sciwin_client)
 
 ⭐ Star us on GitHub to say "Thank you!" ⭐
 
@@ -115,7 +114,6 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 |Harald von Waldow|[:octocat: @hvwaldow](https://github.com/hvwaldow)|[ORCID: 0000-0003-4800-2833](https://orcid.org/0000-0003-4800-2833)|
 
 <!--section images-->
-[coverage-badge]: https://coverage.jenskrumsieck.de/coverage/fairagro/m4.4_sciwin_client
 [rust-image]: https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white
 
 
