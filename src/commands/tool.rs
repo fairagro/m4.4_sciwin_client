@@ -165,8 +165,15 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         } else if !args.is_raw {
             println!("📜 Found changes:");
             print_list(&files);
-            if !outputs.is_empty() && files != outputs {
-                println!("\n⚠️ The list of outputs: {:?} is differs from the list of changed files: {:?} ", &outputs, &files);
+            let mut sorted_outputs = outputs.clone();
+            let mut sorted_files = files.clone();
+            sorted_outputs.sort();
+            sorted_files.sort();
+            if !sorted_outputs.is_empty() && sorted_outputs != sorted_files {
+                println!(
+                    "\n⚠️ The list of outputs: {:?} differs from the list of changed files: {:?}",
+                    sorted_outputs, sorted_files
+                );
             }
         }
 
