@@ -145,7 +145,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             cwl = parser::parse_command_line_inputs(args.command.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
         } else {
             cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
-            println!("Else case: old command");
         }
     } else {
         cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
@@ -170,10 +169,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             sorted_outputs.sort();
             sorted_files.sort();
             if !sorted_outputs.is_empty() && sorted_outputs != sorted_files {
-                println!(
-                    "\n⚠️ The list of outputs: {:?} differs from the list of changed files: {:?}",
-                    sorted_outputs, sorted_files
-                );
+                println!("\n⚠️ The list of outputs: {:?} differs from the list of changed files: {:?}", sorted_outputs, sorted_files);
             }
         }
 
