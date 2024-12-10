@@ -142,7 +142,6 @@ fn validate_parameters(command: &[String], inputs: &[String], outputs: &[String]
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
-    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }

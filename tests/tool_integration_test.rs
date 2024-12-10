@@ -84,7 +84,7 @@ pub fn tool_create_test_inputs_output() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -117,7 +117,7 @@ pub fn tool_create_test_output() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
@@ -149,7 +149,7 @@ pub fn tool_create_test() {
         }
 
         //no uncommitted left?
-        let repo = open_repo(dir.path());
+        let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
