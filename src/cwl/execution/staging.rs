@@ -72,7 +72,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                     let path_str = &into_path.to_string_lossy();
                     match &listing.entry {
                         Entry::Source(src) => {
-                            create_and_write_file(path_str, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
+                            create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
                         }
                         Entry::Include(include) => {
                             let include_path = tool_path.join(&include.include);

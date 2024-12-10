@@ -12,7 +12,8 @@ use std::{
 pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
     let path = Path::new(relative_path);
 
-    path.file_name().and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
+    path.file_name()
+        .and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
 }
 
 fn get_basename(filename: &str) -> String {
@@ -31,26 +32,24 @@ pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
 }
 
-pub fn create_and_write_file(filename: &str, contents: &str) -> Result<(), Error> {
-    let path = Path::new(filename);
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let mut file = fs::File::create_new(filename)?;
-    file.write_all(contents.as_bytes())?;
-    Ok(())
+pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+    create_and_write_file_internal(filename, contents, false)
+}
+pub fn create_and_write_file_forced<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+    create_and_write_file_internal(filename, contents, true)
 }
 
-pub fn create_and_write_file_forced(filename: &str, contents: &str) -> Result<(), Error> {
-    let path = Path::new(filename);
+fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, overwrite: bool) -> Result<(), Error> {
+    let path = filename.as_ref();
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-
-    let mut file = fs::File::create(filename)?; //here ist the difference
+    let mut file = if overwrite {
+        fs::File::create(filename)
+    } else {
+        fs::File::create_new(filename)
+    }?;
     file.write_all(contents.as_bytes())?;
     Ok(())
 }
@@ -92,7 +91,10 @@ pub fn resolve_path(filename: &str, relative_to: &str) -> String {
         None => relative_path,
     };
 
-    pathdiff::diff_paths(path, base_dir).expect("path diffs not valid").to_string_lossy().into_owned()
+    pathdiff::diff_paths(path, base_dir)
+        .expect("path diffs not valid")
+        .to_string_lossy()
+        .into_owned()
 }
 
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
