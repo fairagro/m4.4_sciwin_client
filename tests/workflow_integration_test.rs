@@ -79,7 +79,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("s4n")?;
     let mut _output = cmd
         .arg("workflow")
-        .arg("list")
+        .arg("ls")
         .assert()
         .success()
         .stdout(predicate::str::contains("test"))
@@ -89,7 +89,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut _output2 = Command::cargo_bin("s4n")?
         .arg("workflow")
-        .arg("list")
+        .arg("ls")
         .arg("-a")
         .assert()
         .success()

@@ -24,7 +24,7 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dy
         WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args)?,
         WorkflowCommands::Save(args) => save_workflow(args)?,
         WorkflowCommands::Status(args) => get_workflow_status(args)?,
-        WorkflowCommands::List(args) => list_workflows(args)?,
+        WorkflowCommands::Ls(args) => list_workflows(args)?,
         WorkflowCommands::Rm(args) => remove_workflow(args)?,
     }
     Ok(())
@@ -43,7 +43,7 @@ pub enum WorkflowCommands {
     #[command(about = "Shows socket status of workflow")]
     Status(CreateWorkflowArgs),
     #[command(about = "List all workflows")]
-    List(LsWorkflowArgs),
+    Ls(LsWorkflowArgs),
     #[command(about = "Remove a workflow")]
     Rm(RmWorkflowArgs),
 }
