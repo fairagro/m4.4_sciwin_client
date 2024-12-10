@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     pub fn test_set_placeholder_values() {
-        let cwl_str = r#"class: CommandLineTool
+        let cwl_str = r"class: CommandLineTool
 cwlVersion: v1.2
 baseCommand: $(runtime.true)
 requirements:
@@ -271,7 +271,7 @@ outputs:
   outfile:
     type: File
     outputBinding:
-      glob: $(inputs.newname)"#;
+      glob: $(inputs.newname)";
 
         let expected_str = r#"class: CommandLineTool
 cwlVersion: v1.2
@@ -302,7 +302,7 @@ outputs:
 
         let cwl_expected: CommandLineTool = serde_yml::from_str(expected_str).unwrap();
 
-        assert_eq!(cwl_test, cwl_expected)
+        assert_eq!(cwl_test, cwl_expected);
     }
 
     #[test]
@@ -316,9 +316,9 @@ outputs:
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
         let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
-        let expected = format!("Searching for file {}", file);
+        let expected = format!("Searching for file {file}");
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -333,9 +333,9 @@ outputs:
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
         let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
-        let expected = format!("File has size {}", size);
+        let expected = format!("File has size {size}");
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -351,7 +351,7 @@ outputs:
         let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
         let expected = "Greeting: Hello fellow CWL-enjoyers!";
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -368,7 +368,7 @@ outputs:
         let result = set_placeholder_values_in_string(text, Some(&values), &runtime, &inputs);
         let expected = "Greeting: Hello fellow CWL-enjoyers!";
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -381,6 +381,6 @@ outputs:
         let result = set_placeholder_values_in_string(text, None, &runtime, &[]);
         let expected = "Greeting: Hello World!";
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 }

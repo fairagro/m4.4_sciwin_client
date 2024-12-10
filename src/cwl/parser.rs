@@ -69,7 +69,7 @@ fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
                 input = get_option(arg, args[i + 1]);
                 i += 1
             } else {
-                input = get_flag(arg)
+                input = get_flag(arg);
             }
         } else {
             input = get_positional(arg, i.try_into().unwrap());
@@ -95,7 +95,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
 }
 
 fn get_flag(current: &str) -> CommandInputParameter {
-    let id = current.replace("-", "");
+    let id = current.replace('-', "");
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
         .with_id(slugify!(&id).as_str())
@@ -104,7 +104,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
 }
 
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
-    let id = current.replace("-", "");
+    let id = current.replace('-', "");
     let cwl_type = guess_type(next);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
@@ -157,15 +157,15 @@ mod tests {
             Command::Multiple(vec!["python".to_string(), "script.py".to_string()]),
             Command::Single("echo".to_string()),
             Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]),
-            Command::Single("".to_string()),
+            Command::Single(String::new()),
         ];
 
         for i in 0..commands.len() {
             let args = shlex::split(commands[i]).unwrap();
-            let args_slice: Vec<&str> = args.iter().map(|x| x.as_ref()).collect();
+            let args_slice: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
 
             let result = get_base_command(&args_slice);
-            assert_eq!(result, expected[i])
+            assert_eq!(result, expected[i]);
         }
     }
 
@@ -201,7 +201,7 @@ mod tests {
         ];
 
         let inputs_vec = shlex::split(inputs).unwrap();
-        let inputs_slice: Vec<&str> = inputs_vec.iter().map(|x| x.as_ref()).collect();
+        let inputs_slice: Vec<&str> = inputs_vec.iter().map(AsRef::as_ref).collect();
 
         let result = get_inputs(&inputs_slice);
 

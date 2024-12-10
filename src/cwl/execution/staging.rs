@@ -290,7 +290,7 @@ mod tests {
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
-        assert!(!Path::new(&list[0]).exists())
+        assert!(!Path::new(&list[0]).exists());
     }
 
     #[test]
@@ -309,7 +309,7 @@ mod tests {
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
-        assert!(!Path::new(&list[0]).exists())
+        assert!(!Path::new(&list[0]).exists());
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
 
         unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there
-        assert!(Path::new(&list[0]).exists())
+        assert!(Path::new(&list[0]).exists());
     }
 
     #[test]

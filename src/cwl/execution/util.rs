@@ -295,7 +295,7 @@ mod tests {
     #[serial]
     pub fn test_get_file_metadata() {
         let path = env::current_dir().unwrap().join("tests/test_data/file.txt");
-        let result = get_file_metadata(path.to_path_buf(), None);
+        let result = get_file_metadata(path.clone(), None);
         let expected = OutputFile {
             location: format!("file://{}", path.to_string_lossy().into_owned()),
             basename: "file.txt".to_string(),
@@ -343,12 +343,12 @@ mod tests {
         let input = current.join("input.txt").to_string_lossy().into_owned();
 
         let expected = OutputDirectory {
-            location: format!("file://{}", cwd),
+            location: format!("file://{cwd}"),
             basename: "test_dir".to_string(),
             class: "Directory".to_string(),
             listing: vec![
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{}", file),
+                    location: format!("file://{file}"),
                     basename: "file.txt".to_string(),
                     class: "File".to_string(),
                     checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
@@ -357,7 +357,7 @@ mod tests {
                     format: None,
                 }),
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{}", input),
+                    location: format!("file://{input}"),
                     basename: "input.txt".to_string(),
                     class: "File".to_string(),
                     checksum: "sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string(),
@@ -377,6 +377,6 @@ mod tests {
         let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
         let expected = "http://edamontology.org/format_1234";
 
-        assert_eq!(result, expected.to_string())
+        assert_eq!(result, expected.to_string());
     }
 }

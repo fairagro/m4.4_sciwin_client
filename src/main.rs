@@ -13,7 +13,7 @@ use std::{error::Error, process::exit};
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e}");
         if let Some(cmd_err) = e.downcast_ref::<CommandError>() {
             exit(cmd_err.exit_code());
         } else {

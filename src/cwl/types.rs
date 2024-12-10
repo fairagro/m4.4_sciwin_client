@@ -38,7 +38,7 @@ impl DefaultValue {
             DefaultValue::File(item) => item.location.clone(),
             DefaultValue::Directory(item) => item.location.clone(),
             DefaultValue::Any(value) => match value {
-                serde_yml::Value::Bool(_) => String::from(""), // do not remove!
+                serde_yml::Value::Bool(_) => String::new(), // do not remove!
                 _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
             },
         }

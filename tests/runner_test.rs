@@ -41,7 +41,7 @@ outputs:
         let output = dir.path().join("output.txt");
         assert!(output.exists());
         let contents = fs::read_to_string(output).expect("Could not read output");
-        assert_eq!(contents.trim(), "Hello CWL")
+        assert_eq!(contents.trim(), "Hello CWL");
     });
 }
 
@@ -83,7 +83,7 @@ outputs:
         let output = dir.path().join("output.txt");
         assert!(output.exists());
         let contents = fs::read_to_string(output).expect("Could not read output");
-        assert_eq!(contents.trim(), "Hello World")
+        assert_eq!(contents.trim(), "Hello World");
     });
 }
 
@@ -114,11 +114,11 @@ outputs:
   glob: output.txt
 "#;
 
-        let yml = r#"
+        let yml = r"
 message:
   class: File
   location: whale.txt
-  "#;
+  ";
 
         let inputs: HashMap<String, DefaultValue> = serde_yml::from_str(yml).expect("Input parsing failed");
 
@@ -132,7 +132,7 @@ message:
 #[test]
 #[serial]
 pub fn test_run_commandlinetool() {
-    let cwl = r#"
+    let cwl = r"
 #!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
@@ -163,7 +163,7 @@ outputs:
 baseCommand:
 - python
 - tests/test_data/echo.py
-"#;
+";
 
     let mut tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
     let result = run_commandlinetool(&mut tool, None, None, None);
@@ -172,6 +172,6 @@ baseCommand:
     let _ = fs::remove_file("results.txt");
     match result {
         Ok(_) => println!("success!"),
-        Err(e) => eprintln!("{:?}", e),
+        Err(e) => eprintln!("{e:?}"),
     }
 }

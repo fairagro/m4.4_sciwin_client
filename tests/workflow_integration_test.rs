@@ -69,7 +69,7 @@ pub fn test_workflow() {
     ];
     for c in &connect_args {
         let result = connect_workflow_nodes(c);
-        assert!(result.is_ok())
+        assert!(result.is_ok());
     }
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
@@ -109,7 +109,7 @@ pub fn test_workflow() {
     env::set_current_dir(current).unwrap();
 }
 
-const CALCULATION_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -146,9 +146,9 @@ outputs:
 baseCommand:
 - python
 - calculation.py
-"#;
+";
 
-const PLOT_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const PLOT_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -178,4 +178,4 @@ outputs:
 baseCommand:
 - python
 - plot.py
-"#;
+";

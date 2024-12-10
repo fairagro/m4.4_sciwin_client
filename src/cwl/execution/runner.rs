@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_build_command() {
-        let yaml = r#"
+        let yaml = r"
 class: CommandLineTool
 cwlVersion: v1.2
 inputs:
@@ -427,7 +427,7 @@ outputs:
     type: File
     outputBinding: {glob: output.txt}
 baseCommand: cat
-stdout: output.txt"#;
+stdout: output.txt";
         let tool = &serde_yml::from_str(yaml).unwrap();
 
         let inputs = r#"{
@@ -441,23 +441,23 @@ stdout: output.txt"#;
 
         let cmd = build_command(tool, input_values).unwrap();
 
-        assert_eq!(format_command(&cmd), "cat hello.txt")
+        assert_eq!(format_command(&cmd), "cat hello.txt");
     }
 
     #[test]
     fn test_build_command_stdin() {
-        let yaml = r#"
+        let yaml = r"
 class: CommandLineTool
 cwlVersion: v1.2
 inputs: []
 outputs: []
 baseCommand: [cat]
-stdin: hello.txt"#;
+stdin: hello.txt";
         let tool = &serde_yml::from_str(yaml).unwrap();
 
         let cmd = build_command(tool, None).unwrap();
 
-        assert_eq!(format_command(&cmd), "cat hello.txt")
+        assert_eq!(format_command(&cmd), "cat hello.txt");
     }
 
     #[test]
@@ -479,9 +479,9 @@ arguments: ["cd", "$(inputs.indir.path)",
   {shellQuote: false, valueFrom: "|"},
   "sort"]
 stdout: output.txt"#;
-        let in_yaml = r#"indir:
+        let in_yaml = r"indir:
   class: Directory
-  location: testdir"#;
+  location: testdir";
         let tool = &serde_yml::from_str(yaml).unwrap();
         let input_values: HashMap<String, DefaultValue> = serde_yml::from_str(in_yaml).unwrap();
 
@@ -493,7 +493,7 @@ stdout: output.txt"#;
 
         assert_eq!(
             format_command(&cmd),
-            format!("{} {} cd $(inputs.indir.path) && find . | sort", shell, c_arg)
-        )
+            format!("{shell} {c_arg} cd $(inputs.indir.path) && find . | sort")
+        );
     }
 }

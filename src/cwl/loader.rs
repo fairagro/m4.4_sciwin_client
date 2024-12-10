@@ -38,7 +38,7 @@ mod tests {
     fn test_resolve_filename() {
         let name = "my-tool";
         let filename = resolve_filename(name);
-        assert_eq!(filename, "workflows/my-tool/my-tool.cwl".to_string())
+        assert_eq!(filename, "workflows/my-tool/my-tool.cwl".to_string());
     }
 
     #[test]

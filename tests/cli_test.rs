@@ -120,7 +120,7 @@ pub fn test_cli_s4n_workflow() {
 
     //connect output
     connect_workflow_nodes(&ConnectWorkflowArgs {
-        name: name.clone(),
+        name,
         from: "plot/results".to_string(),
         to: "@outputs/out".to_string(),
     })

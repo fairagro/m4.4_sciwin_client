@@ -6,9 +6,7 @@ use s4n::{
 };
 use serial_test::serial;
 use std::{
-    env,
-    fs::{self},
-    path::Path,
+    env, fs::{self}, iter, path::Path
 };
 use tempfile::tempdir;
 
@@ -47,7 +45,7 @@ pub fn test_execute_local_with_args() {
         file: "tests/test_data/echo.cwl".to_string(),
         args: ["--test", "tests/test_data/input_alt.txt"]
             .iter()
-            .map(|a| a.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<_>>(),
     };
 
@@ -73,7 +71,7 @@ pub fn test_execute_local_with_file() {
         out_dir: None,
         is_quiet: false,
         file: "tests/test_data/echo.cwl".to_string(),
-        args: ["tests/test_data/echo-job.yml"].iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+        args: iter::once(&"tests/test_data/echo-job.yml").map(ToString::to_string).collect::<Vec<_>>(),
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -170,15 +168,15 @@ pub fn test_execute_local_workflow() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: format!("{}/workflows/main/main.cwl", dir_str),
+        file: format!("{dir_str}/workflows/main/main.cwl"),
         args: vec!["inputs.yml".to_string()],
     };
     let result = execute_local(&args);
-    println!("{:#?}", result);
+    println!("{result:#?}");
     assert!(result.is_ok());
 
     //check if file is written which means wf ran completely
-    let results_url = format!("{}/results.svg", dir_str);
+    let results_url = format!("{dir_str}/results.svg");
     let path = Path::new(&results_url);
     assert!(path.exists());
 
@@ -204,7 +202,7 @@ pub fn test_execute_local_tool_default_cwl() {
     };
     let args_override = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec!["--file1".to_string(), "tests/test_data/input.txt".to_string()],
@@ -231,7 +229,7 @@ pub fn test_execute_local_workflow_no_steps() {
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec![],
@@ -250,7 +248,7 @@ pub fn test_execute_local_workflow_in_param() {
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec!["--pop".to_string(), "tests/test_data/input.txt".to_string()],
@@ -273,15 +271,15 @@ pub fn test_execute_local_workflow_dir_out() {
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec![],
     };
 
     assert!(execute_local(&args).is_ok());
-    assert!(fs::exists(format!("{}/file.txt", out_path)).unwrap());
-    assert!(fs::exists(format!("{}/input.txt", out_path)).unwrap());
+    assert!(fs::exists(format!("{out_path}/file.txt")).unwrap());
+    assert!(fs::exists(format!("{out_path}/input.txt")).unwrap());
 }
 
 #[test]
@@ -291,11 +289,11 @@ pub fn test_execute_local_workflow_file_out() {
     let path = "tests/test_data/wf_inout_file.cwl";
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
-    let out_path = format!("{}/file.txt", &out_dir);
+    let out_path = format!("{out_dir}/file.txt");
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec![],
@@ -315,7 +313,7 @@ pub fn test_execute_local_workflow_directory_out() {
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: Some(out_dir.clone()),
+        out_dir: Some(out_dir),
         is_quiet: true,
         file: path.to_string(),
         args: vec!["--dirname".to_string(), "test_directory".to_string()],

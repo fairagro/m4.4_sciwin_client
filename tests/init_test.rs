@@ -11,7 +11,7 @@ use tempfile::{tempdir, Builder, NamedTempFile};
 fn test_init_s4n_without_folder() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
-    println!("Temporary directory: {:?}", temp_dir);
+    println!("Temporary directory: {temp_dir:?}");
     check_git_user().unwrap();
     // Create a subdirectory in the temporary directory
     std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
@@ -35,12 +35,12 @@ fn test_init_s4n_without_folder() {
     //assert minimal folders do exist
     for dir in &expected_dirs {
         let full_path = PathBuf::from(&temp_dir.path()).join(dir);
-        assert!(full_path.exists(), "Directory {} does not exist", dir);
+        assert!(full_path.exists(), "Directory {dir} does not exist");
     }
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
         let full_path = PathBuf::from(&temp_dir.path()).join(dir);
-        assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
+        assert!(!full_path.exists(), "Directory {dir} does exist, but should not exist");
     }
 }
 
@@ -93,7 +93,7 @@ fn test_create_minimal_folder_structure_invalid() {
     let temp_file = NamedTempFile::new().unwrap();
     let base_folder = Some(temp_file.path().to_str().unwrap());
 
-    println!("Base folder path: {:?}", base_folder);
+    println!("Base folder path: {base_folder:?}");
     //path to file instead of a directory, assert that it fails
     let result = create_minimal_folder_structure(base_folder, false);
     assert!(result.is_err(), "Expected failed initialization");
@@ -115,7 +115,7 @@ fn test_create_minimal_folder_structure() {
     //assert that folders exist
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(full_path.exists(), "Directory {} does not exist", dir);
+        assert!(full_path.exists(), "Directory {dir} does not exist");
     }
 }
 
@@ -135,7 +135,7 @@ fn test_create_investigation_excel_file() {
 
     let workbook: Xlsx<_> = open_workbook(excel_path).expect("Cannot open file");
 
-    let sheets = workbook.sheet_names().to_owned();
+    let sheets = workbook.sheet_names();
 
     //verify sheet name
     assert_eq!(sheets[0], "isa_investigation", "Worksheet name is incorrect");
@@ -168,7 +168,7 @@ fn test_create_arc_folder_structure() {
     //assert that folders are created
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(full_path.exists(), "Directory {} does not exist", dir);
+        assert!(full_path.exists(), "Directory {dir} does not exist");
     }
 }
 
@@ -191,7 +191,7 @@ fn test_init_s4n_with_arc() {
 
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(full_path.exists(), "Directory {} does not exist", dir);
+        assert!(full_path.exists(), "Directory {dir} does not exist");
     }
 }
 #[test]
@@ -205,7 +205,7 @@ fn test_init_s4n_minimal() {
 
     //call method with temp dir
     let result = init_s4n(base_folder, arc);
-    println!("{:#?}", result);
+    println!("{result:#?}");
     assert!(result.is_ok(), "Expected successful initialization");
 
     //check if directories were created
@@ -216,12 +216,12 @@ fn test_init_s4n_minimal() {
     //assert minimal folders do exist
     for dir in &expected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(full_path.exists(), "Directory {} does not exist", dir);
+        assert!(full_path.exists(), "Directory {dir} does not exist");
     }
     //assert other arc folders do not exist
     for dir in &unexpected_dirs {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
-        assert!(!full_path.exists(), "Directory {} does exist, but should not exist", dir);
+        assert!(!full_path.exists(), "Directory {dir} does exist, but should not exist");
     }
 }
 

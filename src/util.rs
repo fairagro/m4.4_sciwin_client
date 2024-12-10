@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::{process::Command, thread};
+use std::{num::NonZero, process::Command, thread};
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -18,7 +18,7 @@ pub fn warn(message: &str) {
 
 pub fn print_list(list: &Vec<String>) {
     for item in list {
-        println!("\t- {}", item)
+        println!("\t- {item}");
     }
 }
 
@@ -32,12 +32,12 @@ pub fn highlight_cwl(yaml: &str) {
     for line in LinesWithEndings::from(yaml) {
         let ranges = h.highlight_line(line, &ps).unwrap();
         let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
-        print!("{}", escaped)
+        print!("{escaped}")
     }
 }
 
 pub fn get_processor_count() -> usize {
-    thread::available_parallelism().map(|n| n.get()).unwrap_or(1)
+    thread::available_parallelism().map(NonZero::get).unwrap_or(1)
 }
 
 pub fn get_available_ram() -> u64 {

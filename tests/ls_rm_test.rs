@@ -160,7 +160,7 @@ fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir(&workflows_dir)?;
 
     // dummy CWL files, they only have inputs and outputs
-    let cwl_content_1 = r#"
+    let cwl_content_1 = r"
     inputs:
       - id: speakers
         type: string
@@ -169,15 +169,15 @@ fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
     outputs:
       - id: results
         type: File
-    "#;
-    let cwl_content_2 = r#"
+    ";
+    let cwl_content_2 = r"
     inputs:
       - id: data
         type: File
     outputs:
       - id: chart
         type: File
-    "#;
+    ";
 
     let cwl_file_1 = workflows_dir.join("calculation.cwl");
     let cwl_file_2 = workflows_dir.join("plot.cwl");

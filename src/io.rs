@@ -58,7 +58,7 @@ pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), E
     let path = to.as_ref();
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?
+        fs::create_dir_all(parent)?;
     }
 
     fs::copy(from, to)?;
@@ -77,7 +77,7 @@ pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<S
             files.extend(copy_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?);
         } else {
             copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
-            files.push(dest_path.to_string_lossy().into_owned())
+            files.push(dest_path.to_string_lossy().into_owned());
         }
     }
     Ok(files)
@@ -100,12 +100,12 @@ pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q)
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
     //decide over filename
     let mut filename = match &command {
-        Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or(cmd[1].clone()),
+        Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or_else(|| cmd[1].clone()),
         Command::Single(cmd) => cmd.to_string(),
     };
 
     if let Some(name) = the_name {
-        filename = name.clone();
+        filename.clone_from(&name);
         if filename.ends_with(".cwl") {
             filename = filename.replace(".cwl", "");
         }
@@ -131,7 +131,7 @@ pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
     hasher.update(&buffer);
 
     let result = hasher.finalize();
-    Ok(format!("{:x}", result))
+    Ok(format!("{result:x}"))
 }
 
 pub fn get_shell_command() -> SystemCommand {
@@ -157,7 +157,7 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
             }
             parent
         }
-        _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {}", filename)),
+        _ => fs::read_to_string(filename).unwrap_or_else(|_| panic!("Could not read file {filename}")),
     }
 }
 
@@ -168,7 +168,7 @@ pub fn join_path_string<P: AsRef<Path>>(path: P, location: &str) -> String {
 
 pub fn get_random_filename(prefix: &str, extension: &str) -> String {
     let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
-    format!("{}_{}.{}", prefix, rnd, extension)
+    format!("{prefix}_{rnd}.{extension}")
 }
 
 pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> Option<String> {
@@ -191,7 +191,7 @@ pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> 
 
 pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
     let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
-        &format!("{}{}", dir, MAIN_SEPARATOR_STR)
+        &format!("{dir}{MAIN_SEPARATOR_STR}")
     } else {
         dir
     };

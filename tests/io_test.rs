@@ -38,7 +38,7 @@ pub fn test_guess_type() {
 #[test]
 pub fn test_get_workflows_folder() {
     //could be variable in future
-    assert_eq!(get_workflows_folder(), "workflows/")
+    assert_eq!(get_workflows_folder(), "workflows/");
 }
 
 #[test]

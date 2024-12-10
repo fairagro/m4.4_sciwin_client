@@ -202,7 +202,7 @@ mod tests {
 
     pub fn os_path(path: &str) -> String {
         if cfg!(target_os = "windows") {
-            Path::new(path).to_string_lossy().replace("/", "\\")
+            Path::new(path).to_string_lossy().replace('/', "\\")
         } else {
             path.to_string()
         }

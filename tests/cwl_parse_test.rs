@@ -6,7 +6,7 @@ use s4n::cwl::{
 
 #[test]
 pub fn test_simple_cwl() {
-    let cwl = r#"#!/usr/bin/env cwl-runner
+    let cwl = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -43,9 +43,9 @@ outputs:
 baseCommand:
 - python
 - calculation.py
-"#;
+";
     let clt: Result<CommandLineTool, serde_yml::Error> = serde_yml::from_str(cwl);
-    println!("{:?}", clt);
+    println!("{clt:?}");
     assert!(clt.is_ok());
 }
 
@@ -67,6 +67,6 @@ pub fn create_simple_cwl() {
         }])
         .with_outputs(vec![]);
     let result = serde_yml::to_string(&tool);
-    println!("{:?}", result);
+    println!("{result:?}");
     assert!(result.is_ok());
 }
