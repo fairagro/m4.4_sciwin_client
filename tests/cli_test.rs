@@ -53,7 +53,9 @@ pub fn test_cli_s4n_workflow() {
         is_raw: false,
         no_commit: false,
         no_run: false,
-        is_clean: false,
+        is_clean: false,                    
+        inputs: None,
+        outputs: None,
         command: [
             "python".to_string(),
             "workflows/calculation/calculation.py".to_string(),
@@ -75,7 +77,9 @@ pub fn test_cli_s4n_workflow() {
         is_raw: false,
         no_commit: false,
         no_run: false,
-        is_clean: false,
+        is_clean: false,                    
+        inputs: None,
+        outputs: None,
         command: [
             "python".to_string(),
             "workflows/plot/plot.py".to_string(),

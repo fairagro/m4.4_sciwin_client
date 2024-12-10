@@ -8,6 +8,7 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
+
 #[allow(dead_code)]
 pub fn setup_python(dir_str: &str) -> (String, String) {
     //windows stuff
@@ -43,6 +44,7 @@ pub fn check_git_user() -> Result<(), git2::Error> {
     Ok(())
 }
 
+
 /// Sets up a temporary repository with test data
 #[allow(dead_code)]
 fn set_up_repository() -> TempDir {
@@ -50,9 +52,12 @@ fn set_up_repository() -> TempDir {
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
     create_dir_all(dir.path().join(Path::new("data"))).expect("Failed to create data-dir");
 
-    let source_files: [(PathBuf, &str); 3] = [
+    let source_files: [(PathBuf, &str); 6] = [
         (Path::new("./tests/test_data/echo.py").to_path_buf(), "scripts/echo.py"),
+        (Path::new("./tests/test_data/echo2.py").to_path_buf(), "scripts/echo2.py"),
+        (Path::new("./tests/test_data/echo3.py").to_path_buf(), "scripts/echo3.py"),
         (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
+        (Path::new("./tests/test_data/input2.txt").to_path_buf(), "data/input2.txt"),
         (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
     ];
 
