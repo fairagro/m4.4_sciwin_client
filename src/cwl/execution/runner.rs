@@ -210,7 +210,7 @@ pub fn run_commandlinetool(
         &input_values,
         tool_path,
         dir.path().to_path_buf(),
-        &output_directory.to_string_lossy(),
+        output_directory,
     )?;
 
     //change working directory to tmp folder, we will execute tool from root here
