@@ -26,7 +26,7 @@ pub fn test_cli_s4n_workflow() {
     let dir = tempdir().unwrap();
     let dir_str = &dir.path().to_string_lossy();
     let test_folder = "tests/test_data/hello_world";
-    copy_dir(test_folder, &dir.path()).unwrap();
+    copy_dir(test_folder, dir.path()).unwrap();
 
     //delete all cwl files as we want to generate them
     remove_dir_all(dir.path().join("workflows/main")).unwrap();
