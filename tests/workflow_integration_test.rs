@@ -1,11 +1,13 @@
 use s4n::{
-    commands::workflow::{connect_workflow_nodes, disconnect_workflow_nodes, create_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
-    cwl::loader::load_workflow,
-    io::create_and_write_file,
+  commands::workflow::{connect_workflow_nodes, disconnect_workflow_nodes, create_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
+  cwl::loader::load_workflow,
+  io::create_and_write_file,
 };
 use serial_test::serial;
 use std::{env, path::Path};
 use tempfile::tempdir;
+use assert_cmd::Command;
+use predicates::prelude::*;
 
 #[test]
 #[serial]
@@ -27,9 +29,10 @@ pub fn test_create_workflow() {
     env::set_current_dir(current).unwrap();
 }
 
+
 #[test]
 #[serial]
-pub fn test_workflow() {
+pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
 
@@ -69,10 +72,36 @@ pub fn test_workflow() {
     ];
     for c in &connect_args {
         let result = connect_workflow_nodes(c);
-        assert!(result.is_ok());
+        assert!(result.is_ok())
     }
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
+
+    let mut cmd = Command::cargo_bin("s4n")?;
+    let mut _output = cmd
+        .arg("workflow")
+        .arg("list")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("test"))
+        .stdout(predicate::str::contains("calculation").not())
+        .get_output()
+        .clone();
+
+        let mut _output2 = Command::cargo_bin("s4n")?
+        .arg("workflow")
+        .arg("list")
+        .arg("-a")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("test"))
+        .stdout(predicate::str::contains("pop"))
+        .stdout(predicate::str::contains("speakers"))
+        .stdout(predicate::str::contains("out"))
+        .stdout(predicate::str::contains("calculation"))
+        .stdout(predicate::str::contains("plot"))
+        .get_output()
+        .clone();
 
     assert!(workflow.has_input("speakers"));
     assert!(workflow.has_input("pop"));
@@ -107,7 +136,10 @@ pub fn test_workflow() {
     assert!(!workflow.has_step_output("plot/results"));
 
     env::set_current_dir(current).unwrap();
+    
+    Ok(())
 }
+
 
 const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 

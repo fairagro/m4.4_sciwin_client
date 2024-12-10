@@ -4,13 +4,12 @@ use predicates::prelude::*;
 use s4n::commands::tool::{remove_tool, RmArgs, CreateToolArgs, handle_tool_commands, ToolCommands};
 use serial_test::serial;
 use std::env;
-use std::fs::File;
 use std::{fs, vec};
 use tempfile::tempdir;
 use s4n::repo::get_modified_files;
+use s4n::io::create_and_write_file;
 mod common;
 use common::with_temp_repository;
-use std::io::Write;
 use std::path::Path; 
 
 #[test]
@@ -113,89 +112,16 @@ pub fn tool_remove_test_extension() {
 #[test]
 #[serial]
 fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempdir()?;
-    println!("Temporary directory created at: {:?}", dir.path());
+    let dir = tempdir().unwrap();
+    let original_cwd = env::current_dir().unwrap();
 
-    fs::create_dir_all(dir.path().join("workflows"))?;
-    fs::create_dir_all(dir.path().join("workflows").join("test1"))?;
-    fs::create_dir_all(dir.path().join("workflows").join("test2"))?;
-    fs::create_dir_all(dir.path().join("workflows").join("test3"))?;
+    env::set_current_dir(dir.path()).unwrap();
 
-    File::create(dir.path().join(Path::new("workflows/test1/test1.cwl")))?;
-    File::create(dir.path().join(Path::new("workflows/test2/test2.cwl")))?;
-    File::create(dir.path().join(Path::new("workflows/test3/other_file.txt")))?;
-
-    assert!(dir.path().join(dir.path().join(Path::new("workflows/test1/test1.cwl"))).exists(), "test1.cwl was not created!");
-    assert!(dir.path().join(dir.path().join(Path::new("workflows/test2/test2.cwl"))).exists(), "test2.cwl was not created!");
-    assert!(dir.path().join(dir.path().join(Path::new("workflows/test3/other_file.txt"))).exists(), "other_file.txt was not created!");
-
-    let original_dir = env::current_dir()?;
-    env::set_current_dir(dir.path())?;
+    create_and_write_file("workflows/calculation/calculation.cwl", CALCULATION_FILE).unwrap();
+    create_and_write_file("workflows/plot/plot.cwl", PLOT_FILE).unwrap();
 
     let mut cmd = Command::cargo_bin("s4n")?;
-    let output = cmd
-        .arg("tool")
-        .arg("ls")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("test1.cwl"))
-        .stdout(predicate::str::contains("test2.cwl"))
-        .stdout(predicate::str::contains("other_file.txt").not())
-        .get_output()
-        .clone();
-
-    println!("Command Output: {}", String::from_utf8_lossy(&output.stdout));
-
-    env::set_current_dir(original_dir)?;
-
-    Ok(())
-}
-
-
-#[test]
-#[serial]
-fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
-    let temp_dir = tempdir()?;
-    let workflows_dir = temp_dir.path().join("workflows");
-    fs::create_dir(&workflows_dir)?;
-
-    // dummy CWL files, they only have inputs and outputs
-    let cwl_content_1 = r"
-    inputs:
-      - id: speakers
-        type: string
-      - id: population
-        type: int
-    outputs:
-      - id: results
-        type: File
-    ";
-    let cwl_content_2 = r"
-    inputs:
-      - id: data
-        type: File
-    outputs:
-      - id: chart
-        type: File
-    ";
-
-    let cwl_file_1 = workflows_dir.join("calculation.cwl");
-    let cwl_file_2 = workflows_dir.join("plot.cwl");
-
-    {
-        let mut file = File::create(&cwl_file_1)?;
-        file.write_all(cwl_content_1.as_bytes())?;
-    }
-    {
-        let mut file = File::create(&cwl_file_2)?;
-        file.write_all(cwl_content_2.as_bytes())?;
-    }
-
-    let original_cwd = env::current_dir()?;
-    env::set_current_dir(&temp_dir)?;
-
-    let mut cmd = Command::cargo_bin("s4n")?;
-    let _output = cmd
+    let _output_all = cmd
         .arg("tool")
         .arg("ls")
         .arg("-a")
@@ -206,14 +132,96 @@ fn test_list_tools_with_list_all() -> Result<(), Box<dyn std::error::Error>> {
         .stdout(predicate::str::contains("calculation/population"))
         .stdout(predicate::str::contains("calculation/results"))
         .stdout(predicate::str::contains("plot"))
-        .stdout(predicate::str::contains("plot/data"))
-        .stdout(predicate::str::contains("plot/chart"))
+        .stdout(predicate::str::contains("plot/results"))
         .get_output()
         .clone();
 
+        let mut cmd = Command::cargo_bin("s4n")?;
+        let _output_tools = cmd
+            .arg("tool")
+            .arg("ls")
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("calculation"))
+            .stdout(predicate::str::contains("plot"))
+            .stdout(predicate::str::contains("calculation/speakers").not())
+            .stdout(predicate::str::contains("calculation/population").not())
+            .stdout(predicate::str::contains("calculation/results").not())
+            .stdout(predicate::str::contains("plot/results").not())
+            .get_output()
+            .clone();
+    
     env::set_current_dir(original_cwd)?;
-
-  
 
     Ok(())
 }
+const CALCULATION_FILE: &str = r#"#!/usr/bin/env cwl-runner
+
+cwlVersion: v1.2
+class: CommandLineTool
+
+requirements:
+- class: InitialWorkDirRequirement
+  listing:
+  - entryname: calculation.py
+    entry:
+      $include: ../../calculation.py
+
+inputs:
+- id: population
+  type: File
+  default:
+    class: File
+    location: ../../population.csv
+  inputBinding:
+    prefix: --population
+- id: speakers
+  type: File
+  default:
+    class: File
+    location: ../../speakers_revised.csv
+  inputBinding:
+    prefix: --speakers
+
+outputs:
+- id: results
+  type: File
+  outputBinding:
+    glob: results.csv
+
+baseCommand:
+- python
+- calculation.py
+"#;
+
+const PLOT_FILE: &str = r#"#!/usr/bin/env cwl-runner
+
+cwlVersion: v1.2
+class: CommandLineTool
+
+requirements:
+- class: InitialWorkDirRequirement
+  listing:
+  - entryname: plot.py
+    entry:
+      $include: ../../plot.py
+
+inputs:
+- id: results
+  type: File
+  default:
+    class: File
+    location: ../../results.csv
+  inputBinding:
+    prefix: --results
+
+outputs:
+- id: results
+  type: File
+  outputBinding:
+    glob: results.svg
+
+baseCommand:
+- python
+- plot.py
+"#;

@@ -203,7 +203,7 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
             // Only process .cwl files
             if let Some(tool_name) = file_name.strip_suffix(".cwl") {
 
-                if args.list_all{
+              
                     let mut inputs_list = Vec::new();
                     let mut outputs_list = Vec::new();
 
@@ -212,6 +212,8 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
                     if let Ok(content) = fs::read_to_string(file_path) {
                         // Parse content
                         if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
+                            if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
+                                if args.list_all{
                             // Extract inputs
                             if let Some(inputs) = parsed_yaml.get("inputs") {
                                 for input in inputs.as_sequence().unwrap_or(&vec![]) {
@@ -228,23 +230,22 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
                                     }
                                 }
                             }
+                                    // add row to the table
+                            table.add_row(Row::new(vec![
+                                Cell::new(tool_name).style_spec("bFg"),
+                                Cell::new(&inputs_list.join(", ")),
+                                Cell::new(&outputs_list.join(", ")),
+                            ]));
+                        } else {
+                            // Print only the tool name if not all details
+                            println!("📄 {}", tool_name.green().bold());
                         }
-                    }
-
-                    // add row to the table
-                    table.add_row(Row::new(vec![
-                        Cell::new(tool_name).style_spec("bFg"),
-                        Cell::new(&inputs_list.join(", ")),
-                        Cell::new(&outputs_list.join(", ")),
-                    ]));
-                    
-                }
-                else {
-                    println!("📄 {}", file_name.green().bold());
-                }
+                    }    
+                }       
             }
         }
     }
+}  
     // Print the table
     if args.list_all{
         table.printstd();
