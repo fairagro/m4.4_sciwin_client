@@ -36,7 +36,7 @@ fn set_environment_vars(requirement: &EnvVarRequirement) -> Vec<String> {
     keys
 }
 
-pub fn unset_environment_vars(keys: Vec<String>) {
+pub fn unset_environment_vars(keys: &[String]) {
     for key in keys {
         env::remove_var(key);
     }
@@ -69,7 +69,7 @@ mod tests {
         let mut current_vars = env::vars();
         assert!(current_vars.any(|v| v.0 == "MY_COOL_VAR"));
 
-        unset_environment_vars(keys);
+        unset_environment_vars(&keys);
 
         //gone again
         let mut current_vars = env::vars();
@@ -98,7 +98,7 @@ mod tests {
         let mut current_vars = env::vars();
         assert!(current_vars.any(|v| v.0 == "MY_COOL_VAR"));
 
-        unset_environment_vars(keys);
+        unset_environment_vars(&keys);
 
         //gone again
         let mut current_vars = env::vars();

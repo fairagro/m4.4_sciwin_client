@@ -185,7 +185,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     table.add_row(row![b -> "Steps:"]);
 
     for step in &workflow.steps {
-        let tool = load_tool(&path.join(&step.run).to_string_lossy())?;
+        let tool = load_tool(path.join(&step.run))?;
 
         let input_status = tool
             .inputs

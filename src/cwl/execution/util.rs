@@ -1,5 +1,3 @@
-use fancy_regex::Regex;
-
 use crate::{
     cwl::{
         inputs::CommandInputParameter,
@@ -8,16 +6,21 @@ use crate::{
     },
     io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output},
 };
+use fancy_regex::Regex;
 use std::{
     collections::HashMap,
     env,
     error::Error,
+    fmt::Debug,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 ///Either gets the default value for input or the provided one (preferred)
-pub fn evaluate_input_as_string(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<String, Box<dyn Error>> {
+pub fn evaluate_input_as_string(
+    input: &CommandInputParameter,
+    input_values: &Option<HashMap<String, DefaultValue>>,
+) -> Result<String, Box<dyn Error>> {
     Ok(evaluate_input(input, input_values)?.as_value_string())
 }
 
@@ -58,7 +61,7 @@ pub fn evaluate_outputs(
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
             } else {
                 let filename = match output.type_ {
                     CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
@@ -76,10 +79,10 @@ pub fn evaluate_outputs(
                 let path = &initial_dir.join(filename);
                 fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path.into(), output.format.clone())));
+                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
             }
         } else if output.type_ == CWLType::Directory {
-            if let Some(binding) = &output.output_binding {   
+            if let Some(binding) = &output.output_binding {
                 let dir = if &binding.glob != "." {
                     &initial_dir.join(&binding.glob)
                 } else {
@@ -112,18 +115,21 @@ pub fn evaluate_outputs(
     Ok(outputs)
 }
 
-pub fn get_file_metadata(path: PathBuf, format: Option<String>) -> OutputFile {
-    let basename = path.file_name().and_then(|n| n.to_str()).unwrap().to_string();
+pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> OutputFile {
+    let basename = path.as_ref().file_name().and_then(|n| n.to_str()).unwrap().to_string();
     let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
-    let checksum = format!("sha1${}", get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path)));
+    let checksum = format!(
+        "sha1${}",
+        get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path))
+    );
 
     OutputFile {
-        location: format!("file://{}", path.display()),
+        location: format!("file://{}", &path.as_ref().display()),
         basename,
         class: "File".to_string(),
         checksum,
         size,
-        path: path.to_string_lossy().into_owned(),
+        path: path.as_ref().to_string_lossy().into_owned(),
         format: resolve_format(format),
     }
 }
@@ -137,29 +143,29 @@ fn resolve_format(format: Option<String>) -> Option<String> {
     }
 }
 
-pub fn get_diretory_metadata(path: PathBuf) -> OutputDirectory {
+pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
     OutputDirectory {
-        location: format!("file://{}", path.display()),
-        basename: path.file_name().unwrap().to_string_lossy().into_owned(),
+        location: format!("file://{}", path.as_ref().display()),
+        basename: path.as_ref().file_name().unwrap().to_string_lossy().into_owned(),
         class: "Directory".to_string(),
         listing: vec![],
-        path: path.to_string_lossy().into_owned(),
+        path: path.as_ref().to_string_lossy().into_owned(),
     }
 }
 
-pub fn copy_output_dir(src: &str, dest: &str) -> Result<OutputDirectory, std::io::Error> {
-    fs::create_dir_all(dest)?;
-    let mut dir = get_diretory_metadata(dest.into());
+pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<OutputDirectory, std::io::Error> {
+    fs::create_dir_all(&dest)?;
+    let mut dir = get_diretory_metadata(&dest);
 
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
-        let dest_path = Path::new(dest).join(entry.file_name());
+        let dest_path = dest.as_ref().join(entry.file_name());
         if src_path.is_dir() {
-            let sub_dir = copy_output_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            let sub_dir = copy_output_dir(src_path, dest_path)?;
             dir.listing.push(OutputItem::OutputDirectory(sub_dir));
         } else {
-            copy_file(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?;
+            copy_file(src_path, &dest_path)?;
             dir.listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)))
         }
     }

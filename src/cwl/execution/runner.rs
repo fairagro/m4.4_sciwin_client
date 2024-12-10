@@ -136,14 +136,13 @@ pub fn run_workflow(
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.location);
-                    fs::copy(format!("{}/{}", &workflow_folder.to_string_lossy(), file.location.clone()), &dest)
+                    fs::copy(workflow_folder.join(&file.location), &dest)
                         .map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
                     OutputItem::OutputFile(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
                 DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
-                    copy_output_dir(
-                        &format!("{}/{}", &workflow_folder.to_string_lossy(), &directory.location),
-                        &format!("{}/{}", &output_directory, &directory.location),
+                    copy_output_dir(workflow_folder.join(&directory.location),
+                        format!("{}/{}", &output_directory, &directory.location),
                     )
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
@@ -209,7 +208,7 @@ pub fn run_commandlinetool(
         tool,
         &input_values,
         tool_path,
-        dir.path().to_path_buf(),
+        dir.path(),
         output_directory,
     )?;
 
@@ -245,7 +244,7 @@ pub fn run_commandlinetool(
     let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
 
     //unset environment variables
-    unset_environment_vars(environment_variables);
+    unset_environment_vars(&environment_variables);
 
     //come back to original directory
     env::set_current_dir(current)?;
