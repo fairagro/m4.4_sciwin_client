@@ -156,7 +156,7 @@ pub fn test_execute_local_workflow() {
 
     let dir = tempdir().unwrap();
     let dir_str = &dir.path().to_string_lossy();
-    copy_dir(folder, dir_str).unwrap();
+    copy_dir(folder, dir.path()).unwrap();
 
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();

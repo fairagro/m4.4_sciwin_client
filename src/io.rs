@@ -9,21 +9,21 @@ use std::{
     process::Command as SystemCommand,
     vec,
 };
-pub fn get_filename_without_extension(relative_path: &str) -> Option<String> {
-    let path = Path::new(relative_path);
+pub fn get_filename_without_extension<S: AsRef<str>>(relative_path: S) -> Option<String> {
+    let path = Path::new(relative_path.as_ref());
 
     path.file_name()
         .and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
 }
 
-fn get_basename(filename: &str) -> String {
-    let path = Path::new(filename);
+fn get_basename<S: AsRef<str>>(filename: S) -> String {
+    let path = Path::new(filename.as_ref());
 
     path.file_name().unwrap_or_default().to_string_lossy().into_owned()
 }
 
-fn get_extension(filename: &str) -> String {
-    let path = Path::new(filename);
+fn get_extension<S: AsRef<str>>(filename: S) -> String {
+    let path = Path::new(filename.as_ref());
 
     path.extension().unwrap_or_default().to_string_lossy().into_owned()
 }
@@ -54,8 +54,8 @@ fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, o
     Ok(())
 }
 
-pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
-    let path = Path::new(to);
+pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), Error> {
+    let path = Path::new(to.as_ref());
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?
@@ -65,14 +65,14 @@ pub fn copy_file(from: &str, to: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
+pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<String>, Error> {
     let mut files = vec![];
-    fs::create_dir_all(dest)?;
+    fs::create_dir_all(&dest)?;
 
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
-        let dest_path = Path::new(dest).join(entry.file_name());
+        let dest_path = Path::new(dest.as_ref()).join(entry.file_name());
         if src_path.is_dir() {
             files.extend(copy_dir(src_path.to_str().unwrap(), dest_path.to_str().unwrap())?);
         } else {
@@ -83,9 +83,9 @@ pub fn copy_dir(src: &str, dest: &str) -> Result<Vec<String>, Error> {
     Ok(files)
 }
 
-pub fn resolve_path(filename: &str, relative_to: &str) -> String {
-    let path = Path::new(filename);
-    let relative_path = Path::new(relative_to);
+pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
+    let path = Path::new(filename.as_ref());
+    let relative_path = Path::new(relative_to.as_ref());
     let base_dir = match relative_path.extension() {
         Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
         None => relative_path,
@@ -161,8 +161,8 @@ pub fn get_file_property(filename: &str, property_name: &str) -> String {
     }
 }
 
-pub fn join_path_string(path: &Path, location: &str) -> String {
-    let new_location = path.join(location);
+pub fn join_path_string<P: AsRef<Path>>(path: P, location: &str) -> String {
+    let new_location = path.as_ref().join(location);
     new_location.to_string_lossy().into_owned()
 }
 
@@ -171,8 +171,8 @@ pub fn get_random_filename(prefix: &str, extension: &str) -> String {
     format!("{}_{}.{}", prefix, rnd, extension)
 }
 
-pub fn get_first_file_with_prefix(location: &str, prefix: &str) -> Option<String> {
-    let path = Path::new(location);
+pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> Option<String> {
+    let path = Path::new(location.as_ref());
 
     if path.is_dir() {
         for entry in fs::read_dir(path).unwrap() {

@@ -76,7 +76,8 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                         }
                         Entry::Include(include) => {
                             let include_path = tool_path.join(&include.include);
-                            copy_file(include_path.to_str().unwrap(), path_str).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
+                            copy_file(include_path.to_str().unwrap(), &into_path)
+                                .map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
                         }
                     }
                     staged_files.push(path_str.clone().into_owned());
@@ -117,16 +118,18 @@ fn stage_input_files(
 
         let outcoming_file = handle_filename(&incoming_data);
         let outcoming_file_relative = make_relative_to(&outcoming_file, out_dir);
-        let outcoming_file_stripped = outcoming_file_relative.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
+        let outcoming_file_stripped = outcoming_file_relative
+            .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
+            .to_string();
 
         let into_path = path.join(&outcoming_file_stripped);
         let path_str = &into_path.to_string_lossy();
 
         if input.type_ == CWLType::File {
-            copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
+            copy_file(&incoming_file, &into_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());
         } else if input.type_ == CWLType::Directory {
-            copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
+            copy_dir(&incoming_file, &into_path).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
             staged_files.push(path_str.clone().into_owned());
         }
         staged_files.extend(stage_secondary_files(incoming_data, path)?);
@@ -146,11 +149,13 @@ fn stage_secondary_files(incoming_data: DefaultValue, path: &Path) -> Result<Vec
                 let path_str = &into_path.to_string_lossy();
                 match value {
                     DefaultValue::File(_) => {
-                        copy_file(&incoming_file, path_str).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
+                        copy_file(&incoming_file, &into_path)
+                            .map_err(|e| format!("Failed to copy file from {} to {:?}: {}", incoming_file, into_path, e))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     DefaultValue::Directory(_) => {
-                        copy_dir(&incoming_file, path_str).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
+                        copy_dir(&incoming_file, &into_path)
+                            .map_err(|e| format!("Failed to copy directory from {} to {:?}: {}", incoming_file, into_path, e))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     _ => {}
