@@ -1,16 +1,16 @@
 use assert_cmd::Command;
 use git2::Repository;
 use predicates::prelude::*;
-use s4n::commands::tool::{remove_tool, RmArgs, CreateToolArgs, handle_tool_commands, ToolCommands};
+use s4n::commands::tool::{handle_tool_commands, remove_tool, CreateToolArgs, RmArgs, ToolCommands};
+use s4n::io::create_and_write_file;
+use s4n::repo::get_modified_files;
 use serial_test::serial;
 use std::env;
 use std::{fs, vec};
 use tempfile::tempdir;
-use s4n::repo::get_modified_files;
-use s4n::io::create_and_write_file;
 mod common;
 use common::with_temp_repository;
-use std::path::Path; 
+use std::path::Path;
 
 #[test]
 #[serial]
@@ -49,25 +49,30 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
 pub fn tool_remove_test() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: Some("echo".to_string()), 
+            name: Some("echo".to_string()),
             container_image: None,
             container_tag: None,
             is_raw: false,
             no_commit: false,
             no_run: false,
             is_clean: false,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());
-        assert!(dir.path().join(Path::new("workflows/echo")).exists()); 
+        assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         let tool_remove_args = RmArgs {
-            rm_tool: vec!["echo".to_string()], 
+            rm_tool: vec!["echo".to_string()],
         };
         let cmd_remove = ToolCommands::Rm(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
-        assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
+        assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
         let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
@@ -79,18 +84,23 @@ pub fn tool_remove_test() {
 pub fn tool_remove_test_extension() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: Some("echo".to_string()), 
+            name: Some("echo".to_string()),
             container_image: None,
             container_tag: None,
             is_raw: false,
             no_commit: false,
             no_run: false,
             is_clean: false,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());
-        assert!(dir.path().join(Path::new("workflows/echo")).exists()); 
+        assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         // remove the tool
         let tool_remove_args = RmArgs {
@@ -100,14 +110,13 @@ pub fn tool_remove_test_extension() {
         assert!(handle_tool_commands(&cmd_remove).is_ok());
 
         // check if the tool was removed
-        assert!(!dir.path().join(Path::new("workflows/echo")).exists()); 
+        assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
         // check if there are no uncommitted changes after removal
         let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
     });
 }
-
 
 #[test]
 #[serial]
@@ -136,21 +145,21 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
         .get_output()
         .clone();
 
-        let mut cmd = Command::cargo_bin("s4n")?;
-        let _output_tools = cmd
-            .arg("tool")
-            .arg("ls")
-            .assert()
-            .success()
-            .stdout(predicate::str::contains("calculation"))
-            .stdout(predicate::str::contains("plot"))
-            .stdout(predicate::str::contains("calculation/speakers").not())
-            .stdout(predicate::str::contains("calculation/population").not())
-            .stdout(predicate::str::contains("calculation/results").not())
-            .stdout(predicate::str::contains("plot/results").not())
-            .get_output()
-            .clone();
-    
+    let mut cmd = Command::cargo_bin("s4n")?;
+    let _output_tools = cmd
+        .arg("tool")
+        .arg("ls")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("calculation"))
+        .stdout(predicate::str::contains("plot"))
+        .stdout(predicate::str::contains("calculation/speakers").not())
+        .stdout(predicate::str::contains("calculation/population").not())
+        .stdout(predicate::str::contains("calculation/results").not())
+        .stdout(predicate::str::contains("plot/results").not())
+        .get_output()
+        .clone();
+
     env::set_current_dir(original_cwd)?;
 
     Ok(())

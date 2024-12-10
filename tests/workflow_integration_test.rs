@@ -1,13 +1,13 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
 use s4n::{
-  commands::workflow::{connect_workflow_nodes, disconnect_workflow_nodes, create_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
-  cwl::loader::load_workflow,
-  io::create_and_write_file,
+    commands::workflow::{connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, ConnectWorkflowArgs, CreateWorkflowArgs},
+    cwl::loader::load_workflow,
+    io::create_and_write_file,
 };
 use serial_test::serial;
 use std::{env, path::Path};
 use tempfile::tempdir;
-use assert_cmd::Command;
-use predicates::prelude::*;
 
 #[test]
 #[serial]
@@ -28,7 +28,6 @@ pub fn test_create_workflow() {
 
     env::set_current_dir(current).unwrap();
 }
-
 
 #[test]
 #[serial]
@@ -88,7 +87,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
         .get_output()
         .clone();
 
-        let mut _output2 = Command::cargo_bin("s4n")?
+    let mut _output2 = Command::cargo_bin("s4n")?
         .arg("workflow")
         .arg("list")
         .arg("-a")
@@ -136,10 +135,9 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     assert!(!workflow.has_step_output("plot/results"));
 
     env::set_current_dir(current).unwrap();
-    
+
     Ok(())
 }
-
 
 const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 

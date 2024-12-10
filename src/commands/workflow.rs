@@ -12,10 +12,10 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use git2::Repository;
 use prettytable::{row, Cell, Row, Table};
-use std::{error::Error, fs, io::Write, path::Path, vec, env};
-use walkdir::WalkDir;
 use serde_yml::Value;
 use std::path::PathBuf;
+use std::{env, error::Error, fs, io::Write, path::Path, vec};
+use walkdir::WalkDir;
 
 pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
     match command {
@@ -291,10 +291,10 @@ pub fn list_workflows(args: &LsWorkflowArgs) -> Result<(), Box<dyn Error>> {
                             let outputs_list = extract_workflow_list(parsed_yaml.get("outputs"));
                             let steps_list = extract_step_ids(parsed_yaml.get("steps"));
 
-                              // Format with line breaks
-                              let inputs_str = format_with_line_breaks(&inputs_list, 3);
-                              let outputs_str = format_with_line_breaks(&outputs_list, 3);
-                              let steps_str = format_with_line_breaks(&steps_list, 3);
+                            // Format with line breaks
+                            let inputs_str = format_with_line_breaks(&inputs_list, 3);
+                            let outputs_str = format_with_line_breaks(&outputs_list, 3);
+                            let steps_str = format_with_line_breaks(&steps_list, 3);
 
                             if args.list_all {
                                 // Add row to the table
@@ -326,10 +326,7 @@ pub fn list_workflows(args: &LsWorkflowArgs) -> Result<(), Box<dyn Error>> {
 /// Helper function to extract IDs of items in a CWL workflow
 fn extract_workflow_list(value: Option<&Value>) -> Vec<String> {
     match value {
-        Some(Value::Mapping(mapping)) => mapping
-            .keys()
-            .filter_map(|key| key.as_str().map(String::from))
-            .collect(),
+        Some(Value::Mapping(mapping)) => mapping.keys().filter_map(|key| key.as_str().map(String::from)).collect(),
         Some(Value::Sequence(sequence)) => sequence
             .iter()
             .filter_map(|item| item.get("id").and_then(|id| id.as_str()).map(String::from))
@@ -345,16 +342,14 @@ fn extract_step_ids(value: Option<&Value>) -> Vec<String> {
     match value {
         // If steps are in a mapping format (YAML dictionary)
         Some(Value::Mapping(mapping)) => {
-            step_ids.extend(
-                mapping.keys().filter_map(|key| key.as_str().map(String::from)),
-            );
+            step_ids.extend(mapping.keys().filter_map(|key| key.as_str().map(String::from)));
         }
         // If steps are in an array format (YAML list)
         Some(Value::Sequence(sequence)) => {
             step_ids.extend(
-                sequence.iter().filter_map(|step| {
-                    step.get("id").and_then(|id| id.as_str()).map(String::from)
-                }),
+                sequence
+                    .iter()
+                    .filter_map(|step| step.get("id").and_then(|id| id.as_str()).map(String::from)),
             );
         }
         _ => {}
@@ -362,7 +357,6 @@ fn extract_step_ids(value: Option<&Value>) -> Vec<String> {
 
     step_ids
 }
-
 
 /// Helper function to format a list of strings with line breaks every `max_per_line` items
 fn format_with_line_breaks(items: &[String], max_per_line: usize) -> String {

@@ -10,11 +10,11 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use git2::Repository;
+use prettytable::{Cell, Row, Table};
+use serde_yml::Value;
 use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
 use walkdir::WalkDir;
-use serde_yml::Value;
-use prettytable::{Table, Row, Cell};
-use git2::Repository;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -39,7 +39,11 @@ pub enum ToolCommands {
 pub struct CreateToolArgs {
     #[arg(short = 'n', long = "name", help = "A name to be used for this tool")]
     pub name: Option<String>,
-    #[arg(short = 'c', long = "container-image", help = "An image to pull from e.g. docker hub or path to a Dockerfile")]
+    #[arg(
+        short = 'c',
+        long = "container-image",
+        help = "An image to pull from e.g. docker hub or path to a Dockerfile"
+    )]
     pub container_image: Option<String>,
     #[arg(short = 't', long = "container-tag", help = "The tag for the container when using a Dockerfile")]
     pub container_tag: Option<String>,
@@ -131,7 +135,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     //check container usage
     if let Some(container) = &args.container_image {
         let requirement = if container.contains("Dockerfile") {
-            let image_id = if let Some(tag) = &args.container_tag { tag } else { &"sciwin-container".to_string() };
+            let image_id = if let Some(tag) = &args.container_tag {
+                tag
+            } else {
+                &"sciwin-container".to_string()
+            };
             Requirement::DockerRequirement(DockerRequirement::from_file(container, image_id.as_str()))
         } else {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
@@ -177,10 +185,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
-    println!(
-        "📂 Scanning for tools in: {}",
-        cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold()
-    );
+    println!("📂 Scanning for tools in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
 
     // Build the path to the "workflows" folder
     let folder_path = cwd.join("workflows");
@@ -202,52 +207,50 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
 
             // Only process .cwl files
             if let Some(tool_name) = file_name.strip_suffix(".cwl") {
+                let mut inputs_list = Vec::new();
+                let mut outputs_list = Vec::new();
 
-              
-                    let mut inputs_list = Vec::new();
-                    let mut outputs_list = Vec::new();
-
-                    // Read the contents of the file
-                    let file_path = entry.path();
-                    if let Ok(content) = fs::read_to_string(file_path) {
-                        // Parse content
-                        if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
-                            if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
-                                if args.list_all{
-                            // Extract inputs
-                            if let Some(inputs) = parsed_yaml.get("inputs") {
-                                for input in inputs.as_sequence().unwrap_or(&vec![]) {
-                                    if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                                        inputs_list.push(format!("{}/{}", tool_name, id));
+                // Read the contents of the file
+                let file_path = entry.path();
+                if let Ok(content) = fs::read_to_string(file_path) {
+                    // Parse content
+                    if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
+                        if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
+                            if args.list_all {
+                                // Extract inputs
+                                if let Some(inputs) = parsed_yaml.get("inputs") {
+                                    for input in inputs.as_sequence().unwrap_or(&vec![]) {
+                                        if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
+                                            inputs_list.push(format!("{}/{}", tool_name, id));
+                                        }
                                     }
                                 }
-                            }
-                            // Extract outputs
-                            if let Some(outputs) = parsed_yaml.get("outputs") {
-                                for output in outputs.as_sequence().unwrap_or(&vec![]) {
-                                    if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
-                                        outputs_list.push(format!("{}/{}", tool_name, id));
+                                // Extract outputs
+                                if let Some(outputs) = parsed_yaml.get("outputs") {
+                                    for output in outputs.as_sequence().unwrap_or(&vec![]) {
+                                        if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
+                                            outputs_list.push(format!("{}/{}", tool_name, id));
+                                        }
                                     }
                                 }
+                                // add row to the table
+                                table.add_row(Row::new(vec![
+                                    Cell::new(tool_name).style_spec("bFg"),
+                                    Cell::new(&inputs_list.join(", ")),
+                                    Cell::new(&outputs_list.join(", ")),
+                                ]));
+                            } else {
+                                // Print only the tool name if not all details
+                                println!("📄 {}", tool_name.green().bold());
                             }
-                                    // add row to the table
-                            table.add_row(Row::new(vec![
-                                Cell::new(tool_name).style_spec("bFg"),
-                                Cell::new(&inputs_list.join(", ")),
-                                Cell::new(&outputs_list.join(", ")),
-                            ]));
-                        } else {
-                            // Print only the tool name if not all details
-                            println!("📄 {}", tool_name.green().bold());
                         }
-                    }    
-                }       
+                    }
+                }
             }
         }
     }
-}  
     // Print the table
-    if args.list_all{
+    if args.list_all {
         table.printstd();
     }
     Ok(())
