@@ -1,7 +1,11 @@
 pub mod clt;
-pub mod parser;
-pub mod types;
+pub mod deserialize;
+pub mod execution;
 pub mod format;
-
-#[cfg(test)]
-mod cwl_tests;
+pub mod inputs;
+pub mod loader;
+pub mod outputs;
+pub mod parser;
+pub mod requirements;
+pub mod types;
+pub mod wf;

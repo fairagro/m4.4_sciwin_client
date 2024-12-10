@@ -1,5 +1,10 @@
-use crate::commands::tool::{CreateToolArgs, ToolCommands};
-use clap::{Args, Parser, Subcommand};
+use crate::commands::{
+    execute::ExecuteCommands,
+    init::InitArgs,
+    tool::{CreateToolArgs, ToolCommands},
+    workflow::WorkflowCommands
+};
+use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
@@ -10,11 +15,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    //temporary dummy command to showcase clap usage
-    Dummy {
-        #[command(subcommand)]
-        command: DummyCommands,
-    },    
+    #[command(about = "Initializes project folder structure and repository")]
+    Init(InitArgs),
     #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
     Tool {
         #[command(subcommand)]
@@ -22,25 +24,21 @@ pub enum Commands {
     },
     #[command(hide = true)]
     Run(CreateToolArgs),
-    Workflow,
+    #[command(about = "Provides commands to create and work with CWL Workflows")]
+    Workflow{
+        #[command(subcommand)]
+        command: WorkflowCommands
+    },
     Annotate,
-    Execute,
+    #[command(about = "Execution of CWL Files locally or on remote servers (\x1b[1msynonym\x1b[0m: s4n ex)")]
+    Execute {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    },    
+    #[command(hide = true)]
+    Ex {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    }, 
     Sync,
-}
-
-//temporary demo how to use clap, move to commands folder for real commands
-#[derive(Debug, Subcommand)]
-pub enum DummyCommands {
-    #[command(about = "Creates a dummy")]
-    Create(CreateDummyArgs),
-    Read,
-    Update,
-    Delete,
-}
-
-#[derive(Args, Debug)]
-pub struct CreateDummyArgs {
-    name: String,
-    #[arg(short = 'o', long = "option")]
-    option: Option<String>,
 }

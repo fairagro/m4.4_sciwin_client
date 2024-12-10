@@ -1,12 +1,5 @@
 use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
-use std::path::Path;
-
-pub fn open_repo<P: AsRef<Path>>(path: P) -> Repository {
-    match Repository::open(path) {
-        Ok(repo) => repo,
-        Err(e) => panic!("❌ Failed to open repository {}", e),
-    }
-}
+use std::{iter, path::Path};
 
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
@@ -25,7 +18,7 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
                 }
             }
         }
-        Err(e) => panic!("❌ Failed to get repository status: {}", e),
+        Err(e) => panic!("❌ Failed to get repository status: {e}"),
     }
     files
 }
@@ -39,7 +32,7 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
 
 pub fn stage_all(repo: &Repository) -> Result<(), Error> {
     let mut index = repo.index()?;
-    index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+    index.add_all(iter::once(&"*"), IndexAddOption::DEFAULT, None)?;
     index.write()?;
     Ok(())
 }
@@ -47,16 +40,16 @@ pub fn stage_all(repo: &Repository) -> Result<(), Error> {
 pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
     let head = repo.head()?;
     let parent = repo.find_commit(head.target().unwrap())?;
-    _commit(repo, message, &[&parent])?;
+    commit_impl(repo, message, &[&parent])?;
     Ok(())
 }
 
 pub fn initial_commit(repo: &Repository) -> Result<(), Error> {
-    _commit(repo, "Initial Commit", &[])?;
+    commit_impl(repo, "Initial Commit", &[])?;
     Ok(())
 }
 
-fn _commit(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Result<(), Error> {
+fn commit_impl(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Result<(), Error> {
     let mut index = repo.index()?;
     let new_oid = index.write_tree()?;
     let new_tree = repo.find_tree(new_oid)?;

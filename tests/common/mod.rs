@@ -1,11 +1,48 @@
-use git2::Repository;
+use git2::{Config, Repository};
 use s4n::repo::{initial_commit, stage_all};
 use std::{
     env::{self},
     fs::{copy, create_dir_all},
     path::{Path, PathBuf},
+    process::Command,
 };
 use tempfile::{tempdir, TempDir};
+
+
+#[allow(dead_code)]
+pub fn setup_python(dir_str: &str) -> (String, String) {
+    //windows stuff
+    let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
+    let path_sep = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
+
+    //set up python venv
+    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
+    let old_path = env::var("PATH").unwrap();
+    let python_path = format!("{dir_str}/.venv/{venv_scripts}");
+    let new_path = format!("{python_path}{path_sep}{old_path}");
+
+    //install packages
+    let req_path = format!("{dir_str}/requirements.txt");
+    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
+
+    (new_path, old_path)
+}
+
+#[allow(dead_code)]
+pub fn check_git_user() -> Result<(), git2::Error> {
+    let mut config = Config::open_default()?;
+    if config.get_string("user.name").is_err() {
+        config.remove_multivar("user.name", ".*").ok();
+        config.set_str("user.name", &whoami::username()).expect("Could not set name");
+    }
+
+    if config.get_string("user.email").is_err() {
+        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
+    }
+
+    Ok(())
+}
 
 
 /// Sets up a temporary repository with test data
@@ -24,14 +61,14 @@ fn set_up_repository() -> TempDir {
         (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
     ];
 
-    for (src, target) in source_files.iter() {
+    for (src, target) in &source_files {
         let target_path = dir.path().join(target);
         match copy(src, &target_path) {
             Ok(_) => {
-                println!("Copied {:?} to {:?}", src, target_path);
+                println!("Copied {src:?} to {target_path:?}");
             }
             Err(e) => {
-                eprintln!("Failed to copy file from {:?} to {:?}: {}", src, target_path, e);
+                eprintln!("Failed to copy file from {src:?} to {target_path:?}: {e}");
                 panic!("Error occurred while copying files.");
             }
         }
@@ -49,7 +86,7 @@ fn set_up_repository() -> TempDir {
     dir
 }
 
-/// Sets up a repository with the files in tests/test_data in tmp folder.
+/// Sets up a repository with the files in `tests/test_data` in tmp folder.
 /// You *must* specify `#[serial]` for those tests
 #[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
@@ -63,13 +100,13 @@ where
     test(&dir);
 
     env::set_current_dir(current_dir).expect("Could not reset current dir");
-    dir.close().unwrap()
+    dir.close().unwrap();
 }
 
 #[allow(dead_code)]
 pub fn os_path(path: &str) -> String {
     if cfg!(target_os = "windows") {
-        Path::new(path).to_string_lossy().replace("/", "\\")
+        Path::new(path).to_string_lossy().replace('/', "\\")
     } else {
         path.to_string()
     }

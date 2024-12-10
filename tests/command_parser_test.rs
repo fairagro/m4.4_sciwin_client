@@ -1,9 +1,12 @@
 mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    outputs::{CommandOutputBinding, CommandOutputParameter},
     parser::{get_outputs, parse_command_line},
-    types::{CWLType, File},
+    requirements::{InitialWorkDirRequirement, Requirement},
+    types::{CWLType, DefaultValue, File},
 };
 use serde_yml::Value;
 use serial_test::serial;
@@ -70,9 +73,9 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
 pub fn test_parse_command_line() {
     for (input, expected) in test_cases() {
         let args = shlex::split(input.as_str()).expect("Parsing test case failed");
-        let result = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+        let result = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         assert_eq!(result, expected);
-        println!("{:?}", result);
+        println!("{result:?}");
     }
 }
 
@@ -82,7 +85,7 @@ pub fn test_parse_command_line_testdata() {
     with_temp_repository(|_| {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         let expected = CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "scripts/echo.py".to_string()]))
             .with_inputs(vec![CommandInputParameter::default()
@@ -97,10 +100,10 @@ pub fn test_parse_command_line_testdata() {
 
 #[test]
 pub fn test_cwl_execute_command_single() {
-    let command = "ls -la";
+    let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
-    let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
-    assert!(cwl.execute().is_ok())
+    let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
+    assert!(cwl.execute().is_ok());
 }
 
 #[test]
@@ -109,7 +112,7 @@ pub fn test_cwl_execute_command_multiple() {
     with_temp_repository(|dir| {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(|x| x.as_ref()).collect());
+        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         assert!(cwl.execute().is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
@@ -128,7 +131,9 @@ pub fn test_get_outputs() {
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("archive")
-            .with_binding(CommandOutputBinding { glob: "archive.tar.gz".to_string() }),
+            .with_binding(CommandOutputBinding {
+                glob: "archive.tar.gz".to_string(),
+            }),
     ];
 
     let outputs = get_outputs(files);

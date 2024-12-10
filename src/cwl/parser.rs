@@ -1,6 +1,9 @@
 use super::{
-    clt::{Command, CommandInputParameter, CommandLineBinding, CommandLineTool, CommandOutputBinding, CommandOutputParameter, DefaultValue, InitialWorkDirRequirement, Requirement},
-    types::{CWLType, Directory, File},
+    clt::{Command, CommandLineTool},
+    inputs::{CommandInputParameter, CommandLineBinding},
+    outputs::{CommandOutputBinding, CommandOutputParameter},
+    requirements::{InitialWorkDirRequirement, Requirement},
+    types::{CWLType, DefaultValue, Directory, File},
 };
 use crate::io::get_filename_without_extension;
 use serde_yml::Value;
@@ -53,8 +56,8 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
         .collect()
 }
 
+pub fn get_base_command(command: &[&str]) -> Command {
 
-pub(crate) fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
         return Command::Single(String::from(""));
     };
@@ -71,7 +74,7 @@ pub(crate) fn get_base_command(command: &[&str]) -> Command {
     }
 }
 
-pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
+pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {
@@ -83,10 +86,10 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
                 input = get_option(arg, args[i + 1]);
                 i += 1
             } else {
-                input = get_flag(arg)
+                input = get_flag(arg);
             }
         } else {
-            input = get_positional(arg, i);
+            input = get_positional(arg, i.try_into().unwrap());
         }
         inputs.push(input);
         i += 1;
@@ -94,7 +97,7 @@ pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     inputs
 }
 
-fn get_positional(current: &str, index: usize) -> CommandInputParameter {
+fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),
@@ -109,7 +112,7 @@ fn get_positional(current: &str, index: usize) -> CommandInputParameter {
 }
 
 fn get_flag(current: &str) -> CommandInputParameter {
-    let id = current.replace("-", "");
+    let id = current.replace('-', "");
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
         .with_id(slugify!(&id).as_str())
@@ -118,7 +121,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
 }
 
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
-    let id = current.replace("-", "");
+    let id = current.replace('-', "");
     let cwl_type = guess_type(next);
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
@@ -157,5 +160,68 @@ pub fn guess_type(value: &str) -> CWLType {
         }
         Value::String(_) => CWLType::String,
         _ => CWLType::String,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    //test private cwl api here
+    #[test]
+    pub fn test_get_base_command() {
+        let commands = ["python script.py --arg1 hello", "echo 'Hello World!'", "Rscript lol.R", ""];
+        let expected = [
+            Command::Multiple(vec!["python".to_string(), "script.py".to_string()]),
+            Command::Single("echo".to_string()),
+            Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]),
+            Command::Single(String::new()),
+        ];
+
+        for i in 0..commands.len() {
+            let args = shlex::split(commands[i]).unwrap();
+            let args_slice: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+
+            let result = get_base_command(&args_slice);
+            assert_eq!(result, expected[i]);
+        }
+    }
+
+    #[test]
+    pub fn test_get_inputs() {
+        let inputs = "--argument1 value1 --flag -a value2 positional1 -v 1";
+        let expected = vec![
+            CommandInputParameter::default()
+                .with_id("argument1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--argument1".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
+            CommandInputParameter::default()
+                .with_id("flag")
+                .with_type(CWLType::Boolean)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--flag".to_string()))
+                .with_default_value(DefaultValue::Any(Value::Bool(true))),
+            CommandInputParameter::default()
+                .with_id("a")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"-a".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value2".to_string()))),
+            CommandInputParameter::default()
+                .with_id("positional1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_position(5))
+                .with_default_value(DefaultValue::Any(Value::String("positional1".to_string()))),
+            CommandInputParameter::default()
+                .with_id("v")
+                .with_type(CWLType::Int)
+                .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+                .with_default_value(DefaultValue::Any(serde_yml::from_str("1").unwrap())),
+        ];
+
+        let inputs_vec = shlex::split(inputs).unwrap();
+        let inputs_slice: Vec<&str> = inputs_vec.iter().map(AsRef::as_ref).collect();
+
+        let result = get_inputs(&inputs_slice);
+
+        assert_eq!(result, expected);
     }
 }

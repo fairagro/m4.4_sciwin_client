@@ -1,0 +1,33 @@
+name: 🦀 Continuous Integration
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust_checks:
+    name: 📎 Clippy
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    uses: ./.github/workflows/clippy.yml
+  build:
+    name: 🏗️ Build and Test    
+    uses: ./.github/workflows/build.yml    
+  coverage:
+    name: 🦺 Coverage
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+    uses: ./.github/workflows/tarpaulin.yml    
+  nightly:
+    needs: [build, rust_checks, coverage] # make nightly only if everything is ok!
+    name: 🕶️ Nightly Release
+    uses: ./.github/workflows/nightly.yml
