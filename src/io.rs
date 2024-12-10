@@ -55,7 +55,7 @@ fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, o
 }
 
 pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), Error> {
-    let path = Path::new(to.as_ref());
+    let path = to.as_ref();
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?
@@ -84,7 +84,7 @@ pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<S
 }
 
 pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
-    let path = Path::new(filename.as_ref());
+    let path = filename.as_ref();
     let relative_path = Path::new(relative_to.as_ref());
     let base_dir = match relative_path.extension() {
         Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
@@ -172,7 +172,7 @@ pub fn get_random_filename(prefix: &str, extension: &str) -> String {
 }
 
 pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> Option<String> {
-    let path = Path::new(location.as_ref());
+    let path = location.as_ref();
 
     if path.is_dir() {
         for entry in fs::read_dir(path).unwrap() {
