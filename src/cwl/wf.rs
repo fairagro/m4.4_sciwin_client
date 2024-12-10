@@ -58,15 +58,15 @@ impl Default for Workflow {
 
 impl Workflow {
     pub fn has_step(&self, id: &str) -> bool {
-        self.steps.iter().map(|s| s.id.clone()).any(|x| x == id.to_string())
+        self.steps.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
     pub fn has_input(&self, id: &str) -> bool {
-        self.inputs.iter().map(|s| s.id.clone()).any(|x| x == id.to_string())
+        self.inputs.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
     pub fn has_output(&self, id: &str) -> bool {
-        self.outputs.iter().map(|s| s.id.clone()).any(|x| x == id.to_string())
+        self.outputs.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
     pub fn has_step_input(&self, id: &str) -> bool {
