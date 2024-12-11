@@ -28,6 +28,22 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     }
 }
 
+pub fn parse_command_line_inputs(commands: Vec<&str>, inputs: Vec<&str>) -> CommandLineTool {
+    let base_command = get_base_command(&commands);
+    let tool;
+
+    let input = get_inputs(match &base_command {
+        Command::Single(_) => &inputs[1..],
+        Command::Multiple(_) => &inputs[0..],
+        //Command::Multiple(ref vec) => &inputs[vec.len()..],
+    });
+    tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(input);
+    match base_command {
+        Command::Single(_) => tool,
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&vec[1]))]),
+    }
+}
+
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
     files
         .iter()
@@ -40,7 +56,8 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
         .collect()
 }
 
-fn get_base_command(command: &[&str]) -> Command {
+pub fn get_base_command(command: &[&str]) -> Command {
+
     if command.is_empty() {
         return Command::Single(String::from(""));
     };
@@ -57,7 +74,7 @@ fn get_base_command(command: &[&str]) -> Command {
     }
 }
 
-fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
+pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {

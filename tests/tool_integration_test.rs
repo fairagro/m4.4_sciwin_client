@@ -13,9 +13,10 @@ use s4n::{
 use serial_test::serial;
 use std::{fs::read_to_string, path::Path};
 
+
 #[test]
 #[serial]
-pub fn tool_create_test() {
+pub fn tool_create_test_input() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
             name: None,
@@ -25,6 +26,8 @@ pub fn tool_create_test() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: Some(vec!["data/input.txt".to_string()]),
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -44,6 +47,116 @@ pub fn tool_create_test() {
 
 #[test]
 #[serial]
+pub fn tool_create_test_inputs_output() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: false,
+            no_run: false,
+            is_clean: false,
+            inputs: Some(vec!["data/input.txt".to_string(), "data/input2.txt".to_string()]),
+            outputs: Some(vec!["results2.txt".to_string()]),
+            command: vec![
+                "python".to_string(),
+                "scripts/echo2.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+                "-t2".to_string(),
+                "data/input2.txt".to_string(),
+                "--out".to_string(),
+                "results2.txt".to_string(),
+            ],
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![
+            dir.path().join(Path::new("results.txt")),
+            dir.path().join(Path::new("results2.txt")),
+            dir.path().join(Path::new("workflows/echo2/echo2.cwl")),
+        ];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = Repository::open(dir.path()).unwrap();
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+
+#[test]
+#[serial]
+pub fn tool_create_test_output() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: false,
+            no_run: false,
+            is_clean: false,
+            inputs: None,
+            outputs: Some(vec!["result.txt".to_string()]),
+            command: vec!["python".to_string(), "scripts/echo3.py".to_string(), "--out".to_string(), "result.txt".to_string()],
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![dir.path().join(Path::new("result.txt")), dir.path().join(Path::new("workflows/echo3/echo3.cwl"))];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = Repository::open(dir.path()).unwrap();
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+#[test]
+#[serial]
+pub fn tool_create_test() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: false,
+            no_run: false,
+            is_clean: false,
+            inputs: None,
+            outputs: None,
+            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(Path::new("workflows/echo/echo.cwl"))];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = Repository::open(dir.path()).unwrap();
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+#[test]
+#[serial]
 pub fn tool_create_test_is_raw() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
@@ -54,6 +167,8 @@ pub fn tool_create_test_is_raw() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -79,6 +194,8 @@ pub fn tool_create_test_no_commit() {
             no_commit: true, //look!
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -107,6 +224,8 @@ pub fn tool_create_test_no_run() {
             no_commit: false,
             no_run: true, //look!
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -131,6 +250,8 @@ pub fn tool_create_test_is_clean() {
             no_commit: false,
             no_run: false,
             is_clean: true, //look!
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -156,6 +277,8 @@ pub fn tool_create_test_container_image() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -181,6 +304,7 @@ pub fn tool_create_test_container_image() {
     });
 }
 
+
 #[test]
 #[serial]
 pub fn tool_create_test_dockerfile() {
@@ -193,6 +317,8 @@ pub fn tool_create_test_dockerfile() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
         };
         let cmd = ToolCommands::Create(tool_create_args);

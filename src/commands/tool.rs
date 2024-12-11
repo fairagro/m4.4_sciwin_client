@@ -16,6 +16,7 @@ use serde_yml::Value;
 use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
 use walkdir::WalkDir;
 
+
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
@@ -57,6 +58,11 @@ pub struct CreateToolArgs {
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
 
+    #[arg(short = 'i', long = "inputs", help = "Inputs for the tool", value_delimiter = ' ')]
+    pub inputs: Option<Vec<String>>,
+    #[arg(short = 'o', long = "outputs", help = "Outputs for the tool", value_delimiter = ' ')]
+    pub outputs: Option<Vec<String>>,
+
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
@@ -73,6 +79,65 @@ pub struct ListToolArgs {
     pub list_all: bool,
 }
 
+// problem: flag is only in actual command call not in defined inputs, match to command and add flag
+fn add_flags_to_inputs_outputs(command: Vec<String>, inputs: Vec<String>, outputs: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let mut updated_inputs = Vec::new();
+    let mut num_inputs = 0;
+    for input in &inputs {
+        if let Some(index) = command.iter().position(|arg| arg == input) {
+            if index > 0 && command[index - 1].starts_with('-') {
+                updated_inputs.push(command[index - 1].to_string());
+            }
+            updated_inputs.push(input.to_string());
+            num_inputs += 1;
+        }
+    }
+    for output in &outputs {
+        if let Some(index) = command.iter().position(|arg| arg == output) {
+            if index > 0 && command[index - 1].starts_with('-') {
+                updated_inputs.push(command[index - 1].to_string());
+            }
+            updated_inputs.push(output.to_string());
+        }
+    }
+    let updated_outputs: Vec<String> = outputs.clone().into_iter().filter(|output| !updated_inputs.contains(output)).collect();
+    if !inputs.iter().all(|input| updated_inputs.contains(input)) && inputs.len() > num_inputs {
+        let mut combined_inputs = updated_inputs.clone();
+        for input in &inputs {
+            if !combined_inputs.contains(input) {
+                combined_inputs.push(input.clone());
+            }
+        }
+        return (combined_inputs, updated_outputs);
+    }
+    if updated_inputs.len() >= inputs.len() {
+        (updated_inputs, updated_outputs)
+    } else {
+        (inputs, updated_outputs)
+    }
+}
+
+fn validate_parameters(command: &[String], inputs: &[String], outputs: &[String]) {
+    // Check if any parameters in inputs are not found in outputs
+    let missing_inputs: Vec<&String> = inputs.iter().filter(|input| !command.contains(*input)).collect();
+    if !missing_inputs.is_empty() {
+        println!(" \x1b[33m The following inputs are not found in command: {:?} \x1b[0m", missing_inputs);
+    }
+    // Check if any command parameters after "-" are not in inputs or outputs
+    let mut warnings = Vec::new();
+    for (i, arg) in command.iter().enumerate() {
+        if arg.starts_with('-') && i + 1 < command.len() {
+            let next_param = &command[i + 1];
+            if !inputs.contains(next_param) && !outputs.contains(next_param) {
+                warnings.push(next_param.clone());
+            }
+        }
+    }
+    if !warnings.is_empty() {
+        println!("⚠️ \x1b[33m May have detected additional input or outputs: {:?} \x1b[0m", warnings);
+    }
+}
+
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     //check if git status is clean
@@ -80,7 +145,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
-
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
     if !modified.is_empty() {
@@ -88,13 +152,28 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         print_list(&modified);
         return Err(error("Uncommitted changes detected").into());
     }
-
     //parse input string
     if args.command.is_empty() {
         return Err(error("No commandline string given!").into());
     }
 
-    let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+    let mut cwl;
+    let updated_inputs;
+    let mut updated_outputs = args.outputs.clone().unwrap_or_default();
+    let inputs = args.inputs.clone().unwrap_or_default();
+    let outputs = args.outputs.clone().unwrap_or_default();
+
+    if !inputs.is_empty() || !outputs.is_empty() {
+        validate_parameters(&args.command, &inputs, &outputs);
+        (updated_inputs, updated_outputs) = add_flags_to_inputs_outputs(args.command.clone(), inputs.clone(), outputs.clone());
+        if updated_inputs.len() >= inputs.len() {
+            cwl = parser::parse_command_line_inputs(args.command.iter().map(|s| s.as_str()).collect(), updated_inputs.iter().map(|s| s.as_str()).collect());
+        } else {
+            cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+        }
+    } else {
+        cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+    }
 
     //only run if not prohibited
     if !args.no_run {
@@ -110,6 +189,13 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         } else if !args.is_raw {
             println!("📜 Found changes:");
             print_list(&files);
+            let mut sorted_outputs = outputs.clone();
+            let mut sorted_files = files.clone();
+            sorted_outputs.sort();
+            sorted_files.sort();
+            if !sorted_outputs.is_empty() && sorted_outputs != sorted_files {
+                println!("\n⚠️ The list of outputs: {:?} differs from the list of changed files: {:?}", sorted_outputs, sorted_files);
+            }
         }
 
         if args.is_clean {
@@ -126,8 +212,13 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 }
             }
         }
-        //could check here if an output file matches an input string
-        cwl = cwl.with_outputs(parser::get_outputs(files));
+        //if no --outputs provided infer output from git even if --inputs provided
+        if outputs.is_empty() {
+            //could check here if an output file matches an input string
+            cwl = cwl.with_outputs(parser::get_outputs(files));
+        } else {
+            cwl = cwl.with_outputs(parser::get_outputs(updated_outputs));
+        }
     } else {
         warn("User requested no run, could not determine outputs!")
     }
@@ -166,6 +257,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 println!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
                     stage_file(&repo, path.as_str()).unwrap();
+                    //commit(&repo, format!("Execution of `{}`", &cmd_str).as_str());
                     commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
                 }
                 Ok(())

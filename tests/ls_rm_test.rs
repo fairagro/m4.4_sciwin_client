@@ -56,6 +56,8 @@ pub fn tool_remove_test() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -91,6 +93,8 @@ pub fn tool_remove_test_extension() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None,
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
