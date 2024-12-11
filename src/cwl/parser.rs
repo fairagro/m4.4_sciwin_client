@@ -127,7 +127,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 }
 
 fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
-    if remaining_args.len() == 0 {
+    if remaining_args.is_empty() {
         return None;
     }
     //hopefully? most cases are only `some_command > some_file.out`
