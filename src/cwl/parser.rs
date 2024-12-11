@@ -11,7 +11,7 @@ use slugify::slugify;
 use std::path::Path;
 
 //TODO complete list
-static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "cwltool"];
 
 pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&command);
