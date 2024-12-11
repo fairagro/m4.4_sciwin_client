@@ -92,6 +92,10 @@ impl CommandLineTool {
         self.requirements = Some(requirements);
         self
     }
+    pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
+        self.stdout = stdout;
+        self
+    }
 }
 
 impl Display for CommandLineTool {

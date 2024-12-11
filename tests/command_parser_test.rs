@@ -139,3 +139,12 @@ pub fn test_get_outputs() {
     let outputs = get_outputs(files);
     assert_eq!(outputs, expected);
 }
+
+#[test]
+pub fn test_parse_redirect() {
+    let command = "cat tests/test_data/input.txt \\> output.txt";
+    let split_params = shlex::split(&command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+    
+    assert!(tool.stdout == Some("output.txt".to_string()))
+}

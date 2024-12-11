@@ -15,16 +15,23 @@ static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
 pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&command);
-    let inputs = get_inputs(match &base_command {
+    let remainder = match &base_command {
         Command::Single(_) => &command[1..],
         Command::Multiple(ref vec) => &command[vec.len()..],
-    });
+    };
 
-    let tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(inputs);
+    let redirect_position = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len());
+    let stdout = handle_redirection(&remainder[redirect_position + 1..]);
+
+    let inputs = get_inputs(&remainder[..redirect_position]);
+
+    let tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(inputs).with_stdout(stdout);
 
     match base_command {
         Command::Single(_) => tool,
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&vec[1]))]),
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+            &vec[1],
+        ))]),
     }
 }
 
@@ -117,6 +124,15 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
         .with_id(slugify!(&id).as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
+}
+
+fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
+    if remaining_args.len() == 0 {
+        return None;
+    }
+    //hopefully? most cases are only `some_command > some_file.out`
+    let out_file = remaining_args[0];
+    Some(out_file.to_string())
 }
 
 pub fn guess_type(value: &str) -> CWLType {
