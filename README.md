@@ -3,7 +3,9 @@
 
 ![Rust][rust-image] 
 [![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
-[![🕶️ Nightly Release](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml)
+![GitHub License](https://img.shields.io/github/license/fairagro/m4.4_sciwin_client)
+[![GitHub Downloads](https://img.shields.io/github/downloads/fairagro/m4.4_sciwin_client/total)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
+
 
 ⭐ Star us on GitHub to say "Thank you!" ⭐
 
@@ -106,6 +108,12 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 ```
 
 ## 🪂 Contributors
+<a href="https://github.com/fairagro/m4.4_sciwin_client/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=fairagro/m4.4_sciwin_client" />
+</a>
+
+<small>Made with [contrib.rocks](https://contrib.rocks).</small>
+
 |[Measure 4.4](https://fairagro.net/tag/measure-4-4/)|||
 |--|--|--|
 |Jens Krumsieck|[:octocat: @jenskrumsieck](https://github.com/JensKrumsieck)|[ORCID: 0000-0001-6242-5846](https://orcid.org/0000-0001-6242-5846)|
