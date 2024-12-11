@@ -11,7 +11,7 @@ use slugify::slugify;
 use std::path::Path;
 
 //TODO complete list
-static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "cwltool"];
+static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
 pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&command);
@@ -23,13 +23,13 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
-        let stdout_pos = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len() - 1);
-        let stderr_pos = remainder.iter().position(|i| *i == "2>").unwrap_or(remainder.len() - 1);
+        let stdout_pos = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len());
+        let stderr_pos = remainder.iter().position(|i| *i == "2>").unwrap_or(remainder.len());
         let first_redir_pos = usize::min(stdout_pos, stderr_pos);
 
-        let stdout = handle_redirection(&remainder[stdout_pos + 1..]);
-        let stderr = handle_redirection(&remainder[stderr_pos + 1..]);
-        println!("{remainder:?}");
+        let stdout = handle_redirection(&remainder[stdout_pos..]);
+        let stderr = handle_redirection(&remainder[stderr_pos..]);
+        println!("{:?}",&remainder[..first_redir_pos]);
         let inputs = get_inputs(&remainder[..first_redir_pos]);
 
         tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr);
@@ -139,7 +139,8 @@ fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
         return None;
     }
     //hopefully? most cases are only `some_command > some_file.out`
-    let out_file = remaining_args[0];
+    //remdirect comes at pos 0, discard that
+    let out_file = remaining_args[1];
     Some(out_file.to_string())
 }
 
