@@ -4,7 +4,7 @@ use s4n::{
     commands::{
         execute::{execute_local, LocalExecuteArgs, Runner},
         init::init_s4n,
-        tool::{create_tool, list_tools, CreateToolArgs, LsArgs},
+        tool::{create_tool, list_tools, CreateToolArgs, ListToolArgs},
         workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
     },
     cwl::loader::load_workflow,
@@ -88,7 +88,7 @@ pub fn test_cli_s4n_workflow() {
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
 
     //list tools
-    list_tools(&LsArgs { list_all: true }).unwrap();
+    list_tools(&ListToolArgs { list_all: true }).unwrap();
 
     //create workflow
     let name = "test_workflow".to_string();
