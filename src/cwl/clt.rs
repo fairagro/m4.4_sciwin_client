@@ -96,6 +96,10 @@ impl CommandLineTool {
         self.stdout = stdout;
         self
     }
+    pub fn with_stderr(mut self, stderr: Option<String>) -> Self {
+        self.stderr = stderr;
+        self
+    }
 }
 
 impl Display for CommandLineTool {

@@ -148,3 +148,12 @@ pub fn test_parse_redirect() {
     
     assert!(tool.stdout == Some("output.txt".to_string()))
 }
+
+#[test]
+pub fn test_parse_redirect_stderr() {
+    let command = "cat tests/test_data/inputtxt 2\\> err.txt";
+    let split_params = shlex::split(command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+
+    assert!(tool.stderr == Some("err.txt".to_string()))
+}

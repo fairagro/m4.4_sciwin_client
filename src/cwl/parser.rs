@@ -20,12 +20,20 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
         Command::Multiple(ref vec) => &command[vec.len()..],
     };
 
-    let redirect_position = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len());
-    let stdout = handle_redirection(&remainder[redirect_position + 1..]);
+    let stdout_pos = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len() - 1);
+    let stderr_pos = remainder.iter().position(|i| *i == "2>").unwrap_or(remainder.len() - 1);
+    let first_redir_pos = usize::min(stdout_pos, stderr_pos);
 
-    let inputs = get_inputs(&remainder[..redirect_position]);
+    let stdout = handle_redirection(&remainder[stdout_pos + 1..]);
+    let stderr = handle_redirection(&remainder[stderr_pos + 1..]);
 
-    let tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(inputs).with_stdout(stdout);
+    let inputs = get_inputs(&remainder[..first_redir_pos]);
+
+    let tool = CommandLineTool::default()
+        .with_base_command(base_command.clone())
+        .with_inputs(inputs)
+        .with_stdout(stdout)
+        .with_stderr(stderr);
 
     match base_command {
         Command::Single(_) => tool,
