@@ -29,7 +29,7 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
 
         let stdout = handle_redirection(&remainder[stdout_pos + 1..]);
         let stderr = handle_redirection(&remainder[stderr_pos + 1..]);
-
+        println!("{remainder:?}");
         let inputs = get_inputs(&remainder[..first_redir_pos]);
 
         tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr);
