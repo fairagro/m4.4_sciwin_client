@@ -12,9 +12,7 @@ use s4n::{
 };
 use serial_test::serial;
 use std::{
-    env,
-    fs::{self, remove_dir_all, remove_file},
-    vec,
+    env, fs::{self, remove_dir_all, remove_file}, path::PathBuf, vec
 };
 use tempfile::tempdir;
 
@@ -128,10 +126,10 @@ pub fn test_cli_s4n_workflow() {
 
     //save workflow
     save_workflow(&create_args).expect("Could not save workflow");
-    let wf_path = "workflows/test_workflow/test_workflow.cwl";
-    assert!(fs::exists(wf_path).unwrap());
+    let wf_path = PathBuf::from("workflows/test_workflow/test_workflow.cwl");
+    assert!(fs::exists(&wf_path).unwrap());
 
-    let workflow = load_workflow(wf_path).unwrap();
+    let workflow = load_workflow(&wf_path).unwrap();
     assert!(workflow.has_input("speakers"));
     assert!(workflow.has_input("population"));
     assert!(workflow.has_output("out"));
@@ -158,7 +156,7 @@ pub fn test_cli_s4n_workflow() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: wf_path.to_string(),
+        file: wf_path,
         args: vec!["inputs.yml".to_string()],
     })
     .expect("Could not execute Workflow");

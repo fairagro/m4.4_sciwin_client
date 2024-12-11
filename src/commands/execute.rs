@@ -13,7 +13,7 @@ use crate::{
 };
 use clap::{Args, Subcommand, ValueEnum};
 use serde_yml::Value;
-use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
+use std::{collections::HashMap, error::Error, fs, path::{Path, PathBuf}, process::Command};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -37,7 +37,7 @@ pub struct LocalExecuteArgs {
     #[arg(long = "quiet", help = "Runner does not print to stdout")]
     pub is_quiet: bool,
     #[arg(help = "CWL File to execute")]
-    pub file: String,
+    pub file: PathBuf,
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
     pub args: Vec<String>,
 }
@@ -53,7 +53,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     match args.runner {
         Runner::CWLTool => {
             if !args.is_quiet {
-                eprintln!("💻 Executing {} using cwltool.", &args.file);
+                eprintln!("💻 Executing {:?} using cwltool.", &args.file);
             }
             let mut cmd = Command::new("cwltool");
 
@@ -78,14 +78,14 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
         Runner::Custom => {
             if !args.is_quiet {
                 eprintln!(
-                    "💻 Executing {} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
+                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
 ⚠️  The internal runner currently is for testing purposes only and does not support containerization, yet!",
                     &args.file
                 );
             }
 
             //gather inputs
-            let contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {}: {}", args.file, e))?;
+            let contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {:?}: {}", args.file, e))?;
             let mut inputs: Option<HashMap<String, DefaultValue>> = None;
             let is_file_input = args.args.len() == 1 && !&args.args[0].starts_with("-");
 
@@ -160,10 +160,10 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             if !is_workflow {
                 let mut tool: CommandLineTool = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
-                run_commandlinetool(&mut tool, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
+                run_commandlinetool(&mut tool, inputs, Some(&args.file), args.out_dir.clone())?;
             } else {
                 let mut workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
-                run_workflow(&mut workflow, inputs, Some(args.file.as_str()), args.out_dir.clone())?;
+                run_workflow(&mut workflow, inputs, Some(&args.file), args.out_dir.clone())?;
             }
 
             Ok(())

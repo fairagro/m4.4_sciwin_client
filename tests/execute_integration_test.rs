@@ -6,7 +6,7 @@ use s4n::{
 };
 use serial_test::serial;
 use std::{
-    env, fs::{self}, iter, path::Path
+    env, fs::{self}, iter, path::{Path, PathBuf}
 };
 use tempfile::tempdir;
 
@@ -17,7 +17,7 @@ pub fn test_execute_local() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: "tests/test_data/echo.cwl".to_string(),
+        file: PathBuf::from("tests/test_data/echo.cwl"),
         args: vec![],
     };
 
@@ -42,7 +42,7 @@ pub fn test_execute_local_with_args() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: "tests/test_data/echo.cwl".to_string(),
+        file: PathBuf::from("tests/test_data/echo.cwl"),
         args: ["--test", "tests/test_data/input_alt.txt"]
             .iter()
             .map(ToString::to_string)
@@ -70,7 +70,7 @@ pub fn test_execute_local_with_file() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: "tests/test_data/echo.cwl".to_string(),
+        file: PathBuf::from("tests/test_data/echo.cwl"),
         args: iter::once(&"tests/test_data/echo-job.yml").map(ToString::to_string).collect::<Vec<_>>(),
     };
 
@@ -96,7 +96,7 @@ pub fn test_execute_local_outdir() {
         runner: Runner::Custom,
         out_dir: Some(dir.path().to_string_lossy().into_owned()),
         is_quiet: false,
-        file: "tests/test_data/echo.cwl".to_string(),
+        file: PathBuf::from("tests/test_data/echo.cwl"),
         args: vec![],
     };
 
@@ -115,7 +115,7 @@ pub fn test_execute_local_is_quiet() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: true,
-        file: "tests/test_data/echo.cwl".to_string(),
+        file: PathBuf::from("tests/test_data/echo.cwl"),
         args: vec![],
     };
 
@@ -135,7 +135,7 @@ pub fn test_execute_local_cwltool() {
             runner: Runner::CWLTool,
             out_dir: None,
             is_quiet: false,
-            file: "tests/test_data/echo.cwl".to_string(),
+            file: PathBuf::from("tests/test_data/echo.cwl"),
             args: vec![],
         };
 
@@ -168,7 +168,7 @@ pub fn test_execute_local_workflow() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: format!("{dir_str}/workflows/main/main.cwl"),
+        file: PathBuf::from(format!("{dir_str}/workflows/main/main.cwl")),
         args: vec!["inputs.yml".to_string()],
     };
     let result = execute_local(&args);
@@ -188,7 +188,7 @@ pub fn test_execute_local_workflow() {
 #[test]
 #[serial]
 pub fn test_execute_local_tool_default_cwl() {
-    let path = "tests/test_data/default.cwl";
+    let path = PathBuf::from("tests/test_data/default.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_file = format!("{}/file.wtf", &out_dir);
@@ -197,14 +197,14 @@ pub fn test_execute_local_tool_default_cwl() {
         runner: Runner::Custom,
         out_dir: Some(out_dir.clone()),
         is_quiet: true,
-        file: path.to_string(),
+        file: path.clone(),
         args: vec![],
     };
     let args_override = LocalExecuteArgs {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec!["--file1".to_string(), "tests/test_data/input.txt".to_string()],
     };
 
@@ -223,7 +223,7 @@ pub fn test_execute_local_tool_default_cwl() {
 #[serial]
 pub fn test_execute_local_workflow_no_steps() {
     //has no steps, do not complain!
-    let path = "tests/test_data/wf_inout.cwl";
+    let path = PathBuf::from("tests/test_data/wf_inout.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
 
@@ -231,7 +231,7 @@ pub fn test_execute_local_workflow_no_steps() {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec![],
     };
 
@@ -241,7 +241,7 @@ pub fn test_execute_local_workflow_no_steps() {
 #[test]
 #[serial]
 pub fn test_execute_local_workflow_in_param() {
-    let path = "tests/test_data/test-wf_features.cwl";
+    let path = PathBuf::from("tests/test_data/test-wf_features.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_file = format!("{}/file.wtf", &out_dir);
@@ -250,7 +250,7 @@ pub fn test_execute_local_workflow_in_param() {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec!["--pop".to_string(), "tests/test_data/input.txt".to_string()],
     };
 
@@ -264,7 +264,7 @@ pub fn test_execute_local_workflow_in_param() {
 #[serial]
 pub fn test_execute_local_workflow_dir_out() {
     //has no steps, do not complain!
-    let path = "tests/test_data/wf_inout_dir.cwl";
+    let path = PathBuf::from("tests/test_data/wf_inout_dir.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/test_dir", &out_dir);
@@ -273,7 +273,7 @@ pub fn test_execute_local_workflow_dir_out() {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec![],
     };
 
@@ -286,7 +286,7 @@ pub fn test_execute_local_workflow_dir_out() {
 #[serial]
 pub fn test_execute_local_workflow_file_out() {
     //has no steps, do not complain!
-    let path = "tests/test_data/wf_inout_file.cwl";
+    let path = PathBuf::from("tests/test_data/wf_inout_file.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{out_dir}/file.txt");
@@ -295,7 +295,7 @@ pub fn test_execute_local_workflow_file_out() {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec![],
     };
 
@@ -306,7 +306,7 @@ pub fn test_execute_local_workflow_file_out() {
 #[test]
 #[serial]
 pub fn test_execute_local_workflow_directory_out() {
-    let path = "tests/test_data/mkdir_wf.cwl";
+    let path = PathBuf::from("tests/test_data/mkdir_wf.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/test_directory", &out_dir);
@@ -315,7 +315,7 @@ pub fn test_execute_local_workflow_directory_out() {
         runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
-        file: path.to_string(),
+        file: path,
         args: vec!["--dirname".to_string(), "test_directory".to_string()],
     };
 
