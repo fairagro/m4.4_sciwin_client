@@ -64,7 +64,7 @@ pub struct CreateToolArgs {
 #[derive(Args, Debug)]
 pub struct RemoveToolArgs {
     #[arg(trailing_var_arg = true, help = "Remove a tool")]
-    pub toolnames: Vec<String>,
+    pub tool_names: Vec<String>,
 }
 
 #[derive(Args, Debug)]
@@ -260,7 +260,7 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn std::error::Erro
     let cwd = env::current_dir()?;
     let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");
-    for tool in &args.toolnames {
+    for tool in &args.tool_names {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
         // Check if the path has an extension
@@ -280,7 +280,7 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn std::error::Erro
         }
     }
     //we could also remove all tools if no tool is specified but maybe too dangerous
-    if args.toolnames.is_empty() {
+    if args.tool_names.is_empty() {
         println!("Please enter a tool or a list of tools");
     }
     Ok(())

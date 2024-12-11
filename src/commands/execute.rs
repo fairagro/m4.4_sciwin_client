@@ -17,17 +17,15 @@ use std::{collections::HashMap, error::Error, fs, path::Path, process::Command};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
-        ExecuteCommands::Local(args) | ExecuteCommands::L(args) => execute_local(args)?,
+        ExecuteCommands::Local(args) => execute_local(args)?,
     }
     Ok(())
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ExecuteCommands {
-    #[command(about = "Runs CWL files locally using a custom runner or cwltool (\x1b[1msynonym\x1b[0m: s4n ex l)")]
-    Local(LocalExecuteArgs),
-    #[command(hide = true)]
-    L(LocalExecuteArgs),
+    #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias="l")]
+    Local(LocalExecuteArgs)
 }
 
 #[derive(Args, Debug)]

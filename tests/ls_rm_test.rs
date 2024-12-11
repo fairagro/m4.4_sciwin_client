@@ -21,7 +21,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir(&workflows_path)?;
     //doesn't exist
     let args = RemoveToolArgs {
-        toolnames: vec!["non_existing_tool".to_string()],
+        tool_names: vec!["non_existing_tool".to_string()],
     };
 
     let result = remove_tool(&args);
@@ -34,7 +34,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 #[serial]
 fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
-    let args = RemoveToolArgs { toolnames: vec![] };
+    let args = RemoveToolArgs { tool_names: vec![] };
     let original_dir = env::current_dir()?;
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
@@ -68,7 +68,7 @@ pub fn tool_remove_test() {
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         let tool_remove_args = RemoveToolArgs {
-            toolnames: vec!["echo".to_string()],
+            tool_names: vec!["echo".to_string()],
         };
         let cmd_remove = ToolCommands::Remove(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
@@ -104,7 +104,7 @@ pub fn tool_remove_test_extension() {
 
         // remove the tool
         let tool_remove_args = RemoveToolArgs {
-            toolnames: vec!["echo.cwl".to_string()],
+            tool_names: vec!["echo.cwl".to_string()],
         };
         let cmd_remove = ToolCommands::Remove(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());

@@ -32,7 +32,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Run(args) => create_tool(args)?,
         Commands::Workflow { command } => handle_workflow_commands(command)?,
         Commands::Annotate => todo!(),
-        Commands::Execute { command } | Commands::Ex { command } => handle_execute_commands(command)?,
+        Commands::Execute { command } => handle_execute_commands(command)?,
         Commands::Sync => todo!(),
     }
     Ok(())
