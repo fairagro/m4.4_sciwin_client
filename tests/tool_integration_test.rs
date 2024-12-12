@@ -285,7 +285,7 @@ pub fn test_tool_magic_outputs() {
 
         let tool = load_tool("workflows/touch/touch.cwl").unwrap();
 
-        assert!(tool.outputs[0].output_binding.as_ref().unwrap().glob == "$(inputs.output_txt)".to_string());
+        assert!(tool.outputs[0].output_binding.as_ref().unwrap().glob == *"$(inputs.output_txt)");
     });
 }
 
@@ -308,6 +308,6 @@ pub fn test_tool_magic_stdout() {
         assert!(create_tool(&args).is_ok());
 
         let tool = load_tool("workflows/wc/wc.cwl").unwrap();
-        assert!(tool.stdout.unwrap() == "$(inputs.data_input_txt.path)".to_string());
+        assert!(tool.stdout.unwrap() == *"$(inputs.data_input_txt.path)");
     });
 }
