@@ -100,6 +100,10 @@ impl CommandLineTool {
         self.stderr = stderr;
         self
     }
+    pub fn with_arguments(mut self, args: Option<Vec<Argument>>) -> Self {
+        self.arguments = args;
+        self
+    }
 }
 
 impl Display for CommandLineTool {

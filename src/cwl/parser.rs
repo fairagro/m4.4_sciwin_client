@@ -1,11 +1,11 @@
 use super::{
-    clt::{Command, CommandLineTool},
+    clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use crate::io::get_filename_without_extension;
+use crate::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
 use std::path::Path;
@@ -23,24 +23,38 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
-        let stdout_pos = remainder.iter().position(|i| *i == ">").unwrap_or(remainder.len());
-        let stderr_pos = remainder.iter().position(|i| *i == "2>").unwrap_or(remainder.len());
+        let (cmd, piped) = split_vec_at(remainder, "|");
+
+        let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
+        let stderr_pos = cmd.iter().position(|i| *i == "2>").unwrap_or(cmd.len());
         let first_redir_pos = usize::min(stdout_pos, stderr_pos);
 
-        let stdout = handle_redirection(&remainder[stdout_pos..]);
-        let stderr = handle_redirection(&remainder[stderr_pos..]);
-        println!("{:?}",&remainder[..first_redir_pos]);
-        let inputs = get_inputs(&remainder[..first_redir_pos]);
+        let stdout = handle_redirection(&cmd[stdout_pos..]);
+        let stderr = handle_redirection(&cmd[stderr_pos..]);
 
-        tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr);
+        let inputs = get_inputs(&cmd[..first_redir_pos]);
+
+        let args = collect_arguments(&piped, &inputs);
+
+        tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr).with_arguments(args);
     }
 
-    match base_command {
+    tool = match base_command {
         Command::Single(_) => tool,
         Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
             &vec[1],
         ))]),
+    };
+
+    if tool.arguments.is_some() {
+        if let Some(requirements) = &mut tool.requirements {
+            requirements.push(Requirement::ShellCommandRequirement);
+        } else {
+            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
+        }
     }
+
+    tool
 }
 
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
@@ -142,6 +156,31 @@ fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
     //remdirect comes at pos 0, discard that
     let out_file = remaining_args[1];
     Some(out_file.to_string())
+}
+
+fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option<Vec<Argument>> {
+    if piped.is_empty() {
+        return None;
+    }
+
+    let piped_args = piped.iter().enumerate().map(|(i, &x)| {
+        Argument::Binding(CommandLineBinding {
+            prefix: None,
+            position: Some((inputs.len() + i).try_into().unwrap_or_default()),
+            value_from: Some(x.to_string()),
+            shell_quote: None,
+        })
+    });
+
+    let mut args = vec![Argument::Binding(CommandLineBinding {
+        prefix: None,
+        position: Some(inputs.len().try_into().unwrap_or_default()),
+        value_from: Some("|".to_string()),
+        shell_quote: Some(false),
+    })];
+    args.extend(piped_args);
+
+    Some(args)
 }
 
 pub fn guess_type(value: &str) -> CWLType {
