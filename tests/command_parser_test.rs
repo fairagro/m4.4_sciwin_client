@@ -191,3 +191,13 @@ pub fn test_parse_pipe_op() {
 
     assert!(tool.stdout.is_none()); //as it is in args!
 }
+
+#[test]
+pub fn test_parse_magic() {
+    let command = "mkdir test_directory";
+    let split_params = shlex::split(command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+
+    let first_binding = &tool.outputs[0].output_binding;
+    
+}

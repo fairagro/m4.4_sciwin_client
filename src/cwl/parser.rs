@@ -117,7 +117,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
         _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
     };
     CommandInputParameter::default()
-        .with_id(slugify!(&current).as_str())
+        .with_id(slugify!(&current, separator="_").as_str())
         .with_type(guess_type(current))
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
@@ -127,7 +127,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id).as_str())
+        .with_id(slugify!(&id, separator="_").as_str())
         .with_type(CWLType::Boolean)
         .with_default_value(DefaultValue::Any(Value::Bool(true)))
 }
@@ -143,7 +143,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id).as_str())
+        .with_id(slugify!(&id, separator="_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
 }
@@ -181,6 +181,34 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
     args.extend(piped_args);
 
     Some(args)
+}
+
+pub fn post_process_cwl(tool: &mut CommandLineTool) {
+    let mut processed_once = false;
+    for output in tool.outputs.iter_mut() {
+        if let Some(binding) = &mut output.output_binding {
+            for input in &tool.inputs {
+                if let Some(default) = &input.default {
+                    if binding.glob == default.as_value_string() {
+                        if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
+                            binding.glob = format!("$(inputs.{}.path)", input.id);
+                            processed_once = true;
+                        } else {
+                            binding.glob = format!("$(inputs.{})", input.id);
+                            processed_once = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if processed_once {
+        if let Some(requirements) = &mut tool.requirements {
+            requirements.push(Requirement::InlineJavascriptRequirement);
+        } else {
+            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
+        }
+    }
 }
 
 pub fn guess_type(value: &str) -> CWLType {
