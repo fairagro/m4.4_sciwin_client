@@ -215,6 +215,26 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
                     processed_once = true;
                 }
             }
+            if let Some(arguments) = &mut tool.arguments {
+                for argument in arguments.iter_mut() {
+                    match argument {
+                        Argument::String(s) => {
+                            if *s == default.as_value_string() {
+                                *s = process_input(input);
+                                processed_once = true;
+                            }
+                        }
+                        Argument::Binding(binding) => {
+                            if let Some(from) = &mut binding.value_from {
+                                if *from == default.as_value_string() {
+                                    *from = process_input(input);
+                                    processed_once = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -4,7 +4,7 @@ use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
     cwl::{
-        clt::CommandLineTool,
+        clt::{Argument, CommandLineTool},
         loader::load_tool,
         requirements::{DockerRequirement, Requirement},
         types::Entry,
@@ -309,5 +309,32 @@ pub fn test_tool_magic_stdout() {
 
         let tool = load_tool("workflows/wc/wc.cwl").unwrap();
         assert!(tool.stdout.unwrap() == *"$(inputs.data_input_txt.path)");
+    });
+}
+
+#[test]
+#[serial]
+pub fn test_tool_magic_arguments() {
+    with_temp_repository(|_| {
+        let str = "cat data/input.txt | grep -f data/input.txt";
+        let args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: true,
+            no_run: false,
+            is_clean: true,
+            command: shlex::split(str).unwrap(),
+        };
+
+        assert!(create_tool(&args).is_ok());
+
+        let tool = load_tool("workflows/cat/cat.cwl").unwrap();
+        if let Argument::Binding(binding) = &tool.arguments.unwrap()[3] {
+            assert!(binding.value_from == Some("$(inputs.data_input_txt.path)".to_string()));
+        } else {
+            panic!()
+        }
     });
 }
