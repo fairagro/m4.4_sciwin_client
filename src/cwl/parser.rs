@@ -117,7 +117,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
         _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
     };
     CommandInputParameter::default()
-        .with_id(slugify!(&current, separator="_").as_str())
+        .with_id(slugify!(&current, separator = "_").as_str())
         .with_type(guess_type(current))
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
@@ -127,7 +127,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id, separator="_").as_str())
+        .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(CWLType::Boolean)
         .with_default_value(DefaultValue::Any(Value::Bool(true)))
 }
@@ -143,7 +143,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id, separator="_").as_str())
+        .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
 }
@@ -184,24 +184,40 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 }
 
 pub fn post_process_cwl(tool: &mut CommandLineTool) {
+    fn process_input(input: &CommandInputParameter) -> String {
+        if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
+            format!("$(inputs.{}.path)", input.id)
+        } else {
+            format!("$(inputs.{})", input.id)
+        }
+    }
+
     let mut processed_once = false;
-    for output in tool.outputs.iter_mut() {
-        if let Some(binding) = &mut output.output_binding {
-            for input in &tool.inputs {
-                if let Some(default) = &input.default {
+    for input in &tool.inputs {
+        if let Some(default) = &input.default {
+            for output in tool.outputs.iter_mut() {
+                if let Some(binding) = &mut output.output_binding {
                     if binding.glob == default.as_value_string() {
-                        if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
-                            binding.glob = format!("$(inputs.{}.path)", input.id);
-                            processed_once = true;
-                        } else {
-                            binding.glob = format!("$(inputs.{})", input.id);
-                            processed_once = true;
-                        }
+                        binding.glob = process_input(input);
+                        processed_once = true;
                     }
+                }
+            }
+            if let Some(stdout) = &tool.stdout {
+                if *stdout == default.as_value_string() {
+                    tool.stdout = Some(process_input(input));
+                    processed_once = true;
+                }
+            }
+            if let Some(stderr) = &tool.stderr {
+                if *stderr == default.as_value_string() {
+                    tool.stderr = Some(process_input(input));
+                    processed_once = true;
                 }
             }
         }
     }
+
     if processed_once {
         if let Some(requirements) = &mut tool.requirements {
             requirements.push(Requirement::InlineJavascriptRequirement);

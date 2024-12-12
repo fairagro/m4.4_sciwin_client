@@ -288,3 +288,26 @@ pub fn test_tool_magic_outputs() {
         assert!(tool.outputs[0].output_binding.as_ref().unwrap().glob == "$(inputs.output_txt)".to_string());
     });
 }
+
+#[test]
+#[serial]
+pub fn test_tool_magic_stdout() {
+    with_temp_repository(|_| {
+        let str = "wc data/input.txt \\> data/input.txt";
+        let args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: true,
+            no_run: false,
+            is_clean: true,
+            command: shlex::split(str).unwrap(),
+        };
+
+        assert!(create_tool(&args).is_ok());
+
+        let tool = load_tool("workflows/wc/wc.cwl").unwrap();
+        assert!(tool.stdout.unwrap() == "$(inputs.data_input_txt.path)".to_string());
+    });
+}
