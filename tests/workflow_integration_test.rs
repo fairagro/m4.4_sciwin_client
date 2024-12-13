@@ -1,4 +1,6 @@
+mod common;
 use assert_cmd::Command;
+use common::check_git_user;
 use predicates::prelude::*;
 use s4n::{
     commands::{
@@ -38,6 +40,8 @@ pub fn test_create_workflow() {
 #[test]
 #[serial]
 pub fn test_remove_workflow() {
+    check_git_user().unwrap();
+
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
