@@ -17,7 +17,7 @@ pub enum Requirement {
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
-    ToolTimeLimit
+    ToolTimeLimit,
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
@@ -78,6 +78,17 @@ impl InitialWorkDirRequirement {
                 entryname: filename.to_string(),
                 entry: Entry::from_file(filename),
             }],
+        }
+    }
+    pub fn from_files(filenames: &Vec<&str>) -> Self {
+        InitialWorkDirRequirement {
+            listing: filenames
+                .iter()
+                .map(|&filename| Listing {
+                    entryname: filename.to_string(),
+                    entry: Entry::from_file(filename),
+                })
+                .collect(),
         }
     }
     pub fn from_contents(entryname: &str, contents: &str) -> Self {

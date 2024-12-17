@@ -15,7 +15,6 @@ use crate::{
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
-use colored::Colorize;
 use std::{
     collections::HashMap,
     env,
@@ -30,7 +29,7 @@ use tempfile::tempdir;
 pub fn run_workflow(
     workflow: &mut Workflow,
     input_values: Option<HashMap<String, DefaultValue>>,
-    cwl_path: Option<&str>,
+    cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
     let clock = Instant::now();
@@ -47,7 +46,7 @@ pub fn run_workflow(
         current.to_string_lossy().into_owned()
     };
 
-    let workflow_folder = Path::new(cwl_path.unwrap()).parent().unwrap_or(Path::new("."));
+    let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
 
     //prevent tool from outputting
     set_print_output(false);
@@ -93,9 +92,9 @@ pub fn run_workflow(
                 }
             }
 
-            let preprocessed_file = preprocess_cwl(&file, &path.to_string_lossy());
+            let preprocessed_file = preprocess_cwl(&file, &path);
             let mut tool: CommandLineTool = serde_yml::from_str(&preprocessed_file)?;
-            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path.to_string_lossy()), Some(tmp_path.clone()))?;
+            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path), Some(tmp_path.clone()))?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
@@ -155,23 +154,26 @@ pub fn run_workflow(
     println!("{}", json);
 
     eprintln!(
-        "✔️  Workflow {} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or_default().bold(),
+        "✔️  Workflow {:?} executed successfully in {:.0?}!",
+        &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
     );
     Ok(())
 }
 
+
+
 pub fn run_commandlinetool(
     tool: &mut CommandLineTool,
     input_values: Option<HashMap<String, DefaultValue>>,
-    cwl_path: Option<&str>,
+    cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        eprintln!("🚲 Executing CommandLineTool {} ...", &cwl_path.unwrap_or_default().bold());
+        eprintln!("🚲 Executing CommandLineTool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
     }
     //create staging directory
     let dir = tempdir()?;
@@ -182,8 +184,8 @@ pub fn run_commandlinetool(
     let output_directory = if let Some(out) = out_dir { &PathBuf::from(out) } else { &current };
 
     //set tool path. all paths are given relative to the tool
-    let tool_path = if let Some(file) = cwl_path {
-        Path::new(file).parent().unwrap()
+    let tool_path = if let Some(file) = cwl_path.as_ref() {
+        file.parent().unwrap()
     } else {
         Path::new(".")
     };
@@ -250,8 +252,8 @@ pub fn run_commandlinetool(
     env::set_current_dir(current)?;
 
     eprintln!(
-        "✔️  CommandLineTool {} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or_default().bold(),
+        "✔️  CommandLineTool {:?} executed successfully in {:.0?}!",
+        &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
     );
     Ok(outputs)

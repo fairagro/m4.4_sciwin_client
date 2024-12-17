@@ -172,14 +172,15 @@ pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Resul
     Ok(dir)
 }
 
-pub fn preprocess_cwl(contents: &str, path: &str) -> String {
+
+pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
     let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
     import_regex
         .replace_all(contents, |captures: &fancy_regex::Captures| {
             let filename = captures.name("file").map_or("", |m| m.as_str());
             let indent = captures.name("indent").map_or("", |m| m.as_str());
             let indent_level: String = " ".repeat(indent.len());
-            let path = Path::new(path)
+            let path = path.as_ref()
                 .parent()
                 .map(|parent| parent.join(filename))
                 .unwrap_or_else(|| Path::new(filename).to_path_buf());

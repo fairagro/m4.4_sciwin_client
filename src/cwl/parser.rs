@@ -8,7 +8,7 @@ use super::{
 use crate::io::get_filename_without_extension;
 use serde_yml::Value;
 use slugify::slugify;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -24,24 +24,42 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
 
     match base_command {
         Command::Single(_) => tool,
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&vec[1]))]),
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+            &vec[1],
+        ))]),
     }
 }
 
-pub fn parse_command_line_inputs(commands: Vec<&str>, inputs: Vec<&str>) -> CommandLineTool {
-    let base_command = get_base_command(&commands);
-    let tool;
+fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &InitialWorkDirRequirement) -> Vec<String> {
+    let entry_map: HashMap<&str, &str> = initial_work_dir
+        .listing
+        .iter()
+        .map(|listing| (listing.entryname.as_str(), listing.entryname.as_str()))
+        .collect();
 
-    let input = get_inputs(match &base_command {
-        Command::Single(_) => &inputs[1..],
-        Command::Multiple(_) => &inputs[0..],
-        //Command::Multiple(ref vec) => &inputs[vec.len()..],
-    });
-    tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(input);
-    match base_command {
-        Command::Single(_) => tool,
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&vec[1]))]),
-    }
+    commands
+        .into_iter()
+        .map(|command| {
+            let mut updated_command = command.to_string();
+            for (entry, entryname) in &entry_map {
+                if command.contains(entry) {
+                    updated_command = updated_command.replace(command, entryname);
+                }
+            }
+            updated_command
+        })
+        .collect()
+}
+
+pub fn parse_command_line_fixed_inputs(commands: Vec<&str>, inputs: Vec<&str>) -> CommandLineTool {
+    let initial_dir_req = InitialWorkDirRequirement::from_files(&inputs);
+    let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
+    let base_command = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
+    CommandLineTool::default()
+        .with_base_command(base_command.clone())
+        .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
+            &inputs,
+        ))])
 }
 
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
@@ -57,7 +75,6 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
 }
 
 pub fn get_base_command(command: &[&str]) -> Command {
-
     if command.is_empty() {
         return Command::Single(String::from(""));
     };

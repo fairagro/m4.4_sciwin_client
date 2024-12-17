@@ -18,6 +18,7 @@ use std::{
 };
 use tempfile::tempdir;
 
+
 #[test]
 #[serial]
 ///Tests a whole s4n workflow
@@ -162,7 +163,7 @@ pub fn test_cli_s4n_workflow() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: wf_path.to_string(),
+        file: wf_path.to_string().into(),
         args: vec!["inputs.yml".to_string()],
     })
     .expect("Could not execute Workflow");

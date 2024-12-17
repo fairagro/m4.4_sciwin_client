@@ -52,10 +52,11 @@ fn set_up_repository() -> TempDir {
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
     create_dir_all(dir.path().join(Path::new("data"))).expect("Failed to create data-dir");
 
-    let source_files: [(PathBuf, &str); 6] = [
+    let source_files: [(PathBuf, &str); 7] = [
         (Path::new("./tests/test_data/echo.py").to_path_buf(), "scripts/echo.py"),
         (Path::new("./tests/test_data/echo2.py").to_path_buf(), "scripts/echo2.py"),
         (Path::new("./tests/test_data/echo3.py").to_path_buf(), "scripts/echo3.py"),
+        (Path::new("./tests/test_data/script_test.py").to_path_buf(), "scripts/script_test.py"),
         (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
         (Path::new("./tests/test_data/input2.txt").to_path_buf(), "data/input2.txt"),
         (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
