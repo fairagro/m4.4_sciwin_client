@@ -1,7 +1,7 @@
 mod common;
 use common::with_temp_repository;
 use s4n::cwl::{
-    clt::{Command, CommandLineTool},
+    clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     parser::{get_outputs, parse_command_line},
@@ -18,13 +18,17 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
             "python script.py".to_string(),
             CommandLineTool::default()
                 .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
+                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    "script.py",
+                ))]),
         ),
         (
             "Rscript script.R".to_string(),
             CommandLineTool::default()
                 .with_base_command(Command::Multiple(vec!["Rscript".to_string(), "script.R".to_string()]))
-                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.R"))]),
+                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    "script.R",
+                ))]),
         ),
         (
             "python script.py --option1 value1".to_string(),
@@ -35,7 +39,9 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                     .with_type(CWLType::String)
                     .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
                     .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
-                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
+                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    "script.py",
+                ))]),
         ),
         (
             "python script.py --option1 \"value with spaces\"".to_string(),
@@ -46,7 +52,9 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                     .with_type(CWLType::String)
                     .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
                     .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
-                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
+                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    "script.py",
+                ))]),
         ),
         (
             "python script.py positional1 --option1 value1".to_string(),
@@ -64,7 +72,9 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
                         .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
                         .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
                 ])
-                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))]),
+                .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    "script.py",
+                ))]),
         ),
     ]
 }
@@ -93,7 +103,9 @@ pub fn test_parse_command_line_testdata() {
                 .with_type(CWLType::File)
                 .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
                 .with_default_value(DefaultValue::File(File::from_location(&"data/input.txt".to_string())))])
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("scripts/echo.py"))]);
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                "scripts/echo.py",
+            ))]);
         assert_eq!(cwl, expected);
     });
 }
@@ -127,7 +139,9 @@ pub fn test_get_outputs() {
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("my-file")
-            .with_binding(CommandOutputBinding { glob: "my-file.txt".to_string() }),
+            .with_binding(CommandOutputBinding {
+                glob: "my-file.txt".to_string(),
+            }),
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("archive")
@@ -138,4 +152,42 @@ pub fn test_get_outputs() {
 
     let outputs = get_outputs(files);
     assert_eq!(outputs, expected);
+}
+
+#[test]
+pub fn test_parse_redirect() {
+    let command = "cat tests/test_data/input.txt \\> output.txt";
+    let split_params = shlex::split(command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+
+    assert!(tool.stdout == Some("output.txt".to_string()));
+}
+
+#[test]
+pub fn test_parse_redirect_stderr() {
+    let command = "cat tests/test_data/inputtxt 2\\> err.txt";
+    let split_params = shlex::split(command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+
+    assert!(tool.stderr == Some("err.txt".to_string()));
+}
+
+#[test]
+pub fn test_parse_pipe_op() {
+    let command = "df \\| grep --line-buffered tmpfs \\> df.log";
+    let split_params = shlex::split(command).unwrap();
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+
+    assert!(tool.arguments.is_some());
+    assert!(tool.has_shell_command_requirement());
+
+    if let Some(args) = tool.arguments {
+        if let Argument::Binding(pipe) = &args[0] {
+            assert!(pipe.value_from == Some("|".to_string()));
+        } else {
+            panic!();
+        }
+    }
+
+    assert!(tool.stdout.is_none()); //as it is in args!
 }

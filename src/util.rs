@@ -8,7 +8,7 @@ use syntect::{
 };
 use sysinfo::System;
 
-pub fn error(message: &str) -> String{
+pub fn error(message: &str) -> String {
     format!("❌ {}: {}", "Error".red().bold(), message.red())
 }
 
@@ -58,4 +58,15 @@ pub fn format_command(command: &Command) -> String {
         .collect();
 
     format!("{} {}", program, args.join(" "))
+}
+
+pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: T) -> (Vec<T>, Vec<T>) {
+    let slice = vec.as_ref();
+    if let Some(index) = slice.iter().position(|x| *x == split_at) {
+        let lhs = slice[..index].to_vec();
+        let rhs = slice[index + 1..].to_vec();
+        (lhs, rhs)
+    } else {
+        (slice.to_vec(), vec![])
+    }
 }
