@@ -204,7 +204,6 @@ pub fn run_commandlinetool(
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
-
     //stage files listed in input default values, input values or initial work dir requirements
     let staged_files = stage_required_files(
         tool,

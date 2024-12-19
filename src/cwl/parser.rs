@@ -52,14 +52,13 @@ fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &Initi
 }
 
 pub fn parse_command_line_fixed_inputs(commands: Vec<&str>, inputs: Vec<&str>) -> CommandLineTool {
-    let initial_dir_req = InitialWorkDirRequirement::from_files(&inputs);
+    let initial_dir_req = InitialWorkDirRequirement::from_files(&inputs, commands[1]);
     let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
     let base_command = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
     CommandLineTool::default()
         .with_base_command(base_command.clone())
         .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-            &inputs,
-        ))])
+            &inputs, commands[1]))])
 }
 
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
