@@ -81,9 +81,6 @@ pub struct LsArgs {
 
 /// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
-    println!("inputs: {:?}", args.inputs); 
-    println!("outputs: {:?}", args.outputs); 
-    println!("command: {:?}", args.command); 
     //check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
     if !args.is_raw {
@@ -112,7 +109,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             inputs.iter().map(|s| s.as_str()).collect(),
         );
         cwl = cwl.with_outputs(parser::get_outputs(outputs.clone()));
-        println!("cwl_ {:?}", cwl); 
     }
 
     if let Some(container) = &args.container_image {
@@ -147,9 +143,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             let path = get_qualified_filename(&cwl.base_command, args.name.clone());
             let path_buf = PathBuf::from(path.clone());
             yaml = cwl.save(&path);
-            println!("cwl_1 {:?}", cwl); 
             run_commandlinetool(&mut cwl, None, Some(&path_buf), None)?;
-            println!("cwl_2 {:?}", cwl); 
         }
 
         //check files that changed
@@ -191,10 +185,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             yaml = cwl.save(&path);
             
         }
-        println!("cwl_3 {:?}", cwl);
         yaml = format_cwl(&yaml)?;
-        println!("cwl_4 {:?}", cwl);
-        println!("yaml {:?}", yaml);
         match create_and_write_file(path.as_str(), yaml.as_str()) {
             Ok(_) => {
                 println!("\n📄 Created CWL file {}", path.green().bold());
