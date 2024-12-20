@@ -5,7 +5,8 @@ use s4n::{
         execute::handle_execute_commands,
         init::handle_init_command,
         tool::{create_tool, handle_tool_commands},
-        workflow::handle_workflow_commands
+        workflow::handle_workflow_commands, 
+        annotate::{handle_annotate_commands, annotate_default}, 
     },
     error::{CommandError, ExitCode},
 };
@@ -31,7 +32,20 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
         Commands::Workflow { command } => handle_workflow_commands(command)?,
-        Commands::Annotate => todo!(),
+        //Commands::Annotate { command } => handle_annotate_commands(command)?,
+        Commands::Annotate { command, tool_name } => {
+            match (command, tool_name) {
+                (Some(subcommand), _) => handle_annotate_commands(subcommand)?,
+                (None, Some(name)) => {
+                    println!("Annotating tool: {}", name);
+                    // Call the default annotation function
+                    annotate_default(name)?;
+                }
+                _ => {
+                    eprintln!("Error: No subcommand or tool name provided for annotate.");
+                }
+            }
+        }
         Commands::Execute { command } => handle_execute_commands(command)?,
         Commands::Sync => todo!(),
     }
