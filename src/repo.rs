@@ -13,7 +13,7 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
             for entry in statuses.iter() {
                 let status = entry.status();
                 let path = entry.path().unwrap_or("unknown").to_owned();
-                if status == Status::WT_MODIFIED || status == Status::WT_NEW {
+                if status.contains(Status::WT_MODIFIED) || status.contains(Status::WT_NEW) {
                     files.push(path);
                 }
             }

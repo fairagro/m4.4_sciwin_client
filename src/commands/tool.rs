@@ -1,7 +1,7 @@
 use crate::{
     cwl::{
         format::format_cwl,
-        parser,
+        parser::{self, post_process_cwl},
         requirements::{DockerRequirement, Requirement},
     },
     io::{create_and_write_file, get_qualified_filename},
@@ -152,6 +152,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             cwl = cwl.with_requirements(vec![requirement])
         }
     }
+
+    post_process_cwl(&mut cwl);
 
     //generate yaml
     if !args.is_raw {
