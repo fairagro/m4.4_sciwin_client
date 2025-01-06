@@ -1,20 +1,11 @@
 use crate::{
-    cwl::{
-        inputs::CommandInputParameter,
-        outputs::CommandOutputParameter,
-        types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
-    },
-    io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output},
+    inputs::CommandInputParameter,
+    outputs::CommandOutputParameter,
+    types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
 };
+use core::io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output};
 use fancy_regex::Regex;
-use std::{
-    collections::HashMap,
-    env,
-    error::Error,
-    fmt::Debug,
-    fs,
-    path::Path,
-};
+use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
 
 ///Either gets the default value for input or the provided one (preferred)
 pub fn evaluate_input_as_string(
@@ -179,7 +170,8 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
             let filename = captures.name("file").map_or("", |m| m.as_str());
             let indent = captures.name("indent").map_or("", |m| m.as_str());
             let indent_level: String = " ".repeat(indent.len());
-            let path = path.as_ref()
+            let path = path
+                .as_ref()
                 .parent()
                 .map(|parent| parent.join(filename))
                 .unwrap_or_else(|| Path::new(filename).to_path_buf());
@@ -205,12 +197,10 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
 mod tests {
     use super::*;
     use crate::{
-        cwl::{
-            inputs::CommandLineBinding,
-            outputs::{CommandOutputBinding, CommandOutputParameter},
-        },
-        io::copy_dir,
+        inputs::CommandLineBinding,
+        outputs::{CommandOutputBinding, CommandOutputParameter},
     };
+    use core::io::copy_dir;
     use serde_yml::{value, Value};
     use serial_test::serial;
     use tempfile::tempdir;

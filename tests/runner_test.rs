@@ -1,6 +1,6 @@
 mod common;
 use common::with_temp_repository;
-use s4n::cwl::{
+use cwl::{
     clt::CommandLineTool,
     execution::runner::{run_command, run_commandlinetool},
     types::DefaultValue,

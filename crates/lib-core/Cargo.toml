@@ -1,0 +1,12 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = { workspace = true }
+rand = { workspace = true }
+pathdiff = { workspace = true }
+sha1 = { workspace = true }
+syntect = { workspace = true }
+sysinfo = { workspace = true }

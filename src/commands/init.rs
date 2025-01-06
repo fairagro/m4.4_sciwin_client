@@ -1,7 +1,5 @@
-use crate::{
-    repo::{commit, get_modified_files, initial_commit, stage_all},
-    util::error,
-};
+use crate::repo::{commit, get_modified_files, initial_commit, stage_all};
+use core::util::error;
 use clap::Args;
 use git2::Repository;
 use rust_xlsxwriter::Workbook;

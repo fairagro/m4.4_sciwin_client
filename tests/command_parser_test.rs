@@ -1,13 +1,13 @@
 mod common;
 use common::with_temp_repository;
-use s4n::cwl::{
+use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    parser::{get_outputs, parse_command_line},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, File},
 };
+use s4n::parser::{get_outputs, parse_command_line};
 use serde_yml::Value;
 use serial_test::serial;
 use std::{path::Path, vec};

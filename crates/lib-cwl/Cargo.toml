@@ -1,0 +1,17 @@
+[package]
+name = "cwl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core = { path = "../lib-core" }
+fancy-regex = { workspace = true }
+pathdiff = { workspace = true }
+serde = { workspace = true }
+serde_yml = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+urlencoding = { workspace = true }
+
+[dev-dependencies]
+serial_test = { workspace = true }

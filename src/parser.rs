@@ -1,11 +1,11 @@
-use super::{
+use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use crate::{io::get_filename_without_extension, util::split_vec_at};
+use core::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
 use std::path::Path;

@@ -1,22 +1,28 @@
 use crate::{
-    cwl::{
-        clt::{Argument, Command, CommandLineTool},
-        execution::{
-            environment::{set_tool_environment_vars, unset_environment_vars},
-            staging::{stage_required_files, unstage_files},
-            util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
-            validate::{rewire_paths, set_placeholder_values},
-        },
-        inputs::{CommandLineBinding, WorkflowStepInput},
-        types::{CWLType, DefaultValue, OutputItem},
-        wf::Workflow,
+    clt::{Argument, Command, CommandLineTool},
+    execution::{
+        environment::{set_tool_environment_vars, unset_environment_vars},
+        staging::{stage_required_files, unstage_files},
+        util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
+        validate::{rewire_paths, set_placeholder_values},
     },
+    inputs::{CommandLineBinding, WorkflowStepInput},
+    types::{CWLType, DefaultValue, OutputItem},
+    wf::Workflow,
+};
+use core::{
     error::CommandError,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},
 };
 use std::{
-    collections::HashMap, env, error::Error, fs::{self}, path::{Path, PathBuf}, process::Command as SystemCommand, time::Instant
+    collections::HashMap,
+    env,
+    error::Error,
+    fs::{self},
+    path::{Path, PathBuf},
+    process::Command as SystemCommand,
+    time::Instant,
 };
 use tempfile::tempdir;
 
@@ -129,12 +135,12 @@ pub fn run_workflow(
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.location);
-                    fs::copy(workflow_folder.join(&file.location), &dest)
-                        .map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    fs::copy(workflow_folder.join(&file.location), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
                     OutputItem::OutputFile(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
                 DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
-                    copy_output_dir(workflow_folder.join(&directory.location),
+                    copy_output_dir(
+                        workflow_folder.join(&directory.location),
                         format!("{}/{}", &output_directory, &directory.location),
                     )
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
@@ -197,13 +203,7 @@ pub fn run_commandlinetool(
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(
-        tool,
-        &input_values,
-        tool_path,
-        dir.path(),
-        output_directory,
-    )?;
+    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
@@ -484,9 +484,6 @@ stdout: output.txt"#;
         let shell = shell_cmd.get_program().to_string_lossy();
         let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
 
-        assert_eq!(
-            format_command(&cmd),
-            format!("{shell} {c_arg} cd $(inputs.indir.path) && find . | sort")
-        );
+        assert_eq!(format_command(&cmd), format!("{shell} {c_arg} cd $(inputs.indir.path) && find . | sort"));
     }
 }

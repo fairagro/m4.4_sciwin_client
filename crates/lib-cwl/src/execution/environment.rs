@@ -1,4 +1,4 @@
-use crate::cwl::{
+use crate::{
     clt::CommandLineTool,
     requirements::{EnvVarRequirement, Requirement},
     types::EnviromentDefs,
@@ -45,7 +45,7 @@ pub fn unset_environment_vars(keys: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cwl::types::EnvironmentDef;
+    use crate::types::EnvironmentDef;
     use serial_test::serial;
     use std::{collections::HashMap, vec};
 

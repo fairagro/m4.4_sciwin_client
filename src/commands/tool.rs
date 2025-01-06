@@ -1,15 +1,18 @@
 use crate::{
-    cwl::{
-        format::format_cwl,
-        parser::{self, post_process_cwl},
-        requirements::{DockerRequirement, Requirement},
-    },
-    io::{create_and_write_file, get_qualified_filename},
+    parser::{self, post_process_cwl},
     repo::{commit, get_modified_files, stage_file},
-    util::{error, highlight_cwl, print_list, warn},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use core::{
+    io::create_and_write_file,
+    util::{error, highlight_cwl, print_list, warn},
+};
+use cwl::{
+    format::format_cwl,
+    io::get_qualified_filename,
+    requirements::{DockerRequirement, Requirement},
+};
 use git2::Repository;
 use prettytable::{Cell, Row, Table};
 use serde_yml::Value;

@@ -1,13 +1,13 @@
 use clap::Parser;
+use core::error::{CommandError, ExitCode};
 use s4n::{
     cli::{Cli, Commands},
     commands::{
         execute::handle_execute_commands,
         init::handle_init_command,
         tool::{create_tool, handle_tool_commands},
-        workflow::handle_workflow_commands
+        workflow::handle_workflow_commands,
     },
-    error::{CommandError, ExitCode},
 };
 use std::{error::Error, process::exit};
 

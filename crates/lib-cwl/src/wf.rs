@@ -352,7 +352,7 @@ impl Identifiable for WorkflowStep {
 
 #[cfg(test)]
 mod tests {
-    use crate::cwl::loader::load_workflow;
+    use crate::loader::load_workflow;
 
     #[test]
     fn test_workflow_has_step() {

@@ -5,10 +5,12 @@ use super::{
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
     types::{CWLType, DefaultValue, Entry},
 };
-use crate::io::resolve_path;
-use core::fmt;
+use core::io::resolve_path;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fmt::Display};
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -205,7 +207,7 @@ impl Default for Command {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cwl::{
+    use crate::{
         requirements::InitialWorkDirRequirement,
         types::{CWLType, File, Listing},
     };
@@ -246,7 +248,10 @@ mod tests {
 
         //check if paths are rewritten upon tool saving
 
-        assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt")))));
+        assert_eq!(
+            clt.inputs[0].default,
+            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
+        );
         let requirements = &clt.requirements.unwrap();
         let req_0 = &requirements[0];
         let req_1 = &requirements[1];

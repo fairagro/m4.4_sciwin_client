@@ -1,12 +1,10 @@
 use crate::{
-    cwl::{
-        clt::{Argument, Command, CommandLineTool},
-        inputs::CommandInputParameter,
-        requirements::Requirement,
-        types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
-    },
-    io::{get_file_property, make_relative_to},
+    clt::{Argument, Command, CommandLineTool},
+    inputs::CommandInputParameter,
+    requirements::Requirement,
+    types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
 };
+use core::io::{get_file_property, make_relative_to};
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
 use std::{collections::HashMap, env};
@@ -188,7 +186,8 @@ fn set_placeholder_values_in_string(
     let result = in_re.replace_all(text, |caps: &fancy_regex::Captures| {
         let placeholder = &caps[1];
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
-            let mut input_value = get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder));
+            let mut input_value =
+                get_input_value(base, input_values, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder));
             if suffix == "dirname" {
                 if let Some(diff) = diff_paths(&input_value, &runtime["tooldir"]) {
                     if let Some(diff_str) = diff.to_str() {
@@ -210,7 +209,12 @@ fn set_placeholder_values_in_string(
 }
 
 /// Evaluate inputs and given parameters for given key
-fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue>>, inputs: &[CommandInputParameter], suffix: &str) -> Option<String> {
+fn get_input_value(
+    key: &str,
+    input_values: Option<&HashMap<String, DefaultValue>>,
+    inputs: &[CommandInputParameter],
+    suffix: &str,
+) -> Option<String> {
     let mut value = None;
 
     for input in inputs {
@@ -248,10 +252,8 @@ fn get_input_value(key: &str, input_values: Option<&HashMap<String, DefaultValue
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        cwl::types::{CWLType, File},
-        io::get_file_size,
-    };
+    use crate::types::{CWLType, File};
+    use core::io::get_file_size;
     use serde_yml::Value;
 
     #[test]
@@ -295,7 +297,10 @@ outputs:
 
         let mut input_values = HashMap::new();
         input_values.insert("newname".to_string(), DefaultValue::Any(Value::String("neuer_name.txt".to_string())));
-        input_values.insert("srcfile".to_string(), DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())));
+        input_values.insert(
+            "srcfile".to_string(),
+            DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())),
+        );
 
         let mut cwl_test: CommandLineTool = serde_yml::from_str(cwl_str).unwrap();
         set_placeholder_values(&mut cwl_test, Some(&input_values), &runtime);

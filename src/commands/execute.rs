@@ -1,19 +1,23 @@
-use crate::{
-    cwl::{
-        clt::CommandLineTool,
-        execution::{
-            runner::{run_commandlinetool, run_workflow},
-            util::preprocess_cwl,
-        },
-        parser::guess_type,
-        types::{CWLType, DefaultValue, Directory, File, PathItem},
-        wf::Workflow,
-    },
-    io::join_path_string,
-};
+use crate::parser::guess_type;
 use clap::{Args, Subcommand, ValueEnum};
+use core::io::join_path_string;
+use cwl::{
+    clt::CommandLineTool,
+    execution::{
+        runner::{run_commandlinetool, run_workflow},
+        util::preprocess_cwl,
+    },
+    types::{CWLType, DefaultValue, Directory, File, PathItem},
+    wf::Workflow,
+};
 use serde_yml::Value;
-use std::{collections::HashMap, error::Error, fs, path::{Path, PathBuf}, process::Command};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -24,8 +28,8 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
 
 #[derive(Debug, Subcommand)]
 pub enum ExecuteCommands {
-    #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias="l")]
-    Local(LocalExecuteArgs)
+    #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias = "l")]
+    Local(LocalExecuteArgs),
 }
 
 #[derive(Args, Debug)]
@@ -141,7 +145,11 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             //make paths relative to calling object
             if let Some(inputs) = &mut inputs {
-                let path_prefix = if is_file_input { Path::new(&args.args[0]).parent().unwrap() } else { Path::new(".") };
+                let path_prefix = if is_file_input {
+                    Path::new(&args.args[0]).parent().unwrap()
+                } else {
+                    Path::new(".")
+                };
                 for value in inputs.values_mut() {
                     match value {
                         DefaultValue::File(file) => correct_path(file, path_prefix),

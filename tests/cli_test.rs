@@ -1,18 +1,19 @@
 mod common;
 use common::{check_git_user, setup_python};
-use s4n::{
-    commands::{
-        execute::{execute_local, LocalExecuteArgs, Runner},
-        init::init_s4n,
-        tool::{create_tool, list_tools, CreateToolArgs, ListToolArgs},
-        workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
-    },
-    cwl::loader::load_workflow,
-    io::copy_dir,
+use core::io::copy_dir;
+use cwl::loader::load_workflow;
+use s4n::commands::{
+    execute::{execute_local, LocalExecuteArgs, Runner},
+    init::init_s4n,
+    tool::{create_tool, list_tools, CreateToolArgs, ListToolArgs},
+    workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
 };
 use serial_test::serial;
 use std::{
-    env, fs::{self, remove_dir_all, remove_file}, path::PathBuf, vec
+    env,
+    fs::{self, remove_dir_all, remove_file},
+    path::PathBuf,
+    vec,
 };
 use tempfile::tempdir;
 
@@ -34,7 +35,7 @@ pub fn test_cli_s4n_workflow() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
     let (newpath, restore) = setup_python(dir_str);
-    
+
     //modify path variable
     env::set_var("PATH", newpath);
 
@@ -90,7 +91,10 @@ pub fn test_cli_s4n_workflow() {
 
     //create workflow
     let name = "test_workflow".to_string();
-    let create_args = CreateWorkflowArgs { name: name.clone(), force: false };
+    let create_args = CreateWorkflowArgs {
+        name: name.clone(),
+        force: false,
+    };
     create_workflow(&create_args).expect("Could not create workflow");
 
     //add connections to inputs
