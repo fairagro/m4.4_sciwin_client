@@ -82,20 +82,6 @@ pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<S
     Ok(files)
 }
 
-pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
-    let path = filename.as_ref();
-    let relative_path = Path::new(relative_to.as_ref());
-    let base_dir = match relative_path.extension() {
-        Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
-        None => relative_path,
-    };
-
-    pathdiff::diff_paths(path, base_dir)
-        .expect("path diffs not valid")
-        .to_string_lossy()
-        .into_owned()
-}
-
 pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
     let metadata = std::fs::metadata(path)?;
     Ok(metadata.len())

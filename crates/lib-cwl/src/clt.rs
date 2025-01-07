@@ -1,11 +1,11 @@
 use super::{
     execution::runner::run_command,
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
+    io::resolve_path,
     outputs::{deserialize_outputs, CommandOutputParameter},
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
     types::{CWLType, DefaultValue, Entry},
 };
-use s4n_core::io::resolve_path;
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
