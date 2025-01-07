@@ -1,12 +1,12 @@
 use super::util::evaluate_input;
-use crate::{
+use cwl::{
     clt::CommandLineTool,
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     requirements::Requirement,
     types::{CWLType, DefaultValue, Entry},
 };
-use s4n_core::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
+use super::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
 use std::{
     collections::HashMap,
     error::Error,
@@ -189,7 +189,7 @@ fn handle_filename(value: &DefaultValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
+    use cwl::{
         outputs::CommandOutputBinding,
         requirements::InitialWorkDirRequirement,
         types::{Directory, File},

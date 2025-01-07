@@ -1,5 +1,5 @@
-use super::{clt::CommandLineTool, wf::Workflow};
-use s4n_core::io::get_workflows_folder;
+use cwl::{clt::CommandLineTool, wf::Workflow};
+use cwl_runner::io::get_workflows_folder;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 
 /// Locates CWL File by name

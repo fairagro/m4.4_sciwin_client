@@ -1,10 +1,10 @@
-use crate::{
+use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
     requirements::Requirement,
     types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
 };
-use s4n_core::io::{get_file_property, make_relative_to};
+use crate::io::{get_file_property, make_relative_to};
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
 use std::{collections::HashMap, env};
@@ -252,8 +252,8 @@ fn get_input_value(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{CWLType, File};
-    use s4n_core::io::get_file_size;
+    use cwl::types::{CWLType, File};
+    use crate::io::get_file_size;
     use serde_yml::Value;
 
     #[test]

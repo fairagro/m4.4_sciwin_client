@@ -1,14 +1,14 @@
 use crate::parser::guess_type;
 use clap::{Args, Subcommand, ValueEnum};
-use s4n_core::io::join_path_string;
 use cwl::{
     clt::CommandLineTool,
-    execution::{
-        runner::{run_commandlinetool, run_workflow},
-        util::preprocess_cwl,
-    },
     types::{CWLType, DefaultValue, Directory, File, PathItem},
     wf::Workflow,
+};
+use cwl_runner::{
+    io::join_path_string,
+    runner::{run_commandlinetool, run_workflow},
+    util::preprocess_cwl,
 };
 use serde_yml::Value;
 use std::{

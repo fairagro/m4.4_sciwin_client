@@ -1,11 +1,12 @@
+use crate::cwl::Connectable;
 use crate::repo::{commit, stage_file};
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use s4n_core::io::{create_and_write_file, get_workflows_folder};
+use cwl_runner::io::{create_and_write_file, get_workflows_folder};
+use crate::loader::{load_tool, load_workflow};
 use cwl::{
     format::format_cwl,
     inputs::WorkflowStepInput,
-    loader::{load_tool, load_workflow},
     wf::Workflow,
 };
 use git2::Repository;

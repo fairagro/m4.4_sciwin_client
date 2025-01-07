@@ -2,10 +2,10 @@ mod common;
 use common::{os_path, with_temp_repository};
 use cwl::{
     clt::{Argument, CommandLineTool},
-    loader::load_tool,
     requirements::{DockerRequirement, Requirement},
     types::Entry,
 };
+use s4n::loader::load_tool;
 use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},

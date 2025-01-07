@@ -1,19 +1,19 @@
 use crate::{
-    clt::{Argument, Command, CommandLineTool},
-    execution::{
-        environment::{set_tool_environment_vars, unset_environment_vars},
-        staging::{stage_required_files, unstage_files},
-        util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
-        validate::{rewire_paths, set_placeholder_values},
+    environment::{set_tool_environment_vars, unset_environment_vars},
+    error::CommandError,
+    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
+    staging::{stage_required_files, unstage_files},
+    util::{
+        copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, format_command, get_available_ram, get_file_metadata,
+        get_processor_count, preprocess_cwl,
     },
+    validate::{rewire_paths, set_placeholder_values},
+};
+use cwl::{
+    clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
     types::{CWLType, DefaultValue, OutputItem},
     wf::Workflow,
-};
-use s4n_core::{
-    error::CommandError,
-    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
-    util::{format_command, get_available_ram, get_processor_count},
 };
 use std::{
     collections::HashMap,

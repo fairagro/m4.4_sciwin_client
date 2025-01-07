@@ -353,13 +353,26 @@ dependencies = [
 name = "cwl"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_yml",
+]
+
+[[package]]
+name = "cwl-runner"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "cwl",
  "fancy-regex",
  "pathdiff",
- "s4n-core",
+ "rand",
  "serde",
  "serde_json",
  "serde_yml",
  "serial_test",
+ "sha1",
+ "syntect",
+ "sysinfo",
  "tempfile",
  "urlencoding",
 ]
@@ -1323,11 +1336,11 @@ dependencies = [
  "clap",
  "colored",
  "cwl",
+ "cwl-runner",
  "git2",
  "predicates",
  "prettytable-rs",
  "rust_xlsxwriter",
- "s4n-core",
  "serde_yml",
  "serial_test",
  "shlex",
@@ -1335,18 +1348,6 @@ dependencies = [
  "tempfile",
  "walkdir",
  "whoami",
-]
-
-[[package]]
-name = "s4n-core"
-version = "0.1.0"
-dependencies = [
- "colored",
- "pathdiff",
- "rand",
- "sha1",
- "syntect",
- "sysinfo",
 ]
 
 [[package]]

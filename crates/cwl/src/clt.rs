@@ -1,16 +1,11 @@
 use super::{
-    execution::runner::run_command,
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
-    io::resolve_path,
     outputs::{deserialize_outputs, CommandOutputParameter},
-    requirements::{deserialize_requirements, DockerRequirement, Requirement},
-    types::{CWLType, DefaultValue, Entry},
+    requirements::{deserialize_requirements, Requirement},
+    types::CWLType,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    error::Error,
-    fmt::{self, Display},
-};
+use std::fmt::{self, Display};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -118,43 +113,6 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
-        run_command(self, None)
-    }
-
-    pub fn save(&mut self, path: &str) -> String {
-        //rewire paths to new location
-        for input in &mut self.inputs {
-            if let Some(DefaultValue::File(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
-            }
-            if let Some(DefaultValue::Directory(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
-            }
-        }
-
-        if let Some(requirements) = &mut self.requirements {
-            for requirement in requirements {
-                if let Requirement::DockerRequirement(docker) = requirement {
-                    if let DockerRequirement::DockerFile {
-                        docker_file: Entry::Include(include),
-                        docker_image_id: _,
-                    } = docker
-                    {
-                        include.include = resolve_path(&include.include, path)
-                    }
-                } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
-                    for listing in &mut iwdr.listing {
-                        if let Entry::Include(include) = &mut listing.entry {
-                            include.include = resolve_path(&include.include, path)
-                        }
-                    }
-                }
-            }
-        }
-        self.to_string()
-    }
-
     pub fn get_output_ids(&self) -> Vec<String> {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
@@ -201,75 +159,5 @@ pub enum Command {
 impl Default for Command {
     fn default() -> Self {
         Command::Single(String::new())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        requirements::InitialWorkDirRequirement,
-        types::{CWLType, File, Listing},
-    };
-    use serde_yml::Value;
-    use std::path::Path;
-
-    pub fn os_path(path: &str) -> String {
-        if cfg!(target_os = "windows") {
-            Path::new(path).to_string_lossy().replace('/', "\\")
-        } else {
-            path.to_string()
-        }
-    }
-
-    #[test]
-    pub fn test_cwl_save() {
-        let inputs = vec![
-            CommandInputParameter::default()
-                .with_id("positional1")
-                .with_default_value(DefaultValue::File(File::from_location(&"test_data/input.txt".to_string())))
-                .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_position(0)),
-            CommandInputParameter::default()
-                .with_id("option1")
-                .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
-                .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
-        ];
-        let mut clt = CommandLineTool::default()
-            .with_base_command(Command::Multiple(vec!["python".to_string(), "test/script.py".to_string()]))
-            .with_inputs(inputs)
-            .with_requirements(vec![
-                Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("test/script.py")),
-                Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
-            ]);
-
-        clt.save("workflows/tool/tool.cwl");
-
-        //check if paths are rewritten upon tool saving
-
-        assert_eq!(
-            clt.inputs[0].default,
-            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
-        );
-        let requirements = &clt.requirements.unwrap();
-        let req_0 = &requirements[0];
-        let req_1 = &requirements[1];
-        assert_eq!(
-            *req_0,
-            Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
-                listing: vec![Listing {
-                    entry: Entry::from_file(&os_path("../../test/script.py")),
-                    entryname: "test/script.py".to_string()
-                }]
-            })
-        );
-        assert_eq!(
-            *req_1,
-            Requirement::DockerRequirement(DockerRequirement::DockerFile {
-                docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
-                docker_image_id: "test".to_string()
-            })
-        );
     }
 }

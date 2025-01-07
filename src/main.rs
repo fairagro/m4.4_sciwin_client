@@ -1,5 +1,5 @@
 use clap::Parser;
-use s4n_core::error::{CommandError, ExitCode};
+use cwl_runner::error::{CommandError, ExitCode};
 use s4n::{
     cli::{Cli, Commands},
     commands::{

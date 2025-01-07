@@ -1,8 +1,8 @@
 mod common;
 use common::os_path;
-use cwl::{clt::Command, io::get_qualified_filename, io::resolve_path, types::CWLType};
+use cwl::{clt::Command, types::CWLType};
+use cwl_runner::io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path};
 use s4n::parser::guess_type;
-use s4n_core::io::{get_filename_without_extension, get_workflows_folder};
 use std::vec;
 
 #[test]

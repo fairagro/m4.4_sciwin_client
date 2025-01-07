@@ -1,13 +1,19 @@
+use cwl::clt::Command;
 use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
     cell::RefCell,
-    fs::{self, File},
-    io::{self, Error, Read, Write},
-    path::{Path, MAIN_SEPARATOR_STR},
+    fs::File,
+    io::{self, Read},
     process::Command as SystemCommand,
     vec,
 };
+use std::{
+    fs,
+    io::{Error, Write},
+    path::{Path, MAIN_SEPARATOR_STR},
+};
+
 pub fn get_filename_without_extension<S: AsRef<str>>(relative_path: S) -> Option<String> {
     let path = Path::new(relative_path.as_ref());
 
@@ -15,42 +21,42 @@ pub fn get_filename_without_extension<S: AsRef<str>>(relative_path: S) -> Option
         .and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
 }
 
-fn get_basename<S: AsRef<str>>(filename: S) -> String {
-    let path = Path::new(filename.as_ref());
-
-    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
-}
-
-fn get_extension<S: AsRef<str>>(filename: S) -> String {
-    let path = Path::new(filename.as_ref());
-
-    path.extension().unwrap_or_default().to_string_lossy().into_owned()
-}
-
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
 }
 
-pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
-    create_and_write_file_internal(filename, contents, false)
-}
-pub fn create_and_write_file_forced<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
-    create_and_write_file_internal(filename, contents, true)
-}
+pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
+    //decide over filename
+    let mut filename = match &command {
+        Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or_else(|| cmd[1].clone()),
+        Command::Single(cmd) => cmd.to_string(),
+    };
 
-fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, overwrite: bool) -> Result<(), Error> {
-    let path = filename.as_ref();
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+    if let Some(name) = the_name {
+        filename.clone_from(&name);
+        if filename.ends_with(".cwl") {
+            filename = filename.replace(".cwl", "");
+        }
     }
-    let mut file = if overwrite {
-        fs::File::create(filename)
-    } else {
-        fs::File::create_new(filename)
-    }?;
-    file.write_all(contents.as_bytes())?;
-    Ok(())
+
+    let foldername = filename.clone();
+    filename.push_str(".cwl");
+
+    get_workflows_folder() + &foldername + "/" + &filename
+}
+
+pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
+    let path = filename.as_ref();
+    let relative_path = Path::new(relative_to.as_ref());
+    let base_dir = match relative_path.extension() {
+        Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
+        None => relative_path,
+    };
+
+    pathdiff::diff_paths(path, base_dir)
+        .expect("path diffs not valid")
+        .to_string_lossy()
+        .into_owned()
 }
 
 pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), Error> {
@@ -80,6 +86,48 @@ pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<S
         }
     }
     Ok(files)
+}
+pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
+    let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
+        &format!("{dir}{MAIN_SEPARATOR_STR}")
+    } else {
+        dir
+    };
+    path.strip_prefix(prefix).unwrap_or(path)
+}
+
+pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+    create_and_write_file_internal(filename, contents, false)
+}
+pub fn create_and_write_file_forced<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+    create_and_write_file_internal(filename, contents, true)
+}
+
+fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, overwrite: bool) -> Result<(), Error> {
+    let path = filename.as_ref();
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let mut file = if overwrite {
+        fs::File::create(filename)
+    } else {
+        fs::File::create_new(filename)
+    }?;
+    file.write_all(contents.as_bytes())?;
+    Ok(())
+}
+
+fn get_basename<S: AsRef<str>>(filename: S) -> String {
+    let path = Path::new(filename.as_ref());
+
+    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
+}
+
+fn get_extension<S: AsRef<str>>(filename: S) -> String {
+    let path = Path::new(filename.as_ref());
+
+    path.extension().unwrap_or_default().to_string_lossy().into_owned()
 }
 
 pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
@@ -152,15 +200,6 @@ pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> 
     }
 
     None
-}
-
-pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
-    let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
-        &format!("{dir}{MAIN_SEPARATOR_STR}")
-    } else {
-        dir
-    };
-    path.strip_prefix(prefix).unwrap_or(path)
 }
 
 thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });

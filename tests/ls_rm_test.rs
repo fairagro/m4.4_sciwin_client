@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use s4n_core::io::create_and_write_file;
+use cwl_runner::io::create_and_write_file;
 use git2::Repository;
 use predicates::prelude::*;
 use s4n::{

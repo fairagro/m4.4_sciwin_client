@@ -1,17 +1,22 @@
 [package]
-name = "cwl"
+name = "cwl-runner"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-s4n-core = { path = "../lib-core" }
+cwl = { path = "../cwl" }
 fancy-regex = { workspace = true }
 pathdiff = { workspace = true }
 serde = { workspace = true }
-serde_yml = { workspace = true }
 serde_json = { workspace = true }
+serde_yml = { workspace = true }
 tempfile = { workspace = true }
 urlencoding = { workspace = true }
+colored = { workspace = true }
+rand = { workspace = true }
+sha1 = { workspace = true }
+syntect = { workspace = true }
+sysinfo = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }

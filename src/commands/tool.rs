@@ -1,17 +1,19 @@
+use crate::cwl::Executable;
+use crate::util::error;
 use crate::{
     parser::{self, post_process_cwl},
     repo::{commit, get_modified_files, stage_file},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use s4n_core::{
-    io::create_and_write_file,
-    util::{error, highlight_cwl, print_list, warn},
-};
 use cwl::{
     format::format_cwl,
-    io::get_qualified_filename,
     requirements::{DockerRequirement, Requirement},
+};
+use cwl_runner::{
+    io::create_and_write_file,
+    io::get_qualified_filename,
+    util::{highlight_cwl, print_list, warn},
 };
 use git2::Repository;
 use prettytable::{Cell, Row, Table};
