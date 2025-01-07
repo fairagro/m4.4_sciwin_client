@@ -29,7 +29,7 @@ urlencoding = "2.1.3"
 
 [dependencies]
 cwl = { path = "./crates/lib-cwl" }
-core = { path = "./crates/lib-core" }
+s4n-core = { path = "./crates/lib-core" }
 colored = { workspace = true }
 serde_yml = { workspace = true }
 clap = { version = "4.5.18", features = ["derive", "wrap_help"] }

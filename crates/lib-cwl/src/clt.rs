@@ -5,7 +5,7 @@ use super::{
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
     types::{CWLType, DefaultValue, Entry},
 };
-use core::io::resolve_path;
+use s4n_core::io::resolve_path;
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error,

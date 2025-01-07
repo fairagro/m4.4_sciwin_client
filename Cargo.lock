@@ -270,18 +270,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core"
-version = "0.1.0"
-dependencies = [
- "colored",
- "pathdiff",
- "rand",
- "sha1",
- "syntect",
- "sysinfo",
-]
-
-[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -365,9 +353,9 @@ dependencies = [
 name = "cwl"
 version = "0.1.0"
 dependencies = [
- "core",
  "fancy-regex",
  "pathdiff",
+ "s4n-core",
  "serde",
  "serde_json",
  "serde_yml",
@@ -1334,12 +1322,12 @@ dependencies = [
  "calamine",
  "clap",
  "colored",
- "core",
  "cwl",
  "git2",
  "predicates",
  "prettytable-rs",
  "rust_xlsxwriter",
+ "s4n-core",
  "serde_yml",
  "serial_test",
  "shlex",
@@ -1347,6 +1335,18 @@ dependencies = [
  "tempfile",
  "walkdir",
  "whoami",
+]
+
+[[package]]
+name = "s4n-core"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "pathdiff",
+ "rand",
+ "sha1",
+ "syntect",
+ "sysinfo",
 ]
 
 [[package]]

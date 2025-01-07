@@ -1,6 +1,6 @@
 mod common;
 use common::{check_git_user, setup_python};
-use core::io::copy_dir;
+use s4n_core::io::copy_dir;
 use cwl::loader::load_workflow;
 use s4n::commands::{
     execute::{execute_local, LocalExecuteArgs, Runner},

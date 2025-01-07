@@ -1,7 +1,7 @@
 use crate::repo::{commit, stage_file};
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use core::io::{create_and_write_file, get_workflows_folder};
+use s4n_core::io::{create_and_write_file, get_workflows_folder};
 use cwl::{
     format::format_cwl,
     inputs::WorkflowStepInput,

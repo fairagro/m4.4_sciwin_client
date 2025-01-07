@@ -1,5 +1,5 @@
 use clap::Parser;
-use core::error::{CommandError, ExitCode};
+use s4n_core::error::{CommandError, ExitCode};
 use s4n::{
     cli::{Cli, Commands},
     commands::{

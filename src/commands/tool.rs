@@ -4,7 +4,7 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use core::{
+use s4n_core::{
     io::create_and_write_file,
     util::{error, highlight_cwl, print_list, warn},
 };

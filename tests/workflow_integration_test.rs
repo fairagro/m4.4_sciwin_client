@@ -1,7 +1,7 @@
 mod common;
 use assert_cmd::Command;
 use common::check_git_user;
-use core::io::create_and_write_file;
+use s4n_core::io::create_and_write_file;
 use cwl::loader::load_workflow;
 use predicates::prelude::*;
 use s4n::commands::{

@@ -3,7 +3,7 @@ use crate::{
     outputs::CommandOutputParameter,
     types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
 };
-use core::io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output};
+use s4n_core::io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output};
 use fancy_regex::Regex;
 use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
 
@@ -200,7 +200,7 @@ mod tests {
         inputs::CommandLineBinding,
         outputs::{CommandOutputBinding, CommandOutputParameter},
     };
-    use core::io::copy_dir;
+    use s4n_core::io::copy_dir;
     use serde_yml::{value, Value};
     use serial_test::serial;
     use tempfile::tempdir;

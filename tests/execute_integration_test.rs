@@ -1,6 +1,6 @@
 mod common;
 use common::setup_python;
-use core::io::copy_dir;
+use s4n_core::io::copy_dir;
 use s4n::commands::execute::{execute_local, LocalExecuteArgs, Runner};
 use serial_test::serial;
 use std::{

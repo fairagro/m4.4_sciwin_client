@@ -6,7 +6,7 @@ use crate::{
     requirements::Requirement,
     types::{CWLType, DefaultValue, Entry},
 };
-use core::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
+use s4n_core::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
 use std::{
     collections::HashMap,
     error::Error,

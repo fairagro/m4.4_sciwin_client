@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../lib-core" }
+s4n-core = { path = "../lib-core" }
 fancy-regex = { workspace = true }
 pathdiff = { workspace = true }
 serde = { workspace = true }

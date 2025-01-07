@@ -1,6 +1,6 @@
 use crate::parser::guess_type;
 use clap::{Args, Subcommand, ValueEnum};
-use core::io::join_path_string;
+use s4n_core::io::join_path_string;
 use cwl::{
     clt::CommandLineTool,
     execution::{

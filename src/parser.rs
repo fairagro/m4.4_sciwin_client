@@ -5,7 +5,7 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use core::{io::get_filename_without_extension, util::split_vec_at};
+use s4n_core::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
 use std::path::Path;

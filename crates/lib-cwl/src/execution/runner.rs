@@ -10,7 +10,7 @@ use crate::{
     types::{CWLType, DefaultValue, OutputItem},
     wf::Workflow,
 };
-use core::{
+use s4n_core::{
     error::CommandError,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     util::{format_command, get_available_ram, get_processor_count},

@@ -1,5 +1,5 @@
 use crate::clt::Command;
-use core::io::{get_filename_without_extension, get_workflows_folder};
+use s4n_core::io::{get_filename_without_extension, get_workflows_folder};
 
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
     //decide over filename

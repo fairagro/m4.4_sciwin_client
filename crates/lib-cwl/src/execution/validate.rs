@@ -4,7 +4,7 @@ use crate::{
     requirements::Requirement,
     types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
 };
-use core::io::{get_file_property, make_relative_to};
+use s4n_core::io::{get_file_property, make_relative_to};
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
 use std::{collections::HashMap, env};
@@ -253,7 +253,7 @@ fn get_input_value(
 mod tests {
     use super::*;
     use crate::types::{CWLType, File};
-    use core::io::get_file_size;
+    use s4n_core::io::get_file_size;
     use serde_yml::Value;
 
     #[test]

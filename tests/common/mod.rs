@@ -16,14 +16,14 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
     let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
 
     //set up python venv
-    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
+    let _ = Command::new("python3").arg("-m").arg("venv").arg(".venv").output().expect("Could not create venv");
     let old_path = env::var("PATH").unwrap();
     let python_path = format!("{dir_str}/.venv/{venv_scripts}");
     let new_path = format!("{python_path}{path_sep}{old_path}");
 
     //install packages
     let req_path = format!("{dir_str}/requirements.txt");
-    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
+    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output().expect("Could not install packages");
 
     (new_path, old_path)
 }
