@@ -101,8 +101,10 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     //decide over filename
     let mut filename = match &command {
         Command::Multiple(cmd) => get_filename_without_extension(cmd[1].as_str()).unwrap_or_else(|| cmd[1].clone()),
-        Command::Single(cmd) => cmd.to_string(),
+        Command::Single(cmd) => get_filename_without_extension(cmd.as_str()).unwrap_or_else(|| cmd.clone()),
     };
+
+    filename = get_basename(filename);
 
     if let Some(name) = the_name {
         filename.clone_from(&name);
