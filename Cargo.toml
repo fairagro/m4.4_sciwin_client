@@ -25,6 +25,8 @@ sysinfo = "0.32.0"
 urlencoding = "2.1.3"
 whoami = "1.5.2"
 reqwest = { version = "0.12.9", features = ["json"] }
+futures = "0.3"
+tokio = "1.42.0"
 
 [dev-dependencies]
 serial_test = "3.1.1"
