@@ -11,6 +11,7 @@ use s4n::{
     error::{CommandError, ExitCode},
 };
 use std::{error::Error, process::exit};
+use tokio::runtime::Builder;
 
 fn main() {
     if let Err(e) = run() {
@@ -26,24 +27,23 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
+    let runtime = Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
 
     match &args.command {
         Commands::Init(args) => handle_init_command(args)?,
         Commands::Tool { command } => handle_tool_commands(command)?,
         Commands::Run(args) => create_tool(args)?,
         Commands::Workflow { command } => handle_workflow_commands(command)?,
-        //Commands::Annotate { command } => handle_annotate_commands(command)?,
         Commands::Annotate { command, tool_name } => {
-            match (command, tool_name) {
-                (Some(subcommand), _) => handle_annotate_commands(subcommand)?,
-                (None, Some(name)) => {
-                    println!("Annotating tool: {}", name);
-                    // Call the default annotation function
-                    annotate_default(name)?;
-                }
-                _ => {
-                    eprintln!("Error: No subcommand or tool name provided for annotate.");
-                }
+            if let Some(subcommand) = command {
+                runtime.block_on(handle_annotate_commands(subcommand))?;
+            } else if let Some(name) = tool_name {
+                annotate_default(name)?;
+            } else {
+                eprintln!("Error: No subcommand or tool name provided for annotate.");
             }
         }
         Commands::Execute { command } => handle_execute_commands(command)?,
