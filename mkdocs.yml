@@ -20,6 +20,7 @@ theme:
     - content.code.copy
     - content.code.select
     - content.action.view
+    - navigation.top
 repo_url: https://github.com/fairagro/m4.4_sciwin_client
 repo_name: fairagro/m4.4_sciwin_client
 edit_uri: 'edit/main/docs/'
