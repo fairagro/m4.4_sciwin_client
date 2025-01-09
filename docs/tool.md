@@ -1,5 +1,5 @@
 # Tool Commands
-`s4n`s tool commands are designed to facilitate the interoperability with CWL CommandLineTools. The tool command itself has three subcommands for basic C~~R~~UD operations: `create`, `list` and `remove`.
+`s4n`s tool commands are designed to facilitate the interoperability with CWL CommandLineTools. The tool command itself has three subcommands for basic CR~~U~~D operations: `create`, `list` and `remove`.
 
 ```
 Provides commands to create and work with CWL CommandLineTools
