@@ -8,10 +8,22 @@ on:
             - 'docs/**'
             - '.github/workflows/docs.yml'
             - 'mkdocs.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
     deploy:
         runs-on: ubuntu-latest
-
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
         steps:
             - uses: actions/checkout@v4
 
@@ -25,11 +37,16 @@ jobs:
                   python -m pip install --upgrade pip
                   pip install mkdocs mkdocs-material
 
+            - name: Setup Pages
+              uses: actions/configure-pages@v5
+
             - name: Build
               run: mkdocs build
 
-            - name: Deploy
-              uses: peaceiris/actions-gh-pages@v4
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
               with:
-                  personal_token: ${{ secrets.GITHUB_TOKEN }}
-                  publish_dir: ./site
+                path: './site'
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
