@@ -1,3 +1,5 @@
 site_name: SciWin client documentation
 theme:
   name: material
+repo_url: https://github.com/fairagro/m4.4_sciwin_client
+edit_uri: 'blob/main/docs/'
