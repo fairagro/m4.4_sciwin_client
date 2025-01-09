@@ -60,7 +60,7 @@ cargo test
 > Installation instructions are available once a release is created. You can check out our [nightly builds](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml).
 
 ## 📚 How to Use
-A full developer and user documentation will be available soon! An overview on how to use SciWIn Client is available below.
+Take a look at the **[User documentation](https://fairagro.github.io/m4.4_sciwin_client/)**. An overview on how to use SciWIn Client is available below.
 
 ### Project initialization
 Most commands need the context of a Git repo to work. Project initialization can be done using the `s4n init` command.
