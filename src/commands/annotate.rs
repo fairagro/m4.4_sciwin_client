@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use reqwest::Client;
 use serde_json::Value as jsonValue;
 use colored::*;
+use urlencoding::encode;
 
 const REST_URL_BIOPORTAL: &str = "http://data.bioontology.org";
 
@@ -18,25 +19,19 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
     match command {
         AnnotateCommands::Author(args) => {
             annotate_author(args)?;
-            println!("Handled Author command successfully");
         }
         AnnotateCommands::Performer(args) => {
             annotate_performer(args)?;
-            println!("Handled Performer command successfully");
         }
         AnnotateCommands::Container(args) => {
             annotate_container(args)?;
-            println!("Handled Container command successfully");
         }
         AnnotateCommands::Process(args) => {
             annotate_process_step(args).await?;
-            println!("Handled Process command successfully");
         }
         AnnotateCommands::Schema(args) => {
             annotate_schema(args)?;
-            println!("Handled Schema command successfully");
         }
-        // Add new cases here when extending the enum
     }
     Ok(())
 }
@@ -113,28 +108,31 @@ pub struct AnnotateProcessArgs {
 
 #[derive(ValueEnum, Clone, Debug, Default)]
 pub enum OntologyMapper {
-    Zooma,
     #[default]
+    Zooma,
+    //better? but requires API key
     Bioportal,
-    Text2term,
 }
-/*
-impl Default for OntologyMapper {
-    fn default() -> Self {
-        OntologyMapper::Bioportal // Set your desired default here
-    }
-}
-*/
+
 pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Result<(String, String, String), Box<dyn Error>> {
-    println!("Process annotation");
+    let max_recommendations: usize = 10; 
     match args.mapper {
         OntologyMapper::Zooma => {
             // zooma_recommendations(/* parameters */)?;
-            Ok(("".to_string(),"".to_string(),"".to_string()))
+            match zooma_recommendations(term, max_recommendations).await {
+                Ok(recommendations) => Ok(recommendations),
+                Err(e) => {
+                    eprintln!(
+                        "Error in Zoma recommendation process for term '{}': {}",
+                        term, e
+                    );
+                    Err(e) 
+                }
+            }
         }
         OntologyMapper::Bioportal => {
             let bioportal_key: &str = &args.key.clone().unwrap_or_default(); 
-            let max_recommendations: usize = 10; 
+            
             match bioportal_recommendations(term, bioportal_key, max_recommendations).await {
                 Ok(recommendations) => Ok(recommendations),
                 Err(e) => {
@@ -142,17 +140,11 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
                         "Error in Bioportal recommendation process for term '{}': {}",
                         term, e
                     );
-                    Err(e) // Directly return the existing boxed error
+                    Err(e) 
                 }
             }
         }
-        OntologyMapper::Text2term => {
-            Ok(("".to_string(),"".to_string(),"".to_string()))
-            // Call the function that handles Text2Term recommendations
-            // text2term_recommendations(/* parameters */)?;
-        }
     }
-    //Ok(())
 }
 
 #[derive(Args, Debug)]
@@ -666,89 +658,105 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
     let yaml_result = parse_cwl(&args.cwl_name)?;
     let mut yaml = yaml_result;
 
-    // Check if 'arc:has process sequence' already exists in the parsed YAML
     if let Value::Mapping(ref mut mapping) = yaml {
-        // Check if 'arc:has process sequence' exists, and insert if it doesn't
+        // Create a process sequence if it doesn't exist
         if !mapping.contains_key(Value::String("arc:has process sequence".to_string())) {
             let mut process_sequence = Mapping::new();
-            process_sequence.insert(Value::String("class".to_string()), Value::String("arc:process sequence".to_string()));
+            process_sequence.insert(
+                Value::String("class".to_string()),
+                Value::String("arc:process sequence".to_string()),
+            );
 
-            if let Some(ref name) = args.name {
-                process_sequence.insert(Value::String("arc:name".to_string()), Value::String(name.clone()));
-            }
-
-            // Insert process_sequence into the "arc:has process sequence" field
-            mapping.insert(Value::String("arc:has process sequence".to_string()), Value::Sequence(vec![Value::Mapping(process_sequence)]));
-        }
-
-        // Check if 'arc:has input' exists, and insert if it doesn't
-        if let Some(ref input) = args.input {
-            if !mapping.contains_key(Value::String("arc:has input".to_string())) {
+            // Add inputs
+            if let Some(ref input) = args.input {
                 let mut input_data = Mapping::new();
                 input_data.insert(Value::String("class".to_string()), Value::String("arc:data".to_string()));
                 input_data.insert(Value::String("arc:name".to_string()), Value::String(input.clone()));
 
-                // Insert input_data into the "arc:has input" field
-                mapping.insert(Value::String("arc:has input".to_string()), Value::Sequence(vec![Value::Mapping(input_data)]));
+                process_sequence.insert(
+                    Value::String("arc:has input".to_string()),
+                    Value::Sequence(vec![Value::Mapping(input_data)]),
+                );
             }
-        }
 
-        // Check if 'arc:has output' exists, and insert if it doesn't
-        if let Some(ref output) = args.output {
-            if !mapping.contains_key(Value::String("arc:has output".to_string())) {
+            // Add outputs
+            if let Some(ref output) = args.output {
                 let mut output_data = Mapping::new();
                 output_data.insert(Value::String("class".to_string()), Value::String("arc:data".to_string()));
                 output_data.insert(Value::String("arc:name".to_string()), Value::String(output.clone()));
 
-                // Insert output_data into the "arc:has output" field
-                mapping.insert(Value::String("arc:has output".to_string()), Value::Sequence(vec![Value::Mapping(output_data)]));
-            }
-        }
-
-        // Process the parameters and values as usual
-        if let Some(ref parameter) = args.parameter {
-            let mut parameter_value = Mapping::new();
-            parameter_value.insert(Value::String("class".to_string()), Value::String("arc:process parameter value".to_string()));
-
-            let mut protocol_parameter = Mapping::new();
-            protocol_parameter.insert(Value::String("class".to_string()), Value::String("arc:protocol parameter".to_string()));
-
-            let mut parameter_name = Mapping::new();
-            parameter_name.insert(Value::String("class".to_string()), Value::String("arc:parameter name".to_string()));
-
-            match process_annotation(args, parameter).await {
-                Ok(recommendations) => {
-                    parameter_name.insert(Value::String("arc:term accession".to_string()), Value::String(recommendations.2));
-                    parameter_name.insert(Value::String("arc:term source REF".to_string()), Value::String(recommendations.1));
-                    parameter_name.insert(Value::String("arc:annotation value".to_string()), Value::String(recommendations.0));
-                }
-                Err(e) => {
-                    eprintln!("Failed to process annotation for parameter '{}': {}", parameter, e);
-                }
+                process_sequence.insert(
+                    Value::String("arc:has output".to_string()),
+                    Value::Sequence(vec![Value::Mapping(output_data)]),
+                );
             }
 
-            protocol_parameter.insert(Value::String("arc:has parameter name".to_string()), Value::Sequence(vec![Value::Mapping(parameter_name)]));
-            parameter_value.insert(Value::String("arc:has parameter".to_string()), Value::Sequence(vec![Value::Mapping(protocol_parameter)]));
+            // Add parameters
+            if let Some(ref parameter) = args.parameter {
+                let mut parameter_value = Mapping::new();
+                parameter_value.insert(
+                    Value::String("class".to_string()),
+                    Value::String("arc:process parameter value".to_string()),
+                );
 
-            if let Some(ref value) = args.value {
-                let mut ontology_annotation = Mapping::new();
-                ontology_annotation.insert(Value::String("class".to_string()), Value::String("arc:ontology annotation".to_string()));
+                let mut protocol_parameter = Mapping::new();
+                protocol_parameter.insert(
+                    Value::String("class".to_string()),
+                    Value::String("arc:protocol parameter".to_string()),
+                );
 
-                match process_annotation(args, value).await {
+                let mut parameter_name = Mapping::new();
+                parameter_name.insert(
+                    Value::String("class".to_string()),
+                    Value::String("arc:parameter name".to_string()),
+                );
+
+                match process_annotation(args, parameter).await {
                     Ok(recommendations) => {
-                        ontology_annotation.insert(Value::String("arc:term accession".to_string()), Value::String(recommendations.2));
-                        ontology_annotation.insert(Value::String("arc:term source REF".to_string()), Value::String(recommendations.1));
-                        ontology_annotation.insert(Value::String("arc:annotation value".to_string()), Value::String(recommendations.0));
+                        parameter_name.insert(
+                            Value::String("arc:term accession".to_string()),
+                            Value::String(recommendations.2),
+                        );
+                        parameter_name.insert(
+                            Value::String("arc:term source REF".to_string()),
+                            Value::String(recommendations.1),
+                        );
+                        parameter_name.insert(
+                            Value::String("arc:annotation value".to_string()),
+                            Value::String(recommendations.0),
+                        );
                     }
                     Err(e) => {
-                        eprintln!("Failed to process annotation for value '{}': {}", value, e);
+                        eprintln!("Failed to process annotation for parameter '{}': {}", parameter, e);
                     }
                 }
 
-                parameter_value.insert(Value::String("arc:value".to_string()), Value::Sequence(vec![Value::Mapping(ontology_annotation)]));
+                protocol_parameter.insert(
+                    Value::String("arc:has parameter name".to_string()),
+                    Value::Sequence(vec![Value::Mapping(parameter_name)]),
+                );
+                parameter_value.insert(
+                    Value::String("arc:has parameter".to_string()),
+                    Value::Sequence(vec![Value::Mapping(protocol_parameter)]),
+                );
+
+                if let Some(ref value) = args.value {
+                    parameter_value.insert(Value::String("arc:value".to_string()), Value::String(value.clone()));
+                }
+
+                process_sequence.insert(
+                    Value::String("arc:has parameter value".to_string()),
+                    Value::Sequence(vec![Value::Mapping(parameter_value)]),
+                );
             }
 
-            mapping.insert(Value::String("arc:has parameter value".to_string()), Value::Sequence(vec![Value::Mapping(parameter_value)]));
+            // Add process sequence to the root mapping
+            mapping.insert(
+                Value::String("arc:has process sequence".to_string()),
+                Value::Sequence(vec![Value::Mapping(process_sequence)]),
+            );
+        } else {
+            println!("Process sequence already exists");
         }
     } else {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
@@ -764,7 +772,6 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
 }
 
 
-//const ZOOMA_URL: &str = "http://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate";
 
 async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Result<jsonValue, Box<dyn Error>> {
     
@@ -774,37 +781,37 @@ async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Re
         .await?
         .json::<jsonValue>()
         .await?;
-    //println!("Response {:?}", response);
+
     Ok(response)
 }
+
+
 
 fn select_annotation(
     recommendations: &HashSet<(String, String, String)>,
     term: String,
 ) -> Result<(String, String, String), Box<dyn Error>> {
-    println!("{}", format!("Available annotations for {}:", term).green());
+    println!("{}", format!("Available annotations for '{}':", term).green());
 
     // Collect elements into a vector for indexing
     let elements: Vec<&(String, String, String)> = recommendations.iter().collect();
 
-    // Display a tabular format
-    println!("{:<4} {:<30} {:<30} {:<60}", "No.", "Label", "Ontology", "ID");
-    println!("{:<4} {:<30} {:<30} {:<60}", "---", "-------------------------", "-------------------------", "--------------------------------------------------");
+     // Add an option to skip annotation
+     println!("{:<4} {}", "0".yellow(),format!("Do not use ontology, annotate '{}'", term).yellow());
 
     for (index, (label, ontology, id)) in elements.iter().enumerate() {
         println!(
-            "{:<4} {:<30} {:<30} {:<60}",
+            "{:<4} {:<30} {:<60} {:<50}",
             index + 1,
             label,
-            ontology,
-            id
+            id,
+            ontology
         );
     }
 
-    // Let the user choose an element
     println!("==================================");
-    print!("Enter the number of your choice: ");
-    io::stdout().flush()?; // Ensure the prompt is printed
+    print!("{}", "Enter the number of your choice: ".green());
+    io::stdout().flush()?; 
 
     let mut user_input = String::new();
     io::stdin()
@@ -812,18 +819,23 @@ fn select_annotation(
         .expect("Failed to read input");
 
     // Parse the user input
-    let choice: usize = user_input.trim().parse().unwrap_or(0);
-    if choice > 0 && choice <= elements.len() {
-        let selected = elements[choice - 1].clone();
-        println!("\nYou selected:");
-        println!(
-            "  [Label: {}]   [Ontology: {}]   [ID: {}]",
-            selected.0, selected.1, selected.2
-        );
-        Ok(selected.clone())
-    } else {
-        println!("Invalid choice. Exiting.");
-        Err("Invalid choice".into())
+    match user_input.trim().parse::<usize>() {
+        Ok(0) => {
+            // Return a default value
+            Ok((
+                term,
+                "N/A".to_string(),
+                "N/A".to_string(),
+            ))
+        }
+        Ok(choice) if choice > 0 && choice <= elements.len() => {
+            //let selected = elements[choice - 1].clone();
+            Ok(elements[choice - 1].clone())
+        }
+        _ => {
+            println!("\n{}", "Invalid choice. Please try again.".red());
+            Err("Invalid choice".into())
+        }
     }
 }
 
@@ -832,7 +844,6 @@ async fn bioportal_recommendations(
     biotools_key: &str,
     max_recommendations: usize,
 ) -> Result<(String, String, String), Box<dyn Error>> {
-    println!("search_term {}", search_term);
     let client = Client::new();
     let annotations = get_json_biotools(
         //&format!("{}/recommender?input={}", REST_URL, urlencoding::encode(search_term)),
@@ -859,9 +870,68 @@ async fn bioportal_recommendations(
     }
     select_annotation(&recommendations, search_term.to_string())
 
-    
-    //Ok(recommendations)
 }
 
+async fn zooma_recommendations(
+    search_term: &str,
+    max_recommendations: usize,
+) -> Result<(String, String, String), Box<dyn Error>> {
+    let client = reqwest::Client::new();
+    let mut recommendations: HashSet<(String, String, String)> = HashSet::new();
+
+    let zooma_base = "https://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=";
+
+    // Replace spaces with "+" and URL encode the term
+    let tt = search_term.replace(" ", "+");
+
+    let query = format!("{}{}", zooma_base, encode(&tt));
+
+    // Make the GET request
+    let response = client.get(&query).send().await?;
+    
+    let zooma_json: serde_json::Value = response.json().await?;
 
 
+    if let Some(json_array) = zooma_json.as_array() {
+        for entry in json_array {
+
+            let mut property_value = None;
+            let mut source_name = None;
+            let mut semantic_tag = None;
+    
+            if let Some(tag) = entry.get("semanticTags")
+                .and_then(|tags| tags.as_array())
+                .and_then(|tags| tags.get(0))
+                .and_then(|tag| tag.as_str())
+            {
+                semantic_tag = Some(tag.to_string());
+            }
+    
+            if let Some(value) = entry.get("annotatedProperty")
+                .and_then(|prop| prop.get("propertyValue"))
+                .and_then(|val| val.as_str())
+            {
+                property_value = Some(value.to_string());
+            }
+    
+            if let Some(name) = entry.get("derivedFrom")
+                .and_then(|prov| prov.get("provenance"))
+                .and_then(|source| source.get("generator"))
+                .and_then(|name| name.as_str())
+            {
+                source_name = Some(name.to_string());
+            }
+        
+            if recommendations.len() < max_recommendations {
+                if let (Some(property_value), Some(source_name), Some(semantic_tag)) =
+                    (property_value, source_name, semantic_tag)
+                {
+                    recommendations.insert((property_value, source_name, semantic_tag));
+                }
+            }
+        }
+    }
+
+    select_annotation(&recommendations, search_term.to_string())
+
+}
