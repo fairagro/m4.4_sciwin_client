@@ -18,7 +18,17 @@ theme:
   features:
     - content.action.edit
     - content.code.copy
+    - content.code.select
     - content.action.view
 repo_url: https://github.com/fairagro/m4.4_sciwin_client
 repo_name: fairagro/m4.4_sciwin_client
 edit_uri: 'edit/main/docs/'
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
