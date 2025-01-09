@@ -17,7 +17,8 @@ theme:
         name: Switch to light mode
   features:
     - content.action.edit
+    - content.code.copy
     - content.action.view
 repo_url: https://github.com/fairagro/m4.4_sciwin_client
 repo_name: fairagro/m4.4_sciwin_client
-edit_uri: 'blob/main/docs/'
+edit_uri: 'edit/main/docs/'
