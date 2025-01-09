@@ -4,8 +4,8 @@ TODO: some intro stuff
 ## Working Title: Why you need S4n?
 TODO
 
-## Working Title: What is CWL?
-TODO
+## What is CWL?
+CWL is an acronym for *Common Workflow Language*. 
 
 ## Example Usage
 This example is a sample use case for building a small project with `s4n`. It features the creation of two commandline scripts and the combination of those into a workflow as well as the execution of this workflow using the internal CWL runner.
