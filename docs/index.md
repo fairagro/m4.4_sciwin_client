@@ -1,4 +1,4 @@
-# SciWIn-Client (`s4n`) User documentation
+# User documentation
 Computational workflows, which describe complex, multi-step procedures for automated execution, are essential for ensuring reproducibility, scalability, and efficiency in scientific research. The FAIRagro Scientific Workflow Infrastructure (SciWIn) supports scientists to create, execute, share, and publish these workflows, fostering collaboration and transparency.
 
 ## Why you need `S4n`?
