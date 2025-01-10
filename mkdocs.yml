@@ -1,4 +1,12 @@
+# Project configuration
 site_name: SciWin client documentation
+site_url: https://fairagro.github.io/m4.4_sciwin_client/
+
+# Repository
+repo_name: fairagro/m4.4_sciwin_client
+repo_url: https://github.com/fairagro/m4.4_sciwin_client
+
+# Theme configuration
 theme:
   name: material
   palette:
@@ -15,13 +23,19 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    # content
     - content.action.edit
-    - content.code.copy
-    - content.code.select
     - content.action.view
-    - navigation.top
-repo_url: https://github.com/fairagro/m4.4_sciwin_client
-repo_name: fairagro/m4.4_sciwin_client
+    - content.code.copy
+    # navigation
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.sections
+    - navigation.top 
+    - navigation.tracking
+    # toc
+    - toc.integrate 
 edit_uri: 'edit/main/docs/'
 
 markdown_extensions:
