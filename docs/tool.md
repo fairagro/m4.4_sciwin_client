@@ -18,8 +18,13 @@ Options:
 
 ## `tool create`
 The `tool create` command can be used to easily generate CWL CommandLineTools. It serves as a prefix to the usual command line prompt. Calling `tool create` with a command attached will execute the command, determine in- and outputs and create a CWL tool definition file in the `workflows` folder. `s4n tool create` has `s4n run` as alias for even less typing. 
-> [!NOTE]
-> Before using this command all changes need to be commited as it uses `git` to determine tool outputs!
+
+!!! note
+    Before using this command all changes need to be commited as it uses `git` to determine tool outputs!
+    `git status` can be used to check beforehand.
+
+!!! tip
+    Redirection `>` and pipes `|` can be used, but need to be escaped with a backslash fot the parser to use. Otherwise the console output of `s4n` will be redirected / piped.
 
 ```
 Runs commandline string and creates a tool (synonym: s4n run)
