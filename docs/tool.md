@@ -46,9 +46,42 @@ Options:
 ```
 
 !!! example
-    The following command will create a CWL CommandLineTool description for executing a python script `script.py` with two parameters.
+    The following command will create a CWL CommandLineTool description for executing a python script `echo.py` with a txt file as parameter `--test`.
     ```
-    s4n tool create python script.py --argument1 --argument2
+    s4n tool create python echo.py --test input.txt
+    ```
+    The command will create this CWL file in the workflows folder.
+    ```yaml
+    #!/usr/bin/env cwl-runner
+
+    cwlVersion: v1.2
+    class: CommandLineTool
+
+    requirements:
+    - class: InitialWorkDirRequirement
+      listing:
+      - entryname: echo.py
+        entry:
+          $include: '../../echo.py'
+
+    inputs:
+    - id: test
+      type: File
+      default:
+        class: File
+        location: '../../input.txt'
+      inputBinding:
+        prefix: '--test'
+
+    outputs:
+    - id: results
+      type: File
+      outputBinding:
+        glob: results.txt
+
+    baseCommand:
+    - python
+    - echo.py
     ```
 
 With the `--name` option the resulting filename can be manipulated. Without the argument SciWIn client will automatically generate a name based on the command. If for example the same base command is used in two tools there would be a file name conflict.

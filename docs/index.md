@@ -118,7 +118,7 @@ s4n tool create python workflows/calculation/calculation.py --speakers data/spea
 # 📄 Created CWL file workflows/calculation/calculation.cwl
 ```
 This created CWL file should look like the following example:
-```cwl
+```yaml
 #!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
@@ -214,7 +214,7 @@ s4n tool create python workflows/plot/plot.py --data results.csv
 ```
 
 The freshly created plot tool should look like this:
-```cwl
+```yaml
 #!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
@@ -335,7 +335,7 @@ s4n workflow status main
 ```
 
 The finished CWL workflow file looks like this:
-```cwl
+```yaml
 #!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
