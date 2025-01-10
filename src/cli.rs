@@ -30,15 +30,10 @@ pub enum Commands {
         command: WorkflowCommands
     },
     Annotate,
-    #[command(about = "Execution of CWL Files locally or on remote servers (\x1b[1msynonym\x1b[0m: s4n ex)")]
+    #[command(about = "Execution of CWL Files locally or on remote servers", visible_alias = "ex")]
     Execute {
         #[command(subcommand)]
         command: ExecuteCommands,
-    },    
-    #[command(hide = true)]
-    Ex {
-        #[command(subcommand)]
-        command: ExecuteCommands,
-    }, 
+    },
     Sync,
 }

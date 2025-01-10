@@ -16,13 +16,7 @@ use crate::{
     util::{format_command, get_available_ram, get_processor_count},
 };
 use std::{
-    collections::HashMap,
-    env,
-    error::Error,
-    fs::{self},
-    path::{Path, PathBuf},
-    process::Command as SystemCommand,
-    time::Instant,
+    collections::HashMap, env, error::Error, fs::{self}, path::{Path, PathBuf}, process::Command as SystemCommand, time::Instant
 };
 use tempfile::tempdir;
 

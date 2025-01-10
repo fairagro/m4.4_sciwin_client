@@ -172,7 +172,6 @@ pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Resul
     Ok(dir)
 }
 
-
 pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
     let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
     import_regex

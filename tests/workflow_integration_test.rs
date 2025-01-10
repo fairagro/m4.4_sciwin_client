@@ -1,12 +1,20 @@
+mod common;
 use assert_cmd::Command;
+use common::check_git_user;
 use predicates::prelude::*;
 use s4n::{
-    commands::workflow::{connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, ConnectWorkflowArgs, CreateWorkflowArgs},
+    commands::{
+        init::init_s4n,
+        workflow::{
+            connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, list_workflows, remove_workflow, ConnectWorkflowArgs,
+            CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
+        },
+    },
     cwl::loader::load_workflow,
     io::create_and_write_file,
 };
 use serial_test::serial;
-use std::{env, path::Path};
+use std::{env, fs, path::Path};
 use tempfile::tempdir;
 
 #[test]
@@ -26,6 +34,36 @@ pub fn test_create_workflow() {
     let path = "workflows/test/test.cwl";
     assert!(Path::new(path).exists());
 
+    env::set_current_dir(current).unwrap();
+}
+
+#[test]
+#[serial]
+pub fn test_remove_workflow() {
+    check_git_user().unwrap();
+
+    let dir = tempdir().unwrap();
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+
+    init_s4n(None, false).unwrap();
+    create_workflow(&CreateWorkflowArgs {
+        name: "test".to_string(),
+        force: false,
+    })
+    .unwrap();
+
+    let target = "workflows/test/test.cwl";
+    assert!(fs::exists(target).unwrap());
+
+    list_workflows(&ListWorkflowArgs { list_all: true }).unwrap();
+
+    remove_workflow(&RemoveWorkflowArgs {
+        rm_workflow: vec![target.to_string()],
+    })
+    .unwrap();
+
+    assert!(!fs::exists(target).unwrap());
     env::set_current_dir(current).unwrap();
 }
 

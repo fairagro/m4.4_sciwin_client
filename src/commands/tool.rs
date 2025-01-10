@@ -2,7 +2,7 @@ use crate::cwl::execution::runner::run_commandlinetool;
 use crate::{
     cwl::{
         format::format_cwl,
-        parser,
+        parser::{self, post_process_cwl},
         requirements::{DockerRequirement, Requirement},
     },
     io::{create_and_write_file, get_qualified_filename},
@@ -20,8 +20,8 @@ use walkdir::WalkDir;
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args)?,
-        ToolCommands::Ls(args) => list_tools(args)?,
-        ToolCommands::Rm(args) => remove_tool(args)?,
+        ToolCommands::List(args) => list_tools(args)?,
+        ToolCommands::Remove(args) => remove_tool(args)?,
     }
     Ok(())
 }
@@ -30,10 +30,10 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Err
 pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
-    #[command(about = "Lists all tools")]
-    Ls(LsArgs),
-    #[command(about = "Remove a tool, e.g. s4n tool rm toolname")]
-    Rm(RmArgs),
+    #[command(about = "Lists all tools", visible_alias = "ls")]
+    List(ListToolArgs),
+    #[command(about = "Remove a tool, e.g. s4n tool rm toolname", visible_alias = "rm")]
+    Remove(RemoveToolArgs),
 }
 
 #[derive(Args, Debug)]
@@ -68,13 +68,13 @@ pub struct CreateToolArgs {
 }
 
 #[derive(Args, Debug)]
-pub struct RmArgs {
+pub struct RemoveToolArgs {
     #[arg(trailing_var_arg = true, help = "Remove a tool")]
-    pub rm_tool: Vec<String>,
+    pub tool_names: Vec<String>,
 }
 
 #[derive(Args, Debug)]
-pub struct LsArgs {
+pub struct ListToolArgs {
     #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
     pub list_all: bool,
 }
@@ -177,6 +177,9 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     } else {
         warn("User requested no run, could not determine outputs!")
     }
+
+    post_process_cwl(&mut cwl);
+
     //generate yaml
     if !args.is_raw {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
@@ -206,7 +209,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
+pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
     println!("📂 Scanning for tools in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
@@ -280,11 +283,11 @@ pub fn list_tools(args: &LsArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn remove_tool(args: &RmArgs) -> Result<(), Box<dyn std::error::Error>> {
+pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");
-    for tool in &args.rm_tool {
+    for tool in &args.tool_names {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
         // Check if the path has an extension
@@ -304,7 +307,7 @@ pub fn remove_tool(args: &RmArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     //we could also remove all tools if no tool is specified but maybe too dangerous
-    if args.rm_tool.is_empty() {
+    if args.tool_names.is_empty() {
         println!("Please enter a tool or a list of tools");
     }
     Ok(())

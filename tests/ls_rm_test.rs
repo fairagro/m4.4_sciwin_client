@@ -1,7 +1,7 @@
 use assert_cmd::Command;
 use git2::Repository;
 use predicates::prelude::*;
-use s4n::commands::tool::{handle_tool_commands, remove_tool, CreateToolArgs, RmArgs, ToolCommands};
+use s4n::commands::tool::{handle_tool_commands, remove_tool, CreateToolArgs, RemoveToolArgs, ToolCommands};
 use s4n::io::create_and_write_file;
 use s4n::repo::get_modified_files;
 use serial_test::serial;
@@ -20,8 +20,8 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     let original_dir = env::current_dir()?;
     fs::create_dir(&workflows_path)?;
     //doesn't exist
-    let args = RmArgs {
-        rm_tool: vec!["non_existing_tool".to_string()],
+    let args = RemoveToolArgs {
+        tool_names: vec!["non_existing_tool".to_string()],
     };
 
     let result = remove_tool(&args);
@@ -34,7 +34,7 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 #[serial]
 fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
-    let args = RmArgs { rm_tool: vec![] };
+    let args = RemoveToolArgs { tool_names: vec![] };
     let original_dir = env::current_dir()?;
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
@@ -69,10 +69,10 @@ pub fn tool_remove_test() {
         assert!(handle_tool_commands(&cmd_create).is_ok());
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
-        let tool_remove_args = RmArgs {
-            rm_tool: vec!["echo".to_string()],
+        let tool_remove_args = RemoveToolArgs {
+            tool_names: vec!["echo".to_string()],
         };
-        let cmd_remove = ToolCommands::Rm(tool_remove_args);
+        let cmd_remove = ToolCommands::Remove(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
         assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
@@ -107,10 +107,10 @@ pub fn tool_remove_test_extension() {
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         // remove the tool
-        let tool_remove_args = RmArgs {
-            rm_tool: vec!["echo.cwl".to_string()],
+        let tool_remove_args = RemoveToolArgs {
+            tool_names: vec!["echo.cwl".to_string()],
         };
-        let cmd_remove = ToolCommands::Rm(tool_remove_args);
+        let cmd_remove = ToolCommands::Remove(tool_remove_args);
         assert!(handle_tool_commands(&cmd_remove).is_ok());
 
         // check if the tool was removed

@@ -1,11 +1,11 @@
 use super::{
-    clt::{Command, CommandLineTool},
+    clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use crate::io::get_filename_without_extension;
+use crate::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
 use std::{collections::HashMap, path::Path};
@@ -15,19 +15,46 @@ static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
 pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&command);
-    let inputs = get_inputs(match &base_command {
+    let remainder = match &base_command {
         Command::Single(_) => &command[1..],
         Command::Multiple(ref vec) => &command[vec.len()..],
-    });
+    };
 
-    let tool = CommandLineTool::default().with_base_command(base_command.clone()).with_inputs(inputs);
+    let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
-    match base_command {
+    if !remainder.is_empty() {
+        let (cmd, piped) = split_vec_at(remainder, "|");
+
+        let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
+        let stderr_pos = cmd.iter().position(|i| *i == "2>").unwrap_or(cmd.len());
+        let first_redir_pos = usize::min(stdout_pos, stderr_pos);
+
+        let stdout = handle_redirection(&cmd[stdout_pos..]);
+        let stderr = handle_redirection(&cmd[stderr_pos..]);
+
+        let inputs = get_inputs(&cmd[..first_redir_pos]);
+
+        let args = collect_arguments(&piped, &inputs);
+
+        tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr).with_arguments(args);
+    }
+
+    tool = match base_command {
         Command::Single(_) => tool,
         Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
             &vec[1],
         ))]),
+    };
+
+    if tool.arguments.is_some() {
+        if let Some(requirements) = &mut tool.requirements {
+            requirements.push(Requirement::ShellCommandRequirement);
+        } else {
+            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
+        }
     }
+
+    tool
 }
 
 fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &InitialWorkDirRequirement) -> Vec<String> {
@@ -121,7 +148,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
         _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
     };
     CommandInputParameter::default()
-        .with_id(slugify!(&current).as_str())
+        .with_id(slugify!(&current, separator = "_").as_str())
         .with_type(guess_type(current))
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
@@ -131,7 +158,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id).as_str())
+        .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(CWLType::Boolean)
         .with_default_value(DefaultValue::Any(Value::Bool(true)))
 }
@@ -147,9 +174,108 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
-        .with_id(slugify!(&id).as_str())
+        .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
+}
+
+fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
+    if remaining_args.is_empty() {
+        return None;
+    }
+    //hopefully? most cases are only `some_command > some_file.out`
+    //remdirect comes at pos 0, discard that
+    let out_file = remaining_args[1];
+    Some(out_file.to_string())
+}
+
+fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option<Vec<Argument>> {
+    if piped.is_empty() {
+        return None;
+    }
+
+    let piped_args = piped.iter().enumerate().map(|(i, &x)| {
+        Argument::Binding(CommandLineBinding {
+            prefix: None,
+            position: Some((inputs.len() + i).try_into().unwrap_or_default()),
+            value_from: Some(x.to_string()),
+            shell_quote: None,
+        })
+    });
+
+    let mut args = vec![Argument::Binding(CommandLineBinding {
+        prefix: None,
+        position: Some(inputs.len().try_into().unwrap_or_default()),
+        value_from: Some("|".to_string()),
+        shell_quote: Some(false),
+    })];
+    args.extend(piped_args);
+
+    Some(args)
+}
+
+pub fn post_process_cwl(tool: &mut CommandLineTool) {
+    fn process_input(input: &CommandInputParameter) -> String {
+        if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
+            format!("$(inputs.{}.path)", input.id)
+        } else {
+            format!("$(inputs.{})", input.id)
+        }
+    }
+
+    let mut processed_once = false;
+    for input in &tool.inputs {
+        if let Some(default) = &input.default {
+            for output in tool.outputs.iter_mut() {
+                if let Some(binding) = &mut output.output_binding {
+                    if binding.glob == default.as_value_string() {
+                        binding.glob = process_input(input);
+                        processed_once = true;
+                    }
+                }
+            }
+            if let Some(stdout) = &tool.stdout {
+                if *stdout == default.as_value_string() {
+                    tool.stdout = Some(process_input(input));
+                    processed_once = true;
+                }
+            }
+            if let Some(stderr) = &tool.stderr {
+                if *stderr == default.as_value_string() {
+                    tool.stderr = Some(process_input(input));
+                    processed_once = true;
+                }
+            }
+            if let Some(arguments) = &mut tool.arguments {
+                for argument in arguments.iter_mut() {
+                    match argument {
+                        Argument::String(s) => {
+                            if *s == default.as_value_string() {
+                                *s = process_input(input);
+                                processed_once = true;
+                            }
+                        }
+                        Argument::Binding(binding) => {
+                            if let Some(from) = &mut binding.value_from {
+                                if *from == default.as_value_string() {
+                                    *from = process_input(input);
+                                    processed_once = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if processed_once {
+        if let Some(requirements) = &mut tool.requirements {
+            requirements.push(Requirement::InlineJavascriptRequirement);
+        } else {
+            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
+        }
+    }
 }
 
 pub fn guess_type(value: &str) -> CWLType {

@@ -4,7 +4,7 @@ use s4n::{
     commands::{
         execute::{execute_local, LocalExecuteArgs, Runner},
         init::init_s4n,
-        tool::{create_tool, list_tools, CreateToolArgs, LsArgs},
+        tool::{create_tool, list_tools, CreateToolArgs, ListToolArgs},
         workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
     },
     cwl::loader::load_workflow,
@@ -12,9 +12,7 @@ use s4n::{
 };
 use serial_test::serial;
 use std::{
-    env,
-    fs::{self, remove_dir_all, remove_file},
-    vec,
+    env, fs::{self, remove_dir_all, remove_file}, path::PathBuf, vec
 };
 use tempfile::tempdir;
 
@@ -93,7 +91,7 @@ pub fn test_cli_s4n_workflow() {
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
 
     //list tools
-    list_tools(&LsArgs { list_all: true }).unwrap();
+    list_tools(&ListToolArgs { list_all: true }).unwrap();
 
     //create workflow
     let name = "test_workflow".to_string();
@@ -133,10 +131,10 @@ pub fn test_cli_s4n_workflow() {
 
     //save workflow
     save_workflow(&create_args).expect("Could not save workflow");
-    let wf_path = "workflows/test_workflow/test_workflow.cwl";
-    assert!(fs::exists(wf_path).unwrap());
+    let wf_path = PathBuf::from("workflows/test_workflow/test_workflow.cwl");
+    assert!(fs::exists(&wf_path).unwrap());
 
-    let workflow = load_workflow(wf_path).unwrap();
+    let workflow = load_workflow(&wf_path).unwrap();
     assert!(workflow.has_input("speakers"));
     assert!(workflow.has_input("population"));
     assert!(workflow.has_output("out"));
@@ -164,6 +162,7 @@ pub fn test_cli_s4n_workflow() {
         out_dir: None,
         is_quiet: false,
         file: wf_path.to_string().into(),
+
         args: vec!["inputs.yml".to_string()],
     })
     .expect("Could not execute Workflow");

@@ -24,8 +24,8 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dy
         WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args)?,
         WorkflowCommands::Save(args) => save_workflow(args)?,
         WorkflowCommands::Status(args) => get_workflow_status(args)?,
-        WorkflowCommands::Ls(args) => list_workflows(args)?,
-        WorkflowCommands::Rm(args) => remove_workflow(args)?,
+        WorkflowCommands::List(args) => list_workflows(args)?,
+        WorkflowCommands::Remove(args) => remove_workflow(args)?,
     }
     Ok(())
 }
@@ -42,10 +42,10 @@ pub enum WorkflowCommands {
     Save(CreateWorkflowArgs),
     #[command(about = "Shows socket status of workflow")]
     Status(CreateWorkflowArgs),
-    #[command(about = "List all workflows")]
-    Ls(LsWorkflowArgs),
-    #[command(about = "Remove a workflow")]
-    Rm(RmWorkflowArgs),
+    #[command(about = "List all workflows", visible_alias = "ls")]
+    List(ListWorkflowArgs),
+    #[command(about = "Remove a workflow", visible_alias = "rm")]
+    Remove(RemoveWorkflowArgs),
 }
 
 #[derive(Args, Debug)]
@@ -57,13 +57,13 @@ pub struct CreateWorkflowArgs {
 }
 
 #[derive(Args, Debug)]
-pub struct LsWorkflowArgs {
+pub struct ListWorkflowArgs {
     #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
     pub list_all: bool,
 }
 
 #[derive(Args, Debug)]
-pub struct RmWorkflowArgs {
+pub struct RemoveWorkflowArgs {
     #[arg(trailing_var_arg = true, help = "Remove a workflow")]
     pub rm_workflow: Vec<String>,
 }
@@ -254,7 +254,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-pub fn list_workflows(args: &LsWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn list_workflows(args: &ListWorkflowArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
     println!("📂 Scanning for workflows in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
@@ -368,7 +368,7 @@ fn format_with_line_breaks(items: &[String], max_per_line: usize) -> String {
 }
 
 /// Remove a workflow
-pub fn remove_workflow(args: &RmWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn remove_workflow(args: &RemoveWorkflowArgs) -> Result<(), Box<dyn Error>> {
     let cwd = env::current_dir()?;
     let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");

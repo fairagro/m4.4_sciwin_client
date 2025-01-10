@@ -2,9 +2,10 @@ mod common;
 use common::{os_path, with_temp_repository};
 use git2::Repository;
 use s4n::{
-    commands::tool::{handle_tool_commands, CreateToolArgs, ToolCommands},
+    commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
     cwl::{
-        clt::CommandLineTool,
+        clt::{Argument, CommandLineTool},
+        loader::load_tool,
         requirements::{DockerRequirement, Requirement},
         types::Entry,
     },
@@ -28,13 +29,21 @@ pub fn tool_create_test() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
 
         //check for files being present
-        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(Path::new("workflows/echo/echo.cwl"))];
+        let output_paths = vec![
+            dir.path().join(Path::new("results.txt")),
+            dir.path().join(Path::new("workflows/echo/echo.cwl")),
+        ];
         for output_path in output_paths {
             assert!(output_path.exists());
         }
@@ -59,7 +68,12 @@ pub fn tool_create_test_is_raw() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -86,13 +100,21 @@ pub fn tool_create_test_no_commit() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
 
         //check for files being present
-        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(Path::new("workflows/echo/echo.cwl"))];
+        let output_paths = vec![
+            dir.path().join(Path::new("results.txt")),
+            dir.path().join(Path::new("workflows/echo/echo.cwl")),
+        ];
         for output_path in output_paths {
             assert!(output_path.exists());
         }
@@ -116,7 +138,12 @@ pub fn tool_create_test_no_run() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -142,7 +169,12 @@ pub fn tool_create_test_is_clean() {
             is_clean: true, //look!
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -169,7 +201,12 @@ pub fn tool_create_test_container_image() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -208,7 +245,12 @@ pub fn tool_create_test_dockerfile() {
             is_clean: false,
             inputs: None, 
             outputs: None,
-            command: vec!["python".to_string(), "scripts/echo.py".to_string(), "--test".to_string(), "data/input.txt".to_string()],
+            command: vec![
+                "python".to_string(),
+                "scripts/echo.py".to_string(),
+                "--test".to_string(),
+                "data/input.txt".to_string(),
+            ],
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -221,7 +263,11 @@ pub fn tool_create_test_dockerfile() {
         let requirements = cwl.requirements.expect("No requirements found!");
         assert_eq!(requirements.len(), 2);
 
-        if let Requirement::DockerRequirement(DockerRequirement::DockerFile { docker_file, docker_image_id }) = &requirements[1] {
+        if let Requirement::DockerRequirement(DockerRequirement::DockerFile {
+            docker_file,
+            docker_image_id,
+        }) = &requirements[1]
+        {
             assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
             assert_eq!(*docker_image_id, "sciwin-client".to_string());
         } else {
@@ -231,5 +277,79 @@ pub fn tool_create_test_dockerfile() {
         //no uncommitted left?
         let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+#[test]
+#[serial]
+pub fn test_tool_magic_outputs() {
+    with_temp_repository(|_| {
+        let str = "touch output.txt";
+        let args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: true,
+            no_run: false,
+            is_clean: true,
+            command: shlex::split(str).unwrap(),
+        };
+
+        assert!(create_tool(&args).is_ok());
+
+        let tool = load_tool("workflows/touch/touch.cwl").unwrap();
+
+        assert!(tool.outputs[0].output_binding.as_ref().unwrap().glob == *"$(inputs.output_txt)");
+    });
+}
+
+#[test]
+#[serial]
+pub fn test_tool_magic_stdout() {
+    with_temp_repository(|_| {
+        let str = "wc data/input.txt \\> data/input.txt";
+        let args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: true,
+            no_run: false,
+            is_clean: true,
+            command: shlex::split(str).unwrap(),
+        };
+
+        assert!(create_tool(&args).is_ok());
+
+        let tool = load_tool("workflows/wc/wc.cwl").unwrap();
+        assert!(tool.stdout.unwrap() == *"$(inputs.data_input_txt.path)");
+    });
+}
+
+#[test]
+#[serial]
+pub fn test_tool_magic_arguments() {
+    with_temp_repository(|_| {
+        let str = "cat data/input.txt | grep -f data/input.txt";
+        let args = CreateToolArgs {
+            name: None,
+            container_image: None,
+            container_tag: None,
+            is_raw: false,
+            no_commit: true,
+            no_run: false,
+            is_clean: true,
+            command: shlex::split(str).unwrap(),
+        };
+
+        assert!(create_tool(&args).is_ok());
+
+        let tool = load_tool("workflows/cat/cat.cwl").unwrap();
+        if let Argument::Binding(binding) = &tool.arguments.unwrap()[3] {
+            assert!(binding.value_from == Some("$(inputs.data_input_txt.path)".to_string()));
+        } else {
+            panic!()
+        }
     });
 }

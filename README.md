@@ -3,7 +3,9 @@
 
 ![Rust][rust-image] 
 [![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
-[![🕶️ Nightly Release](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml)
+![GitHub License](https://img.shields.io/github/license/fairagro/m4.4_sciwin_client)
+[![GitHub Downloads](https://img.shields.io/github/downloads/fairagro/m4.4_sciwin_client/total)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
+
 
 ⭐ Star us on GitHub to say "Thank you!" ⭐
 
@@ -12,7 +14,7 @@
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/m4.4_sciwin_client)
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/m4.4_sciwin_client](https://github.com/fairagro/m4.4_sciwin_client))
 
-🦀 Take a look at our latest [poster](https://doi.org/10.5281/zenodo.14098277) to find out, why SciWIn will be amazing! 👀
+🦀 Take a look at our latest [poster](https://doi.org/10.5281/zenodo.14098277) to find out, why SciWIn will be amazing! 👀 Or read the [Documentation](https://fairagro.github.io/m4.4_sciwin_client/) to get started! 🚀
 
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
@@ -27,7 +29,12 @@
 
 
 ## 🚀 About
-Reproducibility in computational research is vital for efficient collaboration, verifying results and ensuring transparency. Yet it remains challenging due to complex workflows, inconsistent data management and the reliance on specific software environments. SciWIn Client is a command-line tool designed to easily create, record, annotate and execute computational workflows. SciWIn Client enables researchers to interactively use intuitive commands to keep track of tasks such as as data-extraction, -cleaning, -transformation, -analysis, -visualization and computational simulation. Automated and standardised workflows minimise sources of error and support transparent and reproducible Open Science.
+
+Computational workflows, which describe complex, multi-step procedures for automated execution, are essential for ensuring reproducibility, scalability, and efficiency in scientific research. The **FAIRagro Scientific Workflow Infrastructure (SciWIn)** supports scientists to create, execute, share, and publish these workflows, fostering collaboration and transparency.
+
+
+Reproducibility in computational research is vital for efficient collaboration, verifying results and ensuring transparency. Yet it remains challenging due to complex workflows, inconsistent data management and the reliance on specific software environments. **SciWIn Client** is a command-line tool designed to easily create, record, annotate and execute computational workflows. SciWIn Client enables researchers to interactively use intuitive commands to keep track of tasks such as as data-extraction, -cleaning, -transformation, -analysis, -visualization and computational simulation. Automated and standardised workflows minimise sources of error and support transparent and reproducible Open Science.
+
 
 ## 🏗️ How to Build and Test
 This project is being developed using Rust and Cargo. To run the source code use `cargo run`, to build use `cargo build`. 
@@ -53,7 +60,7 @@ cargo test
 > Installation instructions are available once a release is created. You can check out our [nightly builds](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/nightly.yml).
 
 ## 📚 How to Use
-A full developer and user documentation will be available soon! An overview on how to use SciWIn Client is available below.
+Take a look at the **[User documentation](https://fairagro.github.io/m4.4_sciwin_client/)**. An overview on how to use SciWIn Client is available below.
 
 ### Project initialization
 Most commands need the context of a Git repo to work. Project initialization can be done using the `s4n init` command.
@@ -106,6 +113,12 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 ```
 
 ## 🪂 Contributors
+<a href="https://github.com/fairagro/m4.4_sciwin_client/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=fairagro/m4.4_sciwin_client" />
+</a>
+
+<small>Made with [contrib.rocks](https://contrib.rocks).</small>
+
 |[Measure 4.4](https://fairagro.net/tag/measure-4-4/)|||
 |--|--|--|
 |Jens Krumsieck|[:octocat: @jenskrumsieck](https://github.com/JensKrumsieck)|[ORCID: 0000-0001-6242-5846](https://orcid.org/0000-0001-6242-5846)|

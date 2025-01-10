@@ -1,0 +1,48 @@
+# Project configuration
+site_name: SciWin client documentation
+site_url: https://fairagro.github.io/m4.4_sciwin_client/
+
+# Repository
+repo_name: fairagro/m4.4_sciwin_client
+repo_url: https://github.com/fairagro/m4.4_sciwin_client
+
+# Theme configuration
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    # content
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    # navigation
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.sections
+    - navigation.top 
+    - navigation.tracking
+    # toc
+    - toc.integrate 
+edit_uri: 'edit/main/docs/'
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
