@@ -155,22 +155,22 @@ Options:
 
 ## `workflow status`
 The `workflow status` command shows the current connection status of a workflow. Successfully connected sockets are marked in green, a gray icon shows the usage of a tool's default value and the red cross shows unconnected sockets.
-
-```bash
-s4n workflow status main
-# Status report for Workflow workflows/main/main.cwl
-# +--------------------------------+------------------+---------------+
-# | Tool                           | Inputs           | Outputs       |
-# +================================+==================+===============+
-# | <Workflow>                     | ✅    speakers   |               |
-# +--------------------------------+------------------+---------------+
-# | Steps:                         |                  |               |
-# +--------------------------------+------------------+---------------+
-# | ../calculation/calculation.cwl | ✅    speakers   | ❌    results |
-# |                                | 🔘    population |               |
-# +--------------------------------+------------------+---------------+
-# ✅ : connected - 🔘 : tool default - ❌ : no connection
-```
+!!! example
+    ```bash
+    s4n workflow status main
+    # Status report for Workflow workflows/main/main.cwl
+    # +--------------------------------+------------------+---------------+
+    # | Tool                           | Inputs           | Outputs       |
+    # +================================+==================+===============+
+    # | <Workflow>                     | ✅    speakers   |               |
+    # +--------------------------------+------------------+---------------+
+    # | Steps:                         |                  |               |
+    # +--------------------------------+------------------+---------------+
+    # | ../calculation/calculation.cwl | ✅    speakers   | ❌    results |
+    # |                                | 🔘    population |               |
+    # +--------------------------------+------------------+---------------+
+    # ✅ : connected - 🔘 : tool default - ❌ : no connection
+    ```
 
 ```
 Shows socket status of workflow
