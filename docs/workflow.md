@@ -36,6 +36,22 @@ Options:
   -h, --help   Print help
 ```
 
+!!! example
+    ```
+    s4n workflow create my-workflow
+    ```
+    will create an empty workflow file in the workflows folder.
+    ```yaml
+    #!/usr/bin/env cwl-runner
+
+    cwlVersion: v1.2
+    class: Workflow
+
+    inputs: []
+    outputs: []
+    steps: []
+    ```
+
 ## `workflow connect` and `workflow disconnect`
 The `workflow connect` and `workflow disconnect` commands can be used to connect CWL CommandLineTools, workflow inputs and workflow outputs forming a directed acyclic graph. The connect command establishes a connection and adds in-, outputs and steps if they are not present in the current workflow. The names of the steps slots can be copied from the output of `s4n tool ls`. For connections to in- or outputs a `@` has to be used es prefix e.g. `@inputs/my-file`. The name of the node is constructed by using the tool's name and the name of the tool's node separated by a forward slash: `mytool/my-input`. Connections are made using the `--from` and `--to` arguments together with the name of the workflow.
 
@@ -53,8 +69,60 @@ Options:
   -h, --help         Print help
 ```
 
-The same logic applies for the disconnect command.
+!!! example "Connect to input socket"
+    ```
+    s4n workflow connect my-workflow --from @inputs/population --to calculation/population
+    ```
+    Will add a new input socket `population` and adds the `calculation` step if it is not present in the workflow already. The step's input `population` will be mapped to the workflow's input.
+    ```yaml
+    #!/usr/bin/env cwl-runner
 
+    cwlVersion: v1.2
+    class: Workflow
+
+    inputs:
+    - id: population
+      type: File
+
+    outputs: []
+    steps:
+    - id: calculation
+      in:
+        population: population
+      run: '../calculation/calculation.cwl'
+      out:
+      - results
+    ```
+    Connecting to workflow outputs works analogues.
+
+!!! example "Connecting Tools"
+    ```
+    s4n workflow connect my-workflow --from calculation/results --to plot/results
+    ```
+    Will add a connection between two CWL CommandLineTools mapping the `results` output of the `calculation` tool to the `results` input of the `plot` tool.
+    ```yaml
+    #!/usr/bin/env cwl-runner
+
+    cwlVersion: v1.2
+    class: Workflow
+
+    inputs: []
+    outputs: []
+    steps:
+    - id: calculation
+      in: {}
+      run: '../calculation/calculation.cwl'
+      out:
+      - results
+    - id: plot
+      in:
+        results: calculation/results
+      run: '../plot/plot.cwl'
+      out:
+      - results
+    ```
+
+The same logic applies for the disconnect command.
 ```
 Disconnects a workflow node
 
