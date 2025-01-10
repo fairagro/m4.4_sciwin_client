@@ -161,8 +161,7 @@ pub fn test_cli_s4n_workflow() {
         runner: Runner::Custom,
         out_dir: None,
         is_quiet: false,
-        file: wf_path.to_string().into(),
-
+        file: wf_path,
         args: vec!["inputs.yml".to_string()],
     })
     .expect("Could not execute Workflow");

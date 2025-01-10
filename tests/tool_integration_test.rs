@@ -293,6 +293,8 @@ pub fn test_tool_magic_outputs() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 
@@ -317,6 +319,8 @@ pub fn test_tool_magic_stdout() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 
@@ -340,6 +344,8 @@ pub fn test_tool_magic_arguments() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 
