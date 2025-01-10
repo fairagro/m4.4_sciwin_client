@@ -45,6 +45,12 @@ Options:
   -h, --help                               Print help
 ```
 
+!!! example
+    The following command will create a CWL CommandLineTool description for executing a python script `script.py` with two parameters.
+    ```
+    s4n tool create python script.py --argument1 --argument2
+    ```
+
 With the `--name` option the resulting filename can be manipulated. Without the argument SciWIn client will automatically generate a name based on the command. If for example the same base command is used in two tools there would be a file name conflict.
 
 The two container options `--container-image` and `--container-tag` can be used to add Docker requirements to the resulting CWL file. However Docker will **NOT** be used to execute the script while generating the tool, so make sure to either use `s4n` in Docker container or provide all neccesary tools for it to run.
