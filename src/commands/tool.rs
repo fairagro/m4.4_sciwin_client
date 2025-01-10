@@ -86,8 +86,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
-    let inputs = args.inputs.clone().unwrap_or_default();
-    let outputs = args.outputs.clone().unwrap_or_default();
+    let inputs = args.inputs.as_deref().unwrap_or(&[]);
+    let outputs = args.outputs.as_deref().unwrap_or(&[]);
 
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
@@ -108,7 +108,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             args.command.iter().map(|s| s.as_str()).collect(),
             inputs.iter().map(|s| s.as_str()).collect(),
         );
-        cwl = cwl.with_outputs(parser::get_outputs(outputs.clone()));
+        cwl = cwl.with_outputs(parser::get_outputs(outputs.to_vec()));
     }
 
     if let Some(container) = &args.container_image {
