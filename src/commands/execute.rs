@@ -161,10 +161,6 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             if !is_workflow {
                 let mut tool: CommandLineTool = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
-                println!("cwl tool: {:?}", tool); 
-                println!("cwl inputs: {:?}", inputs);
-                println!("cwl args.file: {:?}", args.file);  
-                println!("cwl  args.out_dir {:?}",  args.out_dir);  
                 run_commandlinetool(&mut tool, inputs, Some(&args.file), args.out_dir.clone())?;
             } else {
                 let mut workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
