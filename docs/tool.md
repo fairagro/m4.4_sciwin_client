@@ -1,20 +1,21 @@
 # Tool Commands
 `s4n`s tool commands are designed to facilitate the interoperability with CWL CommandLineTools. The tool command itself has three subcommands for basic CR~~U~~D operations: `create`, `list` and `remove`.
 
-```
-Provides commands to create and work with CWL CommandLineTools
+!!! abstract "Usage"
+    ```
+    Provides commands to create and work with CWL CommandLineTools
 
-Usage: s4n tool <COMMAND>
+    Usage: s4n tool <COMMAND>
 
-Commands:
-  create  Runs commandline string and creates a tool (synonym: s4n run)
-  list    Lists all tools [aliases: ls]
-  remove  Remove a tool, e.g. s4n tool rm toolname [aliases: rm]
-  help    Print this message or the help of the given subcommand(s)
+    Commands:
+      create  Runs commandline string and creates a tool (synonym: s4n run)
+      list    Lists all tools [aliases: ls]
+      remove  Remove a tool, e.g. s4n tool rm toolname [aliases: rm]
+      help    Print this message or the help of the given subcommand(s)
 
-Options:
-  -h, --help  Print help
-```
+    Options:
+      -h, --help  Print help
+    ```
 
 ## `tool create`
 The `tool create` command can be used to easily generate CWL CommandLineTools. It serves as a prefix to the usual command line prompt. Calling `tool create` with a command attached will execute the command, determine in- and outputs and create a CWL tool definition file in the `workflows` folder. `s4n tool create` has `s4n run` as alias for even less typing. 
@@ -26,24 +27,25 @@ The `tool create` command can be used to easily generate CWL CommandLineTools. I
 !!! tip
     Redirection `>` and pipes `|` can be used, but need to be escaped with a backslash fot the parser to use. Otherwise the console output of `s4n` will be redirected / piped.
 
-```
-Runs commandline string and creates a tool (synonym: s4n run)
+!!! abstract "Usage"
+    ```
+    Runs commandline string and creates a tool (synonym: s4n run)
 
-Usage: s4n tool create [OPTIONS] [COMMAND]...
+    Usage: s4n tool create [OPTIONS] [COMMAND]...
 
-Arguments:
-  [COMMAND]...  Command line call e.g. python script.py [ARGUMENTS]
+    Arguments:
+      [COMMAND]...  Command line call e.g. python script.py [ARGUMENTS]
 
-Options:
-  -n, --name <NAME>                        A name to be used for this tool
-  -c, --container-image <CONTAINER_IMAGE>  An image to pull from e.g. docker hub or path to a Dockerfile
-  -t, --container-tag <CONTAINER_TAG>      The tag for the container when using a Dockerfile
-  -r, --raw                                Outputs the raw CWL contents to terminal
-      --no-commit                          Do not commit at the end of tool creation
-      --no-run                             Do not run given command
-      --clean                              Deletes created outputs after usage
-  -h, --help                               Print help
-```
+    Options:
+      -n, --name <NAME>                        A name to be used for this tool
+      -c, --container-image <CONTAINER_IMAGE>  An image to pull from e.g. docker hub or path to a Dockerfile
+      -t, --container-tag <CONTAINER_TAG>      The tag for the container when using a Dockerfile
+      -r, --raw                                Outputs the raw CWL contents to terminal
+          --no-commit                          Do not commit at the end of tool creation
+          --no-run                             Do not run given command
+          --clean                              Deletes created outputs after usage
+      -h, --help                               Print help
+    ```
 
 !!! example
     The following command will create a CWL CommandLineTool description for executing a python script `echo.py` with a txt file as parameter `--test`.
@@ -103,27 +105,29 @@ Sometimes it can be beneficial to not commit the created outputs. With the `--cl
 
 `tool list` or `tool ls` can be used to list all existing tools. Using the command without the `-a` flag just ouputs the names of all existing tools in the project. Using the `-all` (or `-a`) flag will also output the tools in- and outputs which than can easily be used for the `workflow connect` command.
 
-```
-Lists all tools
+!!! abstract "Usage"
+    ```
+    Lists all tools
 
-Usage: s4n tool list [OPTIONS]
+    Usage: s4n tool list [OPTIONS]
 
-Options:
-  -a, --all   Outputs the tools with inputs and outputs
-  -h, --help  Print help
-```
+    Options:
+      -a, --all   Outputs the tools with inputs and outputs
+      -h, --help  Print help
+    ```
 
 ## `tool remove`
 The `tool remove` or `tool rm` command can be used to delete one or more CWL CommandLineTools. 
 
-```
-Remove a tool, e.g. s4n tool rm toolname
+!!! abstract "Usage"
+    ```
+    Remove a tool, e.g. s4n tool rm toolname
 
-Usage: s4n tool remove [TOOL_NAMES]...
+    Usage: s4n tool remove [TOOL_NAMES]...
 
-Arguments:
-  [TOOL_NAMES]...  Remove a tool
+    Arguments:
+      [TOOL_NAMES]...  Remove a tool
 
-Options:
-  -h, --help  Print help
-```
+    Options:
+      -h, --help  Print help
+    ```
