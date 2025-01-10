@@ -57,12 +57,10 @@ pub struct CreateToolArgs {
     pub no_run: bool,
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
-
-    #[arg(short = 'i', long = "inputs", help = "Inputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
-    #[arg(short = 'o', long = "outputs", help = "Outputs for the tool", value_delimiter = ' ')]
+    #[arg(short = 'o', long = "outputs", help = "Force values to be considered as an output.", value_delimiter = ' ')]
     pub outputs: Option<Vec<String>>,
-
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
