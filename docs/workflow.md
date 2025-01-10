@@ -69,7 +69,7 @@ Options:
   -h, --help         Print help
 ```
 
-!!! example "Connect to input socket"
+!!! example "Example: Connect to input socket"
     ```
     s4n workflow connect my-workflow --from @inputs/population --to calculation/population
     ```
@@ -95,7 +95,7 @@ Options:
     ```
     Connecting to workflow outputs works analogues.
 
-!!! example "Connecting Tools"
+!!! example "Example: Connecting Tools"
     ```
     s4n workflow connect my-workflow --from calculation/results --to plot/results
     ```
