@@ -59,7 +59,7 @@ wget https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/ma
 wget https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/tests/test_data/hello_world/data/speakers_revised.csv
 ```
 
-The keep the demo project organized, the `workflows` folder will also be used to house the scripts used in this demo. The following bash script needs to be created as `workflows/calculation/calculation.sh` 
+The keep the demo project organized, the `workflows` folder will also be used to house the scripts used in this demo. The following bash script needs to be created as `workflows/calculation/calculation.py` 
 ```python
 import argparse
 import csv
