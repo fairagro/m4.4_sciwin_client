@@ -113,7 +113,6 @@ impl InitialWorkDirRequirement {
         }
     }
     pub fn from_files(filenames: &Vec<&str>, script_name: &str) -> Self {
-        println!("filenames {:?}", filenames);
         InitialWorkDirRequirement {
             listing: filenames
                 .iter()
