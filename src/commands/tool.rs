@@ -1,3 +1,4 @@
+use crate::cwl::execution::runner::run_commandlinetool;
 use crate::{
     cwl::{
         format::format_cwl,
@@ -56,7 +57,10 @@ pub struct CreateToolArgs {
     pub no_run: bool,
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
-
+    #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
+    pub inputs: Option<Vec<String>>,
+    #[arg(short = 'o', long = "outputs", help = "Force values to be considered as an output.", value_delimiter = ' ')]
+    pub outputs: Option<Vec<String>>,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
@@ -73,13 +77,14 @@ pub struct ListToolArgs {
     pub list_all: bool,
 }
 
-/// Creates a Common Workflow Language (CWL) CommandLineTool from a command line string like `python script.py --argument`
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
-    //check if git status is clean
+    // Check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
     if !args.is_raw {
         println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
+    let inputs = args.inputs.as_deref().unwrap_or(&[]);
+    let outputs = args.outputs.as_deref().unwrap_or(&[]);
 
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
@@ -89,50 +94,22 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         return Err(error("Uncommitted changes detected").into());
     }
 
-    //parse input string
+    // Parse input string
     if args.command.is_empty() {
         return Err(error("No commandline string given!").into());
     }
 
-    let mut cwl = parser::parse_command_line(args.command.iter().map(|x| x.as_str()).collect());
+    let mut cwl = parser::parse_command_line(
+        args.command.iter().map(|s| s.as_str()).collect(),
+        if inputs.is_empty() { None } else { Some(inputs.iter().map(|s| s.as_str()).collect()) },
+    );
 
-    //only run if not prohibited
-    if !args.no_run {
-        //execute command
-        if cwl.execute().is_err() {
-            return Err(error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str()).into());
-        }
-
-        //check files that changed
-        let files = get_modified_files(&repo);
-        if files.is_empty() {
-            warn("No output produced!")
-        } else if !args.is_raw {
-            println!("📜 Found changes:");
-            print_list(&files);
-        }
-
-        if args.is_clean {
-            for file in &files {
-                remove_file(file).unwrap()
-            }
-        }
-
-        if !args.no_commit {
-            for file in &files {
-                //could be cleaned before
-                if Path::new(file).exists() {
-                    stage_file(&repo, file.as_str()).unwrap();
-                }
-            }
-        }
-        //could check here if an output file matches an input string
-        cwl = cwl.with_outputs(parser::get_outputs(files));
-    } else {
-        warn("User requested no run, could not determine outputs!")
+    // Handle outputs
+    if !outputs.is_empty() {
+        cwl = cwl.with_outputs(parser::get_outputs(outputs.to_vec()));
     }
 
-    //check container usage
+    // Handle container requirements
     if let Some(container) = &args.container_image {
         let requirement = if container.contains("Dockerfile") {
             let image_id = if let Some(tag) = &args.container_tag {
@@ -145,24 +122,69 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
         };
 
-        //push to existing requirements or create new
+        // Add to requirements
         if let Some(ref mut vec) = cwl.requirements {
             vec.push(requirement);
         } else {
-            cwl = cwl.with_requirements(vec![requirement])
+            cwl = cwl.with_requirements(vec![requirement]);
         }
+    }
+
+    // Only run if not prohibited
+    if !args.no_run {
+        // Execute command
+        if inputs.is_empty() && outputs.is_empty() {
+            if cwl.execute().is_err() {
+                return Err(error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str()).into());
+            }
+        } else {
+            let path = get_qualified_filename(&cwl.base_command, args.name.clone());
+            let path_buf = PathBuf::from(path.clone());
+            run_commandlinetool(&mut cwl, None, Some(&path_buf), None)?;
+        }
+
+        // Check files that changed
+        let files = get_modified_files(&repo);
+        if files.is_empty() && outputs.is_empty() {
+            warn("No output produced!")
+        } else if !args.is_raw {
+            println!("📜 Found changes:");
+            print_list(&files);
+        }
+
+        if args.is_clean {
+            for file in &files {
+                remove_file(file).unwrap();
+            }
+        }
+
+        if !args.no_commit {
+            for file in &files {
+                //could be cleaned before
+                if Path::new(file).exists() {
+                    stage_file(&repo, file.as_str()).unwrap();
+                }
+            }
+        }
+
+        // Add outputs if not specified
+        if outputs.is_empty() {
+            cwl = cwl.with_outputs(parser::get_outputs(files));
+        }
+    } else {
+        warn("User requested no run, could not determine outputs!");
     }
 
     post_process_cwl(&mut cwl);
 
-    //generate yaml
+    // Generate YAML
     if !args.is_raw {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         let mut yaml = cwl.save(&path);
 
         //format
         yaml = format_cwl(&yaml)?;
-
+        
         match create_and_write_file(path.as_str(), yaml.as_str()) {
             Ok(_) => {
                 println!("\n📄 Created CWL file {}", path.green().bold());
@@ -174,10 +196,10 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             }
             Err(e) => Err(Box::new(e)),
         }
+            
     } else {
         let mut yaml = serde_yml::to_string(&cwl)?;
         yaml = format_cwl(&yaml)?;
-
         highlight_cwl(yaml.as_str());
 
         Ok(())

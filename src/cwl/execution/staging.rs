@@ -12,7 +12,7 @@ use crate::{
 use std::{
     collections::HashMap,
     error::Error,
-    fs,
+    fs, env,
     path::{Path, MAIN_SEPARATOR_STR},
     vec,
 };
@@ -75,7 +75,15 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                             create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
                         }
                         Entry::Include(include) => {
-                            let include_path = tool_path.join(&include.include);
+                            let mut include_path = tool_path.join(&include.include);
+                            if !include_path.exists() || !include_path.is_file() {
+                                let current = env::current_dir()?;
+                                let file_path: String = include.include.clone().trim_start_matches(|c: char| !c.is_alphabetic()).to_string();
+                                include_path = current.join(file_path.clone());
+                                if !include_path.exists() || !include_path.is_file() {
+                                    include_path = current.join(tool_path).join(file_path);
+                                }
+                            }
                             copy_file(include_path.to_str().unwrap(), &into_path)
                                 .map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
                         }

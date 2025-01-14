@@ -14,6 +14,7 @@ use s4n::{
 use serial_test::serial;
 use std::{fs::read_to_string, path::Path};
 
+
 #[test]
 #[serial]
 pub fn tool_create_test() {
@@ -26,6 +27,8 @@ pub fn tool_create_test() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -63,6 +66,8 @@ pub fn tool_create_test_is_raw() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -93,6 +98,8 @@ pub fn tool_create_test_no_commit() {
             no_commit: true, //look!
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -129,6 +136,8 @@ pub fn tool_create_test_no_run() {
             no_commit: false,
             no_run: true, //look!
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -158,6 +167,8 @@ pub fn tool_create_test_is_clean() {
             no_commit: false,
             no_run: false,
             is_clean: true, //look!
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -188,6 +199,8 @@ pub fn tool_create_test_container_image() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -230,6 +243,8 @@ pub fn tool_create_test_dockerfile() {
             no_commit: false,
             no_run: false,
             is_clean: false,
+            inputs: None, 
+            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
@@ -278,6 +293,8 @@ pub fn test_tool_magic_outputs() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 
@@ -302,6 +319,8 @@ pub fn test_tool_magic_stdout() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 
@@ -325,6 +344,8 @@ pub fn test_tool_magic_arguments() {
             no_commit: true,
             no_run: false,
             is_clean: true,
+            inputs: None,
+            outputs: None,
             command: shlex::split(str).unwrap(),
         };
 

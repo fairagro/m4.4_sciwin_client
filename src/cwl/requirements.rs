@@ -1,6 +1,7 @@
 use super::types::{Entry, EnviromentDefs, Listing};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::{Mapping, Value};
+use std::{path::MAIN_SEPARATOR_STR, fs};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "class")]
@@ -17,7 +18,7 @@ pub enum Requirement {
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
-    ToolTimeLimit
+    ToolTimeLimit,
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
@@ -65,6 +66,37 @@ where
     Ok(Some(parameters))
 }
 
+fn get_entry_name(script_name: &str, input: &str) -> String {
+    // Read the content of the script file
+    let script_content = match fs::read_to_string(script_name) {
+        Ok(content) => content,
+        Err(err) => {
+            eprintln!("Error reading script file: {}", err);
+            return "".to_string();
+        }
+    };
+        // Check if the input exists in the script
+        if script_content.contains(input) {
+            return input.to_string();
+        }
+
+        // If not found, split progressively at MAIN_SEPARATOR
+        let mut parts: Vec<&str> = input.split(MAIN_SEPARATOR_STR).collect();
+
+
+        // Check progressively shorter substrings
+        while parts.len() > 1 {
+            parts.remove(0); // Remove the first segment
+            let candidate = parts.join(MAIN_SEPARATOR_STR);
+
+            if script_content.contains(&candidate) {
+                return candidate; 
+            }
+        }
+    input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string()
+}
+
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
@@ -78,6 +110,17 @@ impl InitialWorkDirRequirement {
                 entryname: filename.to_string(),
                 entry: Entry::from_file(filename),
             }],
+        }
+    }
+    pub fn from_files(filenames: &Vec<&str>, script_name: &str) -> Self {
+        InitialWorkDirRequirement {
+            listing: filenames
+                .iter()
+                .map(|&filename| Listing {
+                    entryname: get_entry_name(script_name, filename).rsplit(MAIN_SEPARATOR_STR).next().unwrap().to_string(),
+                    entry: Entry::from_file(filename),
+                })
+                .collect(),
         }
     }
     pub fn from_contents(entryname: &str, contents: &str) -> Self {

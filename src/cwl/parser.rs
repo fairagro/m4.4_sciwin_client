@@ -8,21 +8,39 @@ use super::{
 use crate::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
-pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
-    let base_command = get_base_command(&command);
+
+pub fn parse_command_line(
+    commands: Vec<&str>,
+    inputs: Option<Vec<&str>>, 
+) -> CommandLineTool {
+    let base_command = get_base_command(&commands);
+
     let remainder = match &base_command {
-        Command::Single(_) => &command[1..],
-        Command::Multiple(ref vec) => &command[vec.len()..],
+        Command::Single(_) => &commands[1..],
+        Command::Multiple(ref vec) => &commands[vec.len()..],
     };
 
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
-    if !remainder.is_empty() {
+    if let Some(inputs) = &inputs {
+        let mut updated_inputs = inputs.clone();
+        if !updated_inputs.contains(&commands[1]) {
+            updated_inputs.push(commands[1]);
+        }
+
+        let initial_dir_req = InitialWorkDirRequirement::from_files(&updated_inputs, commands[1]);
+        let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
+        let base_command_updated = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
+
+        return tool
+            .with_base_command(base_command_updated)
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(initial_dir_req)]);
+    } else if !remainder.is_empty() {
         let (cmd, piped) = split_vec_at(remainder, "|");
 
         let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
@@ -36,14 +54,18 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
 
         let args = collect_arguments(&piped, &inputs);
 
-        tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr).with_arguments(args);
+        tool = tool
+            .with_inputs(inputs)
+            .with_stdout(stdout)
+            .with_stderr(stderr)
+            .with_arguments(args);
     }
 
     tool = match base_command {
         Command::Single(_) => tool,
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-            &vec[1],
-        ))]),
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(
+            InitialWorkDirRequirement::from_file(&vec[1]),
+        )]),
     };
 
     if tool.arguments.is_some() {
@@ -53,8 +75,28 @@ pub fn parse_command_line(command: Vec<&str>) -> CommandLineTool {
             tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
         }
     }
-
     tool
+}
+
+fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &InitialWorkDirRequirement) -> Vec<String> {
+    let entry_map: HashMap<&str, &str> = initial_work_dir
+        .listing
+        .iter()
+        .map(|listing| (listing.entryname.as_str(), listing.entryname.as_str()))
+        .collect();
+
+    commands
+        .into_iter()
+        .map(|command| {
+            let mut updated_command = command.to_string();
+            for (entry, entryname) in &entry_map {
+                if command.contains(entry) {
+                    updated_command = updated_command.replace(command, entryname);
+                }
+            }
+            updated_command
+        })
+        .collect()
 }
 
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
@@ -69,7 +111,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
         .collect()
 }
 
-fn get_base_command(command: &[&str]) -> Command {
+pub fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
         return Command::Single(String::from(""));
     };
@@ -86,7 +128,7 @@ fn get_base_command(command: &[&str]) -> Command {
     }
 }
 
-fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
+pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {

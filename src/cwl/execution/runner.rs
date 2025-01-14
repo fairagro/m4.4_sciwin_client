@@ -155,12 +155,15 @@ pub fn run_workflow(
     Ok(())
 }
 
+
+
 pub fn run_commandlinetool(
     tool: &mut CommandLineTool,
     input_values: Option<HashMap<String, DefaultValue>>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+
     //measure performance
     let clock = Instant::now();
     if !print_output() {
@@ -195,7 +198,6 @@ pub fn run_commandlinetool(
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, input_values.as_ref(), &runtime);
-
     //stage files listed in input default values, input values or initial work dir requirements
     let staged_files = stage_required_files(
         tool,
