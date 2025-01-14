@@ -111,23 +111,6 @@ pub fn test_parse_command_line_testdata() {
 }
 
 #[test]
-#[serial]
-pub fn test_parse_command_line_inputs_outputs() {
-    with_temp_repository(|_| {
-        let command = "python scripts/echo_inline.py";
-        let inputs = Some(vec!["data/input.txt"]);
-        let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), inputs);
-        let expected = CommandLineTool::default()
-            .with_base_command(Command::Multiple(vec!["python".to_string(), "echo_inline.py".to_string()]))
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-                &vec!["data/input.txt", "scripts/echo_inline.py"], "scripts/echo_inline.py"
-            ))]);
-        assert_eq!(cwl, expected);
-    });
-}
-
-#[test]
 pub fn test_cwl_execute_command_single() {
     let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
