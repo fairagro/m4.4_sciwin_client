@@ -14,97 +14,166 @@ use urlencoding::encode;
 
 const REST_URL_BIOPORTAL: &str = "http://data.bioontology.org";
 
-// Handle annotate-related commands
 pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), Box<dyn Error>> {
     match command {
-        AnnotateCommands::Author(args) => {
-            annotate_author(args)?;
+        AnnotateCommands::Author(args) => annotate_author(args)?,
+        AnnotateCommands::Performer(args) => annotate_performer(args)?,
+        AnnotateCommands::Process(args) => annotate_process_step(args).await?,
+        AnnotateCommands::Container { cwl_name, container } => {
+            annotate_container(cwl_name, container)?
         }
-        AnnotateCommands::Performer(args) => {
-            annotate_performer(args)?;
+        AnnotateCommands::Schema { cwl_name, schema } => {
+            annotate(cwl_name, "$schemas", None, Some(schema))?
         }
-        AnnotateCommands::Container(args) => {
-            annotate_container(args)?;
+        AnnotateCommands::Namespace { cwl_name, namespace, short } => {
+            annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace))?
         }
-        AnnotateCommands::Process(args) => {
-            annotate_process_step(args).await?;
+        AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name)?,
+        AnnotateCommands::Description { cwl_name, description } => {
+            annotate_field(cwl_name, "doc", description)?
         }
-        AnnotateCommands::Schema(args) => {
-            annotate_schema(args)?;
+        AnnotateCommands::License { cwl_name, license } => {
+            annotate_field(cwl_name, "s:license", license)?
+        }
+        AnnotateCommands::Custom { cwl_name, field, value } => {
+            annotate_field(cwl_name, field, value)?
         }
     }
     Ok(())
 }
 
-
-// Enum for annotate-related subcommands
+/// Enum for annotate-related subcommands
 #[derive(Debug, Subcommand)]
 pub enum AnnotateCommands {
     #[command(about = "Annotates author of a tool or workflow from schema.org")]
     Author(AuthorArgs),
+
     #[command(about = "Annotates performer of a tool or workflow from arc ontology")]
     Performer(PerformerArgs),
-    #[command(about = "Annotates performer of a tool or workflow from arc ontology")]
-    Container(ContainerArgs),
+
     #[command(about = "Annotates a process within a workflow")]
     Process(AnnotateProcessArgs),
+
+    #[command(about = "Annotates container information of a tool or workflow")]
+    Container {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 'c', long = "container", help = "Annotation value for the container")]
+        container: String,
+    },
+
+    #[command(about = "Annotates license of a tool or workflow")]
+    License {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "License to annotate")]
+        license: String,
+    },
     #[command(about = "Annotates schema of a tool or workflow")]
-    Schema(AnnotateSchemaArgs),
+    Schema {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "Schema to annotate")]
+        schema: String,
+    },
+    #[command(about = "Annotates namespace of a tool or workflow")]
+    Namespace {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "Namespace to annotate")]
+        namespace: String,
+        #[arg(help = "Namespace abbreviation to annotate")]
+        short: Option<String>,
+    },
+    #[command(about = "Annotates name of a tool or workflow")]
+    Name {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "Name of the tool or workflow")]
+        name: String,
+    },
+    #[command(about = "Annotates description of a tool or workflow")]
+    Description {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "Description of the tool or workflow")]
+        description: String,
+    },
+    #[command(about = "Annotates a CWL file with an custom field and value")]
+    Custom {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(help = "Field to annotate")]
+        field: String,
+        #[arg(help = "Value for the field")]
+        value: String,
+    },
+
 }
 
-// Arguments for annotate command
+/// Arguments for annotate author command
 #[derive(Args, Debug)]
 pub struct AuthorArgs {
     pub cwl_name: String,
+
     #[arg(short = 'n', long = "name", help = "Name of the author")]
     pub author_name: String,
+
     #[arg(short = 'm', long = "mail", help = "Email of the author")]
     pub author_mail: Option<String>,
+
     #[arg(short = 'i', long = "id", help = "Identifier of the author, e.g., ORCID")]
     pub author_id: Option<String>,
 }
 
-// Arguments for performer command
+/// Arguments for annotate performer command
 #[derive(Args, Debug)]
 pub struct PerformerArgs {
     pub cwl_name: String,
+
     #[arg(short = 'f', long = "first_name", help = "First name of the performer")]
     pub first_name: String,
+
     #[arg(short = 'l', long = "last_name", help = "Last name of the performer")]
     pub last_name: String,
+
     #[arg(short = 'm', long = "mail", help = "Email of the performer")]
     pub mail: Option<String>,
+
     #[arg(short = 'a', long = "affiliation", help = "Affiliation of the performer")]
     pub affiliation: Option<String>,
 }
 
-#[derive(Args, Debug)]
-pub struct ContainerArgs {
-    pub cwl_name: String,
-    #[arg(short = 'a', long = "annotation", help = "Annotation value for the container")]
-    pub annotation_value: String,
-}
 
-// Arguments for annotate process command
+/// Arguments for annotate process command
 #[derive(Args, Debug)]
 pub struct AnnotateProcessArgs {
     #[arg(help = "Name of the workflow process being annotated")]
     pub cwl_name: String,
+
     #[arg(short = 'n', long = "name", help = "Name of the process sequence step")]
     pub name: Option<String>,
+
     #[arg(short = 'i', long = "input", help = "Input file or directory, e.g., folder/input.txt")]
     pub input: Option<String>,
+
     #[arg(short = 'o', long = "output", help = "Output file or directory, e.g., folder/output.txt")]
     pub output: Option<String>,
+
     #[arg(short = 'p', long = "parameter", help = "Process step parameter")]
     pub parameter: Option<String>,
+
     #[arg(short = 'v', long = "value", help = "Process step value")]
     pub value: Option<String>,
+
     #[arg(short = 'm', long = "mapper", value_enum, default_value_t = OntologyMapper::default(), help = "Ontology mapping service to use: zooma, biotools, or text2term")]
     pub mapper: OntologyMapper,
+
     #[arg(short = 'k', long = "key", help = "Bioportal API key")]
     pub key: Option<String>,
 }
+
+
 
 #[derive(ValueEnum, Clone, Debug, Default)]
 pub enum OntologyMapper {
@@ -118,7 +187,6 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
     let max_recommendations: usize = 10; 
     match args.mapper {
         OntologyMapper::Zooma => {
-            // zooma_recommendations(/* parameters */)?;
             match zooma_recommendations(term, max_recommendations).await {
                 Ok(recommendations) => Ok(recommendations),
                 Err(e) => {
@@ -147,47 +215,31 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
     }
 }
 
-#[derive(Args, Debug)]
-pub struct AnnotateSchemaArgs {
-    #[arg(help = "Name of the workflow process being annotated")]
-    pub name: String,
-    #[arg(short = 's', long = "schema", help = "Schema, e.g. https://schema.org/version/latest/schemaorg-current-https.rdf, https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl")]
-    pub schema: String,
-
-}
 
 pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
-    annotate_arc_namespace(tool_name)?;
-    annotate_arc_schema(tool_name)?;
-    annotate_schemaorg_namespace(tool_name)?;
-    annotate_schemaorg_schema(tool_name)?;
+    annotate(tool_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
+    annotate(tool_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
+    annotate(tool_name, "$namespaces", Some("arc"), Some("https://github.com/nfdi4plants/ARC_ontology"))?;
+    annotate(tool_name, "$schemas", None, Some("https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl"))?;
     let filename = get_filename(tool_name)?;
 
     if contains_docker_requirement(&filename)?{
-        let container_args = ContainerArgs {
-            cwl_name: tool_name.to_string(),
-            annotation_value: "Docker Container".to_string(),
-        };
-        annotate_container(&container_args)?;
+        annotate_container(tool_name, "Docker Container")?;
     }
     Ok(())
 }
-pub fn annotate_container(args: &ContainerArgs) -> Result<(), Box<dyn Error>> {
-    // Read the existing CWL file
-    let yaml_result = parse_cwl(&args.cwl_name);
 
-    // Handle the result from parse_cwl
-    let mut yaml = match yaml_result {
-        Ok(value) => value,
-        Err(e) => return Err(format!("Failed to parse CWL file: {}", e).into()),
-    };
+
+pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), Box<dyn Error>> {
 
     // Prepare the container information
     let mut container_info = Mapping::new();
     container_info.insert(Value::String("class".to_string()), Value::String("arc:technology type".to_string()));
-    container_info.insert(Value::String("arc:annotation value".to_string()), Value::String(args.annotation_value.clone()));
+    container_info.insert(Value::String("arc:annotation value".to_string()), Value::String(container_value.to_string()));
 
-    // Ensure the root is a mapping
+    let yaml_result = parse_cwl(cwl_name)?;
+    let mut yaml = yaml_result; 
+
     if let Value::Mapping(ref mut mapping) = yaml {
         if let Some(Value::Sequence(ref mut container)) = mapping.get_mut("arc:has technology type") {
             // Check if the container_info already exists in the sequence
@@ -200,7 +252,6 @@ pub fn annotate_container(args: &ContainerArgs) -> Result<(), Box<dyn Error>> {
 
             // Add container_info only if it doesn't already exist
             if !container_exists {
-                println!("Adding new container information: {:?}", container_info);
                 container.push(Value::Mapping(container_info));
             }
         } else {
@@ -212,40 +263,25 @@ pub fn annotate_container(args: &ContainerArgs) -> Result<(), Box<dyn Error>> {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     }
 
-    // Get the filename and write the updated YAML content to it
-    let path = get_filename(&args.cwl_name)?;
-
-    // Create the file at the specified path
-    let mut file = File::create(path)?;
-
-    // Convert the YAML content to a string and write it to the file
-    let yaml_str = serde_yml::to_string(&yaml)?;
-    file.write_all(yaml_str.as_bytes())?;
-
-    Ok(())
+    write_updated_yaml(cwl_name, &yaml)
 }
 
 pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
-    // Read the existing CWL file
-    let yaml_result = parse_cwl(&args.cwl_name);
+    annotate(&args.cwl_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
+    annotate(&args.cwl_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
 
-    // Handle the result from parse_cwl
-    let mut yaml = match yaml_result {
-        Ok(value) => value,
-        Err(e) => return Err(format!("Failed to parse CWL file: {}", e).into()),
-    };
+    let yaml_result = parse_cwl(&args.cwl_name)?; 
+    let mut yaml = yaml_result; 
 
-    // Ensure the root is a mapping
     if let Value::Mapping(ref mut mapping) = yaml {
         // Create the author_info mapping with required fields
         let mut author_info = Mapping::new();
         author_info.insert(Value::String("class".to_string()), Value::String("s:Person".to_string()));
         
-        // Only insert author_id if it's Some
         if let Some(ref author_id) = args.author_id {
             author_info.insert(Value::String("s:identifier".to_string()), Value::String(author_id.clone()));
         }
-        
+
         // Only insert author_mail if it's Some
         if let Some(ref author_mail) = args.author_mail {
             author_info.insert(Value::String("s:email".to_string()), Value::String(format!("mailto:{}", author_mail)));
@@ -267,7 +303,6 @@ pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
 
             // If the author doesn't exist, add it to the sequence
             if !author_exists {
-                println!("Adding new author: {:?}", author_info);
                 authors.push(Value::Mapping(author_info));
             }
         } else {
@@ -279,29 +314,17 @@ pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     }
 
-    // Get the filename and write the updated YAML content to it
-    let path = get_filename(&args.cwl_name)?;
-
-    // Create the file at the specified path
-    let mut file = File::create(path)?;
-
-    // Convert the YAML content to a string and write it to the file
-    let yaml_str = serde_yml::to_string(&yaml)?;
-    file.write_all(yaml_str.as_bytes())?;
-
-    Ok(())
+    write_updated_yaml(&args.cwl_name, &yaml)
 }
 
 
 pub fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
+    annotate(&args.cwl_name, "$schemas", None, Some("https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl"))?;
+    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some("https://github.com/nfdi4plants/ARC_ontology"))?;
     // Read the existing CWL file
-    let yaml_result = parse_cwl(&args.cwl_name);
 
-    // Handle the result from parse_cwl
-    let mut yaml = match yaml_result {
-        Ok(value) => value,
-        Err(e) => return Err(format!("Failed to parse CWL file: {}", e).into()),
-    };
+    let yaml_result = parse_cwl(&args.cwl_name)?; 
+    let mut yaml = yaml_result; 
 
     // Ensure the root is a mapping
     if let Value::Mapping(ref mut mapping) = yaml {
@@ -347,7 +370,6 @@ pub fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
 
             // If the performer doesn't exist, add it to the sequence
             if !performer_exists {
-                println!("Adding new performer: {:?}", performer_info);
                 performers.push(Value::Mapping(performer_info));
             }
         } else {
@@ -359,221 +381,117 @@ pub fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     }
 
-    // Get the filename for saving the updated CWL file
-    let path = get_filename(&args.cwl_name)?;
+    write_updated_yaml(&args.cwl_name, &yaml)
+}
 
-    // Create or overwrite the file at the specified path
-    let mut file = File::create(path)?;
 
-    // Serialize the updated YAML back to a string and write it to the file
-    let yaml_str = serde_yml::to_string(&yaml)?;
-    file.write_all(yaml_str.as_bytes())?;
+pub fn annotate(
+    name: &str,
+    namespace_key: &str,
+    key: Option<&str>,
+    value: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
+    let mut yaml = parse_cwl(name)?;
+    if let Value::Mapping(ref mut mapping) = yaml {
+        match mapping.get_mut(namespace_key) { 
+            // Handle case where the namespace key exists as a sequence
+            Some(Value::Sequence(ref mut sequence)) if key.is_none() && value.is_none() => {
+                if let Some(namespace) = key {
+                    // Add to sequence if not already present
+                    if !sequence.iter().any(|x| matches!(x, Value::String(s) if s == namespace)) {
+                        sequence.push(Value::String(namespace.to_string()));
+                    }
+                }
+            }
+            // Handle case where the namespace key exists as a mapping
+            Some(Value::Mapping(ref mut namespaces)) => {
+                if let (Some(key), Some(value)) = (key, value) {
+                    if !namespaces.contains_key(Value::String(key.to_string())) {
+                        namespaces.insert(
+                            Value::String(key.to_string()),
+                            Value::String(value.to_string()),
+                        );
+                    }
+                }
+            }
+            // Handle case where the namespace key does not exist
+            _ => {
+                if let (Some(key), Some(value)) = (key, value) {
+                    let mut namespaces = Mapping::new();
+                    namespaces.insert(
+                        Value::String(key.to_string()),
+                        Value::String(value.to_string()),
+                    );
+                    mapping.insert(
+                        Value::String(namespace_key.to_string()),
+                        Value::Mapping(namespaces.clone()),
+                    );
+                } else if let Some(namespace) = key {
+                    let sequence = vec![Value::String(namespace.to_string())];
+                    mapping.insert(
+                        Value::String(namespace_key.to_string()),
+                        Value::Sequence(sequence.clone()),
+                    );
+                }
+                else if let Some(value) = value {
+                    if let Some(Value::Sequence(ref mut schemas)) = mapping.get_mut(namespace_key) {
+                        // Check if the schema URL is already in the list
+                        if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == value)) {
+                            // If not, add the new schema to the sequence
+                            schemas.push(Value::String(value.to_string()));
+                        }
+                    } else {
+                        let schemas= vec![Value::String(value.to_string())];
+                        mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(schemas));
+                    }
+                }
+            }
+        }
+    }
+    write_updated_yaml(name, &yaml)
+}
+
+/// Helper function to write updated YAML to a file.
+fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
+    let path = get_filename(name)?;
+
+    // Convert the YAML content to a string and write it to the file
+    let yaml_str = serde_yml::to_string(&yaml)
+        .map_err(|e| format!("Failed to serialize YAML: {}", e))?;
+    File::create(&path)
+        .and_then(|mut file| file.write_all(yaml_str.as_bytes()))
+        .map_err(|e| format!("Failed to write to file '{}': {}", path, e))?;
 
     Ok(())
 }
 
-
-    pub fn annotate_schema(args: &AnnotateSchemaArgs) -> Result<(), Box<dyn Error>> {
-        let mut yaml = parse_cwl(&args.name)?;
-    
-        // Check if the YAML has a "$schemas" field
-        if let Value::Mapping(ref mut mapping) = yaml {
-            // Check if $schemas exists and is a Sequence
-            if let Some(Value::Sequence(ref mut schemas)) = mapping.get_mut("$schemas") {
-                // Check if the schema URL is already in the list
-                if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == &args.schema)) {
-                    // If not, add the new schema to the sequence
-                    schemas.push(Value::String(args.schema.to_string()));
-                }
-            } else {
-                let schemas= vec![Value::String(args.schema.to_string())];
-                mapping.insert(Value::String("$schemas".to_string()), Value::Sequence(schemas));
-            }
-    
-            // If the schema contains "arc", ensure the "arc" namespace is present
-            if args.schema.contains("ARC") {
-                // Check if $namespaces exists and is a Mapping
-                if let Some(Value::Mapping(ref mut namespaces)) = mapping.get_mut("$namespaces") {
-                    if !namespaces.contains_key(Value::String("arc".to_string())) {
-                        namespaces.insert(
-                            Value::String("arc".to_string()),
-                            Value::String("https://github.com/nfdi4plants/ARC_ontology".to_string()),
-                        );
-                    }
-                } else {
-                    let mut namespaces = Mapping::new();
-                    namespaces.insert(
-                        Value::String("arc".to_string()),
-                        Value::String("https://github.com/nfdi4plants/ARC_ontology".to_string()),
-                    );
-                    mapping.insert(Value::String("$namespaces".to_string()), Value::Mapping(namespaces));
-                }
-        }
+pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Box<dyn Error>> {
+    if field == "s:license" {
+        annotate(cwl_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
+        annotate(cwl_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
     }
-    
-        // Get the filename to write the updated YAML
-        let path = get_filename(&args.name)?;
-    
-        // Create the file at the specified path
-        let mut file = File::create(path)?;
-    
-        // Convert the YAML content to a string and write it to the file
-        let yaml_str = serde_yml::to_string(&yaml)?;
-        file.write_all(yaml_str.as_bytes())?;
-    
-        Ok(())
-    }
+    let mut yaml = parse_cwl(cwl_name)?;
 
-
-    pub fn annotate_schemaorg_schema(name: &str) -> Result<(), Box<dyn Error>> {
-        println!("Annotating tool or workflow '{}'", name);
-        let arc_schema = "https://schema.org/version/latest/schemaorg-current-https.rdf".to_string(); 
-    
-        // Parse the CWL file into a YAML value
-        let mut yaml = parse_cwl(name)?;
-    
-        // Check if the YAML has a "$schemas" field
-        if let Value::Mapping(ref mut mapping) = yaml {
-
-            if let Some(Value::Sequence(ref mut schemas)) = mapping.get_mut("$schemas") {
-                // Check if the schema URL is already in the list
-                if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == &arc_schema)) {
-                    // If not, add the new schema to the sequence
-                    schemas.push(Value::String(arc_schema));
-                }
-            } else {
-                let schemas = vec![Value::String(arc_schema)];
-                mapping.insert(Value::String("$schemas".to_string()), Value::Sequence(schemas));
-            }
-                
-        }
-        // Get the filename to write the updated YAML
-        let path = get_filename(name)?;
-    
-        // Create the file at the specified path
-        let mut file = File::create(path)?;
-    
-        // Convert the YAML content to a string and write it to the file
-        let yaml_str = serde_yml::to_string(&yaml)?;
-        file.write_all(yaml_str.as_bytes())?;
-    
-        Ok(())
-    }
-
-    pub fn annotate_schemaorg_namespace(name: &str) -> Result<(), Box<dyn Error>> {
-        println!("Annotating tool or workflow '{}'", name);
-    
-        // Parse the CWL file into a YAML value
-        let mut yaml = parse_cwl(name)?;
-    
-        // Check if the YAML has a "$schemas" field
-        if let Value::Mapping(ref mut mapping) = yaml {
-            // Check if $schemas exists and is a Sequence
-            if let Some(Value::Mapping(ref mut namespaces)) = mapping.get_mut("$namespaces") {
-                if !namespaces.contains_key(Value::String("schema.org".to_string())) {
-                    namespaces.insert(
-                        Value::String("s".to_string()),
-                        Value::String("https://schema.org/".to_string()),
-                    );
-                }
-            } else {
-                let mut namespaces = Mapping::new();
-                namespaces.insert(
-                    Value::String("s".to_string()),
-                    Value::String("https://schema.org/".to_string()),
-                );
-                mapping.insert(Value::String("$namespaces".to_string()), Value::Mapping(namespaces));
+    if let Value::Mapping(ref mut mapping) = yaml {
+        // Check if the field is already present for fields like `s:license`
+        if let Some(existing_value) = mapping.get(Value::String(field.to_string())) {
+            if existing_value == &Value::String(value.to_string()) {
+                println!("Field '{}' already has the value '{}'.", field, value);
+                return Ok(());
             }
         }
-    
-        // Get the filename to write the updated YAML
-        let path = get_filename(name)?;
-    
-        // Create the file at the specified path
-        let mut file = File::create(path)?;
-    
-        // Convert the YAML content to a string and write it to the file
-        let yaml_str = serde_yml::to_string(&yaml)?;
-        file.write_all(yaml_str.as_bytes())?;
-    
-        Ok(())
+
+        // Add or update the field
+        mapping.insert(Value::String(field.to_string()), Value::String(value.to_string()));
+    } else {
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "CWL file is not a valid mapping.",
+        )));
     }
 
-
-    pub fn annotate_arc_schema(name: &str) -> Result<(), Box<dyn Error>> {
-        println!("Annotating tool or workflow '{}'", name);
-        let arc_schema = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl".to_string(); 
-    
-        // Parse the CWL file into a YAML value
-        let mut yaml = parse_cwl(name)?;
-    
-        // Check if the YAML has a "$schemas" field
-        if let Value::Mapping(ref mut mapping) = yaml {
-
-            if let Some(Value::Sequence(ref mut schemas)) = mapping.get_mut("$schemas") {
-                // Check if the schema URL is already in the list
-                if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == &arc_schema)) {
-                    // If not, add the new schema to the sequence
-                    schemas.push(Value::String(arc_schema));
-                }
-            } else {
-                let schemas = vec![Value::String(arc_schema)];
-                mapping.insert(Value::String("$schemas".to_string()), Value::Sequence(schemas));
-            }
-                
-        }
-        // Get the filename to write the updated YAML
-        let path = get_filename(name)?;
-    
-        // Create the file at the specified path
-        let mut file = File::create(path)?;
-    
-        // Convert the YAML content to a string and write it to the file
-        let yaml_str = serde_yml::to_string(&yaml)?;
-        file.write_all(yaml_str.as_bytes())?;
-    
-        Ok(())
-    }
-
-    pub fn annotate_arc_namespace(name: &str) -> Result<(), Box<dyn Error>> {
-        println!("Annotating tool or workflow '{}'", name);
-    
-        // Parse the CWL file into a YAML value
-        let mut yaml = parse_cwl(name)?;
-    
-        // Check if the YAML has a "$schemas" field
-        if let Value::Mapping(ref mut mapping) = yaml {
-            // Check if $schemas exists and is a Sequence
-            if let Some(Value::Mapping(ref mut namespaces)) = mapping.get_mut("$namespaces") {
-                if !namespaces.contains_key(Value::String("arc".to_string())) {
-                    namespaces.insert(
-                        Value::String("arc".to_string()),
-                        Value::String("https://github.com/nfdi4plants/ARC_ontology".to_string()),
-                    );
-                }
-            } else {
-                let mut namespaces = Mapping::new();
-                namespaces.insert(
-                    Value::String("arc".to_string()),
-                    Value::String("https://github.com/nfdi4plants/ARC_ontology".to_string()),
-                );
-                mapping.insert(Value::String("$namespaces".to_string()), Value::Mapping(namespaces));
-            }
-        }
-    
-        // Get the filename to write the updated YAML
-        let path = get_filename(name)?;
-    
-        // Create the file at the specified path
-        let mut file = File::create(path)?;
-    
-        // Convert the YAML content to a string and write it to the file
-        let yaml_str = serde_yml::to_string(&yaml)?;
-        file.write_all(yaml_str.as_bytes())?;
-    
-        Ok(())
-    }
-
+    write_updated_yaml(cwl_name, &yaml)
+}
 
 fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
     // Check if 'name' ends with ".cwl" and append if necessary
@@ -756,25 +674,19 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 Value::Sequence(vec![Value::Mapping(process_sequence)]),
             );
         } else {
+            //allow multiple?
             println!("Process sequence already exists");
         }
     } else {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     }
+    write_updated_yaml(&args.cwl_name, &yaml)
 
-    // Write the updated YAML back to the file
-    let path = get_filename(&args.cwl_name)?;
-    let mut file = File::create(path)?;
-    let yaml_str = serde_yml::to_string(&yaml)?;
-    file.write_all(yaml_str.as_bytes())?;
-
-    Ok(())
 }
 
 
 
 async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Result<jsonValue, Box<dyn Error>> {
-    
     let response = client.get(url)
         .header("Authorization", format!("apikey token={}", biotools_key)) // Replace with your API key
         .send()
@@ -784,7 +696,6 @@ async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Re
 
     Ok(response)
 }
-
 
 
 fn select_annotation(
@@ -829,7 +740,6 @@ fn select_annotation(
             ))
         }
         Ok(choice) if choice > 0 && choice <= elements.len() => {
-            //let selected = elements[choice - 1].clone();
             Ok(elements[choice - 1].clone())
         }
         _ => {
@@ -901,7 +811,7 @@ async fn zooma_recommendations(
     
             if let Some(tag) = entry.get("semanticTags")
                 .and_then(|tags| tags.as_array())
-                .and_then(|tags| tags.get(0))
+                .and_then(|tags| tags.first())
                 .and_then(|tag| tag.as_str())
             {
                 semantic_tag = Some(tag.to_string());
