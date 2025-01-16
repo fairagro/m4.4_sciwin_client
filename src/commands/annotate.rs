@@ -11,8 +11,14 @@ use reqwest::Client;
 use serde_json::Value as jsonValue;
 use colored::*;
 use urlencoding::encode;
+use std::path::PathBuf;
 
 const REST_URL_BIOPORTAL: &str = "http://data.bioontology.org";
+const REST_URL_ZOOMA: &str = "https://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=";
+const SCHEMAORG_NAMESPACE: &str = "https://schema.org/"; 
+const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf"; 
+const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology"; 
+const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
 
 pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), Box<dyn Error>> {
     match command {
@@ -117,13 +123,13 @@ pub struct AuthorArgs {
     pub cwl_name: String,
 
     #[arg(short = 'n', long = "name", help = "Name of the author")]
-    pub author_name: String,
+    pub name: String,
 
     #[arg(short = 'm', long = "mail", help = "Email of the author")]
-    pub author_mail: Option<String>,
+    pub mail: Option<String>,
 
     #[arg(short = 'i', long = "id", help = "Identifier of the author, e.g., ORCID")]
-    pub author_id: Option<String>,
+    pub id: Option<String>,
 }
 
 /// Arguments for annotate performer command
@@ -152,7 +158,7 @@ pub struct AnnotateProcessArgs {
     pub cwl_name: String,
 
     #[arg(short = 'n', long = "name", help = "Name of the process sequence step")]
-    pub name: Option<String>,
+    pub name: String,
 
     #[arg(short = 'i', long = "input", help = "Input file or directory, e.g., folder/input.txt")]
     pub input: Option<String>,
@@ -217,10 +223,10 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
 
 
 pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
-    annotate(tool_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
-    annotate(tool_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
-    annotate(tool_name, "$namespaces", Some("arc"), Some("https://github.com/nfdi4plants/ARC_ontology"))?;
-    annotate(tool_name, "$schemas", None, Some("https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl"))?;
+    annotate(tool_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+    annotate(tool_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
+    annotate(tool_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
+    annotate(tool_name, "$schemas", None, Some(ARC_SCHEMA))?;
     let filename = get_filename(tool_name)?;
 
     if contains_docker_requirement(&filename)?{
@@ -267,8 +273,9 @@ pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), B
 }
 
 pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
-    annotate(&args.cwl_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
-    annotate(&args.cwl_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
+    //part of schema.org annotation, ensure it is present
+    annotate(&args.cwl_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+    annotate(&args.cwl_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
 
     let yaml_result = parse_cwl(&args.cwl_name)?; 
     let mut yaml = yaml_result; 
@@ -278,16 +285,16 @@ pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
         let mut author_info = Mapping::new();
         author_info.insert(Value::String("class".to_string()), Value::String("s:Person".to_string()));
         
-        if let Some(ref author_id) = args.author_id {
+        if let Some(ref author_id) = args.id {
             author_info.insert(Value::String("s:identifier".to_string()), Value::String(author_id.clone()));
         }
 
         // Only insert author_mail if it's Some
-        if let Some(ref author_mail) = args.author_mail {
+        if let Some(ref author_mail) = args.mail {
             author_info.insert(Value::String("s:email".to_string()), Value::String(format!("mailto:{}", author_mail)));
         }
 
-        author_info.insert(Value::String("s:name".to_string()), Value::String(args.author_name.clone()));
+        author_info.insert(Value::String("s:name".to_string()), Value::String(args.name.clone()));
 
         // Check if "s:author" exists and is a sequence, then add new author
         if let Some(Value::Sequence(ref mut authors)) = mapping.get_mut("s:author") {
@@ -295,7 +302,7 @@ pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
             let author_exists = authors.iter().any(|author| {
                 if let Value::Mapping(ref existing_author) = author {
                     if let Some(Value::String(ref id)) = existing_author.get(Value::String("s:identifier".to_string())) {
-                        return id == &args.author_id.clone().unwrap_or_default();
+                        return id == &args.id.clone().unwrap_or_default();
                     }
                 }
                 false
@@ -319,10 +326,10 @@ pub fn annotate_author(args: &AuthorArgs) -> Result<(), Box<dyn Error>> {
 
 
 pub fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
-    annotate(&args.cwl_name, "$schemas", None, Some("https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl"))?;
-    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some("https://github.com/nfdi4plants/ARC_ontology"))?;
+    // Ensure arc namespace and schema are defined
+    annotate(&args.cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
     // Read the existing CWL file
-
     let yaml_result = parse_cwl(&args.cwl_name)?; 
     let mut yaml = yaml_result; 
 
@@ -467,8 +474,8 @@ fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
 
 pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Box<dyn Error>> {
     if field == "s:license" {
-        annotate(cwl_name, "$namespaces", Some("s"), Some("https://schema.org/"))?;
-        annotate(cwl_name, "$schemas", None, Some("https://schema.org/version/latest/schemaorg-current-https.rdf"))?;
+        annotate(cwl_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+        annotate(cwl_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
     }
     let mut yaml = parse_cwl(cwl_name)?;
 
@@ -494,64 +501,55 @@ pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Bo
 }
 
 fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
-    // Check if 'name' ends with ".cwl" and append if necessary
-    let filename = if name.ends_with(".cwl") {
-        name.to_string()
+    let path = Path::new(name);
+
+    // Check if the provided name is an absolute path and the file exists
+    let file_path = if path.is_absolute() && path.exists() {
+        path.to_path_buf()
     } else {
-        format!("{}.cwl", name)
+        // Attempt to resolve the file in other locations
+        let filename = get_filename(name)?;
+        PathBuf::from(filename)
     };
 
-    let cwl_name = Path::new(&filename).extension().unwrap();
-    // Define the paths to check
-    let current_dir = env::current_dir()?;
-    let current_path = current_dir.join(cwl_name);
-    let workflows_path = current_dir.join(format!("workflows/{}/{}", name, filename));
-
-    // Attempt to read the file from the current directory
-    let file_path = if current_path.exists() {
-        current_path
-    } else if workflows_path.exists() {
-        workflows_path
-    } else {
-        return Err(format!("CWL file '{}' not found in current directory or workflows/{}/{}", filename, name, filename).into());
-    };
-
-    // Read the file content
-    let content = fs::read_to_string(file_path)?;
-
-    // Parse the YAML content
+    // Read and parse the file content
+    let content = fs::read_to_string(&file_path)?;
     let yaml: Value = serde_yml::from_str(&content)?;
-
     Ok(yaml)
 }
 
 fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
-    // Check if 'name' ends with ".cwl" and append if necessary
     let filename = if name.ends_with(".cwl") {
         name.to_string()
     } else {
         format!("{}.cwl", name)
     };
 
-    // Define the paths to check
+    let input_path = PathBuf::from(&filename);
+
+    // If the input path is absolute and exists, return it directly
+    if input_path.is_absolute() && input_path.exists() {
+        return Ok(input_path.display().to_string());
+    }
+
+    // Attempt to locate the file in the current directory or workflows directory
     let current_dir = env::current_dir()?;
     let current_path = current_dir.join(&filename);
-    let workflows_path = current_dir.join(format!("workflows/{}/{}", name, filename));
+    let workflows_path = current_dir.join(format!("workflows/{}", filename));
 
-    // Attempt to find the file in the current directory or workflows directory
-    let file_path = if current_path.exists() {
+    let resolved_path = if current_path.exists() {
         current_path
     } else if workflows_path.exists() {
         workflows_path
     } else {
         return Err(format!(
-            "CWL file '{}' not found in current directory or workflows/{}/{}",
-            filename, name, filename
-        ).into());
+            "CWL file '{}' not found in current directory or workflows/",
+            filename
+        )
+        .into());
     };
 
-    // Return the file path as a string
-    Ok(file_path.display().to_string())
+    Ok(resolved_path.display().to_string())
 }
 
 
@@ -584,6 +582,12 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 Value::String("class".to_string()),
                 Value::String("arc:process sequence".to_string()),
             );
+            if !mapping.contains_key(Value::String("arc:name:".to_string())) {
+                process_sequence.insert(
+                    Value::String("arc:name".to_string()),
+                    Value::String(args.name.to_string()),
+                );
+            }
 
             // Add inputs
             if let Some(ref input) = args.input {
@@ -789,12 +793,10 @@ async fn zooma_recommendations(
     let client = reqwest::Client::new();
     let mut recommendations: HashSet<(String, String, String)> = HashSet::new();
 
-    let zooma_base = "https://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=";
-
     // Replace spaces with "+" and URL encode the term
     let tt = search_term.replace(" ", "+");
 
-    let query = format!("{}{}", zooma_base, encode(&tt));
+    let query = format!("{}{}", REST_URL_ZOOMA, encode(&tt));
 
     // Make the GET request
     let response = client.get(&query).send().await?;
