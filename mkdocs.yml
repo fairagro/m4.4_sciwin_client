@@ -9,6 +9,7 @@ repo_url: https://github.com/fairagro/m4.4_sciwin_client
 # Theme configuration
 theme:
   name: material
+  logo: assets/logo.png
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
