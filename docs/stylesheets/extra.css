@@ -1,8 +1,10 @@
 [data-md-color-scheme="slate"] {
-    --md-typeset-a-color: #0f9884;
     --md-primary-fg-color: #0f9884;
     --md-primary-fg-color--light: #0f9884;
     --md-primary-fg-color--dark: #0f9884;
+}
+[data-md-color-scheme="slate"][data-md-color-primary=indigo]  {
+--md-typeset-a-color: #0f9884;
 }
 
 [data-md-color-scheme="default"] {
