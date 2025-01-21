@@ -12,6 +12,7 @@ use serde_json::Value as jsonValue;
 use colored::*;
 use urlencoding::encode;
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 const REST_URL_BIOPORTAL: &str = "http://data.bioontology.org";
 const REST_URL_ZOOMA: &str = "https://www.ebi.ac.uk/spot/zooma/v2/api/services/annotate?propertyValue=";
@@ -20,13 +21,17 @@ const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-curr
 const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology"; 
 const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
 
+
+
+
 pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), Box<dyn Error>> {
     match command {
-        AnnotateCommands::Author(args) => annotate_author(args)?,
-        AnnotateCommands::Performer(args) => annotate_performer(args)?,
-        AnnotateCommands::Process(args) => annotate_process_step(args).await?,
-        AnnotateCommands::Container { cwl_name, container } => {
-            annotate_container(cwl_name, container)?
+        AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name)?,
+        AnnotateCommands::Description { cwl_name, description } => {
+            annotate_field(cwl_name, "doc", description)?
+        }
+        AnnotateCommands::License { cwl_name, license } => {
+            annotate_field(cwl_name, "s:license", license)?
         }
         AnnotateCommands::Schema { cwl_name, schema } => {
             annotate(cwl_name, "$schemas", None, Some(schema))?
@@ -34,12 +39,11 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
         AnnotateCommands::Namespace { cwl_name, namespace, short } => {
             annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace))?
         }
-        AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name)?,
-        AnnotateCommands::Description { cwl_name, description } => {
-            annotate_field(cwl_name, "doc", description)?
-        }
-        AnnotateCommands::License { cwl_name, license } => {
-            annotate_field(cwl_name, "s:license", license)?
+        AnnotateCommands::Author(args) => annotate_author(args)?,
+        AnnotateCommands::Performer(args) => annotate_performer(args)?,
+        AnnotateCommands::Process(args) => annotate_process_step(args).await?,
+        AnnotateCommands::Container { cwl_name, container } => {
+            annotate_container(cwl_name, container)?
         }
         AnnotateCommands::Custom { cwl_name, field, value } => {
             annotate_field(cwl_name, field, value)?
@@ -51,13 +55,50 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
 /// Enum for annotate-related subcommands
 #[derive(Debug, Subcommand)]
 pub enum AnnotateCommands {
-    #[command(about = "Annotates author of a tool or workflow from schema.org")]
+    #[command(about = "Annotates name of a tool or workflow")]
+    Name {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 'n', long = "name", help = "Name of the tool or workflow")]
+        name: String,
+    },
+    #[command(about = "Annotates description of a tool or workflow")]
+    Description {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 'd', long = "description", help = "Description of the tool or workflow")]
+        description: String,
+    },
+    #[command(about = "Annotates license of a tool or workflow")]
+    License {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 'l', long = "license", help = "License to annotate")]
+        license: String,
+    },
+    #[command(about = "Annotates schema of a tool or workflow")]
+    Schema {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 's', long = "schema", help = "Schema to annotate")]
+        schema: String,
+    },
+    #[command(about = "Annotates namespace of a tool or workflow")]
+    Namespace {
+        #[arg(help = "Name of the CWL file")]
+        cwl_name: String,
+        #[arg(short = 'n', long = "namespace", help = "Namespace to annotate")]
+        namespace: String,
+        #[arg(long = "namespace abbreviation", help = "Namespace abbreviation to annotate")]
+        short: Option<String>,
+    },
+    #[command(about = "Annotates author of a tool or workflow (schema.org)")]
     Author(AuthorArgs),
 
-    #[command(about = "Annotates performer of a tool or workflow from arc ontology")]
+    #[command(about = "Annotates performer of a tool or workflow (arc ontology)")]
     Performer(PerformerArgs),
 
-    #[command(about = "Annotates a process within a workflow")]
+    #[command(about = "Annotates a process arc ontolology")]
     Process(AnnotateProcessArgs),
 
     #[command(about = "Annotates container information of a tool or workflow")]
@@ -66,44 +107,6 @@ pub enum AnnotateCommands {
         cwl_name: String,
         #[arg(short = 'c', long = "container", help = "Annotation value for the container")]
         container: String,
-    },
-
-    #[command(about = "Annotates license of a tool or workflow")]
-    License {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "License to annotate")]
-        license: String,
-    },
-    #[command(about = "Annotates schema of a tool or workflow")]
-    Schema {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Schema to annotate")]
-        schema: String,
-    },
-    #[command(about = "Annotates namespace of a tool or workflow")]
-    Namespace {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Namespace to annotate")]
-        namespace: String,
-        #[arg(help = "Namespace abbreviation to annotate")]
-        short: Option<String>,
-    },
-    #[command(about = "Annotates name of a tool or workflow")]
-    Name {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Name of the tool or workflow")]
-        name: String,
-    },
-    #[command(about = "Annotates description of a tool or workflow")]
-    Description {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Description of the tool or workflow")]
-        description: String,
     },
     #[command(about = "Annotates a CWL file with an custom field and value")]
     Custom {
@@ -180,7 +183,6 @@ pub struct AnnotateProcessArgs {
 }
 
 
-
 #[derive(ValueEnum, Clone, Debug, Default)]
 pub enum OntologyMapper {
     #[default]
@@ -194,7 +196,9 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
     match args.mapper {
         OntologyMapper::Zooma => {
             match zooma_recommendations(term, max_recommendations).await {
-                Ok(recommendations) => Ok(recommendations),
+                Ok(recommendations) => {
+                    Ok(recommendations)
+                }
                 Err(e) => {
                     eprintln!(
                         "Error in Zoma recommendation process for term '{}': {}",
@@ -208,7 +212,9 @@ pub async fn process_annotation(args: &AnnotateProcessArgs, term: &str) -> Resul
             let bioportal_key: &str = &args.key.clone().unwrap_or_default(); 
             
             match bioportal_recommendations(term, bioportal_key, max_recommendations).await {
-                Ok(recommendations) => Ok(recommendations),
+                Ok(recommendations) => {
+                    Ok(recommendations)
+                }
                 Err(e) => {
                     eprintln!(
                         "Error in Bioportal recommendation process for term '{}': {}",
@@ -257,9 +263,10 @@ pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), B
             });
 
             // Add container_info only if it doesn't already exist
-            if !container_exists {
+           if !container_exists {
                 container.push(Value::Mapping(container_info));
-            }
+         }
+            
         } else {
             // If `arc:has technology type` doesn't exist, create it and add the container info
             let containers = vec![Value::Mapping(container_info)];
@@ -458,8 +465,37 @@ pub fn annotate(
     write_updated_yaml(name, &yaml)
 }
 
+pub fn annotate_ontology(
+    term_accession: &str,
+    source_ref: Option<&str>,
+    annotation_value: &str,
+) -> Result<String, Box<dyn Error>> {
+    // Create a mapping for the annotation
+    let mut annotation = HashMap::new();
+
+    // Add fields to the annotation
+    annotation.insert("arc:parameter name", Value::String("class".to_string()));
+    annotation.insert(
+        "arc:term accession",
+        Value::String(term_accession.to_string()),
+    );
+    if let Some(source) = source_ref {
+        annotation.insert("arc:term source REF", Value::String(source.to_string()));
+    }
+    annotation.insert(
+        "arc:annotation value",
+        Value::String(annotation_value.to_string()),
+    );
+
+    // Convert the mapping to a YAML string
+    let yaml_string = serde_yml::to_string(&annotation)?;
+
+    Ok(yaml_string)
+}
+
+
 /// Helper function to write updated YAML to a file.
-fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
+pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
     let path = get_filename(name)?;
 
     // Convert the YAML content to a string and write it to the file
@@ -471,6 +507,7 @@ fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+    
 
 pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Box<dyn Error>> {
     if field == "s:license" {
@@ -500,7 +537,7 @@ pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Bo
     write_updated_yaml(cwl_name, &yaml)
 }
 
-fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
+pub fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let path = Path::new(name);
 
     // Check if the provided name is an absolute path and the file exists
@@ -518,42 +555,41 @@ fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
     Ok(yaml)
 }
 
-fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
+pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
+    // Check if 'name' ends with ".cwl" and append if necessary
     let filename = if name.ends_with(".cwl") {
         name.to_string()
     } else {
         format!("{}.cwl", name)
     };
+ 
 
-    let input_path = PathBuf::from(&filename);
-
-    // If the input path is absolute and exists, return it directly
-    if input_path.is_absolute() && input_path.exists() {
-        return Ok(input_path.display().to_string());
-    }
-
-    // Attempt to locate the file in the current directory or workflows directory
+    // Define the paths to check
     let current_dir = env::current_dir()?;
     let current_path = current_dir.join(&filename);
-    let workflows_path = current_dir.join(format!("workflows/{}", filename));
+    let base_name = current_path.file_stem()
+    .and_then(|stem| stem.to_str()) 
+    .map(|s| s.to_string()).unwrap_or_default(); 
 
-    let resolved_path = if current_path.exists() {
+    let workflows_path = current_dir.join(format!("workflows/{}/{}", base_name, filename));
+
+    let file_path = if current_path.exists() {
         current_path
-    } else if workflows_path.exists() {
+    } 
+    else if workflows_path.exists() {
         workflows_path
     } else {
         return Err(format!(
-            "CWL file '{}' not found in current directory or workflows/",
-            filename
-        )
-        .into());
+            "CWL file '{}' not found in current directory or workflows/{}/{}",
+            filename, name, filename
+        ).into());
     };
-
-    Ok(resolved_path.display().to_string())
+    //println!("file_path {:?}", file_path);
+    // Return the file path as a string
+    Ok(file_path.display().to_string())
 }
 
-
-fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Error>> {
+pub fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Error>> {
     // Open the file in read-only mode
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
@@ -568,7 +604,6 @@ fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Error>> 
 
     Ok(false)
 }
-
 pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box<dyn Error>> {
     // Read and parse the existing CWL file
     let yaml_result = parse_cwl(&args.cwl_name)?;
@@ -582,15 +617,12 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 Value::String("class".to_string()),
                 Value::String("arc:process sequence".to_string()),
             );
-            if !mapping.contains_key(Value::String("arc:name:".to_string())) {
-                process_sequence.insert(
-                    Value::String("arc:name".to_string()),
-                    Value::String(args.name.to_string()),
-                );
-            }
-
-            // Add inputs
-            if let Some(ref input) = args.input {
+            process_sequence.insert(
+                Value::String("arc:name".to_string()),
+                Value::String(args.name.clone()),
+            );
+                // Add inputs
+                if let Some(ref input) = args.input {
                 let mut input_data = Mapping::new();
                 input_data.insert(Value::String("class".to_string()), Value::String("arc:data".to_string()));
                 input_data.insert(Value::String("arc:name".to_string()), Value::String(input.clone()));
@@ -634,19 +666,18 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 );
 
                 match process_annotation(args, parameter).await {
-                    Ok(recommendations) => {
-                        parameter_name.insert(
-                            Value::String("arc:term accession".to_string()),
-                            Value::String(recommendations.2),
-                        );
-                        parameter_name.insert(
-                            Value::String("arc:term source REF".to_string()),
-                            Value::String(recommendations.1),
-                        );
-                        parameter_name.insert(
-                            Value::String("arc:annotation value".to_string()),
-                            Value::String(recommendations.0),
-                        );
+                    Ok((annotation_value, source_ref, term_accession)) => {
+                        // Use the annotate_ontology function to create an annotation YAML string
+                        let annotation_yaml = annotate_ontology(
+                            &term_accession,
+                            Some(&source_ref),
+                            &annotation_value,
+                        )?;
+                        
+                        let annotation_mapping: Value = serde_yml::from_str(&annotation_yaml)?;
+                        if let Value::Mapping(annotation_mapping) = annotation_mapping {
+                            parameter_name.extend(annotation_mapping);
+                        }
                     }
                     Err(e) => {
                         eprintln!("Failed to process annotation for parameter '{}': {}", parameter, e);
@@ -657,14 +688,11 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                     Value::String("arc:has parameter name".to_string()),
                     Value::Sequence(vec![Value::Mapping(parameter_name)]),
                 );
+
                 parameter_value.insert(
                     Value::String("arc:has parameter".to_string()),
                     Value::Sequence(vec![Value::Mapping(protocol_parameter)]),
                 );
-
-                if let Some(ref value) = args.value {
-                    parameter_value.insert(Value::String("arc:value".to_string()), Value::String(value.clone()));
-                }
 
                 process_sequence.insert(
                     Value::String("arc:has parameter value".to_string()),
@@ -678,41 +706,59 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 Value::Sequence(vec![Value::Mapping(process_sequence)]),
             );
         } else {
-            //allow multiple?
             println!("Process sequence already exists");
         }
     } else {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     }
-    write_updated_yaml(&args.cwl_name, &yaml)
 
+    write_updated_yaml(&args.cwl_name, &yaml)
 }
 
-
-
-async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Result<jsonValue, Box<dyn Error>> {
-    let response = client.get(url)
-        .header("Authorization", format!("apikey token={}", biotools_key)) // Replace with your API key
+pub async fn get_json_biotools(url: &str, client: &Client, biotools_key: &str) -> Result<jsonValue, Box<dyn Error>> {
+    let response = client
+        .get(url)
+        .header("Authorization", format!("apikey token={}", biotools_key))
         .send()
-        .await?
-        .json::<jsonValue>()
         .await?;
 
-    Ok(response)
+    // Check for HTTP status errors
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await?;
+        return Err(format!(
+            "Request failed with status code {}: {}",
+            status, error_text
+        )
+        .into());
+    }
+
+    // Parse the response body as JSON
+    let json = response.json::<jsonValue>().await.map_err(|e| {
+        format!(
+            "Failed to parse JSON response: {}",
+            e
+        )
+    })?;
+
+    Ok(json)
 }
 
 
-fn select_annotation(
+pub fn select_annotation(
     recommendations: &HashSet<(String, String, String)>,
     term: String,
+    input_fn: impl Fn() -> Result<String, io::Error>,
 ) -> Result<(String, String, String), Box<dyn Error>> {
     println!("{}", format!("Available annotations for '{}':", term).green());
 
-    // Collect elements into a vector for indexing
     let elements: Vec<&(String, String, String)> = recommendations.iter().collect();
 
-     // Add an option to skip annotation
-     println!("{:<4} {}", "0".yellow(),format!("Do not use ontology, annotate '{}'", term).yellow());
+    println!(
+        "{:<4} {}",
+        "0".yellow(),
+        format!("Do not use ontology, annotate '{}'", term).yellow()
+    );
 
     for (index, (label, ontology, id)) in elements.iter().enumerate() {
         println!(
@@ -728,24 +774,11 @@ fn select_annotation(
     print!("{}", "Enter the number of your choice: ".green());
     io::stdout().flush()?; 
 
-    let mut user_input = String::new();
-    io::stdin()
-        .read_line(&mut user_input)
-        .expect("Failed to read input");
+    let user_input = input_fn()?; // Use the input function
 
-    // Parse the user input
     match user_input.trim().parse::<usize>() {
-        Ok(0) => {
-            // Return a default value
-            Ok((
-                term,
-                "N/A".to_string(),
-                "N/A".to_string(),
-            ))
-        }
-        Ok(choice) if choice > 0 && choice <= elements.len() => {
-            Ok(elements[choice - 1].clone())
-        }
+        Ok(0) => Ok((term, "N/A".to_string(), "N/A".to_string())),
+        Ok(choice) if choice > 0 && choice <= elements.len() => Ok(elements[choice - 1].clone()),
         _ => {
             println!("\n{}", "Invalid choice. Please try again.".red());
             Err("Invalid choice".into())
@@ -753,7 +786,7 @@ fn select_annotation(
     }
 }
 
-async fn bioportal_recommendations(
+pub async fn bioportal_recommendations(
     search_term: &str,
     biotools_key: &str,
     max_recommendations: usize,
@@ -782,11 +815,12 @@ async fn bioportal_recommendations(
     } else {
         println!("No valid annotations found.");
     }
-    select_annotation(&recommendations, search_term.to_string())
+    //Ok(select_annotation(&recommendations, search_term.to_string(), || Ok("1".to_string()))?)
+    select_annotation(&recommendations, search_term.to_string(), || Ok("1".to_string()))
 
 }
 
-async fn zooma_recommendations(
+pub async fn zooma_recommendations(
     search_term: &str,
     max_recommendations: usize,
 ) -> Result<(String, String, String), Box<dyn Error>> {
@@ -844,6 +878,6 @@ async fn zooma_recommendations(
         }
     }
 
-    select_annotation(&recommendations, search_term.to_string())
-
+    //Ok(select_annotation(&recommendations, search_term.to_string(), || Ok("1".to_string()))?)
+    select_annotation(&recommendations, search_term.to_string(), || Ok("1".to_string()))
 }
