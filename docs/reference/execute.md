@@ -1,4 +1,4 @@
-# Workflow and Tool execution
+# Workflow and Tool Execution
 The `execute` command provides tools to execute CWL documents locally or on a remote server (soonish™).
 !!! abstract "Usage"
     ```

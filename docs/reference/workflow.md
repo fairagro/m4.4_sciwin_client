@@ -1,4 +1,4 @@
-# Workflow commands
+# Workflow Commands
 The workflow commands provide easy ways to perform operations on CWL Workflow files. This features basic CR~~U~~D operations and the possibility to connect and disconnect steps.
 
 !!! abstract "Usage"
