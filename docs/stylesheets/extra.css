@@ -8,3 +8,8 @@
     --md-primary-fg-color--light: #0f9884;
     --md-primary-fg-color--dark: #0f9884;
 }
+
+.bg-light-green {
+    padding: 25px;
+    background-color: #E1EFD8;
+}

@@ -35,8 +35,10 @@ theme:
     - navigation.tabs.sticky
     - navigation.path
     - navigation.sections
+    - navigation.indexes
     - navigation.top 
     - navigation.tracking
+    - navigation.footer
     # toc
     - toc.integrate 
 edit_uri: 'edit/main/docs/'
@@ -55,6 +57,7 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.superfences
   - pymdownx.details
+  - pymdownx.blocks.caption
   - admonition
   - attr_list
   - md_in_html
@@ -73,3 +76,4 @@ nav:
     - Tool Commands: reference/tool.md
     - Workflow Commands: reference/workflow.md
     - Workflow and Tool Execution: reference/execute.md
+  - FAIRagro: https://fairagro.net
