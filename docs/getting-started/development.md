@@ -1,6 +1,11 @@
 # Development
 If you want to be part of the SciWIn Client development feel free to checkout our Repository: [SciWIn Client](https://github.com/fairagro/m4.4_sciwin_client).
 
+## Feature requests and bug reports
+We use GitHub issues to track progress and work on feature requests and bug reports. If there is any kind of improvement to be made to SciWIn Client, please consider opening a new issue on GitHub.
+
+[Open Issue](https://github.com/fairagro/m4.4_sciwin_client/issues/new){ .md-button }
+
 ## Building SciWIn Client
 To build SciWIn Client locally the repository needs to be cloned from GitHub:
 
@@ -18,7 +23,7 @@ Furthermore a [Rust](https://www.rust-lang.org/) environment needs to be set up.
 === ":simple-linux: Linux"
     Use the following Bash command to install Rustup
     ```
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     ```
 
 === ":fontawesome-brands-windows: Windows"
@@ -29,11 +34,12 @@ Furthermore a [Rust](https://www.rust-lang.org/) environment needs to be set up.
 
     For WSL2 the following command can be used.
     ```
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     ```
 
-### Build and test
 If VSCode is used as development environment the [rust-analyzer](https://code.visualstudio.com/docs/languages/rust) extension needs to be installed.
+
+### Build and test
 
 SciWIn Client can than be build using the  `cargo` commandline tool
 ```
