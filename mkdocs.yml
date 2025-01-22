@@ -53,6 +53,8 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
@@ -70,6 +72,9 @@ nav:
   - Getting Started: 
     - getting-started/index.md
     - Example Project: getting-started/example.md
+    - Development: getting-started/development.md
+  - Examples:
+    - examples/index.md
   - Reference: 
     - reference/index.md
     - Project Initialization: reference/init.md
