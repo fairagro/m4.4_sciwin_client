@@ -3,6 +3,7 @@
     --md-primary-fg-color--light: #0f9884;
     --md-primary-fg-color--dark: #0f9884;
 }
+
 [data-md-color-scheme="default"] {
     --md-primary-fg-color: #0f9884;
     --md-primary-fg-color--light: #0f9884;
@@ -12,4 +13,24 @@
 .bg-light-green {
     padding: 25px;
     background-color: #E1EFD8;
+}
+
+h1.title {
+    font-size: 2.5rem;
+    font-weight: bolder;
+    font-style: italic;
+    color: var(--md-primary-fg-color);
+    margin: 0 0;
+}
+
+.hero {
+    display: flex;
+    flex-direction: column;
+    min-height: 60vh;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.hero .md-button {
+    font-size: 0.8rem;
 }
