@@ -199,3 +199,364 @@ For this cases there is the possibility to specify outputs via the commandline u
     ```
 
 This CWL file can then be executed remotely by using any runner e.g. `cwltool` and will write the `sleep.txt` file after 60 seconds.
+
+
+## Pulling `docker` containers
+For full reproducibility it is recommended to use `docker` containers as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
+
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n tool create -c pandas/pandas:pip-all python calculation.py --population population.csv --speakers speakers_revised.csv
+    ```
+=== ":simple-python: calculation.py"
+    ```python
+    import pandas as pd
+    import argparse
+    
+    parser = argparse.ArgumentParser(prog="python calculation.py", description="Calculates the percentage of speakers for each language")
+    parser.add_argument("-p", "--population", required=True, help="Path to the population.csv File")
+    parser.add_argument("-s", "--speakers", required=True, help="Path to the speakers.csv File")
+    
+    args = parser.parse_args()
+    
+    df = pd.read_csv(args.population)
+    sum = df["population"].sum()
+    
+    print(f"Total population: {sum}")
+    
+    df = pd.read_csv(args.speakers)
+    df["percentage"] = df["speakers"] / sum * 100
+    
+    df.to_csv("results.csv")
+    print(df.head(10))
+    ```
+=== ":simple-commonworkflowlanguage: calculation.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+    
+    cwlVersion: v1.2
+    class: CommandLineTool
+    
+    requirements:
+    - class: InitialWorkDirRequirement
+      listing:
+      - entryname: calculation.py
+        entry:
+          $include: '../../calculation.py'
+    - class: DockerRequirement
+      dockerPull: pandas/pandas:pip-all
+    
+    inputs:
+    - id: population
+      type: File
+      default:
+        class: File
+        location: '../../population.csv'
+      inputBinding:
+        prefix: '--population'
+    - id: speakers
+      type: File
+      default:
+        class: File
+        location: '../../speakers_revised.csv'
+      inputBinding:
+        prefix: '--speakers'
+    
+    outputs:
+    - id: results
+      type: File
+      outputBinding:
+        glob: results.csv
+    
+    baseCommand:
+    - python
+    - calculation.py
+    ```
+=== "population.csv"
+    ```csv
+    country,population
+    Afghanistan,37466414
+    Albania,2793592
+    Algeria,43900000
+    Andorra,85101
+    Angola,32866270
+    Antigua and Barbuda,101489
+    Argentina,47327407
+    Armenia,2930450
+    Aruba,106739
+    Australia,26473055
+    Austria,8979894
+    Azerbaijan,10145212
+    Bahrain,1311134
+    Bangladesh,169356251
+    Basque Country,3193513
+    Belarus,9155978
+    Belgium,11584008
+    Benin,11175692
+    Bhutan,787424
+    Bolivia,11051600
+    Botswana,2291661
+    Brazil,203062512
+    British North Borneo,285000
+    Brunei,428697
+    Bulgaria,7000039
+    Burkina Faso,20488000
+    Burundi,11530580
+    Cambodia,16005373
+    Cameroon,24053727
+    Canada,36991981
+    Cape Verde,555988
+    Catalonia,7747709
+    Central African Republic,4659080
+    Chad,15477751
+    Chile,19458000
+    Colombia,49065615
+    Comoros,902348
+    Cook Islands,17434
+    Costa Rica,5044197
+    Croatia,3871833
+    Cuba,11181595
+    Cyprus,1141166
+    Czech Republic,10900555
+    Democratic Republic of the Congo,86790567
+    Denmark,5827463
+    Djibouti,956985
+    Dominica,74656
+    Dominican Republic,10760028
+    East Timor,1243235
+    Ecuador,16938986
+    Egypt,94798827
+    El Salvador,5744113
+    England,57106398
+    Eritrea,3497000
+    Estonia,1374687
+    Ethiopia,104957438
+    Federated States of Micronesia,105544
+    Fiji,905502
+    Finland,5608218
+    France,68373433
+    Gabon,2025137
+    Galicia,2695645
+    Germany,84358845
+    Ghana,32833031
+    Greece,10482487
+    Grenada,114299
+    Guatemala,17263239
+    Guinea,12717176
+    Guinea-Bissau,1861283
+    Guyana,777859
+    Honduras,10062994
+    Hungary,9599744
+    Iceland,364260
+    India,1326093247
+    Indonesia,275439000
+    Iran,86758304
+    Iraq,38274618
+    Israel,9840000
+    Italy,58850717
+    Ivory Coast,24294750
+    Jamaica,2697983
+    Japan,125440000
+    Jordan,10428241
+    Kazakhstan,19002586
+    Kenya,48468138
+    Kingdom of Denmark,5930987
+    Kingdom of the Netherlands,17100715
+    Kosovo,1883018
+    Kyrgyzstan,6694200
+    Laos,6858160
+    Latvia,1871882
+    Lebanon,6100075
+    Lesotho,2007201
+    Liberia,5214030
+    Libya,6678567
+    Liechtenstein,37922
+    Lithuania,2860002
+    Madagascar,25570895
+    Malawi,18622104
+    Malaysia,32447385
+    Maldives,436330
+    Mali,20250833
+    Malta,553214
+    Mauritania,4614974
+    Mauritius,1264613
+    Mexico,124777324
+    Mongolia,3409939
+    Montenegro,622359
+    Morocco,37076584
+    Mozambique,29668834
+    Myanmar,53370609
+    Namibia,2533794
+    Nauru,13650
+    Nepal,29164578
+    Netherlands,17590672
+    New Zealand,5118700
+    Nicaragua,5142098
+    Niger,21477348
+    Nigeria,211400708
+    Niue,1612
+    North Korea,25490965
+    North Macedonia,1836713
+    Northern Ireland,1852168
+    Northern Mariana Islands,47329
+    Norway,5550203
+    Oman,4829480
+    Pakistan,223773700
+    Palau,21729
+    Papua New Guinea,8935000
+    Paraguay,6811297
+    People's Republic of China,1442965000
+    Peru,29381884
+    Philippines,109035343
+    Poland,38382576
+    Portugal,10347892
+    Qatar,2639211
+    Republic of Ireland,5123536
+    Republic of the Congo,5260750
+    Romania,19053815
+    Russia,145975300
+    Rwanda,13246394
+    Saint Kitts and Nevis,55345
+    Saint Lucia,167591
+    Saint Vincent and the Grenadines,109897
+    Samoa,200010
+    Saudi Arabia,33000000
+    Scotland,5404700
+    Senegal,16876720
+    Seychelles,95843
+    Sierra Leone,7557212
+    Singapore,5866139
+    Sint Maarten,43847
+    Slovakia,5449270
+    Slovenia,2066880
+    Solomon Islands,611343
+    Somalia,11031386
+    South Africa,62027503
+    South Korea,51466201
+    South Sudan,12575714
+    Spain,47415750
+    Sri Lanka,21444000
+    State of Palestine,5227193
+    Sudan,40533330
+    Sweden,10551707
+    Switzerland,8902308
+    Syria,22933531
+    São Tomé and Príncipe,204327
+    Taiwan,23412899
+    Tajikistan,8921343
+    Tanzania,57310019
+    Thailand,66188503
+    The Bahamas,395361
+    The Gambia,2639916
+    Togo,7797694
+    Trinidad and Tobago,1369125
+    Tunisia,11565204
+    Turkey,85372377
+    Turkmenistan,6117933
+    Tuvalu,11792
+    Uganda,47123531
+    United Arab Emirates,9890400
+    United Kingdom,67326569
+    United States of America,332278200
+    Uruguay,3444263
+    Uzbekistan,34915100
+    Vanuatu,300019
+    Vatican City,764
+    Venezuela,28515829
+    Vietnam,96208984
+    Wales,3113000
+    Yemen,28250420
+    Zambia,17094130
+    Zimbabwe,15178979
+    ```
+=== "speakers_revised.csv"
+    ```csv
+    language,speakers
+    Bangla,300000000
+    Egyptian Arabic,100542400
+    English,1132366680
+    German,134993040
+    Indonesian,198996550
+    Japanese,128000000
+    Portuguese,475300000
+    Punjabi,125000000
+    Russian,154000000
+    Standard Mandarin,1090951810
+    ``` 
+=== "results.csv"
+    ```csv
+    ,language,speakers,percentage
+    0,Bangla,300000000,3.8990180176129665
+    1,Egyptian Arabic,100542400,1.3067220971134996
+    2,English,1132366680,14.71706029288192
+    3,German,134993040,1.7544676507078263
+    4,Indonesian,198996550,2.5863037796427317
+    5,Japanese,128000000,1.663581020848199
+    6,Portuguese,475300000,6.177344212571477
+    7,Punjabi,125000000,1.6245908406720693
+    8,Russian,154000000,2.0014959157079892
+    9,Standard Mandarin,1090951810,14.178802545124924
+    ``` 
+
+When the tool is executed by a runner supporting containerization e.g. `cwltool` it is using the `pandas/pandas:pip-all` container to run the script in a reproducible environment.
+
+## Building custom `docker` containers
+Using a complex research environments a custom docker container is may needed. The same example from above will be executed in a container built from a `Dockerfile`.
+This can be achieved by using the `-c` argument with a path to a `Dockerfile`. A tag can be specified by using `-t`.
+
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n tool create -c Dockerfile -t my-docker python calculation.py --population population.csv --speakers speakers_revised.csv
+    ```
+=== ":simple-commonworkflowlanguage: calculation.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+    
+    cwlVersion: v1.2
+    class: CommandLineTool
+    
+    requirements:
+    - class: InitialWorkDirRequirement
+      listing:
+      - entryname: calculation.py
+        entry:
+          $include: '../../calculation.py'
+    - class: DockerRequirement
+      dockerFile:
+        $include: '../../Dockerfile'
+      dockerImageId: my-docker
+    
+    inputs:
+    - id: population
+      type: File
+      default:
+        class: File
+        location: '../../population.csv'
+      inputBinding:
+        prefix: '--population'
+    - id: speakers
+      type: File
+      default:
+        class: File
+        location: '../../speakers_revised.csv'
+      inputBinding:
+        prefix: '--speakers'
+    
+    outputs:
+    - id: results
+      type: File
+      outputBinding:
+        glob: results.csv
+    
+    baseCommand:
+    - python
+    - calculation.py
+    
+    ```
+=== ":simple-docker: Dockerfile"
+    ```docker
+    FROM python
+    RUN pip install pandas
+    ```
+
+A runner will check whether a container with the specified image is existent and build it using the `Dockerfile` otherwise.
