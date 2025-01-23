@@ -27,7 +27,7 @@ Scientific Workflows made easy!
 
     Focus on your content and generate a responsive and searchable static site
 
-    [:octicons-arrow-right-24: Examples](#)
+    [:octicons-arrow-right-24: Examples](./examples/index.md)
 
 -   :books:{ .lg .middle } __Command Reference__
 
