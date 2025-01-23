@@ -1,5 +1,5 @@
 # Example Project
-This example is a sample use case for building a small project with `s4n`. It features the creation of two commandline scripts and the combination of those into a workflow as well as the execution of this workflow using the internal CWL runner.
+This example is a sample use case for building a small project with `s4n`. It features the creation of two commandline scripts and the combination of those into a workflow as well as the execution of this workflow using the internal CWL runner. For detailed examples for the used `s4n` commands visit the [examples](../examples/index.md) page.
 
 ## Prerequisites
 Add `s4n` to your `PATH` environment variable if not done already. 
