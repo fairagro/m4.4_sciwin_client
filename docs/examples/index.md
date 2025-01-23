@@ -3,7 +3,7 @@ Besides the [full walkthrough example](../getting-started/example.md) examples o
 
 <div class="grid cards" markdown>
 
--   :octicons-terminal-16:{ .lg .middle } __Creation of Command Line Tools__
+-   [:octicons-terminal-16:{ .lg .middle } __Creation of Command Line Tools__](tool-creation.md)
 
     ---
  
