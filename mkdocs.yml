@@ -75,6 +75,7 @@ nav:
     - Development: getting-started/development.md
   - Examples:
     - examples/index.md
+    - Tool Creation: examples/tool-creation.md
   - Reference: 
     - reference/index.md
     - Project Initialization: reference/init.md
