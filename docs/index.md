@@ -6,7 +6,7 @@ hide:
 <div class="hero" markdown>
 # SciWin Client User Documentation { .title }
 
-Scientic Workflows made easy!
+Scientific Workflows made easy!
 
 [Get started](./getting-started/index.md){ .md-button .md-button--primary }
 </div>
