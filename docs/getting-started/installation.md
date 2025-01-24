@@ -1,0 +1,3 @@
+# Installation
+!!! warning
+    Coming soon

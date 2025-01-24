@@ -12,7 +12,3 @@ SciWIn Concept graphic describing the relations of SciWIn client to other SciWIn
 ## Common Workflow Language
 *Common Workflow Language* (CWL) is an open standard for the description of computational workflows. Tool wrappers are used for describing how to run certain commandline tools which can be connected to create workflows. 
 CWL as being an open standard is portable and compatible with a variety of platforms including HPC and Kubernetes environments. CWL uses YAML to describe Tools and Workflows.
-
-## Installation
-!!! warning
-    Coming soon

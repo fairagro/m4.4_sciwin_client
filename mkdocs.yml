@@ -71,6 +71,7 @@ nav:
   - Home: index.md
   - Getting Started: 
     - getting-started/index.md
+    - Installation: getting-started/installation.md
     - Example Project: getting-started/example.md
     - Development: getting-started/development.md
   - Examples:
