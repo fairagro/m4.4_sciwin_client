@@ -55,7 +55,7 @@ As input parameter we wish to use the `hello-world` input of the `echo` tool and
     ```
     s4n workflow connect echo-cat --from @inputs/message --to echo/hello_world
     ```
-=== ":simple-commonworkflowlanguage: my-workflow.cwl"
+=== ":simple-commonworkflowlanguage: echo-cat.cwl"
     ```yaml
     #!/usr/bin/env cwl-runner
 
@@ -82,7 +82,7 @@ As input parameter we wish to use the `hello-world` input of the `echo` tool and
     ```
     s4n workflow connect echo-cat --from echo/greeting --to cat/greeting_txt
     ```
-=== ":simple-commonworkflowlanguage: my-workflow.cwl"
+=== ":simple-commonworkflowlanguage: echo-cat.cwl"
     ```yaml
     #!/usr/bin/env cwl-runner
 
