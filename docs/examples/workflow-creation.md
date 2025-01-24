@@ -30,6 +30,92 @@ Connections can be seen as the arrows in the above figure. Think about a sentenc
 
 Therefore the command that created this arrow was `s4n workflow connect my-workflow --from @inputs/speakers --to calculation/speakers`.
 
-!!! info
-    more examples will follow..
+In this simple example we will connect the `echo` command with the `cat` command. Use the following Commands to create the needed command line tool specifications.
+```
+s4n tool create echo "Hello World" \> greeting.txt
+s4n tool create cat greeting.txt 
+s4n workflow create echo-cat
+```
 
+To get an overview of the available slots the `s4n tool ls -a` command can be used.
+```
++------+------------------+---------------+
+| Tool | Inputs           | Outputs       |
++------+------------------+---------------+
+| echo | echo/hello_world | echo/greeting |
++------+------------------+---------------+
+| cat  | cat/greeting_txt |               |
++------+------------------+---------------+
+```
+
+As input parameter we wish to use the `hello-world` input of the `echo` tool and connect the output `echo/greeting` to the input `cat/greeting_txt`. Therefore 3 connections are needed.
+
+### Connecting a new input to echo step
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n workflow connect echo-cat --from @inputs/message --to echo/hello_world
+    ```
+=== ":simple-commonworkflowlanguage: my-workflow.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+
+    cwlVersion: v1.2
+    class: Workflow
+
+    inputs:
+    - id: message
+      type: string
+
+    outputs: []
+    steps:
+    - id: echo
+      in:
+        hello_world: message
+      run: '../echo/echo.cwl'
+      out:
+      - greeting
+
+    ```
+
+### Connecting the output of the echo step to the cat step
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n workflow connect echo-cat --from echo/greeting --to cat/greeting_txt
+    ```
+=== ":simple-commonworkflowlanguage: my-workflow.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+
+    cwlVersion: v1.2
+    class: Workflow
+
+    inputs:
+    - id: message
+      type: string
+
+    outputs: []
+    steps:
+    - id: echo
+      in:
+        hello_world: message
+      run: '../echo/echo.cwl'
+      out:
+      - greeting
+    - id: cat
+      in:
+        greeting_txt: echo/greeting
+      run: '../cat/cat.cwl'
+      out: []
+    ```
+
+To save the workflow `s4n workflow save echo-cat` is used.
+
+Workflow visualizations can be achieved using `cwltool`
+```
+cwltool --print-dot workflows/echo-cat/echo-cat.cwl | dot -Tsvg > workflow.svg
+```
+
+![created workflow](../assets/workflow_01.svg)
+// caption
+The created `echo-cat` workflow as DAG representation.
+//
