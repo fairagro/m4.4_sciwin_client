@@ -1,21 +1,13 @@
-use tokio;
+use s4n::commands::annotate::{
+    annotate, annotate_container, annotate_default, annotate_field, annotate_performer, annotate_person, annotate_process_step,
+    contains_docker_requirement, get_filename, handle_annotate_commands, parse_cwl, AnnotateCommands, AnnotateProcessArgs, PerformerArgs, PersonArgs,
+};
+use serde_yml::Value;
 use serial_test::serial;
 use std::env;
 use std::fs;
 use tempfile::tempdir;
-use s4n::commands::annotate::{handle_annotate_commands, AnnotateCommands, AuthorArgs,
-     PerformerArgs, AnnotateProcessArgs, OntologyMapper, annotate_process_step,
-     annotate_performer,  
-     get_filename, contains_docker_requirement, annotate_field, annotate_ontology, 
-     parse_cwl, annotate_default, get_json_biotools, select_annotation, bioportal_recommendations, zooma_recommendations};
-use serde_yml::Value;
-use std::error::Error;
-use httpmock::MockServer;
-use reqwest::Client; 
-use httpmock::Method::GET; 
-use std::collections::HashSet;
-use serde_json::json;
-
+use tokio;
 
 const CWL_CONTENT: &str = r#"
     class: CommandLineTool
@@ -31,8 +23,8 @@ const CWL_CONTENT_ANNOTATED: &str = r#"
     class: CommandLineTool
     baseCommand: echo
     hints:
-        DockerRequirement:
-        dockerPull: node:slim
+      DockerRequirement:
+      dockerPull: node:slim
     inputs: []
     outputs: []
     s:author:
@@ -40,16 +32,21 @@ const CWL_CONTENT_ANNOTATED: &str = r#"
       s:identifier: https://orcid.org/0000-0002-6130-1021
       s:email: mailto:dyuen@oicr.on.ca
       s:name: Denis Yuen
+    s:contributor:
+    - class: s:Person
+      s:identifier: https://orcid.org/0000-0002-6130-1021
+      s:email: mailto:dyuen@oicr.on.ca
+      s:name: Denis Yuen
     arc:performer:
     - class: arc:Person
-      arc:first name: "Example"
-      arc:last name: "Person"
-      arc:email: "example.person@email.de "
-      arc:affiliation: "Institution"
+      arc:first name: Jane
+      arc:last name: Doe2
+      arc:email: jdoe@mail.de
+      arc:affiliation: institution
       arc:has role:
       - class: arc:role
-        arc:term accession: "https://credit.niso.org/contributor-roles/formal-analysis/"
-        arc:annotation value: "Formal analysis"
+        arc:term accession: http://purl.obolibrary.org/obo/NCIT_C170397
+        arc:annotation value: Formal Search
     s:citation: https://dx.doi.org/10.6084/m9.figshare.3115156.v2
     s:codeRepository: https://github.com/common-workflow-language/common-workflow-language
     s:dateCreated: "2016-12-13"
@@ -62,7 +59,6 @@ const CWL_CONTENT_ANNOTATED: &str = r#"
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     "#;
 
-// A mock of the CWL_WITH_DOCKER_CONTENT that simulates a CWL file with Docker requirement
 const CWL_WITH_DOCKER_CONTENT: &str = r#"
     cwlVersion: v1.0
     class: CommandLineTool
@@ -72,16 +68,12 @@ const CWL_WITH_DOCKER_CONTENT: &str = r#"
             dockerPull: 'busybox'
 "#;
 
-// Mocking external constants
-//const SCHEMAORG_NAMESPACE: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf";
 const SCHEMAORG_SCHEMA: &str = "https://schema.org/";
 const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
-//const ARC_SCHEMA: &str = " https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
 
-#[tokio::test]
+#[test]
 #[serial]
-async fn test_annotate_container() {
-
+fn test_annotate_container() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
 
@@ -90,12 +82,7 @@ async fn test_annotate_container() {
     let temp_file_name = "test.cwl";
     fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
 
-    let command = AnnotateCommands::Container {
-        cwl_name: temp_file_name.to_string(),
-        container: "docker://my-container:latest".to_string(),
-    };
-
-    let result = handle_annotate_commands(&command).await;
+    let result = annotate_container(temp_file_name, "docker://my-container:latest");
 
     assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
 
@@ -112,7 +99,6 @@ async fn test_annotate_container() {
 #[tokio::test]
 #[serial]
 async fn test_annotate_new_container() {
-
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
 
@@ -143,7 +129,6 @@ async fn test_annotate_new_container() {
 #[tokio::test]
 #[serial]
 async fn test_annotate_same_container() {
-
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
 
@@ -174,7 +159,6 @@ async fn test_annotate_same_container() {
 #[tokio::test]
 #[serial]
 async fn test_annotate_schema() {
-
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
 
@@ -343,9 +327,10 @@ async fn test_annotate_performer() {
     let command = AnnotateCommands::Performer(PerformerArgs {
         cwl_name: temp_file_name.to_string(),
         first_name: "J".to_string(),
-        last_name: "Doe".to_string(), 
-        mail: Some("doe@mail.com".to_string()), 
+        last_name: "Doe".to_string(),
+        mail: Some("doe@mail.com".to_string()),
         affiliation: Some("institute1".to_string()),
+        role: None,
     });
 
     let result = handle_annotate_commands(&command).await;
@@ -354,17 +339,16 @@ async fn test_annotate_performer() {
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
-        updated_content.contains("arc:first name: J") &&
-        updated_content.contains("arc:last name: Doe") &&
-        updated_content.contains("arc:email: doe@mail.com") &&
-        updated_content.contains("arc:affiliation: institute1"),
+        updated_content.contains("arc:first name: J")
+            && updated_content.contains("arc:last name: Doe")
+            && updated_content.contains("arc:email: doe@mail.com")
+            && updated_content.contains("arc:affiliation: institute1"),
         "Expected performer annotation to be added, but got: {}",
         updated_content
     );
 
     env::set_current_dir(current).unwrap();
 }
-
 
 #[tokio::test]
 #[serial]
@@ -378,10 +362,10 @@ async fn test_annotate_author() {
 
     fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
 
-    let command = AnnotateCommands::Author(AuthorArgs {
+    let command = AnnotateCommands::Author(PersonArgs {
         cwl_name: temp_file_name.to_string(),
         name: "J Doe".to_string(),
-        mail: Some("doe@mail.com".to_string()), 
+        mail: Some("doe@mail.com".to_string()),
         id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
     });
 
@@ -391,10 +375,11 @@ async fn test_annotate_author() {
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
-        updated_content.contains("class: s:Person") &&
-        updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000") &&
-        updated_content.contains("s:email: mailto:doe@mail.com") &&
-        updated_content.contains("s:name: J Doe"),
+        updated_content.contains("s:author")
+            && updated_content.contains("class: s:Person")
+            && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
+            && updated_content.contains("s:email: mailto:doe@mail.com")
+            && updated_content.contains("s:name: J Doe"),
         "Expected performer annotation to be added, but got: {}",
         updated_content
     );
@@ -412,12 +397,12 @@ async fn test_annotate_author_exists() {
 
     let temp_file_name = "test.cwl";
 
-    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
+    fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
 
-    let command = AnnotateCommands::Author(AuthorArgs {
+    let command = AnnotateCommands::Author(PersonArgs {
         cwl_name: temp_file_name.to_string(),
         name: "J Doe".to_string(),
-        mail: Some("doe@mail.com".to_string()), 
+        mail: Some("doe@mail.com".to_string()),
         id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
     });
 
@@ -427,10 +412,14 @@ async fn test_annotate_author_exists() {
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
-        updated_content.contains("class: s:Person") &&
-        updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000") &&
-        updated_content.contains("s:email: mailto:doe@mail.com") &&
-        updated_content.contains("s:name: J Doe"),
+        updated_content.contains("s:author")
+            && updated_content.contains("s:identifier: https://orcid.org/0000-0002-6130-1021")
+            && updated_content.contains("s:email: mailto:dyuen@oicr.on.ca")
+            && updated_content.contains("s:name: Denis Yuen")
+            && updated_content.contains("class: s:Person")
+            && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
+            && updated_content.contains("s:email: mailto:doe@mail.com")
+            && updated_content.contains("s:name: J Doe"),
         "Expected performer annotation to be added, but got: {}",
         updated_content
     );
@@ -448,12 +437,12 @@ async fn test_annotate_same_author() {
 
     let temp_file_name = "test.cwl";
 
-    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
+    fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
 
-    let command = AnnotateCommands::Author(AuthorArgs {
+    let command = AnnotateCommands::Author(PersonArgs {
         cwl_name: temp_file_name.to_string(),
         name: "Denis Yuen".to_string(),
-        mail: Some("dyuen@oicr.on.ca".to_string()), 
+        mail: Some("dyuen@oicr.on.ca".to_string()),
         id: Some("https://orcid.org/0000-0002-6130-1021".to_string()),
     });
 
@@ -463,10 +452,10 @@ async fn test_annotate_same_author() {
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
-        updated_content.contains("class: s:Person") &&
-        updated_content.contains("s:identifier: https://orcid.org/0000-0002-6130-1021") &&
-        updated_content.contains("s:email: mailto:dyuen@oicr.on.ca") &&
-        updated_content.contains("s:name: Denis Yuen"),
+        updated_content.contains("class: s:Person")
+            && updated_content.contains("s:identifier: https://orcid.org/0000-0002-6130-1021")
+            && updated_content.contains("s:email: mailto:dyuen@oicr.on.ca")
+            && updated_content.contains("s:name: Denis Yuen"),
         "Expected performer annotation to be added, but got: {}",
         updated_content
     );
@@ -476,8 +465,107 @@ async fn test_annotate_same_author() {
 
 #[tokio::test]
 #[serial]
-async fn test_annotate_process_step_with_input_output() {
+async fn test_annotate_contributor() {
+    let dir = tempdir().unwrap();
+    let current = env::current_dir().unwrap();
 
+    env::set_current_dir(dir.path()).unwrap();
+
+    let temp_file_name = "test.cwl";
+
+    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
+
+    let command = AnnotateCommands::Contributor(PersonArgs {
+        cwl_name: temp_file_name.to_string(),
+        name: "J Doe".to_string(),
+        mail: Some("doe@mail.com".to_string()),
+        id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
+    });
+
+    let result = handle_annotate_commands(&command).await;
+
+    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+
+    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
+    assert!(
+        updated_content.contains("s:contributor")
+            && updated_content.contains("class: s:Person")
+            && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
+            && updated_content.contains("s:email: mailto:doe@mail.com")
+            && updated_content.contains("s:name: J Doe"),
+        "Expected contributor annotation to be added, but got: {}",
+        updated_content
+    );
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_annotate_contributor_exists() {
+    let dir = tempdir().unwrap();
+    let current = env::current_dir().unwrap();
+
+    env::set_current_dir(dir.path()).unwrap();
+
+    let temp_file_name = "test.cwl";
+
+    fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
+
+    let command = AnnotateCommands::Contributor(PersonArgs {
+        cwl_name: temp_file_name.to_string(),
+        name: "J Doe".to_string(),
+        mail: Some("doe@mail.com".to_string()),
+        id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
+    });
+
+    let result = handle_annotate_commands(&command).await;
+
+    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+
+    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
+    assert!(
+        updated_content.contains("s:contributor")
+            && updated_content.contains("class: s:Person")
+            && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
+            && updated_content.contains("s:email: mailto:doe@mail.com")
+            && updated_content.contains("s:name: J Doe"),
+        "Expected contributor annotation to be added, but got: {}",
+        updated_content
+    );
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_annotate_same_contributor() {
+    let dir = tempdir().unwrap();
+    let current = env::current_dir().unwrap();
+
+    env::set_current_dir(dir.path()).unwrap();
+
+    let temp_file_name = "test.cwl";
+
+    fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
+
+    let command = AnnotateCommands::Author(PersonArgs {
+        cwl_name: temp_file_name.to_string(),
+        name: "Denis Yuen".to_string(),
+        mail: Some("dyuen@oicr.on.ca".to_string()),
+        id: Some("https://orcid.org/0000-0002-6130-1021".to_string()),
+    });
+
+    let result = handle_annotate_commands(&command).await;
+
+    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_annotate_process_step_with_input_output() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -493,10 +581,7 @@ async fn test_annotate_process_step_with_input_output() {
         output: Some("output_data".to_string()),
         parameter: None,
         value: None,
-        key: None, 
-        mapper: OntologyMapper::default(),
     });
-
 
     let result = handle_annotate_commands(&args).await;
 
@@ -550,12 +635,9 @@ async fn test_annotate_custom() {
     env::set_current_dir(current).unwrap();
 }
 
-
-
 #[tokio::test]
 #[serial]
 async fn test_annotate_process() {
-
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -571,8 +653,6 @@ async fn test_annotate_process() {
         output: Some("output_data".to_string()),
         parameter: None,
         value: None,
-        key: None, 
-        mapper: OntologyMapper::default(),
     };
 
     let result = annotate_process_step(&args).await;
@@ -608,11 +688,7 @@ async fn test_get_filename() {
 
     fs::write(&file_in_current_dir, "").unwrap();
     let result = get_filename(&base_name);
-    assert!(
-        result.is_ok(),
-        "Expected Ok(file path), got Err: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "Expected Ok(file path), got Err: {:?}", result);
     assert_eq!(
         result.unwrap(),
         file_in_current_dir.display().to_string(),
@@ -623,11 +699,7 @@ async fn test_get_filename() {
 
     fs::write(&file_in_workflows_dir, "").unwrap();
     let result = get_filename(&base_name);
-    assert!(
-        result.is_ok(),
-        "Expected Ok(file path), got Err: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "Expected Ok(file path), got Err: {:?}", result);
     assert_eq!(
         result.unwrap(),
         file_in_workflows_dir.display().to_string(),
@@ -637,26 +709,18 @@ async fn test_get_filename() {
     fs::remove_file(&file_in_workflows_dir).unwrap();
 
     let result = get_filename(&base_name);
+    assert!(result.is_err(), "Expected Err(file not found), got Ok: {:?}", result);
     assert!(
-        result.is_err(),
-        "Expected Err(file not found), got Ok: {:?}",
-        result
-    );
-    assert!(
-        result
-            .unwrap_err()
-            .to_string()
-            .contains("CWL file 'example.cwl' not found"),
+        result.unwrap_err().to_string().contains("CWL file 'example.cwl' not found"),
         "Expected error message about missing file, but got different error"
     );
 
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn test_annotate_performer_add_to_existing_list() {
-
+async fn test_annotate_performer_add_to_existing_list() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -671,21 +735,53 @@ fn test_annotate_performer_add_to_existing_list() {
         last_name: "Smith".to_string(),
         mail: Some("jane.smith@example.com".to_string()),
         affiliation: Some("Example Organization".to_string()),
+        role: None,
     };
 
     let result = annotate_performer(&args);
+    assert!(result.await.is_ok(), "annotate_performer failed");
+
+    let updated_content = fs::read_to_string(cwl_filename).expect("Failed to read updated CWL file");
+    println!("Updated Content:\n{}", updated_content);
+
+    assert!(updated_content.contains("Jane"), "First name not added");
+    assert!(updated_content.contains("Smith"), "Last name not added");
+    assert!(updated_content.contains("jane.smith@example.com"), "Email not added");
+    assert!(updated_content.contains("Example Organization"), "Affiliation not added");
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[test]
+#[serial]
+fn test_annotate_author_add_to_existing_list() {
+    let dir = tempdir().unwrap();
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+
+    let cwl_filename = "test_process.cwl";
+
+    fs::write(cwl_filename, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
+
+    let args = PersonArgs {
+        cwl_name: cwl_filename.to_string(),
+        name: "Jane Smith".to_string(),
+        mail: Some("jane.smith@example.com".to_string()),
+        id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
+    };
+
+    let result = annotate_person(&args, "author");
 
     assert!(result.is_ok(), "Expected Ok, got {:?}", result);
 
     let updated_yaml: Value = serde_yml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
-    if let Value::Sequence(performers) = &updated_yaml["arc:performer"] {
-        assert_eq!(performers.len(), 2, "Expected 2 performers, found {}", performers.len());
-        let new_performer = &performers[1];
-        assert_eq!(new_performer["arc:first name"], "Jane");
-        assert_eq!(new_performer["arc:last name"], "Smith");
-        assert_eq!(new_performer["arc:email"], "jane.smith@example.com");
-        assert_eq!(new_performer["arc:affiliation"], "Example Organization");
+    if let Value::Sequence(authors) = &updated_yaml["s:author"] {
+        assert_eq!(authors.len(), 2, "Expected 2 authors, found {}", authors.len());
+        let new_author = &authors[1];
+        assert_eq!(new_author["s:name"], "Jane Smith");
+        assert_eq!(new_author["s:email"], "mailto:jane.smith@example.com");
+        assert_eq!(new_author["s:identifier"], "http://orcid.org/0000-0000-0000-0000");
     } else {
         panic!("Expected 'arc:performer' to be a sequence.");
     }
@@ -693,10 +789,9 @@ fn test_annotate_performer_add_to_existing_list() {
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn test_annotate_performer_avoid_duplicate() {
-
+async fn test_annotate_performer_avoid_duplicate() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -719,11 +814,12 @@ fn test_annotate_performer_avoid_duplicate() {
         last_name: "Davis".to_string(),
         mail: Some("charlie.davis@example.com".to_string()),
         affiliation: None,
+        role: None,
     };
 
     let result = annotate_performer(&args);
 
-    assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+    assert!(result.await.is_ok(), "annotate_performer failed");
 
     let updated_yaml: Value = serde_yml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
@@ -736,9 +832,9 @@ fn test_annotate_performer_avoid_duplicate() {
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn test_annotate_performer_invalid_root() {
+async fn test_annotate_performer_invalid_root() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -757,11 +853,12 @@ fn test_annotate_performer_invalid_root() {
         last_name: "Evans".to_string(),
         mail: None,
         affiliation: None,
+        role: None,
     };
 
     let result = annotate_performer(&args);
 
-    assert!(result.is_err(), "Expected Err, got {:?}", result);
+    assert!(result.await.is_err(), "annotate_performer expected to fail");
 
     env::set_current_dir(current).unwrap();
 }
@@ -769,8 +866,8 @@ fn test_annotate_performer_invalid_root() {
 #[tokio::test]
 #[serial]
 async fn test_contains_docker_requirement() {
-    use tempfile::tempdir;
     use std::fs;
+    use tempfile::tempdir;
 
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
@@ -788,17 +885,8 @@ requirements:
     "#;
     fs::write(&file_with_docker, content_with_docker).unwrap();
     let result = contains_docker_requirement(file_with_docker.to_str().unwrap());
-    assert!(
-        result.is_ok(),
-        "Expected Ok(true), but got Err: {:?}",
-        result
-    );
-    assert_eq!(
-        result.unwrap(),
-        true,
-        "Expected true for file containing 'DockerRequirement'"
-    );
-
+    assert!(result.is_ok(), "Expected Ok(true), but got Err: {:?}", result);
+    assert_eq!(result.unwrap(), true, "Expected true for file containing 'DockerRequirement'");
 
     let content_without_docker = r#"
 class: CommandLineTool
@@ -807,29 +895,13 @@ outputs: []
     "#;
     fs::write(&file_without_docker, content_without_docker).unwrap();
     let result = contains_docker_requirement(file_without_docker.to_str().unwrap());
-    assert!(
-        result.is_ok(),
-        "Expected Ok(false), but got Err: {:?}",
-        result
-    );
-    assert_eq!(
-        result.unwrap(),
-        false,
-        "Expected false for file not containing 'DockerRequirement'"
-    );
+    assert!(result.is_ok(), "Expected Ok(false), but got Err: {:?}", result);
+    assert_eq!(result.unwrap(), false, "Expected false for file not containing 'DockerRequirement'");
 
     fs::write(&empty_file, "").unwrap();
     let result = contains_docker_requirement(empty_file.to_str().unwrap());
-    assert!(
-        result.is_ok(),
-        "Expected Ok(false) for empty file, but got Err: {:?}",
-        result
-    );
-    assert_eq!(
-        result.unwrap(),
-        false,
-        "Expected false for empty file"
-    );
+    assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {:?}", result);
+    assert_eq!(result.unwrap(), false, "Expected false for empty file");
 
     env::set_current_dir(current).unwrap();
 }
@@ -837,8 +909,8 @@ outputs: []
 #[tokio::test]
 #[serial]
 async fn test_annotate_field() {
-    use tempfile::tempdir;
     use std::fs;
+    use tempfile::tempdir;
 
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
@@ -853,11 +925,7 @@ s:license: "MIT"
     fs::write(temp_file_name, existing_field_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(
-        result.is_ok(),
-        "Expected Ok(()), but got Err: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
@@ -873,11 +941,7 @@ s:license: "GPL"
     fs::write(temp_file_name, different_value_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(
-        result.is_ok(),
-        "Expected Ok(()), but got Err: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
@@ -892,11 +956,7 @@ class: CommandLineTool
     fs::write(temp_file_name, no_field_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(
-        result.is_ok(),
-        "Expected Ok(()), but got Err: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
@@ -913,57 +973,14 @@ class: CommandLineTool
     fs::write(temp_file_name, invalid_yaml_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(
-        result.is_err(),
-        "Expected Err for invalid YAML, but got Ok(()): {:?}",
-        result
-    );
+    assert!(result.is_err(), "Expected Err for invalid YAML, but got Ok(()): {:?}", result);
 
     env::set_current_dir(current).unwrap();
 }
 
-
-#[test]
-fn test_annotate_ontology() {
-
-    let term_accession = "http://purl.obolibrary.org/obo/NCIT_C43582";
-    let annotation_value = "Data Transformation";
-    let result = annotate_ontology(term_accession, None, annotation_value);
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
-
-    let result_str = result.unwrap();
-    assert!(result_str.contains("arc:term accession: http://purl.obolibrary.org/obo/NCIT_C43582"));
-    assert!(result_str.contains("arc:annotation value: Data Transformation"));
-    assert!(!result_str.contains("arc:term source REF"));
-
-    let source_ref = "NCIT";
-    let result = annotate_ontology(term_accession, Some(source_ref), annotation_value);
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
-
-    let result_str = result.unwrap();
-    assert!(result_str.contains("arc:term source REF: NCIT"));
-}
-
-#[test]
-fn test_annotate_ontology_empty_annotation_value() {
-
-    let term_accession = "http://purl.obolibrary.org/obo/NCIT_C43582";
-    let annotation_value = "";
-    let result = annotate_ontology(term_accession, None, annotation_value);
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
-
-    let result_str = result.unwrap();
-    println!("result_str {:?}", result_str);
-    assert!(result_str.contains("arc:term accession: http://purl.obolibrary.org/obo/NCIT_C43582"));
-    assert!(result_str.contains("arc:annotation value: "));
-    assert!(!result_str.contains("arc:term source REF"));
-}
-
-
 #[test]
 #[serial]
 fn test_annotate_default() {
-
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -979,21 +996,19 @@ fn test_annotate_default() {
     // Read the updated file and check if annotations were added
     let updated_content = fs::read_to_string(&temp_file_name).expect("Failed to read updated CWL file");
     assert!(
-        updated_content.contains("$namespaces:") &&
-        updated_content.contains("s:") &&
-        updated_content.contains("$schemas:") &&
-        updated_content.contains(SCHEMAORG_SCHEMA),
+        updated_content.contains("$namespaces:")
+            && updated_content.contains("s:")
+            && updated_content.contains("$schemas:")
+            && updated_content.contains(SCHEMAORG_SCHEMA),
         "Expected annotations for schemaorg to be added, but got: {}",
         updated_content
     );
     assert!(
-        updated_content.contains("arc:") &&
-        updated_content.contains(ARC_NAMESPACE),
+        updated_content.contains("arc:") && updated_content.contains(ARC_NAMESPACE),
         "Expected annotations for arc to be added, but got: {}",
         updated_content
     );
 
-    
     let docker_tool_name = "docker_tool";
     let docker_temp_file_name = format!("{}.cwl", docker_tool_name);
     fs::write(&docker_temp_file_name, CWL_WITH_DOCKER_CONTENT).expect("Failed to write CWL file with Docker");
@@ -1010,7 +1025,6 @@ fn test_annotate_default() {
 
     env::set_current_dir(current).unwrap();
 }
-
 
 #[test]
 #[serial]
@@ -1093,11 +1107,7 @@ fn test_parse_cwl_file_not_found() {
     let file_name = "non_existent_tool.cwl";
 
     let result = parse_cwl(file_name);
-    assert!(
-        result.is_err(),
-        "Expected Err for non-existent file, got: {:?}",
-        result
-    );
+    assert!(result.is_err(), "Expected Err for non-existent file, got: {:?}", result);
 
     std::env::set_current_dir(current).unwrap();
 }
@@ -1113,267 +1123,87 @@ fn test_parse_cwl_invalid_yaml() {
     let yaml_content = r#"
         name: "example_tool
         version: "1.0"
-    "#; // Missing closing quote on name value
+    "#;
     fs::write(file_name, yaml_content).unwrap();
 
     let result = parse_cwl(file_name);
-    assert!(
-        result.is_err(),
-        "Expected Err for invalid YAML, got: {:?}",
-        result
-    );
+    assert!(result.is_err(), "Expected Err for invalid YAML, got: {:?}", result);
 
     std::env::set_current_dir(current).unwrap();
 }
 
-#[tokio::test]
-async fn test_get_json_biotools_success() {
-    let server = MockServer::start();
-
-    let mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/tool")
-            .header("Authorization", "apikey token=test_api_key");
-        then.status(200)
-            .json_body(serde_json::json!({
-                "id": "example_tool",
-                "name": "Example Tool",
-                "version": "1.0"
-            }));
-    });
-
-    let client = Client::new();
-    let url = &format!("{}/tool", &server.base_url());
-    let result = get_json_biotools(url, &client, "test_api_key").await;
-
-    assert!(result.is_ok(), "Expected Ok(jsonValue), got Err: {:?}", result);
-    let json = result.unwrap();
-    assert_eq!(json["id"], "example_tool");
-    assert_eq!(json["name"], "Example Tool");
-    assert_eq!(json["version"], "1.0");
-
-    mock.assert();
-}
-
-#[tokio::test]
-async fn test_get_json_biotools_unauthorized() {
-    let server = MockServer::start();
-
-    let mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/tool")
-            .header("Authorization", "apikey token=invalid_key");
-        then.status(401)
-            .json_body(serde_json::json!({
-                "error": "Unauthorized"
-            }));
-    });
-
-    let client = Client::new();
-    let url = &format!("{}/tool", &server.base_url());
-    let result = get_json_biotools(url, &client, "invalid_key").await;
-
-    assert!(result.is_err(), "Expected Err, got Ok: {:?}", result);
-
-    let error_message = result.unwrap_err().to_string();
-    assert!(
-        error_message.contains("401"),
-        "Expected error message to indicate unauthorized, got: {}",
-        error_message
-    );
-
-    mock.assert();
-}
-
-#[tokio::test]
-async fn test_get_json_biotools_not_found() {
-    let server = MockServer::start();
-
-    let mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/tool")
-            .header("Authorization", "apikey token=test_api_key");
-        then.status(404)
-            .json_body(serde_json::json!({
-                "error": "Not Found"
-            }));
-    });
-
-    let client = Client::new();
-    let url = &format!("{}/tool", &server.base_url());
-    let result = get_json_biotools(url, &client, "test_api_key").await;
-
-    assert!(result.is_err(), "Expected Err, got Ok: {:?}", result);
-
-    let error_message = result.unwrap_err().to_string();
-    assert!(
-        error_message.contains("404"),
-        "Expected error message to indicate not found, got: {}",
-        error_message
-    );
-
-    mock.assert();
-}
-    
-#[tokio::test]
-async fn test_get_json_biotools_invalid_json() {
-    let server = MockServer::start();
-
-    let mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/tool")
-            .header("Authorization", "apikey token=test_api_key");
-        then.status(200)
-            .body("invalid_json");
-    });
-
-    let client = Client::new();
-    let url = &format!("{}/tool", &server.base_url());
-    let result = get_json_biotools(url, &client, "test_api_key").await;
-
-    assert!(result.is_err(), "Expected Err, got Ok: {:?}", result);
-
-    let error_message = result.unwrap_err().to_string();
-    assert!(
-        error_message.contains("Failed to parse JSON response"),
-        "Expected error message to indicate invalid JSON, got: {}",
-        error_message
-    );
-
-    mock.assert();
-}
-
-
 #[test]
-fn test_select_annotation_do_not_use_ontology() {
-    let recommendations = HashSet::new();
-    let term = "example_term".to_string();
-
-    let input_fn = || Ok("0".to_string()); 
-    let result = select_annotation(&recommendations, term.clone(), input_fn);
-
+#[serial]
+fn test_namespace_key_as_sequence() {
+    let dir = tempdir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+    let file_name = "valid_tool.cwl";
+    fs::write(file_name, CWL_CONTENT).unwrap();
+    let result = annotate(file_name, "namespace", Some("key"), None);
     assert!(result.is_ok());
-    let annotation = result.unwrap();
-    assert_eq!(annotation.0, term);
-    assert_eq!(annotation.1, "N/A");
-    assert_eq!(annotation.2, "N/A");
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[test]
-fn test_select_annotation_valid_choice() {
-    let mut recommendations = HashSet::new();
-    recommendations.insert((
-        "Example Label".to_string(),
-        "Example Ontology".to_string(),
-        "Example ID".to_string(),
-    ));
-    let term = "example_term".to_string();
-
-    let input_fn = || Ok("1".to_string()); 
-    let result = select_annotation(&recommendations, term, input_fn);
-
+#[serial]
+fn test_namespace_key_as_mapping() {
+    let dir = tempdir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+    let file_name = "valid_tool.cwl";
+    fs::write(file_name, CWL_CONTENT).unwrap();
+    let result = annotate(file_name, "namespace", Some("key"), Some("value"));
     assert!(result.is_ok());
-    let annotation = result.unwrap();
-    assert_eq!(annotation.0, "Example Label");
-    assert_eq!(annotation.1, "Example Ontology");
-    assert_eq!(annotation.2, "Example ID");
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[test]
-fn test_select_annotation_invalid_choice() {
-    let mut recommendations = HashSet::new();
-    recommendations.insert((
-        "Example Label".to_string(),
-        "Example Ontology".to_string(),
-        "Example ID".to_string(),
-    ));
-    let term = "example_term".to_string();
-
-    let input_fn = || Ok("invalid".to_string()); 
-    let result = select_annotation(&recommendations, term, input_fn);
-
-    assert!(result.is_err());
+#[serial]
+fn test_namespace_key_does_not_exist() {
+    let dir = tempdir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+    let file_name = "valid_tool.cwl";
+    fs::write(file_name, CWL_CONTENT).unwrap();
+    let result = annotate(file_name, "namespace", Some("key"), Some("value"));
+    assert!(result.is_ok());
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[test]
-fn test_select_annotation_out_of_range_choice() {
-    let mut recommendations = HashSet::new();
-    recommendations.insert((
-        "Example Label".to_string(),
-        "Example Ontology".to_string(),
-        "Example ID".to_string(),
-    ));
-    let term = "example_term".to_string();
+#[serial]
+fn test_add_to_sequence() {
+    let dir = tempdir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
 
-    let input_fn = || Ok("2".to_string()); 
-    let result = select_annotation(&recommendations, term, input_fn);
+    let file_name = "valid_tool.cwl";
 
-    assert!(result.is_err());
+    fs::write(file_name, CWL_CONTENT).unwrap();
+    let result = annotate(file_name, "namespace", Some("new_key"), None);
+    assert!(result.is_ok());
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[tokio::test]
-async fn test_bioportal_recommendations_empty_response() -> Result<(), Box<dyn Error>> {
-    let server = MockServer::start();
-    let biotools_key = "fake_biotools_key";
-    let search_term = "example_term";
-    let max_recommendations = 5;
+#[serial]
+async fn test_process_step_missing_parameters() {
+    let dir = tempdir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+    let file_name = "tool.cwl";
+    let args = AnnotateProcessArgs {
+        cwl_name: file_name.to_string(),
+        name: "process_name".to_string(),
+        input: None,
+        output: None,
+        parameter: None,
+        value: Some("some_value".to_string()),
+    };
+    fs::write(file_name, CWL_CONTENT).unwrap();
 
-    let _mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/annotator")
-            .query_param("text", search_term);
-        then.status(200).json_body(json!([]));
-    });
-
-    let rest_url_bioportal = server.url("/annotator");
-    let result = bioportal_recommendations(&rest_url_bioportal, biotools_key, max_recommendations).await;
-
-    assert!(result.is_err());
-    Ok(())
+    let result = annotate_process_step(&args).await;
+    assert!(result.is_ok());
+    std::env::set_current_dir(current).unwrap();
 }
-
-#[tokio::test]
-async fn test_bioportal_recommendations_unauthorized() -> Result<(), Box<dyn Error>> {
-    let server = MockServer::start();
-    let biotools_key = "invalid_key";
-    let search_term = "example_term";
-    let max_recommendations = 5;
-
-    let _mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/annotator")
-            .query_param("text", search_term);
-        then.status(401)
-            .json_body(json!({ "error": "Unauthorized" }));
-    });
-
-    let rest_url_bioportal = server.url("/annotator");
-    let result = bioportal_recommendations(&rest_url_bioportal, biotools_key, max_recommendations).await;
-
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert!(e.to_string().contains("Unauthorized"));
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_zooma_recommendations_empty_response() -> Result<(), Box<dyn Error>> {
-    let server = MockServer::start();
-    let max_recommendations = 5;
-
-    let _mock = server.mock(|when, then| {
-        when.method(GET)
-            .path("/zooma/annotate")
-            .query_param("q", "example+term");
-        then.status(200).json_body(json!([]));
-    });
-
-    let rest_url_zooma = server.url("/zooma/annotate?q=");
-    let result = zooma_recommendations(&rest_url_zooma, max_recommendations).await;
-
-    assert!(result.is_err());
-    Ok(())
-}
-
