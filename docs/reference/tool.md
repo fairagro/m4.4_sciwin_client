@@ -99,7 +99,7 @@ Some scripts tend to run for a very long time - e.g. quantum chemistry calculati
 
 Sometimes it can be beneficial to not commit the created outputs. With the `--clean` flag all outputs will be deleted before commiting the freshly created tool. 
 
-Implicit in- and outputs can be added using `-i` or `-o`. ([See Examples](../examples/tool-creation.md#implicit-inputs---hardcoded-files))
+Implicit in- and outputs can be added using `-i` or `-o`. ([See Examples](../examples/tool-creation.md#implicit-inputs-hardcoded-files))
 
 ## `tool list`
 

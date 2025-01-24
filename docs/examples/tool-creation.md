@@ -243,6 +243,56 @@ Like shown in the above example there is also the possibility to specify inputs 
     - load.py
     ```
 
+## Piping 
+Using the pipe operator `|` is a common usecase when using the commandline. Let's assume the first 5 lines of a file are needed e.g `cat speakers.csv | head -n 5 > speakers_5.csv`
+
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n tool create -o speakers_5.csv --name shorten cat speakers.csv \| head -n 5 \> speakers_5.csv
+    ```
+=== ":simple-commonworkflowlanguage: shorten.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+    
+    cwlVersion: v1.2
+    class: CommandLineTool
+    
+    requirements:
+    - class: ShellCommandRequirement
+    
+    inputs:
+    - id: speakers_csv
+      type: File
+      default:
+        class: File
+        location: /tmp/.tmpt9vUnw/speakers.csv
+      inputBinding:
+        position: 0
+    
+    outputs:
+    - id: speakers_5
+      type: File
+      outputBinding:
+        glob: speakers_5.csv
+    
+    baseCommand: cat
+    arguments:
+    - position: 1
+      valueFrom: '|'
+      shellQuote: false
+    - position: 1
+      valueFrom: head
+    - position: 2
+      valueFrom: '-n'
+    - position: 3
+      valueFrom: '5'
+    - position: 4
+      valueFrom: '>'
+    - position: 5
+      valueFrom: speakers_5.csv
+    ```
+
+
 ## Pulling `docker` containers
 For full reproducibility it is recommended to use `docker` containers as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
 
