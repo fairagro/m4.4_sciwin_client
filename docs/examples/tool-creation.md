@@ -248,48 +248,48 @@ Using the pipe operator `|` is a common usecase when using the commandline. Let'
 
 === ":octicons-terminal-16: Command"
     ```
-    s4n tool create -o speakers_5.csv --name shorten cat speakers.csv \| head -n 5 \> speakers_5.csv
+    s4n tool create cat speakers.csv \| head -n 5 \> speakers_5.csv
     ```
 === ":simple-commonworkflowlanguage: shorten.cwl"
     ```yaml
-    #!/usr/bin/env cwl-runner
-    
-    cwlVersion: v1.2
-    class: CommandLineTool
-    
-    requirements:
-    - class: ShellCommandRequirement
-    
-    inputs:
-    - id: speakers_csv
-      type: File
-      default:
-        class: File
-        location: /tmp/.tmpt9vUnw/speakers.csv
-      inputBinding:
-        position: 0
-    
-    outputs:
-    - id: speakers_5
-      type: File
-      outputBinding:
-        glob: speakers_5.csv
-    
-    baseCommand: cat
-    arguments:
-    - position: 1
-      valueFrom: '|'
-      shellQuote: false
-    - position: 1
-      valueFrom: head
-    - position: 2
-      valueFrom: '-n'
-    - position: 3
-      valueFrom: '5'
-    - position: 4
-      valueFrom: '>'
-    - position: 5
-      valueFrom: speakers_5.csv
+       #!/usr/bin/env cwl-runner
+       
+       cwlVersion: v1.2
+       class: CommandLineTool
+       
+       requirements:
+       - class: ShellCommandRequirement
+       
+       inputs:
+       - id: speakers_csv
+         type: File
+         default:
+           class: File
+           location: '../../speakers.csv'
+         inputBinding:
+           position: 0
+       
+       outputs:
+       - id: speakers_5
+         type: File
+         outputBinding:
+           glob: speakers_5.csv
+       
+       baseCommand: cat
+       arguments:
+       - position: 1
+         valueFrom: '|'
+         shellQuote: false
+       - position: 1
+         valueFrom: head
+       - position: 2
+         valueFrom: '-n'
+       - position: 3
+         valueFrom: '5'
+       - position: 4
+         valueFrom: '>'
+       - position: 5
+         valueFrom: speakers_5.csv
     ```
 
 
