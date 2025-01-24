@@ -1012,7 +1012,7 @@ fn test_annotate_default() {
 
     env::set_current_dir(current).unwrap();
 }
-/*
+
 #[test]
 #[serial]
 fn test_parse_cwl_valid_absolute_path() {
@@ -1022,33 +1022,18 @@ fn test_parse_cwl_valid_absolute_path() {
 
     let file_name = "valid_tool.cwl";
     let cwl_path = dir.path().join(file_name);
-    let yaml_content = r#"
-        name: "example_tool"
-        version: "1.0"
-    "#;
-    fs::write(cwl_path, yaml_content).unwrap();
 
-    let result = parse_cwl(cwl_path.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(Value), got: {:?}", result);
+    fs::write(cwl_path, CWL_CONTENT).unwrap();
 
-    if let Value::Mapping(mapping) = result.unwrap() {
-        assert_eq!(
-            mapping.get(Value::String("name".to_string())),
-            Some(Value::String("example_tool".to_string())),
-            "Expected 'name' key to be parsed correctly"
-        );
-        assert_eq!(
-            mapping.get(Value::String("version".to_string())),
-            Some(Value::String("1.0".to_string())),
-            "Expected 'version' key to be parsed correctly"
-        );
-    } else {
-        panic!("Parsed YAML is not a Mapping");
-    }
+    let result = parse_cwl(file_name);
+    assert!(result.is_ok(), "Expected Ok(Value), got Err: {:?}", result);
+
+    let yaml = result.unwrap();
+    assert_eq!(yaml["class"], "CommandLineTool");
+    assert_eq!(yaml["baseCommand"], "echo");
 
     std::env::set_current_dir(current).unwrap();
 }
-
 
 #[test]
 #[serial]
@@ -1058,33 +1043,20 @@ fn test_parse_cwl_valid_relative_path() {
     std::env::set_current_dir(dir.path()).unwrap();
 
     let file_name = "valid_tool.cwl";
-    let yaml_content = r#"
-        name: "example_tool"
-        version: "1.0"
-    "#;
-    fs::write(file_name, yaml_content).unwrap();
+
+    fs::write(file_name, CWL_CONTENT).unwrap();
 
     let result = parse_cwl(file_name);
-    assert!(result.is_ok(), "Expected Ok(Value), got: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(Value), got Err: {:?}", result);
 
-    if let Value::Mapping(mapping) = result.unwrap() {
-        assert_eq!(
-            mapping.get(Value::String("name".to_string())),
-            Some(Value::String("example_tool".to_string())),
-            "Expected 'name' key to be parsed correctly"
-        );
-        assert_eq!(
-            mapping.get(Value::String("version".to_string())),
-            Some(Value::String("1.0".to_string())),
-            "Expected 'version' key to be parsed correctly"
-        );
-    } else {
-        panic!("Parsed YAML is not a Mapping");
-    }
+    let yaml = result.unwrap();
+    assert_eq!(yaml["class"], "CommandLineTool");
+    assert_eq!(yaml["baseCommand"], "echo");
 
     std::env::set_current_dir(current).unwrap();
 }
-*/
+
+
 
 #[test]
 #[serial]
@@ -1101,7 +1073,9 @@ fn test_parse_cwl_file_not_found() {
     std::env::set_current_dir(current).unwrap();
 }
 
-/*
+
+
+
 #[test]
 #[serial]
 fn test_parse_cwl_invalid_yaml() {
@@ -1121,7 +1095,7 @@ fn test_parse_cwl_invalid_yaml() {
 
     std::env::set_current_dir(current).unwrap();
 }
-*/
+
 
 #[test]
 #[serial]

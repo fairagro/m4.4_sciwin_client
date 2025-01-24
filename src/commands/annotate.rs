@@ -473,36 +473,46 @@ pub fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
 }
 
 pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
+    // Ensure the filename ends with `.cwl`
     let filename = if name.ends_with(".cwl") {
         name.to_string()
     } else {
         format!("{}.cwl", name)
     };
 
+    // Get the current working directory
     let current_dir = env::current_dir()?;
     let current_path = current_dir.join(&filename);
+
+    // Extract the base name
     let base_name = current_path
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .map(|s| s.to_string())
-        .unwrap_or_default();
+        .unwrap_or("")
+        .to_string();
 
-    let workflows_path = current_dir.join(format!("workflows/{}/{}", base_name, filename));
+    // Construct the path to the workflows directory
+    let workflows_path = current_dir.join(Path::new("workflows").join(&base_name).join(&filename));
 
-    let file_path = if current_path.exists() {
+    // Check file existence in the current directory or workflows directory
+    let file_path = if current_path.is_file() {
         current_path
-    } else if workflows_path.exists() {
+    } else if workflows_path.is_file() {
         workflows_path
     } else {
         return Err(format!(
             "CWL file '{}' not found in current directory or workflows/{}/{}",
-            filename, name, filename
+            filename, base_name, filename
         )
         .into());
     };
 
-    Ok(file_path.display().to_string())
+    Ok(file_path
+        .canonicalize()?
+        .to_string_lossy()
+        .to_string())
 }
+
 
 pub fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Error>> {
     let file = File::open(file_path)?;
