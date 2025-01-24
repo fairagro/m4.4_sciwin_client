@@ -200,7 +200,7 @@ For this cases there is the possibility to specify outputs via the commandline u
 
 This CWL file can then be executed remotely by using any runner e.g. `cwltool` and will write the `sleep.txt` file after 60 seconds.
 
-## Explicit inputs
+## Implicit inputs - hardcoded files
 Like shown in the above example there is also the possibility to specify inputs explictly. This is needed e.g. if the scripts loads a hardcoded file like in the following example.
 
 === ":octicons-terminal-16: Command"
