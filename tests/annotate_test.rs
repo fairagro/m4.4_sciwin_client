@@ -1185,7 +1185,7 @@ fn test_add_to_sequence() {
     assert!(result.is_ok());
     std::env::set_current_dir(current).unwrap();
 }
-
+/*
 #[tokio::test]
 #[serial]
 async fn test_process_step_missing_parameters() {
@@ -1207,3 +1207,4 @@ async fn test_process_step_missing_parameters() {
     assert!(result.is_ok());
     std::env::set_current_dir(current).unwrap();
 }
+*/

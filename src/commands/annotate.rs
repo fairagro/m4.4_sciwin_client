@@ -342,9 +342,9 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
             // Check if the performer already exists based on email match
             let performer_exists = performers.iter().any(|performer| {
                 if let Value::Mapping(existing_performer) = performer {
-                    args.mail.as_ref().map_or(false, |mail| {
+                    args.mail.as_ref().is_some_and(|mail| {
                         existing_performer.get(Value::String("arc:email".to_string())) == Some(&Value::String(mail.clone()))
-                    })
+                        })
                 } else {
                     false
                 }
