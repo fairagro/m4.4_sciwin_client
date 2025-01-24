@@ -116,6 +116,6 @@ cwltool --print-dot workflows/echo-cat/echo-cat.cwl | dot -Tsvg > workflow.svg
 ```
 
 ![created workflow](../assets/workflow_01.svg)
-// caption
+/// caption
 The created `echo-cat` workflow as DAG representation.
-//
+///
