@@ -2,7 +2,8 @@ use crate::commands::{
     execute::ExecuteCommands,
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
-    workflow::WorkflowCommands
+    workflow::WorkflowCommands,
+    annotate::{AnnotateCommands}
 };
 use clap::{Parser, Subcommand};
 
@@ -29,7 +30,19 @@ pub enum Commands {
         #[command(subcommand)]
         command: WorkflowCommands
     },
-    Annotate,
+    #[command(about = "Annotate CWL files")]
+    /*Annotate{
+        #[command(subcommand)]
+        command: AnnotateCommands
+    },*/
+    Annotate {
+        #[command(subcommand)]
+        command: Option<AnnotateCommands>,
+        /// Name of the tool or workflow to annotate
+        #[arg(value_name = "TOOL_NAME", required = false)]
+        tool_name: Option<String>,
+    },
+
     #[command(about = "Execution of CWL Files locally or on remote servers", visible_alias = "ex")]
     Execute {
         #[command(subcommand)]
