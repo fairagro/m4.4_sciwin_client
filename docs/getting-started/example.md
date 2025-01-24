@@ -347,6 +347,11 @@ Use the save command to commit the workflow
 s4n workflow save main
 ```
 
+![Workflow](../assets/simple_workflow.svg)
+/// caption
+Graph representation of the created workflow
+///
+
 ## Execution
 The workflow now can be executed using a standard CWL runner like `cwltool` or using SciWIn-client's internal runner. SciWIn's internal runner is still in a testing phase so it will not be able to support all features `cwltool` does, but is does support everything the client can generate. CWL can either be executed by using commandline arguments or by using a input file in YAML format. For this demo the following input file (`inputs.yml`) is used:
 ```yaml
