@@ -76,6 +76,7 @@ nav:
   - Examples:
     - examples/index.md
     - Tool Creation: examples/tool-creation.md
+    - Workflow Creation: examples/workflow-creation.md
   - Reference: 
     - reference/index.md
     - Project Initialization: reference/init.md
