@@ -250,7 +250,7 @@ Using the pipe operator `|` is a common usecase when using the commandline. Let'
     ```
     s4n tool create cat speakers.csv \| head -n 5 \> speakers_5.csv
     ```
-=== ":simple-commonworkflowlanguage: shorten.cwl"
+=== ":simple-commonworkflowlanguage: cat.cwl"
     ```yaml
        #!/usr/bin/env cwl-runner
        
