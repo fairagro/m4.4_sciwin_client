@@ -11,4 +11,12 @@ Besides the [full walkthrough example](../getting-started/example.md) examples o
 
     [:octicons-arrow-right-24: Tool Creation](tool-creation.md)
 
+-   [:octicons-workflow-24:{ .lg .middle } __Creation of Workflows__](workflow-creation.md)
+
+    ---
+ 
+    Examples on how to create CWL Workflows.
+
+    [:octicons-arrow-right-24: Workflowl Creation](workflow-creation.md)
+
 </div>
