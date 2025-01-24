@@ -200,6 +200,48 @@ For this cases there is the possibility to specify outputs via the commandline u
 
 This CWL file can then be executed remotely by using any runner e.g. `cwltool` and will write the `sleep.txt` file after 60 seconds.
 
+## Explicit inputs
+Like shown in the above example there is also the possibility to specify inputs explictly. This is needed e.g. if the scripts loads a hardcoded file like in the following example.
+
+=== ":octicons-terminal-16: Command"
+    ```
+    s4n tool create -i file.txt -o out.txt python load.py
+    ```
+=== ":simple-python: load.py"
+    ```python
+    with open('file.txt', 'r') as file:
+        data = file.read()
+        with open('out.txt', 'w') as out:
+            out.write(data)
+    ```
+=== ":simple-commonworkflowlanguage: calculation.cwl"
+    ```yaml
+    #!/usr/bin/env cwl-runner
+    
+    cwlVersion: v1.2
+    class: CommandLineTool
+    
+    requirements:
+    - class: InitialWorkDirRequirement
+      listing:
+      - entryname: file.txt
+        entry:
+          $include: '../../file.txt'
+      - entryname: load.py
+        entry:
+          $include: '../../load.py'
+    
+    inputs: []
+    outputs:
+    - id: out
+      type: File
+      outputBinding:
+        glob: out.txt
+    
+    baseCommand:
+    - python
+    - load.py
+    ```
 
 ## Pulling `docker` containers
 For full reproducibility it is recommended to use `docker` containers as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
