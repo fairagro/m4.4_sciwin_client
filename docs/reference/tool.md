@@ -29,8 +29,6 @@ The `tool create` command can be used to easily generate CWL CommandLineTools. I
 
 !!! abstract "Usage"
     ```
-    Runs commandline string and creates a tool (synonym: s4n run)
-
     Usage: s4n tool create [OPTIONS] [COMMAND]...
 
     Arguments:
@@ -44,6 +42,8 @@ The `tool create` command can be used to easily generate CWL CommandLineTools. I
           --no-commit                          Do not commit at the end of tool creation
           --no-run                             Do not run given command
           --clean                              Deletes created outputs after usage
+      -i, --inputs <INPUTS>                    Force values to be considered as an input.
+      -o, --outputs <OUTPUTS>                  Force values to be considered as an output.
       -h, --help                               Print help
     ```
 
@@ -97,9 +97,9 @@ As `tool create` needs all changes to be commited beforehand it will create a co
 
 Some scripts tend to run for a very long time - e.g. quantum chemistry calculations. To prevent the tool from running the `--no-run` flag can be used. If this flag is set the parser will just use information from the command line to create the tool, outputs need to be set manually.
 
-**TODO: Manual In and Outputs!!!** (See #44)
+Sometimes it can be beneficial to not commit the created outputs. With the `--clean` flag all outputs will be deleted before commiting the freshly created tool. 
 
-Sometimes it can be beneficial to not commit the created outputs. With the `--clean` flag all outputs will be deleted before commiting the freshly created tool.
+Implicit in- and outputs can be added using `-i` or `-o`. ([See Examples](../examples/tool-creation.md#implicit-inputs---hardcoded-files))
 
 ## `tool list`
 
