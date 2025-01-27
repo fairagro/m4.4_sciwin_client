@@ -10,7 +10,7 @@ use s4n::{
             CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
         },
     },
-    cwl::loader::load_workflow,
+    cwl::load_workflow,
     io::create_and_write_file,
 };
 use serial_test::serial;

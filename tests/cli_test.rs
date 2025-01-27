@@ -7,7 +7,7 @@ use s4n::{
         tool::{create_tool, list_tools, CreateToolArgs, ListToolArgs},
         workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
     },
-    cwl::loader::load_workflow,
+    cwl::load_workflow,
     io::copy_dir,
 };
 use serial_test::serial;

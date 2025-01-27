@@ -8,7 +8,7 @@ use cwl::{
 use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
-    cwl::loader::load_tool,
+    cwl::load_tool,
     repo::get_modified_files,
 };
 use serial_test::serial;
