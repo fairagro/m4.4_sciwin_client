@@ -8,6 +8,10 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
+/// Represents a CWL CommandLineTool, a process characterized by the execution of a standalone, 
+/// non-interactive program which is invoked on some input, produces output, and then terminates.
+/// 
+/// Reference: [CWL CommandLineTool Specification](https://www.commonwl.org/v1.2/CommandLineTool.html)
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {

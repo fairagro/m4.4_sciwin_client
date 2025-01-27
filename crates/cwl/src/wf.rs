@@ -7,6 +7,11 @@ use super::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 
+/// Represents a CWL Workflow, a  process characterized by multiple subprocess steps, 
+/// where step outputs are connected to the inputs of downstream steps to form a 
+/// directed acyclic graph, and independent steps may run concurrently.
+/// 
+/// Reference: [CWL Workflow Specification](https://www.commonwl.org/v1.2/Workflow.html)
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {

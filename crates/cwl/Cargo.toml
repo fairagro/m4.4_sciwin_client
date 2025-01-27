@@ -1,7 +1,15 @@
 [package]
 name = "cwl"
+description = "CWL Rust library, intended to be used for YAML parsing with serde"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/fairagro/m4.4_sciwin_client"
+authors = [
+    "Jens Krumsieck",
+    "Antonia Leidel",
+    "Harald von Waldow",
+    "Patrick König",
+]
 
 [dependencies]
 serde = { version = "1.0.210", features = ["derive"] }
