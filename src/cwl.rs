@@ -9,8 +9,6 @@ use cwl::{
 };
 use std::{collections::HashMap, error::Error, fs, path::Path, fmt::Debug};
 
-pub mod execution;
-
 pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;

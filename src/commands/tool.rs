@@ -1,10 +1,8 @@
 use crate::{
-    parser::{self, post_process_cwl},
-    cwl::{
-        execution::runner::{run_command, run_commandlinetool},
-        Saveable,
-    },
+    cwl::Saveable,
+    execution::runner::{run_command, run_commandlinetool},
     io::{create_and_write_file, get_qualified_filename},
+    parser::{self, post_process_cwl},
     repo::{commit, get_modified_files, stage_file},
     util::{error, highlight_cwl, print_list, warn},
 };

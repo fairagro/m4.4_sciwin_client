@@ -1,7 +1,7 @@
 mod common;
 use common::with_temp_repository;
 use cwl::{clt::CommandLineTool, types::DefaultValue};
-use s4n::cwl::execution::runner::{run_command, run_commandlinetool};
+use s4n::execution::runner::{run_command, run_commandlinetool};
 use serial_test::serial;
 use std::{collections::HashMap, fs};
 

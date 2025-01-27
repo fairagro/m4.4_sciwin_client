@@ -8,7 +8,7 @@ use cwl::{
     types::{CWLType, DefaultValue, File},
 };
 use s4n::{
-    cwl::execution::runner::run_command,
+    execution::runner::run_command,
     parser::{get_outputs, parse_command_line},
 };
 use serde_yml::Value;
