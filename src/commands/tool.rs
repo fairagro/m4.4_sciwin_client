@@ -1,7 +1,7 @@
 use crate::{
+    parser::{self, post_process_cwl},
     cwl::{
         execution::runner::{run_command, run_commandlinetool},
-        parser::{self, post_process_cwl},
         Saveable,
     },
     io::{create_and_write_file, get_qualified_filename},

@@ -7,7 +7,6 @@ use loader::{load_tool, resolve_filename};
 
 pub mod execution;
 pub mod loader;
-pub mod parser;
 
 pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;

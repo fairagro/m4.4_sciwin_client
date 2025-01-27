@@ -1,12 +1,10 @@
 use crate::{
-    cwl::{
-        execution::{
-            runner::{run_commandlinetool, run_workflow},
-            util::preprocess_cwl,
-        },
-        parser::guess_type,
+    cwl::execution::{
+        runner::{run_commandlinetool, run_workflow},
+        util::preprocess_cwl,
     },
     io::join_path_string,
+    parser::guess_type,
 };
 use clap::{Args, Subcommand, ValueEnum};
 use cwl::{
