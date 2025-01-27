@@ -1,13 +1,13 @@
 mod common;
 use common::with_temp_repository;
-use s4n::cwl::{
+use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    parser::{get_outputs, parse_command_line},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, File},
 };
+use s4n::cwl::{execution::runner::run_command, parser::{get_outputs, parse_command_line}},
 use serde_yml::Value;
 use serial_test::serial;
 use std::{path::Path, vec};
@@ -115,7 +115,7 @@ pub fn test_cwl_execute_command_single() {
     let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
-    assert!(cwl.execute().is_ok());
+    assert!(run_command(&cwl, None).is_ok());
 }
 
 #[test]
@@ -125,7 +125,7 @@ pub fn test_cwl_execute_command_multiple() {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
         let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
-        assert!(cwl.execute().is_ok());
+        assert!(run_command(&cwl, None).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
         assert!(output_path.exists());
