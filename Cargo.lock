@@ -415,6 +415,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cwl"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_yml",
+]
+
+[[package]]
 name = "derive_arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1716,6 +1724,7 @@ dependencies = [
  "calamine",
  "clap",
  "colored",
+ "cwl",
  "dialoguer",
  "fancy-regex",
  "git2",

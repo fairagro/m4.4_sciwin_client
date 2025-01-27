@@ -1,5 +1,4 @@
 use super::{
-    execution::runner::run_command,
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
     outputs::{deserialize_outputs, CommandOutputParameter},
     requirements::{deserialize_requirements, DockerRequirement, Requirement},
@@ -8,7 +7,7 @@ use super::{
 use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -116,10 +115,6 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
-        run_command(self, None)
-    }
-
     pub fn save(&mut self, path: &str) -> String {
         //rewire paths to new location
         for input in &mut self.inputs {

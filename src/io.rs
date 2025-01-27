@@ -1,4 +1,4 @@
-use crate::cwl::clt::Command;
+use cwl::clt::Command;
 use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
