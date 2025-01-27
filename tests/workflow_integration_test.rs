@@ -1,6 +1,7 @@
 mod common;
 use assert_cmd::Command;
 use common::check_git_user;
+use cwl::load_workflow;
 use predicates::prelude::*;
 use s4n::{
     commands::{
@@ -10,7 +11,6 @@ use s4n::{
             CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
         },
     },
-    cwl::load_workflow,
     io::create_and_write_file,
 };
 use serial_test::serial;

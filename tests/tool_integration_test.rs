@@ -4,11 +4,11 @@ use cwl::{
     clt::{Argument, CommandLineTool},
     requirements::{DockerRequirement, Requirement},
     types::Entry,
+    load_tool,
 };
 use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
-    cwl::load_tool,
     repo::get_modified_files,
 };
 use serial_test::serial;

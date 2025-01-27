@@ -178,3 +178,24 @@ pub struct ResourceRequirement {
 pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_initial_workdir_requirement() {
+        let req = InitialWorkDirRequirement::from_file("../../tests/test_data/echo.py");
+        assert_eq!(req.listing.len(), 1);
+        assert_eq!(req.listing[0].entryname, "../../tests/test_data/echo.py".to_string());
+    }
+
+    #[test]
+    pub fn test_initial_workdir_requirement_multiple() {
+        let req = InitialWorkDirRequirement::from_files(
+            &vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"],
+            "../../tests/test_data/echo.py", 
+        );
+        assert_eq!(req.listing.len(), 2);
+    }
+}
