@@ -1,10 +1,9 @@
 use super::{
     inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
     outputs::{deserialize_outputs, CommandOutputParameter},
-    requirements::{deserialize_requirements, DockerRequirement, Requirement},
-    types::{CWLType, DefaultValue, Entry},
+    requirements::{deserialize_requirements, Requirement},
+    types::CWLType,
 };
-use crate::io::resolve_path;
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -115,39 +114,6 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
-    pub fn save(&mut self, path: &str) -> String {
-        //rewire paths to new location
-        for input in &mut self.inputs {
-            if let Some(DefaultValue::File(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
-            }
-            if let Some(DefaultValue::Directory(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
-            }
-        }
-
-        if let Some(requirements) = &mut self.requirements {
-            for requirement in requirements {
-                if let Requirement::DockerRequirement(docker) = requirement {
-                    if let DockerRequirement::DockerFile {
-                        docker_file: Entry::Include(include),
-                        docker_image_id: _,
-                    } = docker
-                    {
-                        include.include = resolve_path(&include.include, path)
-                    }
-                } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
-                    for listing in &mut iwdr.listing {
-                        if let Entry::Include(include) = &mut listing.entry {
-                            include.include = resolve_path(&include.include, path)
-                        }
-                    }
-                }
-            }
-        }
-        self.to_string()
-    }
-
     pub fn get_output_ids(&self) -> Vec<String> {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
@@ -241,7 +207,10 @@ mod tests {
 
         //check if paths are rewritten upon tool saving
 
-        assert_eq!(clt.inputs[0].default, Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt")))));
+        assert_eq!(
+            clt.inputs[0].default,
+            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
+        );
         let requirements = &clt.requirements.unwrap();
         let req_0 = &requirements[0];
         let req_1 = &requirements[1];
