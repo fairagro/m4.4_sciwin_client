@@ -70,9 +70,10 @@ mod tests {
     #[rstest]
     #[case("../../tests/test_data/mkdir_wf.cwl")]
     #[case("../../tests/test_data/test-wf.cwl")]
+    #[case("../../tests/test_data/test-wf_features.cwl")]
+    #[case("../../tests/test_data/wf_inout.cwl")]
     #[case("../../tests/test_data/wf_inout_dir.cwl")]
-    #[case("../../tests/test_data/wf_inout_files.cwl")]
-    #[case("../../tests/test_data/wf_features.cwl")]
+    #[case("../../tests/test_data/wf_inout_file.cwl")]
     #[case("../../tests/test_data/hello_world/workflows/main/main.cwl")]
     fn test_load_multiple_wfs(#[case] filename: &str) {
         let tool = load_tool(filename);
