@@ -237,4 +237,24 @@ baseCommand:
         println!("{result:?}");
         assert!(result.is_ok());
     }
+
+    #[test]
+    pub fn test_get_error_code() {
+        let mut tool = CommandLineTool::default();
+        assert_eq!(tool.get_error_code(), 1);
+        tool.permanent_fail_codes = Some(vec![42]);
+        assert_eq!(tool.get_error_code(), 42);
+    }
+
+    #[test]
+    pub fn test_has_stdout() {
+        let tool = CommandLineTool::default().with_stdout(Some("stdout.txt".to_string()));
+        assert!(tool.has_stdout_output());
+    }
+
+    #[test]
+    pub fn test_has_stderr() {
+        let tool = CommandLineTool::default().with_stderr(Some("stderr.txt".to_string()));
+        assert!(tool.has_stderr_output());
+    }
 }

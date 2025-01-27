@@ -136,3 +136,16 @@ pub struct WorkflowStepInputParameter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_identifyable(){
+        let mut input = CommandInputParameter::default();
+        assert_eq!(input.id(), "");
+        input.set_id("test".to_string());
+        assert_eq!(input.id(), "test");
+    }
+}

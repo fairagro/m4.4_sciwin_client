@@ -111,3 +111,24 @@ impl Identifiable for WorkflowOutputParameter {
         self.id = id
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_identifyable_output(){
+        let mut output = CommandOutputParameter::default();
+        assert_eq!(output.id(), "");
+        output.set_id("test".to_string());
+        assert_eq!(output.id(), "test");
+    }
+
+    #[test]
+    pub fn test_identifyable_workflow_output() {
+        let mut output = WorkflowOutputParameter::default();
+        assert_eq!(output.id(), "");
+        output.set_id("test".to_string());
+        assert_eq!(output.id(), "test");
+    }
+}
