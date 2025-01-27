@@ -1,11 +1,11 @@
-use super::{
+use crate::{io::get_filename_without_extension, util::split_vec_at};
+use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use crate::{io::get_filename_without_extension, util::split_vec_at};
 use serde_yml::Value;
 use slugify::slugify;
 use std::{collections::HashMap, path::Path};
@@ -13,11 +13,7 @@ use std::{collections::HashMap, path::Path};
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 
-
-pub fn parse_command_line(
-    commands: Vec<&str>,
-    inputs: Option<Vec<&str>>, 
-) -> CommandLineTool {
+pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> CommandLineTool {
     let base_command = get_base_command(&commands);
 
     let remainder = match &base_command {
@@ -54,18 +50,14 @@ pub fn parse_command_line(
 
         let args = collect_arguments(&piped, &inputs);
 
-        tool = tool
-            .with_inputs(inputs)
-            .with_stdout(stdout)
-            .with_stderr(stderr)
-            .with_arguments(args);
+        tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr).with_arguments(args);
     }
 
     tool = match base_command {
         Command::Single(_) => tool,
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(
-            InitialWorkDirRequirement::from_file(&vec[1]),
-        )]),
+        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+            &vec[1],
+        ))]),
     };
 
     if tool.arguments.is_some() {

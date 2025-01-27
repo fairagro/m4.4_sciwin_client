@@ -1,4 +1,4 @@
-use s4n::cwl::{
+use cwl::{
     clt::{Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     types::CWLType,

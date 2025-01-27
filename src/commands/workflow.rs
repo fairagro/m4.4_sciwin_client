@@ -1,15 +1,13 @@
 use crate::{
-    cwl::{
-        format::format_cwl,
-        inputs::WorkflowStepInput,
-        loader::{load_tool, load_workflow},
-        wf::Workflow,
-    },
-    io::{create_and_write_file, get_workflows_folder},
-    repo::{commit, stage_file},
+    cwl::{loader::{load_tool, load_workflow}, Connectable}, io::{create_and_write_file, get_workflows_folder}, repo::{commit, stage_file}
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use cwl::{
+    format::format_cwl,
+    inputs::WorkflowStepInput,
+    wf::Workflow,
+};
 use git2::Repository;
 use prettytable::{row, Cell, Row, Table};
 use serde_yml::Value;

@@ -1,7 +1,7 @@
 use super::types::{Entry, EnviromentDefs, Listing};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yml::{Mapping, Value};
-use std::{path::MAIN_SEPARATOR_STR, fs};
+use std::{fs, path::MAIN_SEPARATOR_STR};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "class")]
@@ -75,27 +75,25 @@ fn get_entry_name(script_name: &str, input: &str) -> String {
             return "".to_string();
         }
     };
-        // Check if the input exists in the script
-        if script_content.contains(input) {
-            return input.to_string();
+    // Check if the input exists in the script
+    if script_content.contains(input) {
+        return input.to_string();
+    }
+
+    // If not found, split progressively at MAIN_SEPARATOR
+    let mut parts: Vec<&str> = input.split(MAIN_SEPARATOR_STR).collect();
+
+    // Check progressively shorter substrings
+    while parts.len() > 1 {
+        parts.remove(0); // Remove the first segment
+        let candidate = parts.join(MAIN_SEPARATOR_STR);
+
+        if script_content.contains(&candidate) {
+            return candidate;
         }
-
-        // If not found, split progressively at MAIN_SEPARATOR
-        let mut parts: Vec<&str> = input.split(MAIN_SEPARATOR_STR).collect();
-
-
-        // Check progressively shorter substrings
-        while parts.len() > 1 {
-            parts.remove(0); // Remove the first segment
-            let candidate = parts.join(MAIN_SEPARATOR_STR);
-
-            if script_content.contains(&candidate) {
-                return candidate; 
-            }
-        }
+    }
     input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string()
 }
-
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -117,7 +115,11 @@ impl InitialWorkDirRequirement {
             listing: filenames
                 .iter()
                 .map(|&filename| Listing {
-                    entryname: get_entry_name(script_name, filename).rsplit(MAIN_SEPARATOR_STR).next().unwrap().to_string(),
+                    entryname: get_entry_name(script_name, filename)
+                        .rsplit(MAIN_SEPARATOR_STR)
+                        .next()
+                        .unwrap()
+                        .to_string(),
                     entry: Entry::from_file(filename),
                 })
                 .collect(),

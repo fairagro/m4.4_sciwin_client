@@ -1,19 +1,18 @@
 mod common;
 use common::{os_path, with_temp_repository};
+use cwl::{
+    clt::{Argument, CommandLineTool},
+    requirements::{DockerRequirement, Requirement},
+    types::Entry,
+};
 use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
-    cwl::{
-        clt::{Argument, CommandLineTool},
-        loader::load_tool,
-        requirements::{DockerRequirement, Requirement},
-        types::Entry,
-    },
+    cwl::loader::load_tool,
     repo::get_modified_files,
 };
 use serial_test::serial;
 use std::{fs::read_to_string, path::Path};
-
 
 #[test]
 #[serial]
@@ -27,7 +26,7 @@ pub fn tool_create_test() {
             no_commit: false,
             no_run: false,
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -66,7 +65,7 @@ pub fn tool_create_test_is_raw() {
             no_commit: false,
             no_run: false,
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -98,7 +97,7 @@ pub fn tool_create_test_no_commit() {
             no_commit: true, //look!
             no_run: false,
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -136,7 +135,7 @@ pub fn tool_create_test_no_run() {
             no_commit: false,
             no_run: true, //look!
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -167,7 +166,7 @@ pub fn tool_create_test_is_clean() {
             no_commit: false,
             no_run: false,
             is_clean: true, //look!
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -199,7 +198,7 @@ pub fn tool_create_test_container_image() {
             no_commit: false,
             no_run: false,
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
@@ -243,7 +242,7 @@ pub fn tool_create_test_dockerfile() {
             no_commit: false,
             no_run: false,
             is_clean: false,
-            inputs: None, 
+            inputs: None,
             outputs: None,
             command: vec![
                 "python".to_string(),
