@@ -39,7 +39,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_load_tool() {
-        let path = "../..&tests/test_data/echo.cwl";
+        let path = "../../tests/test_data/echo.cwl";
 
         let tool_result = load_tool(path);
         assert!(tool_result.is_ok());
