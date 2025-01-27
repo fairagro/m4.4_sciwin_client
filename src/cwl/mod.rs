@@ -13,8 +13,8 @@ pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
-    fn add_output_connection(&mut self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>>;
-    fn add_input_connection(&mut self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>>;
+    fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
+    fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;
     fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool);
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
 }
@@ -74,7 +74,7 @@ impl Connectable for Workflow {
     }
 
     /// Adds a connection between an input and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow input will be added.
-    fn add_input_connection(&mut self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>> {
+    fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
         let to_filename = resolve_filename(to_parts[0]);
@@ -102,7 +102,7 @@ impl Connectable for Workflow {
     }
 
     /// Adds a connection between an output and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow output will be added.
-    fn add_output_connection(&mut self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>> {
+    fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
         let from_filename = resolve_filename(from_parts[0]);
@@ -115,7 +115,7 @@ impl Connectable for Workflow {
 
         let output = self.outputs.iter_mut().find(|o| o.id == to_output).unwrap();
         output.type_.clone_from(&from_slot.type_);
-        output.output_source.clone_from(from);
+        output.output_source.clone_from(&from.to_string());
 
         println!("➕ Added or updated connection from {from} to outputs.{to_output} in workflow!");
 
