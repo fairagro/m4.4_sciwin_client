@@ -37,6 +37,8 @@ pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Bo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
+
     #[test]
     fn test_load_tool() {
         let path = "../../tests/test_data/echo.cwl";
@@ -52,4 +54,28 @@ mod tests {
         let wf_result = load_workflow(path);
         assert!(wf_result.is_ok());
     }
+
+    #[rstest]
+    #[case("../../tests/test_data/default.cwl")]
+    #[case("../../tests/test_data/echo.cwl")]
+    #[case("../../tests/test_data/mkdir.cwl")]
+    #[case("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl")]
+    #[case("../../tests/test_data/hello_world/workflows/plot/plot.cwl")]
+
+    fn test_load_multiple_tools(#[case] filename: &str) {
+        let tool = load_tool(filename);
+        assert!(tool.is_ok());
+    } 
+
+    #[rstest]
+    #[case("../../tests/test_data/mkdir_wf.cwl")]
+    #[case("../../tests/test_data/test-wf.cwl")]
+    #[case("../../tests/test_data/wf_inout_dir.cwl")]
+    #[case("../../tests/test_data/wf_inout_files.cwl")]
+    #[case("../../tests/test_data/wf_features.cwl")]
+    #[case("../../tests/test_data/hello_world/workflows/main/main.cwl")]
+    fn test_load_multiple_wfs(#[case] filename: &str) {
+        let tool = load_tool(filename);
+        assert!(tool.is_ok());
+    } 
 }
