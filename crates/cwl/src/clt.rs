@@ -248,13 +248,23 @@ baseCommand:
 
     #[test]
     pub fn test_has_stdout() {
-        let tool = CommandLineTool::default().with_stdout(Some("stdout.txt".to_string()));
+        let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
+            id: "stdout".to_string(),
+            type_: CWLType::Stdout,
+            output_binding: None,
+            format: None,
+        }]);
         assert!(tool.has_stdout_output());
     }
 
     #[test]
     pub fn test_has_stderr() {
-        let tool = CommandLineTool::default().with_stderr(Some("stderr.txt".to_string()));
+        let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
+            id: "stderr".to_string(),
+            type_: CWLType::Stderr,
+            output_binding: None,
+            format: None,
+        }]);
         assert!(tool.has_stderr_output());
     }
 }
