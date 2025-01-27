@@ -1,5 +1,5 @@
-use super::{clt::CommandLineTool, wf::Workflow};
 use crate::io::get_workflows_folder;
+use cwl::{clt::CommandLineTool, wf::Workflow};
 use std::{error::Error, fmt::Debug, fs, path::Path};
 
 /// Locates CWL File by name

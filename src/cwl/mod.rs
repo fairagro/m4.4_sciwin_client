@@ -1,4 +1,9 @@
-use cwl::{clt::CommandLineTool, wf::Workflow};
+use cwl::{
+    clt::CommandLineTool, inputs::{CommandInputParameter, WorkflowStepInput}, outputs::WorkflowOutputParameter, requirements::{DockerRequirement, Requirement}, types::{DefaultValue, Entry}, wf::{Workflow, WorkflowStep}
+};
+use std::{collections::HashMap, error::Error};
+use crate::io::resolve_path;
+use loader::{load_tool, resolve_filename};
 
 pub mod execution;
 pub mod loader;
@@ -8,10 +13,10 @@ pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
-    pub fn add_output_connection(&mut self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>>;
-    pub fn add_input_connection(&mut self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>>;
-    pub fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool);
-    pub fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
+    fn add_output_connection(&mut self, from: &String, to_output: &str) -> Result<(), Box<dyn Error>>;
+    fn add_input_connection(&mut self, from_input: &str, to: &String) -> Result<(), Box<dyn Error>>;
+    fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool);
+    fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
 }
 
 pub trait Saveable {

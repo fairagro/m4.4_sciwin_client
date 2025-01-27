@@ -1,9 +1,8 @@
-use crate::cwl::execution::runner::run_commandlinetool;
 use crate::{
     cwl::{
-        format::format_cwl,
+        execution::runner::{run_command, run_commandlinetool},
         parser::{self, post_process_cwl},
-        requirements::{DockerRequirement, Requirement},
+        Saveable,
     },
     io::{create_and_write_file, get_qualified_filename},
     repo::{commit, get_modified_files, stage_file},
@@ -11,6 +10,10 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
+use cwl::{
+    format::format_cwl,
+    requirements::{DockerRequirement, Requirement},
+};
 use git2::Repository;
 use prettytable::{Cell, Row, Table};
 use serde_yml::Value;
@@ -59,7 +62,12 @@ pub struct CreateToolArgs {
     pub is_clean: bool,
     #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
-    #[arg(short = 'o', long = "outputs", help = "Force values to be considered as an output.", value_delimiter = ' ')]
+    #[arg(
+        short = 'o',
+        long = "outputs",
+        help = "Force values to be considered as an output.",
+        value_delimiter = ' '
+    )]
     pub outputs: Option<Vec<String>>,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
@@ -101,7 +109,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     let mut cwl = parser::parse_command_line(
         args.command.iter().map(|s| s.as_str()).collect(),
-        if inputs.is_empty() { None } else { Some(inputs.iter().map(|s| s.as_str()).collect()) },
+        if inputs.is_empty() {
+            None
+        } else {
+            Some(inputs.iter().map(|s| s.as_str()).collect())
+        },
     );
 
     // Handle outputs
@@ -134,7 +146,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     if !args.no_run {
         // Execute command
         if inputs.is_empty() && outputs.is_empty() {
-            if cwl.execute().is_err() {
+            if run_command(&cwl, None).is_err() {
                 return Err(error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str()).into());
             }
         } else {
@@ -184,7 +196,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
         //format
         yaml = format_cwl(&yaml)?;
-        
+
         match create_and_write_file(path.as_str(), yaml.as_str()) {
             Ok(_) => {
                 println!("\n📄 Created CWL file {}", path.green().bold());
@@ -196,7 +208,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             }
             Err(e) => Err(Box::new(e)),
         }
-            
     } else {
         let mut yaml = serde_yml::to_string(&cwl)?;
         yaml = format_cwl(&yaml)?;
