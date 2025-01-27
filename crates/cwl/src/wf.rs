@@ -7,10 +7,10 @@ use super::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 
-/// Represents a CWL Workflow, a  process characterized by multiple subprocess steps, 
-/// where step outputs are connected to the inputs of downstream steps to form a 
+/// Represents a CWL Workflow, a  process characterized by multiple subprocess steps,
+/// where step outputs are connected to the inputs of downstream steps to form a
 /// directed acyclic graph, and independent steps may run concurrently.
-/// 
+///
 /// Reference: [CWL Workflow Specification](https://www.commonwl.org/v1.2/Workflow.html)
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -171,45 +171,28 @@ impl Identifiable for WorkflowStep {
 
 #[cfg(test)]
 mod tests {
-    use crate::cwl::loader::load_workflow;
+    use std::fs;
+
+    use crate::wf::Workflow;
 
     #[test]
-    fn test_workflow_has_step() {
-        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+    fn test_workflow_steps() {
+        let contents = fs::read_to_string("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
+        let workflow: Workflow = serde_yml::from_str(&contents).unwrap();
 
         assert!(workflow.has_step("calculation"));
         assert!(workflow.has_step("plot"));
         assert!(!workflow.has_step("bogus"));
-    }
-
-    #[test]
-    fn test_workflow_has_input() {
-        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
 
         assert!(workflow.has_input("population"));
         assert!(workflow.has_input("speakers"));
         assert!(!workflow.has_input("bogus"));
-    }
-
-    #[test]
-    fn test_workflow_has_output() {
-        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
 
         assert!(workflow.has_output("out"));
         assert!(!workflow.has_output("bogus"));
-    }
-
-    #[test]
-    fn test_workflow_has_step_input() {
-        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
 
         assert!(workflow.has_step_input("calculation/results"));
         assert!(!workflow.has_step_input("plot/results"));
-    }
-
-    #[test]
-    fn test_workflow_has_step_output() {
-        let workflow = load_workflow("tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
 
         assert!(workflow.has_step_output("calculation/results"));
         assert!(!workflow.has_step_output("calculation/bogus"));

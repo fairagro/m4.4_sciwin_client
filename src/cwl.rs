@@ -7,7 +7,7 @@ use cwl::{
     types::{DefaultValue, Entry},
     wf::{Workflow, WorkflowStep},
 };
-use std::{collections::HashMap, error::Error, fs, path::Path, fmt::Debug};
+use std::{collections::HashMap, error::Error, fmt::Debug, fs, path::Path};
 
 pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
@@ -272,6 +272,21 @@ pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Bo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cwl::{
+        clt::Command,
+        inputs::CommandLineBinding,
+        requirements::InitialWorkDirRequirement,
+        types::{CWLType, File, Listing},
+    };
+    use serde_yml::Value;
+
+    pub fn os_path(path: &str) -> String {
+        if cfg!(target_os = "windows") {
+            Path::new(path).to_string_lossy().replace('/', "\\")
+        } else {
+            path.to_string()
+        }
+    }
 
     #[test]
     fn test_resolve_filename() {
@@ -294,5 +309,56 @@ mod tests {
 
         let wf_result = load_workflow(path);
         assert!(wf_result.is_ok());
+    }
+
+    #[test]
+    pub fn test_cwl_save() {
+        let inputs = vec![
+            CommandInputParameter::default()
+                .with_id("positional1")
+                .with_default_value(DefaultValue::File(File::from_location(&"test_data/input.txt".to_string())))
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_position(0)),
+            CommandInputParameter::default()
+                .with_id("option1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
+        ];
+        let mut clt = CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "test/script.py".to_string()]))
+            .with_inputs(inputs)
+            .with_requirements(vec![
+                Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("test/script.py")),
+                Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
+            ]);
+
+        clt.save("workflows/tool/tool.cwl");
+
+        //check if paths are rewritten upon tool saving
+
+        assert_eq!(
+            clt.inputs[0].default,
+            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
+        );
+        let requirements = &clt.requirements.unwrap();
+        let req_0 = &requirements[0];
+        let req_1 = &requirements[1];
+        assert_eq!(
+            *req_0,
+            Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
+                listing: vec![Listing {
+                    entry: Entry::from_file(&os_path("../../test/script.py")),
+                    entryname: "test/script.py".to_string()
+                }]
+            })
+        );
+        assert_eq!(
+            *req_1,
+            Requirement::DockerRequirement(DockerRequirement::DockerFile {
+                docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
+                docker_image_id: "test".to_string()
+            })
+        );
     }
 }

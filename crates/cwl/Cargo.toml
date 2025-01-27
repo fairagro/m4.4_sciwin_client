@@ -12,5 +12,5 @@ authors = [
 ]
 
 [dependencies]
-serde = { version = "1.0.210", features = ["derive"] }
-serde_yml = "0.0.12"
+serde = { workspace = true }
+serde_yml = { workspace = true }

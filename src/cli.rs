@@ -3,7 +3,7 @@ use crate::commands::{
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
     workflow::WorkflowCommands,
-    annotate::{AnnotateCommands}
+    annotate::AnnotateCommands
 };
 use clap::{Parser, Subcommand};
 
