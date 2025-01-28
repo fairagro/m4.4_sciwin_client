@@ -26,27 +26,23 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
 pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
     let mut index = repo.index()?;
     index.add_path(Path::new(path))?;
-    index.write()?;
-    Ok(())
+    index.write()
 }
 
 pub fn stage_all(repo: &Repository) -> Result<(), Error> {
     let mut index = repo.index()?;
     index.add_all(iter::once(&"*"), IndexAddOption::DEFAULT, None)?;
-    index.write()?;
-    Ok(())
+    index.write()
 }
 
 pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
     let head = repo.head()?;
     let parent = repo.find_commit(head.target().unwrap())?;
-    commit_impl(repo, message, &[&parent])?;
-    Ok(())
+    commit_impl(repo, message, &[&parent])
 }
 
 pub fn initial_commit(repo: &Repository) -> Result<(), Error> {
-    commit_impl(repo, "Initial Commit", &[])?;
-    Ok(())
+    commit_impl(repo, "Initial Commit", &[])
 }
 
 fn commit_impl(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Result<(), Error> {
