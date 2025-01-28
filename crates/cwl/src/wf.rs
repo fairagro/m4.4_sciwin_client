@@ -171,9 +171,16 @@ impl Identifiable for WorkflowStep {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::fs;
 
-    use crate::wf::Workflow;
+    #[test]
+    fn test_identifyable() {
+        let mut input = WorkflowStep::default();
+        assert_eq!(input.id(), "");
+        input.set_id("test".to_string());
+        assert_eq!(input.id(), "test");
+    }
 
     #[test]
     fn test_workflow_steps() {
