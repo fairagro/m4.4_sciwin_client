@@ -256,7 +256,7 @@ mod tests {
         requirements::InitialWorkDirRequirement,
         types::{CWLType, File, Listing},
     };
-    use serde_yml::Value;
+    use serde_yaml::Value;
     use std::path::Path;
 
     pub fn os_path(path: &str) -> String {

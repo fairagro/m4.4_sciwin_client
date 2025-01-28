@@ -1,5 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yml::Value;
+use serde_yaml::Value;
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
@@ -28,7 +28,7 @@ pub enum CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
-    Any(serde_yml::Value),
+    Any(serde_yaml::Value),
 }
 
 impl DefaultValue {
@@ -37,8 +37,8 @@ impl DefaultValue {
             DefaultValue::File(item) => item.location.clone(),
             DefaultValue::Directory(item) => item.location.clone(),
             DefaultValue::Any(value) => match value {
-                serde_yml::Value::Bool(_) => String::new(), // do not remove!
-                _ => serde_yml::to_string(value).unwrap().trim_end().to_string(),
+                serde_yaml::Value::Bool(_) => String::new(), // do not remove!
+                _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
         }
     }
@@ -63,13 +63,13 @@ impl<'de> Deserialize<'de> for DefaultValue {
         if let Some(location_str) = location {
             let secondary_files = value
                 .get("secondaryFiles")
-                .map(|v| serde_yml::from_value(v.clone()))
+                .map(|v| serde_yaml::from_value(v.clone()))
                 .transpose()
                 .map_err(serde::de::Error::custom)?;
 
             let basename = value
                 .get("basename")
-                .map(|v| serde_yml::from_value(v.clone()))
+                .map(|v| serde_yaml::from_value(v.clone()))
                 .transpose()
                 .map_err(serde::de::Error::custom)?;
 
@@ -77,7 +77,7 @@ impl<'de> Deserialize<'de> for DefaultValue {
                 Some("File") => {
                     let format = value
                         .get("format")
-                        .map(|v| serde_yml::from_value(v.clone()))
+                        .map(|v| serde_yaml::from_value(v.clone()))
                         .transpose()
                         .map_err(serde::de::Error::custom)?;
                     let mut item = File::from_location(&location_str.to_string());

@@ -2,7 +2,7 @@ use s4n::commands::annotate::{
     annotate, annotate_container, annotate_default, annotate_field, annotate_performer, annotate_person, annotate_process_step,
     contains_docker_requirement, get_filename, handle_annotate_commands, parse_cwl, AnnotateCommands, AnnotateProcessArgs, PerformerArgs, PersonArgs,
 };
-use serde_yml::Value;
+use serde_yaml::Value;
 use serial_test::serial;
 use std::env;
 use std::fs;
@@ -778,7 +778,7 @@ fn test_annotate_author_add_to_existing_list() {
 
     assert!(result.is_ok(), "Expected Ok, got {:?}", result);
 
-    let updated_yaml: Value = serde_yml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
+    let updated_yaml: Value = serde_yaml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
     if let Value::Sequence(authors) = &updated_yaml["s:author"] {
         assert_eq!(authors.len(), 2, "Expected 2 authors, found {}", authors.len());
@@ -825,7 +825,7 @@ async fn test_annotate_performer_avoid_duplicate() {
 
     assert!(result.await.is_ok(), "annotate_performer failed");
 
-    let updated_yaml: Value = serde_yml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
+    let updated_yaml: Value = serde_yaml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
     if let Value::Sequence(performers) = &updated_yaml["arc:performer"] {
         assert_eq!(performers.len(), 1, "Expected 1 performer, found {}", performers.len());

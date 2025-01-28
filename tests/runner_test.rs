@@ -32,7 +32,7 @@ outputs:
   glob: output.txt
 
 "#;
-        let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+        let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
         assert!(run_command(&tool, None).is_ok());
 
         let output = dir.path().join("output.txt");
@@ -72,9 +72,9 @@ outputs:
 
         let yml = "message: \"Hello World\"";
 
-        let inputs: HashMap<String, DefaultValue> = serde_yml::from_str(yml).expect("Input parsing failed");
+        let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(yml).expect("Input parsing failed");
 
-        let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+        let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
         assert!(run_command(&tool, Some(inputs)).is_ok());
 
         let output = dir.path().join("output.txt");
@@ -117,9 +117,9 @@ message:
   location: whale.txt
   ";
 
-        let inputs: HashMap<String, DefaultValue> = serde_yml::from_str(yml).expect("Input parsing failed");
+        let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(yml).expect("Input parsing failed");
 
-        let tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+        let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
 
         let result = run_command(&tool, Some(inputs));
         assert!(result.is_err());
@@ -162,7 +162,7 @@ baseCommand:
 - tests/test_data/echo.py
 ";
 
-    let mut tool: CommandLineTool = serde_yml::from_str(cwl).expect("Tool parsing failed");
+    let mut tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
     let result = run_commandlinetool(&mut tool, None, None, None);
     assert!(result.is_ok());
     //delete results.txt

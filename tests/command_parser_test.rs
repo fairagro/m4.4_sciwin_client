@@ -11,7 +11,7 @@ use s4n::{
     execution::runner::run_command,
     parser::{get_outputs, parse_command_line},
 };
-use serde_yml::Value;
+use serde_yaml::Value;
 use serial_test::serial;
 use std::{path::Path, vec};
 

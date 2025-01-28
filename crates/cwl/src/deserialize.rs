@@ -1,5 +1,5 @@
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
-use serde_yml::Value;
+use serde_yaml::Value;
 use std::fmt::Debug;
 
 pub trait Identifiable {
@@ -18,7 +18,7 @@ where
         Value::Sequence(seq) => seq
             .into_iter()
             .map(|item| {
-                let param: T = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                let param: T = serde_yaml::from_value(item).map_err(serde::de::Error::custom)?;
                 Ok(param)
             })
             .collect::<Result<Vec<_>, _>>()?,
@@ -26,7 +26,7 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let mut param: T = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                let mut param: T = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
                 param.set_id(id.to_string());
                 Ok(param)
             })

@@ -201,7 +201,7 @@ mod tests {
         inputs::CommandLineBinding,
         outputs::{CommandOutputBinding, CommandOutputParameter},
     };
-    use serde_yml::{value, Value};
+    use serde_yaml::{value, Value};
     use serial_test::serial;
     use tempfile::tempdir;
 

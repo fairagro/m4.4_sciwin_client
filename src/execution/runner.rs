@@ -93,7 +93,7 @@ pub fn run_workflow(
             }
 
             let preprocessed_file = preprocess_cwl(&file, &path);
-            let mut tool: CommandLineTool = serde_yml::from_str(&preprocessed_file)?;
+            let mut tool: CommandLineTool = serde_yaml::from_str(&preprocessed_file)?;
             let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path), Some(tmp_path.clone()))?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
@@ -420,7 +420,7 @@ outputs:
     outputBinding: {glob: output.txt}
 baseCommand: cat
 stdout: output.txt";
-        let tool = &serde_yml::from_str(yaml).unwrap();
+        let tool = &serde_yaml::from_str(yaml).unwrap();
 
         let inputs = r#"{
     "file1": {
@@ -445,7 +445,7 @@ inputs: []
 outputs: []
 baseCommand: [cat]
 stdin: hello.txt";
-        let tool = &serde_yml::from_str(yaml).unwrap();
+        let tool = &serde_yaml::from_str(yaml).unwrap();
 
         let cmd = build_command(tool, None).unwrap();
 
@@ -474,8 +474,8 @@ stdout: output.txt"#;
         let in_yaml = r"indir:
   class: Directory
   location: testdir";
-        let tool = &serde_yml::from_str(yaml).unwrap();
-        let input_values: HashMap<String, DefaultValue> = serde_yml::from_str(in_yaml).unwrap();
+        let tool = &serde_yaml::from_str(yaml).unwrap();
+        let input_values: HashMap<String, DefaultValue> = serde_yaml::from_str(in_yaml).unwrap();
 
         let cmd = build_command(tool, Some(input_values)).unwrap();
 

@@ -6,7 +6,7 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use serde_yml::Value;
+use serde_yaml::Value;
 use slugify::slugify;
 use std::{collections::HashMap, path::Path};
 
@@ -148,7 +148,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),
         CWLType::Directory => DefaultValue::Directory(Directory::from_location(&current.to_string())),
-        _ => DefaultValue::Any(serde_yml::from_str(current).unwrap()),
+        _ => DefaultValue::Any(serde_yaml::from_str(current).unwrap()),
     };
     CommandInputParameter::default()
         .with_id(slugify!(&current, separator = "_").as_str())
@@ -172,7 +172,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let default_value = match cwl_type {
         CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
         CWLType::Directory => DefaultValue::Directory(Directory::from_location(&next.to_string())),
-        _ => DefaultValue::Any(serde_yml::from_str(next).unwrap()),
+        _ => DefaultValue::Any(serde_yaml::from_str(next).unwrap()),
     };
 
     CommandInputParameter::default()
@@ -292,7 +292,7 @@ pub fn guess_type(value: &str) -> CWLType {
         }
     }
     //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
-    let yaml_value: Value = serde_yml::from_str(value).unwrap();
+    let yaml_value: Value = serde_yaml::from_str(value).unwrap();
     match yaml_value {
         Value::Null => CWLType::Null,
         Value::Bool(_) => CWLType::Boolean,
@@ -359,7 +359,7 @@ mod tests {
                 .with_id("v")
                 .with_type(CWLType::Int)
                 .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
-                .with_default_value(DefaultValue::Any(serde_yml::from_str("1").unwrap())),
+                .with_default_value(DefaultValue::Any(serde_yaml::from_str("1").unwrap())),
         ];
 
         let inputs_vec = shlex::split(inputs).unwrap();

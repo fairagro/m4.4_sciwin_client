@@ -14,7 +14,7 @@ use cwl::{
 };
 use git2::Repository;
 use prettytable::{Cell, Row, Table};
-use serde_yml::Value;
+use serde_yaml::Value;
 use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
 use walkdir::WalkDir;
 
@@ -207,7 +207,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             Err(e) => Err(Box::new(e)),
         }
     } else {
-        let mut yaml = serde_yml::to_string(&cwl)?;
+        let mut yaml = serde_yaml::to_string(&cwl)?;
         yaml = format_cwl(&yaml)?;
         highlight_cwl(yaml.as_str());
 
@@ -247,7 +247,7 @@ pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
                 let file_path = entry.path();
                 if let Ok(content) = fs::read_to_string(file_path) {
                     // Parse content
-                    if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
+                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content) {
                         if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
                             if args.list_all {
                                 // Extract inputs

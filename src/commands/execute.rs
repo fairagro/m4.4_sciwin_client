@@ -12,7 +12,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File, PathItem},
     wf::Workflow,
 };
-use serde_yml::Value;
+use serde_yaml::Value;
 use std::{
     collections::HashMap,
     error::Error,
@@ -102,7 +102,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                     let input = &args.args[0];
                     if is_file_input {
                         let yaml = fs::read_to_string(input).map_err(|e| format!("Could not load File {}: {}", input, e))?;
-                        inputs = Some(serde_yml::from_str(&yaml).map_err(|e| format!("Could not read input file: {}", e))?);
+                        inputs = Some(serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read input file: {}", e))?);
                     }
                 }
                 //arguments given as commandline inputs
@@ -117,7 +117,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                             let value = match guess_type(raw_value) {
                                 CWLType::File => DefaultValue::File(File::from_location(raw_value)),
                                 CWLType::Directory => DefaultValue::Directory(Directory::from_location(raw_value)),
-                                _ => serde_yml::from_str(&args.args[i + 1])?,
+                                _ => serde_yaml::from_str(&args.args[i + 1])?,
                             };
                             map.insert(key, value);
                             i += 1;
@@ -164,15 +164,15 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             //preprocess cwl import statements
             let preprocessed_contents = preprocess_cwl(&contents, &args.file);
 
-            let cwl_yaml: Value = serde_yml::from_str(&preprocessed_contents).map_err(|e| format!("Could not load YAML: {}", e))?;
+            let cwl_yaml: Value = serde_yaml::from_str(&preprocessed_contents).map_err(|e| format!("Could not load YAML: {}", e))?;
             let class = cwl_yaml.get("class").expect("Could not get class");
             let is_workflow = class == "Workflow";
 
             if !is_workflow {
-                let mut tool: CommandLineTool = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
+                let mut tool: CommandLineTool = serde_yaml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
                 run_commandlinetool(&mut tool, inputs, Some(&args.file), args.out_dir.clone())?;
             } else {
-                let mut workflow: Workflow = serde_yml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
+                let mut workflow: Workflow = serde_yaml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
                 run_workflow(&mut workflow, inputs, Some(&args.file), args.out_dir.clone())?;
             }
 

@@ -1,6 +1,6 @@
 use super::types::{Entry, EnviromentDefs, Listing};
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yml::{Mapping, Value};
+use serde_yaml::{Mapping, Value};
 use std::{fs, path::MAIN_SEPARATOR_STR};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -36,7 +36,7 @@ where
         Value::Sequence(seq) => seq
             .into_iter()
             .map(|item| {
-                let param: Requirement = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                let param: Requirement = serde_yaml::from_value(item).map_err(serde::de::Error::custom)?;
                 Ok(param)
             })
             .collect::<Result<Vec<_>, _>>()?,
@@ -56,7 +56,7 @@ where
                         map
                     }
                 };
-                let param: Requirement = serde_yml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
+                let param: Requirement = serde_yaml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
                 Ok(param)
             })
             .collect::<Result<Vec<_>, _>>()?,

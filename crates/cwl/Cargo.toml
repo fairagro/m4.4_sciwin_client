@@ -13,7 +13,7 @@ authors = [
 
 [dependencies]
 serde = { workspace = true }
-serde_yml = { workspace = true }
+serde_yaml = { workspace = true }
 
 [dev-dependencies]
 rstest = "0.24.0"

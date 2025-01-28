@@ -110,7 +110,7 @@ impl CommandLineTool {
 
 impl Display for CommandLineTool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match serde_yml::to_string(self) {
+        match serde_yaml::to_string(self) {
             Ok(yaml) => write!(f, "{}", yaml),
             Err(_) => Err(fmt::Error),
         }
@@ -211,7 +211,7 @@ baseCommand:
 - python
 - calculation.py
 ";
-        let clt: Result<CommandLineTool, serde_yml::Error> = serde_yml::from_str(cwl);
+        let clt: Result<CommandLineTool, serde_yaml::Error> = serde_yaml::from_str(cwl);
         println!("{clt:?}");
         assert!(clt.is_ok());
     }
@@ -233,7 +233,7 @@ baseCommand:
                 format: None,
             }])
             .with_outputs(vec![]);
-        let result = serde_yml::to_string(&tool);
+        let result = serde_yaml::to_string(&tool);
         println!("{result:?}");
         assert!(result.is_ok());
     }

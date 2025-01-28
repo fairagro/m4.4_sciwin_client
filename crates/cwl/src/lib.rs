@@ -18,7 +18,7 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
         return Err(format!("❌ Tool {:?} does not exist.", filename).into());
     }
     let contents = fs::read_to_string(path)?;
-    let tool: CommandLineTool = serde_yml::from_str(&contents).map_err(|e| format!("❌ Could not read CommandLineTool {:?}: {}", filename, e))?;
+    let tool: CommandLineTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CommandLineTool {:?}: {}", filename, e))?;
 
     Ok(tool)
 }
@@ -30,7 +30,7 @@ pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Bo
         return Err(format!("❌ Workflow {:?} does not exist, yet!", filename).into());
     }
     let contents = fs::read_to_string(path)?;
-    let workflow: Workflow = serde_yml::from_str(&contents).map_err(|e| format!("❌ Could not read Workflow {:?}: {}", filename, e))?;
+    let workflow: Workflow = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read Workflow {:?}: {}", filename, e))?;
     Ok(workflow)
 }
 

@@ -1,6 +1,6 @@
 use super::{deserialize::Identifiable, types::CWLType};
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yml::Value;
+use serde_yaml::Value;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +50,7 @@ where
         Value::Sequence(seq) => seq
             .into_iter()
             .map(|item| {
-                let param: CommandOutputParameter = serde_yml::from_value(item).map_err(serde::de::Error::custom)?;
+                let param: CommandOutputParameter = serde_yaml::from_value(item).map_err(serde::de::Error::custom)?;
                 Ok(param)
             })
             .collect::<Result<Vec<_>, _>>()?,
@@ -60,11 +60,11 @@ where
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
                 let param = match value {
                     Value::String(type_str) => {
-                        let type_ = serde_yml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                        let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
                         CommandOutputParameter::default().with_id(id).with_type(type_)
                     }
                     _ => {
-                        let mut param: CommandOutputParameter = serde_yml::from_value(value).map_err(serde::de::Error::custom)?;
+                        let mut param: CommandOutputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
                         param.id = id.to_string();
                         param
                     }

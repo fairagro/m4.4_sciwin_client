@@ -13,7 +13,7 @@ use cwl::{
 };
 use git2::Repository;
 use prettytable::{row, Cell, Row, Table};
-use serde_yml::Value;
+use serde_yaml::Value;
 use std::path::PathBuf;
 use std::{env, error::Error, fs, io::Write, path::Path, vec};
 use walkdir::WalkDir;
@@ -72,7 +72,7 @@ pub struct RemoveWorkflowArgs {
 pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     let wf = Workflow::default();
 
-    let mut yaml = serde_yml::to_string(&wf)?;
+    let mut yaml = serde_yaml::to_string(&wf)?;
     yaml = format_cwl(&yaml)?;
 
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
@@ -117,7 +117,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     }
 
     //save workflow
-    let mut yaml = serde_yml::to_string(&workflow)?;
+    let mut yaml = serde_yaml::to_string(&workflow)?;
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
@@ -143,7 +143,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     }
 
     // save workflow
-    let mut yaml = serde_yml::to_string(&workflow)?;
+    let mut yaml = serde_yaml::to_string(&workflow)?;
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
@@ -285,7 +285,7 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> Result<(), Box<dyn Error>> {
 
                 // Read the contents of the file for detailed information
                 if let Ok(content) = fs::read_to_string(file_path) {
-                    if let Ok(parsed_yaml) = serde_yml::from_str::<Value>(&content) {
+                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content) {
                         if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("Workflow") {
                             // Extract inputs, outputs, and steps
                             let inputs_list = extract_workflow_list(parsed_yaml.get("inputs"));

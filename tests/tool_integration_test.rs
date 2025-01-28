@@ -213,7 +213,7 @@ pub fn tool_create_test_container_image() {
         //read file
         let cwl_file = dir.path().join(Path::new("workflows/echo/echo.cwl"));
         let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
-        let cwl: CommandLineTool = serde_yml::from_str(&cwl_contents).expect("Could not convert CWL");
+        let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
         let requirements = cwl.requirements.expect("No requirements found!");
         assert_eq!(requirements.len(), 2);
@@ -257,7 +257,7 @@ pub fn tool_create_test_dockerfile() {
         //read file
         let cwl_file = dir.path().join(Path::new("workflows/echo/echo.cwl"));
         let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
-        let cwl: CommandLineTool = serde_yml::from_str(&cwl_contents).expect("Could not convert CWL");
+        let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
         let requirements = cwl.requirements.expect("No requirements found!");
         assert_eq!(requirements.len(), 2);

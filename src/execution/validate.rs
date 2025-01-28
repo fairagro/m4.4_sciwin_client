@@ -254,7 +254,7 @@ mod tests {
     use super::*;
     use crate::io::get_file_size;
     use cwl::types::{CWLType, File};
-    use serde_yml::Value;
+    use serde_yaml::Value;
 
     #[test]
     pub fn test_set_placeholder_values() {
@@ -302,10 +302,10 @@ outputs:
             DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())),
         );
 
-        let mut cwl_test: CommandLineTool = serde_yml::from_str(cwl_str).unwrap();
+        let mut cwl_test: CommandLineTool = serde_yaml::from_str(cwl_str).unwrap();
         set_placeholder_values(&mut cwl_test, Some(&input_values), &runtime);
 
-        let cwl_expected: CommandLineTool = serde_yml::from_str(expected_str).unwrap();
+        let cwl_expected: CommandLineTool = serde_yaml::from_str(expected_str).unwrap();
 
         assert_eq!(cwl_test, cwl_expected);
     }

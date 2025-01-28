@@ -1,7 +1,7 @@
 use clap::{Args, Subcommand};
 use colored::*;
 use dialoguer::Select;
-use serde_yml::{Mapping, Value};
+use serde_yaml::{Mapping, Value};
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
@@ -418,7 +418,7 @@ pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>
     let path = get_filename(name)?;
 
     // Convert the YAML content to a string and write it to the file
-    let yaml_str = serde_yml::to_string(&yaml).map_err(|e| format!("Failed to serialize YAML: {}", e))?;
+    let yaml_str = serde_yaml::to_string(&yaml).map_err(|e| format!("Failed to serialize YAML: {}", e))?;
     File::create(&path)
         .and_then(|mut file| file.write_all(yaml_str.as_bytes()))
         .map_err(|e| format!("Failed to write to file '{}': {}", path, e))?;
@@ -468,7 +468,7 @@ pub fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
 
     // Read and parse the file content
     let content = fs::read_to_string(&file_path)?;
-    let yaml: Value = serde_yml::from_str(&content)?;
+    let yaml: Value = serde_yaml::from_str(&content)?;
     Ok(yaml)
 }
 

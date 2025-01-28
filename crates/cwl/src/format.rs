@@ -1,4 +1,4 @@
-use serde_yml::{Mapping, Value};
+use serde_yaml::{Mapping, Value};
 use std::{collections::HashMap, error::Error};
 
 const HASH_BANG: &str = "#!/usr/bin/env cwl-runner\n\n";
@@ -7,12 +7,12 @@ const KEYS_WITH_NEWLINES: [&str; 6] = ["inputs", "outputs", "steps", "requiremen
 
 /// formats cwl document in an oppinionated way. Heavily inspired by <https://github.com/rabix/cwl-format>
 pub fn format_cwl(raw_cwl: &str) -> Result<String, Box<dyn Error>> {
-    let cwl = &serde_yml::from_str(raw_cwl)?;
+    let cwl = &serde_yaml::from_str(raw_cwl)?;
 
     let comment = add_leading_comment(raw_cwl);
 
     let formatted_node = format_node(cwl);
-    let mut formatted_cwl = serde_yml::to_string(&formatted_node)?;
+    let mut formatted_cwl = serde_yaml::to_string(&formatted_node)?;
     formatted_cwl = add_space_between_main_sections(&formatted_cwl);
 
     Ok(format!("{}{}", comment, formatted_cwl))
