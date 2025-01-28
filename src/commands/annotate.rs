@@ -10,6 +10,7 @@ use std::io::BufReader;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs, path::Path};
+use tokio::runtime::Builder;
 
 const REST_URL_TS: &str = "https://ts4nfdi-api-gateway.prod.km.k8s.zbmed.de/api-gateway/search?query=";
 const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
@@ -17,6 +18,19 @@ const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-curr
 const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
 const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
 const MAX_RECOMMENDATIONS: usize = 10;
+
+pub fn handle_annotation_command(command: &Option<AnnotateCommands>, tool_name: &Option<String>) -> Result<(), Box<dyn Error>> {
+    let runtime = Builder::new_current_thread().enable_all().build()?;
+
+    if let Some(subcommand) = command {
+        runtime.block_on(handle_annotate_commands(subcommand))?;
+    } else if let Some(name) = tool_name {
+        annotate_default(name)?;
+    } else {
+        eprintln!("Error: No subcommand or tool name provided for annotate.");
+    }
+    Ok(())
+}
 
 pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), Box<dyn Error>> {
     match command {
@@ -341,9 +355,9 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
             // Check if the performer already exists based on email match
             let performer_exists = performers.iter().any(|performer| {
                 if let Value::Mapping(existing_performer) = performer {
-                    args.mail.as_ref().is_some_and(|mail| {
-                        existing_performer.get(Value::String("arc:email".to_string())) == Some(&Value::String(mail.clone()))
-                        })
+                    args.mail
+                        .as_ref()
+                        .is_some_and(|mail| existing_performer.get(Value::String("arc:email".to_string())) == Some(&Value::String(mail.clone())))
                 } else {
                     false
                 }
@@ -484,11 +498,7 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     let current_path = current_dir.join(&filename);
 
     // Extract the base name
-    let base_name = current_path
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .unwrap_or("")
-        .to_string();
+    let base_name = current_path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("").to_string();
 
     // Construct the path to the workflows directory
     let workflows_path = current_dir.join(Path::new("workflows").join(&base_name).join(&filename));
@@ -506,12 +516,8 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
         .into());
     };
 
-    Ok(file_path
-        .canonicalize()?
-        .to_string_lossy()
-        .to_string())
+    Ok(file_path.canonicalize()?.to_string_lossy().to_string())
 }
-
 
 pub fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Error>> {
     let file = File::open(file_path)?;
