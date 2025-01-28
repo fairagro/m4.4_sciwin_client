@@ -8,6 +8,7 @@ use cwl::{
     types::{DefaultValue, Entry},
     wf::{Workflow, WorkflowStep},
 };
+use syntect::{easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::{as_24_bit_terminal_escaped, LinesWithEndings}};
 use std::{collections::HashMap, error::Error};
 
 pub trait Connectable {
@@ -245,6 +246,20 @@ impl Connectable for Workflow {
 /// Locates CWL File by name
 pub fn resolve_filename(cwl_filename: &str) -> String {
     format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename)
+}
+
+pub fn highlight_cwl(yaml: &str) {
+    let ps = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+
+    let syntax = ps.find_syntax_by_extension("yaml").unwrap();
+    let mut h = HighlightLines::new(syntax, &ts.themes["InspiredGitHub"]);
+
+    for line in LinesWithEndings::from(yaml) {
+        let ranges = h.highlight_line(line, &ps).unwrap();
+        let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
+        print!("{escaped}")
+    }
 }
 
 #[cfg(test)]

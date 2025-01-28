@@ -1,6 +1,6 @@
 use crate::{
+    error,
     repo::{commit, get_modified_files, initial_commit, stage_all},
-    util::error,
 };
 use clap::Args;
 use git2::Repository;

@@ -1,4 +1,4 @@
-use crate::{io::get_filename_without_extension, util::split_vec_at};
+use crate::{io::get_filename_without_extension, split_vec_at};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},

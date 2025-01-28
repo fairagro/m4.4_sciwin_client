@@ -1,13 +1,13 @@
 use crate::{
+    error::CommandError,
     execution::{
         environment::{set_tool_environment_vars, unset_environment_vars},
         staging::{stage_required_files, unstage_files},
         util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
         validate::{rewire_paths, set_placeholder_values},
     },
-    error::CommandError,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
-    util::{format_command, get_available_ram, get_processor_count},
+    {format_command, get_available_ram, get_processor_count},
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
