@@ -20,11 +20,10 @@ use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
-        ToolCommands::Create(args) => create_tool(args)?,
-        ToolCommands::List(args) => list_tools(args)?,
-        ToolCommands::Remove(args) => remove_tool(args)?,
+        ToolCommands::Create(args) => create_tool(args),
+        ToolCommands::List(args) => list_tools(args),
+        ToolCommands::Remove(args) => remove_tool(args),
     }
-    Ok(())
 }
 
 #[derive(Debug, Subcommand)]

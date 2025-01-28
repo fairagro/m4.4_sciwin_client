@@ -31,10 +31,6 @@ pub enum Commands {
         command: WorkflowCommands
     },
     #[command(about = "Annotate CWL files")]
-    /*Annotate{
-        #[command(subcommand)]
-        command: AnnotateCommands
-    },*/
     Annotate {
         #[command(subcommand)]
         command: Option<AnnotateCommands>,

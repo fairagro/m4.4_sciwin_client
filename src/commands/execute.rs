@@ -23,9 +23,8 @@ use std::{
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
-        ExecuteCommands::Local(args) => execute_local(args)?,
+        ExecuteCommands::Local(args) => execute_local(args),
     }
-    Ok(())
 }
 
 #[derive(Debug, Subcommand)]

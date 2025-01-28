@@ -20,11 +20,11 @@ const MAX_RECOMMENDATIONS: usize = 10;
 
 pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), Box<dyn Error>> {
     match command {
-        AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name)?,
-        AnnotateCommands::Description { cwl_name, description } => annotate_field(cwl_name, "doc", description)?,
-        AnnotateCommands::License { cwl_name, license } => annotate_field(cwl_name, "s:license", license)?,
-        AnnotateCommands::Schema { cwl_name, schema } => annotate(cwl_name, "$schemas", None, Some(schema))?,
-        AnnotateCommands::Namespace { cwl_name, namespace, short } => annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace))?,
+        AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name),
+        AnnotateCommands::Description { cwl_name, description } => annotate_field(cwl_name, "doc", description),
+        AnnotateCommands::License { cwl_name, license } => annotate_field(cwl_name, "s:license", license),
+        AnnotateCommands::Schema { cwl_name, schema } => annotate(cwl_name, "$schemas", None, Some(schema)),
+        AnnotateCommands::Namespace { cwl_name, namespace, short } => annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace)),
         //AnnotateCommands::Author(args) => annotate_author(args)?,
         AnnotateCommands::Author(args) => {
             let role_args = PersonArgs {
@@ -33,7 +33,7 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
                 mail: args.mail.clone(),
                 id: args.id.clone(),
             };
-            annotate_person(&role_args, "author")?
+            annotate_person(&role_args, "author")
         }
         AnnotateCommands::Contributor(args) => {
             let role_args = PersonArgs {
@@ -42,14 +42,13 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
                 mail: args.mail.clone(),
                 id: args.id.clone(),
             };
-            annotate_person(&role_args, "contributor")?
+            annotate_person(&role_args, "contributor")
         }
-        AnnotateCommands::Performer(args) => annotate_performer(args).await?,
-        AnnotateCommands::Process(args) => annotate_process_step(args).await?,
-        AnnotateCommands::Container { cwl_name, container } => annotate_container(cwl_name, container)?,
-        AnnotateCommands::Custom { cwl_name, field, value } => annotate_field(cwl_name, field, value)?,
+        AnnotateCommands::Performer(args) => annotate_performer(args).await,
+        AnnotateCommands::Process(args) => annotate_process_step(args).await,
+        AnnotateCommands::Container { cwl_name, container } => annotate_container(cwl_name, container),
+        AnnotateCommands::Custom { cwl_name, field, value } => annotate_field(cwl_name, field, value),
     }
-    Ok(())
 }
 
 /// Enum for annotate-related subcommands

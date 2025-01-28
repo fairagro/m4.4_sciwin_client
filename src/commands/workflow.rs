@@ -20,15 +20,14 @@ use walkdir::WalkDir;
 
 pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
     match command {
-        WorkflowCommands::Create(args) => create_workflow(args)?,
-        WorkflowCommands::Connect(args) => connect_workflow_nodes(args)?,
-        WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args)?,
-        WorkflowCommands::Save(args) => save_workflow(args)?,
-        WorkflowCommands::Status(args) => get_workflow_status(args)?,
-        WorkflowCommands::List(args) => list_workflows(args)?,
-        WorkflowCommands::Remove(args) => remove_workflow(args)?,
+        WorkflowCommands::Create(args) => create_workflow(args),
+        WorkflowCommands::Connect(args) => connect_workflow_nodes(args),
+        WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args),
+        WorkflowCommands::Save(args) => save_workflow(args),
+        WorkflowCommands::Status(args) => get_workflow_status(args),
+        WorkflowCommands::List(args) => list_workflows(args),
+        WorkflowCommands::Remove(args) => remove_workflow(args),
     }
-    Ok(())
 }
 
 #[derive(Debug, Subcommand)]
