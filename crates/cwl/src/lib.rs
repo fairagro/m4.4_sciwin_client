@@ -51,6 +51,12 @@ mod tests {
         assert!(tool.is_ok());
     } 
 
+    #[test]
+    #[should_panic]
+    fn test_load_tool_fails() {
+        let _ = load_tool("this is not valid").unwrap();
+    }
+
     #[rstest]
     #[case("../../tests/test_data/mkdir_wf.cwl")]
     #[case("../../tests/test_data/test-wf.cwl")]
@@ -60,7 +66,13 @@ mod tests {
     #[case("../../tests/test_data/wf_inout_file.cwl")]
     #[case("../../tests/test_data/hello_world/workflows/main/main.cwl")]
     fn test_load_multiple_wfs(#[case] filename: &str) {
-        let tool = load_tool(filename);
-        assert!(tool.is_ok());
+        let workflow = load_workflow(filename);
+        assert!(workflow.is_ok());
     } 
+
+    #[test]
+    #[should_panic]
+    fn test_load_wf_fails() {
+        let _ = load_workflow("this is not valid").unwrap();
+    }
 }

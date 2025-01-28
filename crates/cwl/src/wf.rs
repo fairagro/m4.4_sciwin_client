@@ -193,8 +193,10 @@ mod tests {
 
         assert!(workflow.has_step_input("calculation/results"));
         assert!(!workflow.has_step_input("plot/results"));
+        assert!(!workflow.has_step_input("bogus"));
 
         assert!(workflow.has_step_output("calculation/results"));
         assert!(!workflow.has_step_output("calculation/bogus"));
+        assert!(!workflow.has_step_output("bogus"));
     }
 }

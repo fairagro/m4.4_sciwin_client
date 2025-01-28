@@ -148,4 +148,10 @@ mod tests {
         input.set_id("test".to_string());
         assert_eq!(input.id(), "test");
     }
+
+    #[test]
+    pub fn test_workflow_step_input_default() {
+        let input = WorkflowStepInput::default();
+        assert_eq!(input, WorkflowStepInput::String(String::default()));
+    }
 }
