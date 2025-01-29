@@ -14,6 +14,7 @@ SciWIn client provides commands for project initialization ([`s4n init`](init.md
       annotate  
       execute   Execution of CWL Files locally or on remote servers [aliases: ex]
       sync      
+      completions  Generate shell completions
       help      Print this message or the help of the given subcommand(s)
 
     Options:
