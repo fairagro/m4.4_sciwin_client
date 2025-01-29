@@ -161,7 +161,7 @@ pub struct PerformerArgs {
     #[arg(short = 'l', long = "last_name", help = "Last name of the performer")]
     pub last_name: String,
 
-    #[arg(short = 'e', long = "email", help = "Email of the performer")]
+    #[arg(short = 'm', long = "mail", help = "Email of the performer")]
     pub mail: Option<String>,
 
     #[arg(short = 'a', long = "affiliation", help = "Affiliation of the performer")]
@@ -264,6 +264,8 @@ pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), Box<dyn Error>> {
+    annotate(cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    annotate(cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
     // Prepare the container information
     let mut container_info = Mapping::new();
     container_info.insert(Value::String("class".to_string()), Value::String("arc:technology type".to_string()));
@@ -535,6 +537,9 @@ pub fn contains_docker_requirement(file_path: &str) -> Result<bool, Box<dyn Erro
 }
 
 pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box<dyn Error>> {
+    // Ensure ARC namespace and schema are defined
+    annotate(&args.cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
     // Read and parse the existing CWL file
     let yaml_result = parse_cwl(&args.cwl_name)?;
     let mut yaml = yaml_result;

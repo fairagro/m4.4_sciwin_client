@@ -85,4 +85,5 @@ nav:
     - Tool Commands: reference/tool.md
     - Workflow Commands: reference/workflow.md
     - Workflow and Tool Execution: reference/execute.md
+    - Workflow and Tool Metadata Annotation: reference/annotate.md
   - FAIRagro Website: https://fairagro.net
