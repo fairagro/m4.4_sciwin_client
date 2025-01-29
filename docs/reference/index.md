@@ -21,3 +21,22 @@ SciWIn client provides commands for project initialization ([`s4n init`](init.md
       -h, --help     Print help
       -V, --version  Print version
     ```
+
+## Shell completions
+Shell completions are available using the `s4n completions` command
+!!! abstract "Usage"
+    ``` 
+    Generate shell completions
+
+    Usage: s4n completions <SHELL>
+
+    Arguments:
+      <SHELL>  [possible values: bash, elvish, fish, powershell, zsh]
+
+    Options:
+      -h, --help  Print help
+    ```
+The command can be used to generate the shell completions for several shells.
+```
+s4n completions bash > completions.sh
+```
