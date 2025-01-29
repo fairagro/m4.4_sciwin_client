@@ -12,7 +12,13 @@ authors = [
     "Harald von Waldow",
     "Patrick König",
 ]
-keywords = ["cwl", "common workflow language", "commonwl", "workflow", "fairagro"]
+keywords = [
+    "cwl",
+    "common workflow language",
+    "commonwl",
+    "workflow",
+    "fairagro",
+]
 categories = ["science"]
 
 [dependencies]
