@@ -1,5 +1,6 @@
 use clap::{Args, Subcommand};
 use colored::*;
+use cwl::format::format_cwl;
 use dialoguer::Select;
 use serde_yaml::{Mapping, Value};
 use std::collections::HashSet;
@@ -432,8 +433,9 @@ pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>
 
     // Convert the YAML content to a string and write it to the file
     let yaml_str = serde_yaml::to_string(&yaml).map_err(|e| format!("Failed to serialize YAML: {}", e))?;
+    let formatted_yaml = format_cwl(&yaml_str)?;
     File::create(&path)
-        .and_then(|mut file| file.write_all(yaml_str.as_bytes()))
+        .and_then(|mut file| file.write_all(formatted_yaml.as_bytes()))
         .map_err(|e| format!("Failed to write to file '{}': {}", path, e))?;
 
     Ok(())

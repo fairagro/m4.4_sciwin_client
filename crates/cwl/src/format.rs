@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error};
 
 const HASH_BANG: &str = "#!/usr/bin/env cwl-runner\n\n";
 const HASH_BANG_PRE: &str = "#!/usr/bin/env ";
-const KEYS_WITH_NEWLINES: [&str; 6] = ["inputs", "outputs", "steps", "requirements", "hints", "baseCommand"];
+const KEYS_WITH_NEWLINES: [&str; 7] = ["inputs", "outputs", "steps", "requirements", "hints", "baseCommand", "$schemas"];
 
 /// formats cwl document in an oppinionated way. Heavily inspired by <https://github.com/rabix/cwl-format>
 pub fn format_cwl(raw_cwl: &str) -> Result<String, Box<dyn Error>> {
