@@ -39,12 +39,12 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
-      - name: Install cross
+      - name: Install cross --git https://github.com/cross-rs/cross
         if: ${{ startsWith(matrix.command, 'cross') }}
-        run: cargo install cross
+        run: cargo install cross 
       - name: VS Tools
         if: ${{ startsWith(matrix.os, 'windows') }}
         uses: microsoft/setup-msbuild@v2

@@ -1,5 +1,5 @@
 use cwl::clt::Command;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{distributions::Alphanumeric, Rng};
 use sha1::{Digest, Sha1};
 use std::{
     cell::RefCell,
@@ -169,7 +169,7 @@ pub fn join_path_string<P: AsRef<Path>>(path: P, location: &str) -> String {
 }
 
 pub fn get_random_filename(prefix: &str, extension: &str) -> String {
-    let rnd: String = rand::rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
+    let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
     format!("{prefix}_{rnd}.{extension}")
 }
 
