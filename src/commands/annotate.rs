@@ -140,10 +140,10 @@ pub enum AnnotateCommands {
 pub struct PersonArgs {
     pub cwl_name: String,
 
-    #[arg(short = 'n', long = "name", help = "Name of the person (author or contributor)")]
+    #[arg(short = 'n', long = "name", help = "Name of the person")]
     pub name: String,
 
-    #[arg(short = 'm', long = "mail", help = "Email of the person (author or contributor)")]
+    #[arg(short = 'm', long = "mail", help = "Email of the person")]
     pub mail: Option<String>,
 
     #[arg(short = 'i', long = "id", help = "Identifier of the person, e.g., ORCID")]
