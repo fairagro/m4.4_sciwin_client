@@ -1,3 +1,5 @@
+use std::{error::Error, io};
+
 use crate::commands::{
     execute::ExecuteCommands,
     init::InitArgs,
@@ -5,7 +7,8 @@ use crate::commands::{
     workflow::WorkflowCommands,
     annotate::AnnotateCommands
 };
-use clap::{Parser, Subcommand};
+use clap::{Command, Parser, Subcommand};
+use clap_complete::{generate, Generator, Shell};
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
@@ -45,4 +48,14 @@ pub enum Commands {
         command: ExecuteCommands,
     },
     Sync,
+    #[command(about = "Generate shell completions")]
+    Completions{
+        #[arg()]
+        shell: Shell,
+    }
+}
+
+pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> Result<(), Box<dyn Error>>{
+    generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
+    Ok(())
 }

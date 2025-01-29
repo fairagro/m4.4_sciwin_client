@@ -1,6 +1,6 @@
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use s4n::{
-    cli::{Cli, Commands},
+    cli::{generate_completions, Cli, Commands},
     commands::{
         annotate::handle_annotation_command,
         execute::handle_execute_commands,
@@ -35,5 +35,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Execute { command } => handle_execute_commands(command),
         Commands::Sync => todo!(),
+        Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
     }
 }

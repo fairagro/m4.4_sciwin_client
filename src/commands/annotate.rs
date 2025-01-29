@@ -103,7 +103,7 @@ pub enum AnnotateCommands {
         cwl_name: String,
         #[arg(short = 'n', long = "namespace", help = "Namespace to annotate")]
         namespace: String,
-        #[arg(long = "namespace abbreviation", help = "Namespace abbreviation to annotate")]
+        #[arg(long = "abbreviation", help = "Namespace abbreviation to annotate")]
         short: Option<String>,
     },
     #[command(about = "Annotates author of a tool or workflow (schema.org)")]
