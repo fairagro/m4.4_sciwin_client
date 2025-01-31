@@ -3,11 +3,7 @@ use log::{error, LevelFilter};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
-        annotate::handle_annotation_command,
-        execute::handle_execute_commands,
-        init::handle_init_command,
-        tool::{create_tool, handle_tool_commands},
-        workflow::handle_workflow_commands,
+        annotate::handle_annotation_command, execute::handle_execute_commands, init::handle_init_command, sync::handle_sync, tool::{create_tool, handle_tool_commands}, workflow::handle_workflow_commands
     },
     error::{CommandError, ExitCode},
     log::LOGGER,
@@ -38,7 +34,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Workflow { command } => handle_workflow_commands(command),
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Execute { command } => handle_execute_commands(command),
-        Commands::Sync => todo!(),
+        Commands::Sync => handle_sync(),
         Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
     }
 }

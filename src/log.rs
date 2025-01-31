@@ -20,9 +20,9 @@ impl Log for Logger {
 fn format_level(level: &log::Level) -> String {
     match level {
         log::Level::Error => "❌ Error: ".bold().red().to_string(),
-        log::Level::Warn => "⚠️  Warning: ".yellow().to_string(),
+        log::Level::Warn => "⚠️  Warning: ".bold().yellow().to_string(),
         log::Level::Info => String::new(),
-        log::Level::Debug => "DEBUG: ".blue().to_string(),
-        log::Level::Trace => "TRACE: ".purple().to_string(),
+        log::Level::Debug => "Debug: ".bold().blue().to_string(),
+        log::Level::Trace => "Trace: ".bold().purple().to_string(),
     }
 }
