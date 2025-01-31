@@ -1,9 +1,7 @@
-use crate::{
-    error,
-    repo::{commit, get_modified_files, initial_commit, stage_all},
-};
+use crate::repo::{commit, get_modified_files, initial_commit, stage_all};
 use clap::Args;
 use git2::Repository;
+use log::{error, info};
 use rust_xlsxwriter::Workbook;
 use std::{
     env,
@@ -46,7 +44,7 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
             initial_commit(&repo)?;
         }
     } else {
-        eprintln!("{}", error("Nothing to commit"));
+        error!("Nothing to commit");
     }
 
     Ok(())
@@ -104,9 +102,9 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     File::create(workflows_dir.join(".gitkeep"))?;
 
     if !silent {
-        println!("📂 s4n project initialisation sucessfully:");
-        println!("{} (Base)", base_dir.display());
-        println!("  ├── workflows");
+        info!("📂 s4n project initialisation sucessfully:");
+        info!("{} (Base)", base_dir.display());
+        info!("  ├── workflows");
     }
 
     Ok(())
@@ -139,12 +137,12 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
 
-    println!("📂 s4n project initialisation sucessfully:");
-    println!("{} (Base)", base_dir.display());
-    println!("  ├── assays");
-    println!("  ├── studies");
-    println!("  ├── workflows");
-    println!("  └── runs");
+    info!("📂 s4n project initialisation sucessfully:");
+    info!("{} (Base)", base_dir.display());
+    info!("  ├── assays");
+    info!("  ├── studies");
+    info!("  ├── workflows");
+    info!("  └── runs");
 
     Ok(())
 }

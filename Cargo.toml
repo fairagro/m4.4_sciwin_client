@@ -53,6 +53,7 @@ reqwest = { version = "0.12.12", features = ["json"] }
 tokio = { version = "1.43.0", features = ["macros"] }
 dialoguer = "0.11.0"
 clap_complete = "4.5.43"
+log = "0.4.25"
 
 [dev-dependencies]
 serial_test = "3.1.1"

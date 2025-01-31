@@ -15,6 +15,7 @@ use cwl::{
     types::{CWLType, DefaultValue, OutputItem},
     wf::Workflow,
 };
+use log::info;
 use std::{
     collections::HashMap,
     env,
@@ -153,7 +154,7 @@ pub fn run_workflow(
     let json = serde_json::to_string_pretty(&output_values)?;
     println!("{}", json);
 
-    eprintln!(
+    info!(
         "✔️  Workflow {:?} executed successfully in {:.0?}!",
         &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
@@ -170,11 +171,11 @@ pub fn run_commandlinetool(
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        eprintln!("🚲 Executing CommandLineTool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
+        info!("🚲 Executing CommandLineTool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
     }
     //create staging directory
     let dir = tempdir()?;
-    eprintln!("📁 Created staging directory: {:?}", dir.path());
+    info!("📁 Created staging directory: {:?}", dir.path());
 
     //save reference to current working directory
     let current = env::current_dir()?;
@@ -241,7 +242,7 @@ pub fn run_commandlinetool(
     //come back to original directory
     env::set_current_dir(current)?;
 
-    eprintln!(
+    info!(
         "✔️  CommandLineTool {:?} executed successfully in {:.0?}!",
         &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
@@ -253,7 +254,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     let mut command = build_command(tool, input_values)?;
 
     //run
-    eprintln!("⏳ Executing Command: `{}`", format_command(&command));
+    info!("⏳ Executing Command: `{}`", format_command(&command));
     let output = command.output()?;
 
     //handle redirection of stdout

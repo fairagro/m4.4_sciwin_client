@@ -12,6 +12,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File, PathItem},
     wf::Workflow,
 };
+use log::info;
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
@@ -82,7 +83,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
         }
         Runner::Custom => {
             if !args.is_quiet {
-                eprintln!(
+                info!(
                     "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
 ⚠️  The internal runner currently is for testing purposes only and does not support containerization, yet!",
                     &args.file

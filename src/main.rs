@@ -1,4 +1,5 @@
 use clap::{CommandFactory, Parser};
+use log::{error, LevelFilter};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
@@ -9,12 +10,15 @@ use s4n::{
         workflow::handle_workflow_commands,
     },
     error::{CommandError, ExitCode},
+    log::LOGGER,
 };
 use std::{error::Error, process::exit};
 
 fn main() {
+    log::set_logger(&LOGGER).map(|_| log::set_max_level(LevelFilter::Info)).unwrap();
+
     if let Err(e) = run() {
-        eprintln!("Error: {e}");
+        error!("{e}");
         if let Some(cmd_err) = e.downcast_ref::<CommandError>() {
             exit(cmd_err.exit_code());
         } else {

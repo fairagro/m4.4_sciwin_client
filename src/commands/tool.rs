@@ -4,7 +4,7 @@ use crate::{
     io::{create_and_write_file, get_qualified_filename},
     parser::{self, post_process_cwl},
     repo::{commit, get_modified_files, stage_file},
-    {error, print_list, warn},
+    print_list,
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -13,6 +13,7 @@ use cwl::{
     requirements::{DockerRequirement, Requirement},
 };
 use git2::Repository;
+use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};
 use serde_yaml::Value;
 use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
@@ -86,7 +87,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Check if git status is clean
     let cwd = env::current_dir().expect("directory to be accessible");
     if !args.is_raw {
-        println!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
+        info!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
     let inputs = args.inputs.as_deref().unwrap_or(&[]);
     let outputs = args.outputs.as_deref().unwrap_or(&[]);
@@ -94,14 +95,14 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
     if !modified.is_empty() {
-        println!("Uncommitted changes detected:");
+        error!("Uncommitted changes detected:");
         print_list(&modified);
-        return Err(error("Uncommitted changes detected").into());
+        return Err("Uncommitted changes detected".into());
     }
 
     // Parse input string
     if args.command.is_empty() {
-        return Err(error("No commandline string given!").into());
+        return Err("No commandline string given!".into());
     }
 
     let mut cwl = parser::parse_command_line(
@@ -144,7 +145,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         // Execute command
         if inputs.is_empty() && outputs.is_empty() {
             if run_command(&cwl, None).is_err() {
-                return Err(error(format!("Could not execute command: `{}`!", args.command.join(" ")).as_str()).into());
+                return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
             }
         } else {
             let path = get_qualified_filename(&cwl.base_command, args.name.clone());
@@ -155,9 +156,9 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         // Check files that changed
         let files = get_modified_files(&repo);
         if files.is_empty() && outputs.is_empty() {
-            warn("No output produced!")
+            warn!("No output produced!")
         } else if !args.is_raw {
-            println!("📜 Found changes:");
+            info!("📜 Found changes:");
             print_list(&files);
         }
 
@@ -181,7 +182,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             cwl = cwl.with_outputs(parser::get_outputs(files));
         }
     } else {
-        warn("User requested no run, could not determine outputs!");
+        warn!("User requested no run, could not determine outputs!");
     }
 
     post_process_cwl(&mut cwl);
@@ -196,7 +197,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
         match create_and_write_file(path.as_str(), yaml.as_str()) {
             Ok(_) => {
-                println!("\n📄 Created CWL file {}", path.green().bold());
+                info!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
                     stage_file(&repo, path.as_str()).unwrap();
                     commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
@@ -217,7 +218,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
-    println!("📂 Scanning for tools in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
+    info!("📂 Scanning for tools in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
 
     // Build the path to the "workflows" folder
     let folder_path = cwd.join("workflows");
@@ -305,15 +306,15 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn std::error::Erro
         if tool_path.exists() && tool_path.is_dir() {
             // Attempt to remove the directory
             fs::remove_dir_all(&tool_path)?;
-            println!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
+            info!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
             commit(&repo, format!("Deletion of `{}`", tool.as_str()).as_str()).unwrap();
         } else {
-            println!("Tool '{}' does not exist.", tool_path.display().to_string().red());
+            error!("Tool '{}' does not exist.", tool_path.display().to_string().red());
         }
     }
     //we could also remove all tools if no tool is specified but maybe too dangerous
     if args.tool_names.is_empty() {
-        println!("Please enter a tool or a list of tools");
+        info!("Please enter a tool or a list of tools");
     }
     Ok(())
 }

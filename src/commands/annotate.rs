@@ -2,6 +2,7 @@ use clap::{Args, Subcommand};
 use colored::*;
 use cwl::format::format_cwl;
 use dialoguer::Select;
+use log::error;
 use serde_yaml::{Mapping, Value};
 use std::collections::HashSet;
 use std::error::Error;
@@ -28,7 +29,7 @@ pub fn handle_annotation_command(command: &Option<AnnotateCommands>, tool_name: 
     } else if let Some(name) = tool_name {
         annotate_default(name)?;
     } else {
-        eprintln!("Error: No subcommand or tool name provided for annotate.");
+        error!("No subcommand or tool name provided for annotate.");
     }
     Ok(())
 }
@@ -434,7 +435,7 @@ pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>
     let path = get_filename(name)?;
 
     // Convert the YAML content to a string and write it to the file
-    let yaml_str = serde_yaml::to_string(&yaml).map_err(|e| format!("Failed to serialize YAML: {}", e))?;
+    let yaml_str = serde_yaml::to_string(&yaml).map_err(|e| format!("Failed to serialize YAML: {e}"))?;
     let formatted_yaml = format_cwl(&yaml_str)?;
     File::create(&path)
         .and_then(|mut file| file.write_all(formatted_yaml.as_bytes()))

@@ -12,6 +12,7 @@ use cwl::{
     {load_tool, load_workflow},
 };
 use git2::Repository;
+use log::{error, info};
 use prettytable::{row, Cell, Row, Table};
 use serde_yaml::Value;
 use std::path::PathBuf;
@@ -85,7 +86,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     }
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
-    println!("📄 Created new Workflow file: {}", filename);
+    info!("📄 Created new Workflow file: {}", filename);
 
     Ok(())
 }
@@ -120,7 +121,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    println!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {}!", filename);
 
     Ok(())
 }
@@ -146,7 +147,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    println!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {}!", filename);
 
     Ok(())
 }
@@ -157,7 +158,7 @@ pub fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     let repo = Repository::open(".")?;
     stage_file(&repo, &filename)?;
     let msg = &format!("✅ Saved workflow {}", args.name);
-    println!("{}", msg);
+    info!("{msg}");
     commit(&repo, msg)?;
     Ok(())
 }
@@ -167,7 +168,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     let path = Path::new(&filename).parent().unwrap_or(Path::new("."));
     let workflow = load_workflow(&filename)?;
 
-    println!("Status report for Workflow {}", filename.green().bold());
+    info!("Status report for Workflow {}", filename.green().bold());
 
     let mut table = Table::new();
     table.set_titles(row![bFg => "Tool", "Inputs", "Outputs"]);
@@ -249,7 +250,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
 
     table.printstd();
 
-    println!("✅ : connected - 🔘 : tool default - ❌ : no connection");
+    info!("✅ : connected - 🔘 : tool default - ❌ : no connection");
 
     Ok(())
 }
@@ -257,7 +258,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
 pub fn list_workflows(args: &ListWorkflowArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
-    println!("📂 Scanning for workflows in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
+    info!("📂 Scanning for workflows in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
 
     // Build the path to the "workflows" folder
     let folder_path = cwd.join("workflows");
@@ -385,15 +386,15 @@ pub fn remove_workflow(args: &RemoveWorkflowArgs) -> Result<(), Box<dyn Error>> 
         if wf_path.exists() && wf_path.is_dir() {
             // Attempt to remove the directory
             fs::remove_dir_all(&wf_path)?;
-            println!("{} {}", "Removed workflow:".green(), wf_path.display().to_string().green());
+            info!("{} {}", "Removed workflow:".green(), wf_path.display().to_string().green());
             commit(&repo, format!("Deletion of `{}`", wf.as_str()).as_str()).unwrap();
         } else {
-            println!("Workflow '{}' does not exist.", wf_path.display().to_string().red());
+            error!("Workflow '{}' does not exist.", wf_path.display().to_string().red());
         }
     }
     //we could also remove all tools if no wf is specified but maybe too dangerous
     if args.rm_workflow.is_empty() {
-        println!("Please enter a tool or a list of workflows");
+        error!("Please enter a tool or a list of workflows");
     }
     Ok(())
 }

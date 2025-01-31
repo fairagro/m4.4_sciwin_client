@@ -2,26 +2,19 @@ pub mod cli;
 pub mod commands;
 pub mod cwl;
 pub mod error;
+pub mod execution;
 pub mod io;
+pub mod log;
 pub mod parser;
 pub mod repo;
-pub mod execution;
 
-use colored::Colorize;
+use ::log::info;
 use std::{num::NonZero, process::Command, thread};
 use sysinfo::System;
 
-pub fn error(message: &str) -> String {
-    format!("❌ {}: {}", "Error".red().bold(), message.red())
-}
-
-pub fn warn(message: &str) {
-    eprintln!("⚠️  {}", message.yellow());
-}
-
 pub fn print_list(list: &Vec<String>) {
     for item in list {
-        println!("\t- {item}");
+        info!("\t- {item}");
     }
 }
 

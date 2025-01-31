@@ -8,6 +8,7 @@ use cwl::{
     types::{DefaultValue, Entry},
     wf::{Workflow, WorkflowStep},
 };
+use log::{info, warn};
 use syntect::{easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::{as_24_bit_terminal_escaped, LinesWithEndings}};
 use std::{collections::HashMap, error::Error};
 
@@ -71,7 +72,7 @@ impl Connectable for Workflow {
             };
             self.steps.push(workflow_step);
 
-            println!("➕ Added step {name} to workflow");
+            info!("➕ Added step {name} to workflow");
         }
     }
 
@@ -98,7 +99,7 @@ impl Connectable for Workflow {
             .in_
             .insert(to_parts[1].to_string(), WorkflowStepInput::String(from_input.to_owned()));
 
-        println!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
+        info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
         Ok(())
     }
@@ -119,7 +120,7 @@ impl Connectable for Workflow {
         output.type_.clone_from(&from_slot.type_);
         output.output_source.clone_from(&from.to_string());
 
-        println!("➕ Added or updated connection from {from} to outputs.{to_output} in workflow!");
+        info!("➕ Added or updated connection from {from} to outputs.{to_output} in workflow!");
 
         Ok(())
     }
@@ -135,7 +136,7 @@ impl Connectable for Workflow {
             let from_outputs = from_tool.get_output_ids();
             if !from_outputs.contains(&from_parts[1].to_string()) {
                 return Err(format!(
-                    "❌ Tool {} does not have output `{}`. Cannot not create node from {} in Workflow!",
+                    "Tool {} does not have output `{}`. Cannot not create node from {} in Workflow!",
                     from_parts[0], from_parts[1], from_filename
                 )
                 .into());
@@ -144,7 +145,7 @@ impl Connectable for Workflow {
             //create step
             self.add_new_step_if_not_exists(from_parts[0], &from_tool);
         } else {
-            println!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
+            info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
         }
 
         //handle to
@@ -168,26 +169,26 @@ impl Connectable for Workflow {
         let from_parts = from.split('/').collect::<Vec<_>>();
         let to_parts = to.split('/').collect::<Vec<_>>();
         if from_parts.len() != 2 {
-            return Err(format!("❌ Invalid '--from' format: {from}. Please use tool/parameter or @inputs/parameter.").into());
+            return Err(format!("Invalid '--from' format: {from}. Please use tool/parameter or @inputs/parameter.").into());
         }
         if to_parts.len() != 2 {
-            return Err(format!("❌ Invalid '--to' format: {to}. Please use tool/parameter or @outputs/parameter.").into());
+            return Err(format!("Invalid '--to' format: {to}. Please use tool/parameter or @outputs/parameter.").into());
         }
         if !self.has_step(to_parts[0]) {
-            return Err(format!("❌ Step {} not found!", to_parts[0]).into());
+            return Err(format!("Step {} not found!", to_parts[0]).into());
         }
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]);
         // If the step is found, try to remove the connection by removing input from tool_y that uses output of tool_x
         //Input is empty, change that?
         if let Some(step) = step {
             if step.in_.remove(to_parts[1]).is_some() {
-                println!("🔗 Successfully disconnected {from} from {to}");
+                info!("🔗 Successfully disconnected {from} from {to}");
             } else {
-                println!("⚠️ No connection found between {from} and {to}. Nothing to disconnect.");
+                warn!("No connection found between {from} and {to}. Nothing to disconnect.");
             }
             Ok(())
         } else {
-            Err(format!("❌ Failed to find step {} in workflow!", to_parts[0]).into())
+            Err(format!("Failed to find step {} in workflow!", to_parts[0]).into())
         }
     }
 
@@ -195,19 +196,19 @@ impl Connectable for Workflow {
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
         if to_parts.len() != 2 {
-            return Err(format!("❌ Invalid 'to' format for input connection: {from_input} to:{to}").into());
+            return Err(format!("Invalid 'to' format for input connection: {from_input} to:{to}").into());
         }
         if let Some(index) = self.inputs.iter().position(|s| s.id == *from_input.to_string()) {
             self.inputs.remove(index);
         }
         if let Some(step) = self.steps.iter_mut().find(|s| s.id == to_parts[0]) {
             if step.in_.remove(to_parts[1]).is_some() {
-                println!("➖ Successfully disconnected input {from_input} from {to}");
+                info!("➖ Successfully disconnected input {from_input} from {to}");
             } else {
-                println!("⚠️ No input connection found for {from_input} to disconnect.");
+                warn!("No input connection found for {from_input} to disconnect.");
             }
         } else {
-            return Err(format!("❌ Step {} not found in workflow!", to_parts[0]).into());
+            return Err(format!("Step {} not found in workflow!", to_parts[0]).into());
         }
 
         Ok(())
@@ -221,7 +222,7 @@ impl Connectable for Workflow {
             // Remove the output connection
             self.outputs.remove(index);
             removed_from_outputs = true;
-            println!("➖ Removed connection to outputs.{to_output} from workflow!");
+            info!("➖ Removed connection to outputs.{to_output} from workflow!");
         }
         // Check if this output is part of any step output and remove it, do we want that?
         let mut removed_from_step = false;
@@ -229,14 +230,14 @@ impl Connectable for Workflow {
             if let Some(output_index) = step.out.iter().position(|out| out == from_parts[1]) {
                 step.out.remove(output_index);
                 removed_from_step = true;
-                println!("➖ Removed output {to_output} from step {} in workflow!", step.id);
+                info!("➖ Removed output {to_output} from step {} in workflow!", step.id);
             }
         }
         if !removed_from_outputs {
-            println!("⚠️ No matching output found for '{to_output}' in workflow outputs.");
+            warn!("No matching output found for '{to_output}' in workflow outputs.");
         }
         if !removed_from_step {
-            println!("⚠️ No matching step output found for '{to_output}'.");
+            warn!("No matching step output found for '{to_output}'.");
         }
 
         Ok(())
