@@ -26,6 +26,7 @@
   - [Creation of CWL Workflows](#creation-of-cwl-workflows)
   - [Execution of CWL Files](#execution-of-cwl-files)
 - [🪂 Contributors](#-contributors)
+- [⚖️ License](#%EF%B8%8F-license)
 
 
 ## 🚀 About
@@ -125,6 +126,12 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 |Antonia Leidel|[:octocat: @aleidel](https://github.com/aleidel)| |
 |Patrick König|[:octocat: @patrick-koenig](https://github.com/patrick-koenig)|[ORCID: 0000-0002-8948-6793](https://orcid.org/0000-0002-8948-6793)|
 |Harald von Waldow|[:octocat: @hvwaldow](https://github.com/hvwaldow)|[ORCID: 0000-0003-4800-2833](https://orcid.org/0000-0003-4800-2833)|
+
+## ⚖️ License
+
+This work is dual-licensed under Apache 2.0 and MIT .
+You can choose between one of them if you use this work.
+`SPDX-License-Identifier: Apache-2.0 OR MIT`
 
 <!--section images-->
 [rust-image]: https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white
