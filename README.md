@@ -3,8 +3,7 @@
 
 ![Rust][rust-image] 
 [![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
-![GitHub License]([https://img.shields.io/github/license/fairagro/m4.4_sciwin_client](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-green
-))
+![GitHub License](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-green)
 [![GitHub Downloads](https://img.shields.io/github/downloads/fairagro/m4.4_sciwin_client/total)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
 
 
