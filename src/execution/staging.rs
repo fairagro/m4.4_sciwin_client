@@ -36,7 +36,10 @@ pub fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
         path.as_ref(),
         out_dir.as_ref(),
     )?);
-
+    //do not remove file multiple times if input matches InitialWorkDirRequirement filename
+    staged_files.sort_unstable();
+    staged_files.dedup();
+    
     Ok(staged_files)
 }
 
@@ -77,7 +80,11 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                     let path_str = &into_path.to_string_lossy();
                     match &listing.entry {
                         Entry::Source(src) => {
-                            create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
+                            if fs::exists(src).unwrap_or(false) {
+                                copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", src, path_str, e))?;
+                            } else {
+                                create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
+                            }
                         }
                         Entry::Include(include) => {
                             let mut include_path = tool_path.join(&include.include);

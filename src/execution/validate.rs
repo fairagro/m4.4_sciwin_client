@@ -217,33 +217,29 @@ fn get_input_value(
 ) -> Option<String> {
     let mut value = None;
 
+    fn evaluate(value: &DefaultValue, suffix: &str) -> Option<String> {
+        if let DefaultValue::File(file) = value {
+            if suffix == "format" {
+                file.format.clone()
+            } else {
+                Some(get_file_property(&file.location, suffix))
+            }
+        } else {
+            Some(value.as_value_string())
+        }
+    }
+
     for input in inputs {
         if input.id == key {
             if let Some(default) = &input.default {
-                if let DefaultValue::File(file) = default {
-                    if suffix == "format" {
-                        value = file.format.clone();
-                    } else {
-                        value = Some(get_file_property(&file.location, suffix));
-                    }
-                } else {
-                    value = Some(default.as_value_string());
-                }
+                value = evaluate(default, suffix);
             }
         }
     }
 
     if let Some(values) = input_values {
         if values.contains_key(key) {
-            if let DefaultValue::File(file) = &values[key] {
-                if suffix == "format" {
-                    value = file.format.clone();
-                } else {
-                    value = Some(get_file_property(&file.location, suffix));
-                }
-            } else {
-                value = Some(values[key].as_value_string());
-            }
+            value = evaluate(&values[key], suffix);
         }
     }
     value
@@ -282,7 +278,7 @@ requirements:
   InitialWorkDirRequirement:
     listing:
       - entryname: neuer_name.txt
-        entry: "Hello fellow CWL-enjoyers!"
+        entry: tests/test_data/input.txt
 inputs:
   srcfile: File
   newname: string
@@ -354,7 +350,7 @@ outputs:
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
         let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
-        let expected = "Greeting: Hello fellow CWL-enjoyers!";
+        let expected = "Greeting: tests/test_data/input.txt";
 
         assert_eq!(result, expected);
     }
@@ -371,7 +367,7 @@ outputs:
         let inputs = vec![CommandInputParameter::default().with_id("infile").with_type(CWLType::File)];
 
         let result = set_placeholder_values_in_string(text, Some(&values), &runtime, &inputs);
-        let expected = "Greeting: Hello fellow CWL-enjoyers!";
+        let expected = "Greeting: tests/test_data/input.txt";
 
         assert_eq!(result, expected);
     }

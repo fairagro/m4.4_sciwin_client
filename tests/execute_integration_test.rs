@@ -309,7 +309,6 @@ pub fn test_execute_local_workflow_directory_out() {
     let path = PathBuf::from("tests/test_data/mkdir_wf.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
-    let out_path = format!("{}/test_directory", &out_dir);
 
     let args = LocalExecuteArgs {
         runner: Runner::Custom,
@@ -317,6 +316,25 @@ pub fn test_execute_local_workflow_directory_out() {
         is_quiet: true,
         file: path,
         args: vec!["--dirname".to_string(), "test_directory".to_string()],
+    };
+
+    assert!(execute_local(&args).is_ok());
+}
+
+#[test]
+#[serial]
+pub fn test_execute_local_with_binary_input(){
+    let path = PathBuf::from("tests/test_data/read_bin.cwl");
+    let dir = tempdir().unwrap();
+    let out_dir = dir.path().to_string_lossy().into_owned();
+    let out_path = format!("{}/output.txt", &out_dir);
+
+    let args = LocalExecuteArgs {
+        runner: Runner::Custom,
+        out_dir: Some(out_dir),
+        is_quiet: true,
+        file: path,
+        args: vec![], //file has default
     };
 
     assert!(execute_local(&args).is_ok());
