@@ -1,4 +1,5 @@
 <a name="top"></a>
+<img src=".github/logo.svg" alt="icon" height=100 /> 
 # SciWIn Client - Scientific Workflow Infrastructure<!-- omit from toc -->
 
 ![Rust][rust-image] 
@@ -26,7 +27,7 @@
   - [Creation of CWL Workflows](#creation-of-cwl-workflows)
   - [Execution of CWL Files](#execution-of-cwl-files)
 - [🪂 Contributors](#-contributors)
-- [⚖️ License](#%EF%B8%8F-license)
+- [⚖️ License](#️-license)
 
 
 ## 🚀 About
