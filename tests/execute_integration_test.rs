@@ -338,5 +338,7 @@ pub fn test_execute_local_with_binary_input(){
     };
 
     assert!(execute_local(&args).is_ok());
-    assert!(fs::exists(out_path).unwrap());
+    assert!(fs::exists(&out_path).unwrap());
+    let contents = fs::read_to_string(&out_path).unwrap();
+    assert_eq!(contents, "69420".to_string());
 }
