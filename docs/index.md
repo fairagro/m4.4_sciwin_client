@@ -4,6 +4,8 @@ hide:
   - toc
 ---
 <div class="hero" markdown>
+<img src="assets/logo.svg" alt="logo" width="600"/> 
+
 # SciWin Client User Documentation { .title }
 
 Scientific Workflows made easy!
