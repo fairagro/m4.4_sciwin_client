@@ -293,8 +293,8 @@ Using the pipe operator `|` is a common usecase when using the commandline. Let'
     ```
 
 
-## Pulling `docker` containers
-For full reproducibility it is recommended to use `docker` containers as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
+## Pulling containers
+For full reproducibility it is recommended to use containers e.g. `docker` as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
 
 === ":octicons-terminal-16: Command"
     ```
@@ -592,8 +592,8 @@ For full reproducibility it is recommended to use `docker` containers as require
 
 When the tool is executed by a runner supporting containerization e.g. `cwltool` it is using the `pandas/pandas:pip-all` container to run the script in a reproducible environment.
 
-## Building custom `docker` containers
-Using a complex research environments a custom docker container is may needed. The same example from above will be executed in a container built from a `Dockerfile`.
+## Building custom containers
+Using a complex research environments a custom container is may needed. The same example from above will be executed in a container built from a `Dockerfile`.
 This can be achieved by using the `-c` argument with a path to a `Dockerfile`. A tag can be specified by using `-t`.
 
 === ":octicons-terminal-16: Command"
