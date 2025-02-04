@@ -1,5 +1,8 @@
 <a name="top"></a>
-<img src=".github/logo.svg" alt="icon" height=100 /> 
+<p align="center">
+  <img src=".github/logo.svg" alt="icon" height="100"/> 
+</p>
+
 # SciWIn Client - Scientific Workflow Infrastructure<!-- omit from toc -->
 
 ![Rust][rust-image] 
