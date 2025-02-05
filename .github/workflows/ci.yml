@@ -34,6 +34,9 @@ jobs:
       pull-requests: write
       actions: read
     uses: ./.github/workflows/tarpaulin.yml    
+  conformance:
+    name: 🦆 CWL Conformance Tests
+    uses: ./.github/workflows/cwl.yml
   nightly:
     needs: [build, rust_checks, coverage] # make nightly only if everything is ok!
     name: 🕶️ Nightly Release
