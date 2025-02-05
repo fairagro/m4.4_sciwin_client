@@ -7,6 +7,9 @@ on:
       - '**'
       - '!docs/**'
       - '!mkdocs.yml'
+      - '!**/*.md'
+      - '!LICENSE-*'
+
   pull_request:
     branches: ["main"]
 
