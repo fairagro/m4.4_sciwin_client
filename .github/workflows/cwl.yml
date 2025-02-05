@@ -6,6 +6,9 @@ jobs:
   run_tests:
     name: 👀 Run Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - uses: actions/checkout@v4
