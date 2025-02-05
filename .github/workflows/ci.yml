@@ -35,7 +35,10 @@ jobs:
       actions: read
     uses: ./.github/workflows/tarpaulin.yml    
   conformance:
-    name: 🦆 CWL Conformance Tests
+    name: 🦆 CWL Conformance Tests    
+    permissions:
+      contents: read
+      actions: read
     #needs: build
     uses: ./.github/workflows/cwl.yml
   nightly:
