@@ -1,4 +1,4 @@
-use crate::{io::get_filename_without_extension, split_vec_at};
+use crate::{io::get_filename_without_extension, split_vec_at, cwl::resolve_filename};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -8,10 +8,66 @@ use cwl::{
 };
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::{Path, MAIN_SEPARATOR}, env, io::Write, fs};
+use serde::{Serialize, Deserialize}; 
+use std::error::Error;
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FileEntry {
+    class: String,
+    path: String,
+}
+
+pub fn create_input_yml(inputs: &[&str], command: &str) -> Result<String, Box<dyn Error>> {
+    let mut yaml_data: HashMap<String, FileEntry> = HashMap::new();
+
+    // Generate a base filename
+    let base_name = get_filename_without_extension(command).unwrap_or_else(|| "command".to_string());
+    let yaml_name = resolve_filename(&base_name);
+    let yaml_filename = match yaml_name.rsplit_once('.') {
+        Some((base, _)) => format!("{}_inputs.yml", base),
+        None => format!("{}_inputs.yml", yaml_name),
+    };
+
+    // Construct full path in the current directory
+    let yaml_path = env::current_dir()?.join(&yaml_filename);
+
+    // Populate YAML data
+    for input in inputs {
+        let key = input.replace('.', "_"); 
+        let file_type = guess_type(input);
+        let type_str = match file_type {
+            CWLType::File => "File",
+            CWLType::Directory => "Directory",
+            CWLType::Float => "Float",
+            CWLType::Int => "Int",
+            CWLType::Boolean => "Boolean",
+            CWLType::Null => "Null",
+            _ => "String",
+        };
+
+        yaml_data.insert(
+            key,
+            FileEntry {
+                class: type_str.to_string(),
+                path: format!("..{}..{}{}", MAIN_SEPARATOR, MAIN_SEPARATOR, input),
+            },
+        );
+       
+    }
+
+    // Convert to YAML
+    let yaml_string = serde_yaml::to_string(&yaml_data)?;
+
+    // Write to file safely
+    let mut file = fs::File::create(&yaml_path)?;
+    file.write_all(yaml_string.as_bytes())?;
+
+    Ok(yaml_path.display().to_string())
+}
 
 pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> CommandLineTool {
     let base_command = get_base_command(&commands);
@@ -24,18 +80,29 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if let Some(inputs) = &inputs {
+        let test_in = InitialWorkDirRequirement::from_files(inputs, commands[1]);
+        tool = tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(test_in)]);
+        let input_parameters: Vec<CommandInputParameter> = inputs
+        .iter()
+        .map(|current| {
+            CommandInputParameter::default()
+                .with_id(&current.replace(".", "_")) 
+                .with_type(guess_type(current)) 
+        })
+        .collect();
+        tool = tool.with_inputs(input_parameters);
+
         let mut updated_inputs = inputs.clone();
         if !updated_inputs.contains(&commands[1]) {
             updated_inputs.push(commands[1]);
         }
-
         let initial_dir_req = InitialWorkDirRequirement::from_files(&updated_inputs, commands[1]);
         let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
         let base_command_updated = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
 
-        return tool
-            .with_base_command(base_command_updated)
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(initial_dir_req)]);
+        tool = tool
+            .with_base_command(base_command_updated);
+        return tool; 
     } else if !remainder.is_empty() {
         let (cmd, piped) = split_vec_at(remainder, "|");
 

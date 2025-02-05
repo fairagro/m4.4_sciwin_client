@@ -102,7 +102,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     File::create(workflows_dir.join(".gitkeep"))?;
 
     if !silent {
-        info!("📂 s4n project initialisation sucessfully:");
+        info!("📂 s4n project initialisation successfully:");
         info!("{} (Base)", base_dir.display());
         info!("  ├── workflows");
     }
@@ -137,7 +137,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
 
-    info!("📂 s4n project initialisation sucessfully:");
+    info!("📂 s4n project initialisation successfully:");
     info!("{} (Base)", base_dir.display());
     info!("  ├── assays");
     info!("  ├── studies");
