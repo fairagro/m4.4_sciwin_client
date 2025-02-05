@@ -8,6 +8,7 @@
 ![Rust][rust-image] 
 [![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
 ![GitHub License](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-green)
+[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
 [![GitHub Downloads](https://img.shields.io/github/downloads/fairagro/m4.4_sciwin_client/total)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
 
 
@@ -61,8 +62,11 @@ cargo test
 ```
 
 ## 🐱‍👤 Installation
-> [!IMPORTANT]
-> Installation instructions are available once a release is created. You can check out our [nightly builds](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml).
+Installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
+
+[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
+
+The easiest way is to use the `shell` or `powershell` scripts with the provided commands.
 
 ## 📚 How to Use
 Take a look at the **[User documentation](https://fairagro.github.io/m4.4_sciwin_client/)**. An overview on how to use SciWIn Client is available below.
