@@ -4,7 +4,7 @@ on:
 
 jobs:
   run_tests:
-    name: 🦆 Run CWL Conformance Tests
+    name: 👀 Run Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -26,13 +26,11 @@ jobs:
           echo '#!/bin/bash
           s4n execute local "$@"' > s4n_wrapper.sh
           chmod +x s4n_wrapper.sh
-      - name: Create Test Environment
+      - name: Run Tests
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           pip install cwltest
-      - name: Run Tests
-        run: |
           export PATH=$PATH:$(pwd):$(pwd)/target/release
           cd cwl-v1.2
           cwltest --tool s4n_wrapper.sh --test conformance_tests.yaml --badgedir badges
