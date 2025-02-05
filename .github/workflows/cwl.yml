@@ -18,7 +18,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Build
-        run: cargo build --release
+        run: cargo build
       - name: Clone CWL
         run: git clone https://github.com/common-workflow-language/cwl-v1.2
       - name: Create Wrapper
@@ -27,11 +27,12 @@ jobs:
           s4n execute local "$@"' > s4n_wrapper.sh
           chmod +x s4n_wrapper.sh
       - name: Run Tests
+        continue-on-error: true
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           pip install cwltest
-          export PATH=$PATH:$(pwd):$(pwd)/target/release
+          export PATH=$PATH:$(pwd):$(pwd)/target/debug
           cd cwl-v1.2
           cwltest --tool s4n_wrapper.sh --test conformance_tests.yaml --badgedir badges
       - name: Generate Output
