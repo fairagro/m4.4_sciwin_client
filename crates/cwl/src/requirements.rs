@@ -179,6 +179,6 @@ mod tests {
             &vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"],
             "../../tests/test_data/echo.py", 
         );
-        assert_eq!(req.listing.len(), 2);
+        assert_eq!(req.listing.len(), 3);
     }
 }
