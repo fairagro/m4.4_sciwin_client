@@ -23,8 +23,15 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --verbose --release
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run tests
