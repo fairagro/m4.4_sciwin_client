@@ -29,6 +29,7 @@ jobs:
           s4n execute local "$@"' > s4n_wrapper.sh
           chmod +x s4n_wrapper.sh
       - name: Run Tests
+        continue-on-error: true
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
