@@ -36,6 +36,9 @@ jobs:
           export PATH=$PATH:$(pwd):$(pwd)/target/debug
           cd cwl-v1.2
           cwltest --tool s4n_wrapper.sh --test conformance_tests.yaml --badgedir badges
+      - name: Generate Summary
+        run: |
+          ls
           ls badges
           TABLE="| Subject        | Status | Badge                                      |"
           TABLE="$TABLE\n|----------------|--------|--------------------------------------------|"
