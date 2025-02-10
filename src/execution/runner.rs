@@ -252,7 +252,6 @@ pub fn run_commandlinetool(
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, input_values)?;
-    println!("{command:?}");
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
     let output = command.output()?;
