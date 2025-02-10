@@ -1,4 +1,4 @@
-use crate::{io::get_filename_without_extension, split_vec_at, cwl::resolve_filename};
+use crate::{cwl::resolve_filename, io::get_filename_without_extension, split_vec_at};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -6,11 +6,16 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
+use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{collections::HashMap, path::{Path, MAIN_SEPARATOR}, env, io::Write, fs};
-use serde::{Serialize, Deserialize}; 
 use std::error::Error;
+use std::{
+    collections::HashMap,
+    env, fs,
+    io::Write,
+    path::{Path, MAIN_SEPARATOR},
+};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -37,7 +42,7 @@ pub fn create_input_yml(inputs: &[&str], command: &str) -> Result<String, Box<dy
 
     // Populate YAML data
     for input in inputs {
-        let key = input.replace('.', "_"); 
+        let key = input.replace('.', "_");
         let file_type = guess_type(input);
         let type_str = match file_type {
             CWLType::File => "File",
@@ -56,7 +61,6 @@ pub fn create_input_yml(inputs: &[&str], command: &str) -> Result<String, Box<dy
                 path: format!("..{}..{}{}", MAIN_SEPARATOR, MAIN_SEPARATOR, input),
             },
         );
-       
     }
 
     // Convert to YAML
@@ -83,13 +87,13 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
         let test_in = InitialWorkDirRequirement::from_files(inputs, commands[1]);
         tool = tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(test_in)]);
         let input_parameters: Vec<CommandInputParameter> = inputs
-        .iter()
-        .map(|current| {
-            CommandInputParameter::default()
-                .with_id(&current.replace(".", "_")) 
-                .with_type(guess_type(current)) 
-        })
-        .collect();
+            .iter()
+            .map(|current| {
+                CommandInputParameter::default()
+                    .with_id(&current.replace(".", "_"))
+                    .with_type(guess_type(current))
+            })
+            .collect();
         tool = tool.with_inputs(input_parameters);
 
         let mut updated_inputs = inputs.clone();
@@ -100,9 +104,8 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
         let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
         let base_command_updated = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
 
-        tool = tool
-            .with_base_command(base_command_updated);
-        return tool; 
+        tool = tool.with_base_command(base_command_updated);
+        return tool;
     } else if !remainder.is_empty() {
         let (cmd, piped) = split_vec_at(remainder, "|");
 
@@ -212,11 +215,8 @@ pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
 
 fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
-    let default_value = match cwl_type {
-        CWLType::File => DefaultValue::File(File::from_location(&current.to_string())),
-        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&current.to_string())),
-        _ => DefaultValue::Any(serde_yaml::from_str(current).unwrap()),
-    };
+    let default_value = parse_default_value(current, &cwl_type);
+
     CommandInputParameter::default()
         .with_id(slugify!(&current, separator = "_").as_str())
         .with_type(guess_type(current))
@@ -236,17 +236,22 @@ fn get_flag(current: &str) -> CommandInputParameter {
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     let cwl_type = guess_type(next);
-    let default_value = match cwl_type {
-        CWLType::File => DefaultValue::File(File::from_location(&next.to_string())),
-        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&next.to_string())),
-        _ => DefaultValue::Any(serde_yaml::from_str(next).unwrap()),
-    };
+    let default_value = parse_default_value(next, &cwl_type);
 
     CommandInputParameter::default()
         .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
         .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
+}
+
+fn parse_default_value(value: &str, cwl_type: &CWLType) -> DefaultValue {
+    match cwl_type {
+        CWLType::File => DefaultValue::File(File::from_location(&value.to_string())),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&value.to_string())),
+        CWLType::String => DefaultValue::Any(Value::String(value.to_string())),
+        _ => DefaultValue::Any(serde_yaml::from_str(value).unwrap()),
+    }
 }
 
 fn handle_redirection(remaining_args: &[&str]) -> Option<String> {
@@ -378,6 +383,7 @@ pub fn guess_type(value: &str) -> CWLType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_yaml::Number;
     //test private cwl api here
     #[test]
     pub fn test_get_base_command() {
@@ -435,5 +441,32 @@ mod tests {
         let result = get_inputs(&inputs_slice);
 
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    pub fn test_get_default_value_number() {
+        let commandline_args = "-v 42";
+        let expected = CommandInputParameter::default()
+            .with_id("v")
+            .with_type(CWLType::Int)
+            .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+            .with_default_value(DefaultValue::Any(Value::Number(Number::from(42))));
+
+        let args = shlex::split(commandline_args).unwrap();
+        let result = get_inputs(&args.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
+
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    pub fn test_get_default_value_json_str() {
+        let arg = "{\"message\": \"Hello World\"}";
+        let expected = CommandInputParameter::default()
+            .with_id("message_hello_world")
+            .with_type(CWLType::String)
+            .with_binding(CommandLineBinding::default().with_position(0))
+            .with_default_value(DefaultValue::Any(Value::String(arg.to_string())));
+        let result = get_inputs(&[arg]);
+        assert_eq!(result[0], expected);
     }
 }

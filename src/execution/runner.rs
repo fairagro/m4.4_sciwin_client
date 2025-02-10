@@ -252,7 +252,7 @@ pub fn run_commandlinetool(
 
 pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, input_values)?;
-
+    println!("{command:?}");
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
     let output = command.output()?;
@@ -340,7 +340,7 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
         if let Some(ref binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
-            binding.value_from = Some(evaluate_input_as_string(input, &input_values)?);
+            binding.value_from = Some(evaluate_input_as_string(input, &input_values)?.replace("'", ""));
             bindings.push((position, i + index, binding))
         }
     }
