@@ -4,11 +4,11 @@ on:
   push:
     branches: ["main"]
     paths:
-      - '**'
-      - '!docs/**'
-      - '!mkdocs.yml'
-      - '!**/*.md'
-      - '!LICENSE-*'
+      - "**"
+      - "!docs/**"
+      - "!mkdocs.yml"
+      - "!**/*.md"
+      - "!LICENSE-*"
 
   pull_request:
     branches: ["main"]
@@ -25,23 +25,23 @@ jobs:
       actions: read
     uses: ./.github/workflows/clippy.yml
   build:
-    name: 🏗️ Build and Test    
-    uses: ./.github/workflows/build.yml    
+    name: 🏗️ Build and Test
+    uses: ./.github/workflows/build.yml
   coverage:
     name: 🦺 Coverage
     permissions:
       contents: read
       pull-requests: write
       actions: read
-    uses: ./.github/workflows/tarpaulin.yml    
-  conformance:
-    name: 🦆 CWL Conformance Tests    
-    permissions:
-      contents: read
-      actions: read
-    #needs: build
-    uses: ./.github/workflows/cwl.yml
+    uses: ./.github/workflows/tarpaulin.yml
   nightly:
     needs: [build, rust_checks, coverage] # make nightly only if everything is ok!
     name: 🕶️ Nightly Release
     uses: ./.github/workflows/nightly.yml
+  conformance:
+    name: 🦆 CWL Conformance Tests
+    permissions:
+      contents: read
+      actions: read
+    needs: nightly
+    uses: ./.github/workflows/cwl.yml
