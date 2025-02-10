@@ -39,12 +39,10 @@ jobs:
           cwltest --tool s4n_wrapper.sh --test conformance_tests.yaml --badgedir badges
       - name: Generate Summary
         run: |
-          ls
-          ls badges
           TABLE="| Subject        | Status | Badge                                      |"
           TABLE="$TABLE\n|----------------|--------|--------------------------------------------|"
 
-          for file in badges/*.json; do
+          for file in cwl-v1.2/badges/*.json; do
                   SUBJECT=$(jq -r '.subject' $file)
                   STATUS=$(jq -r '.status' $file)
                   COLOR=$(jq -r '.color' $file)
