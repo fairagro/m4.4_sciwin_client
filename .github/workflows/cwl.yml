@@ -44,9 +44,9 @@ jobs:
 
           for file in cwl-v1.2/badges/*.json; do
                   SUBJECT=$(jq -r '.subject' $file)
-                  STATUS=$(jq -r '.status' $file)25
+                  STATUS=$(jq -r '.status' $file)
                   COLOR=$(jq -r '.color' $file)
-                  BADGE_URL="https://img.shields.io/badge/$SUBJECT-$STATUS-$COLOR"
+                  BADGE_URL="https://img.shields.io/badge/$SUBJECT-${STATUS}25-$COLOR"
                   TABLE="$TABLE\n| $SUBJECT       | $STATUS | ![$SUBJECT]( $BADGE_URL )                  |"
           done
 
