@@ -10,17 +10,13 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Cache Cargo
-        uses: actions/cache@v3
+      - name: Fetch artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Build
-        run: cargo build
+          pattern: s4n-**-linux-x64
+      - name: Install s4n
+        run: |
+          chmod +x artifacts/s4n-*-linux-x64
       - name: Clone CWL
         run: git clone https://github.com/common-workflow-language/cwl-v1.2
       - name: Create Wrapper
@@ -34,7 +30,7 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           pip install cwltest
-          export PATH=$PATH:$(pwd):$(pwd)/target/debug
+          export PATH=$PATH:$(pwd)
           cd cwl-v1.2
           cwltest --tool s4n_wrapper.sh --test conformance_tests.yaml --badgedir badges
       - name: Generate Summary
