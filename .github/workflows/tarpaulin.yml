@@ -19,6 +19,8 @@ jobs:
             ~/.cargo
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install Tarpaulin 📈
         run: cargo install cargo-tarpaulin
