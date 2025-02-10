@@ -13,7 +13,8 @@ jobs:
       - name: Fetch artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: s4n-**-linux-x64        
+          pattern: s4n-**-linux-x64
+          path: .     
       - name: Clone CWL
         run: git clone https://github.com/common-workflow-language/cwl-v1.2
       - name: Create Wrapper
