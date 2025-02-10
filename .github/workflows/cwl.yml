@@ -47,5 +47,6 @@ jobs:
                   BADGE_URL="https://img.shields.io/badge/$SUBJECT-$STATUS-$COLOR"
                   TABLE="$TABLE\n| $SUBJECT       | $STATUS | ![$SUBJECT]( $BADGE_URL )                  |"
           done
-
-          echo -e "$TABLE" >> $GITHUB_STEP_SUMMARY
+          
+          echo "$TABLE" 
+          echo "$TABLE" >> $GITHUB_STEP_SUMMARY
