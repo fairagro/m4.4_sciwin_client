@@ -31,7 +31,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Build
-        run: cargo build --verbose --release
+        run: cargo build --verbose
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run tests
