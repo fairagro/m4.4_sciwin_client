@@ -19,6 +19,7 @@ jobs:
         run: git clone https://github.com/common-workflow-language/cwl-v1.2
       - name: Create Wrapper
         run: |
+          ls
           echo '#!/bin/bash
           s4n execute local "$@"' > s4n_wrapper.sh
           chmod +x s4n
