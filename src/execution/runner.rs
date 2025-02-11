@@ -102,6 +102,13 @@ pub fn run_workflow(
 
             let preprocessed_file = preprocess_cwl(&file, &path);
             let mut tool: CommandLineTool = serde_yaml::from_str(&preprocessed_file)?;
+
+            if tool.class != "CommandLineTool" {
+                Err(CommandError {
+                    exit_code: 33,
+                    message: format!("CWL Document of class {:?} is not supported, expected 'CommandLineTool'", tool.class),
+                })?
+            }
             let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path), Some(tmp_path.clone()))?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
@@ -135,7 +142,7 @@ pub fn run_workflow(
                     dir.location = format!("file://{}", new_loc);
                     OutputItem::OutputDirectory(dir)
                 }
-                OutputItem::OutputString(str) => OutputItem::OutputString(str.to_string()),
+                OutputItem::Any(str) => OutputItem::Any(str.clone()),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
@@ -153,7 +160,7 @@ pub fn run_workflow(
                     )
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
-                DefaultValue::Any(_) => OutputItem::OutputString(result.as_value_string()),
+                DefaultValue::Any(inner) => OutputItem::Any(inner.clone()),
             };
             output_values.insert(&output.id, value);
         }

@@ -97,7 +97,7 @@ pub fn evaluate_outputs(
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
                 let contents = fs::read_to_string(&binding.glob)?;
-                outputs.insert(output.id.clone(), OutputItem::OutputString(contents));
+                outputs.insert(output.id.clone(), OutputItem::Any(Value::String(contents)));
             }
         }
     }
