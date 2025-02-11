@@ -81,7 +81,8 @@ impl<'de> Deserialize<'de> for CWLType {
 impl Serialize for CWLType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         let s = serialize_type(self);
         serializer.serialize_str(&s)
     }
@@ -108,10 +109,31 @@ impl DefaultValue {
     }
 
     pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
-        matches!(
-            (self, cwl_type),
-            (DefaultValue::File(_), CWLType::File) | (DefaultValue::Directory(_), CWLType::Directory) | (DefaultValue::Any(_), _)
-        )
+        match (self, cwl_type) {
+            (_, CWLType::Any) => true,
+            (DefaultValue::File(_), CWLType::File) => true,
+            (DefaultValue::Directory(_), CWLType::Directory) => true,
+            (DefaultValue::Any(Value::Null), CWLType::Optional(_)) => true,
+            (_, CWLType::Optional(inner)) => self.has_matching_type(&inner),
+            (DefaultValue::Any(inner), cwl_type) => match inner {
+                Value::Bool(_) => matches!(cwl_type, CWLType::Boolean),
+                Value::Number(num) => {
+                    if num.is_i64() {
+                        matches!(cwl_type, CWLType::Int | CWLType::Long)
+                    } else if num.is_f64() {
+                        matches!(cwl_type, CWLType::Float | CWLType::Double)
+                    } else {
+                        false
+                    }
+                }
+                Value::String(_) => matches!(cwl_type, CWLType::String),
+                Value::Sequence(_) => matches!(cwl_type, CWLType::Array(_)),
+                Value::Mapping(_) => false,
+                Value::Null => matches!(cwl_type, CWLType::Null),
+                _ => false,
+            },
+            _ => false,
+        }
     }
 }
 
@@ -369,5 +391,47 @@ mod tests {
     pub fn test_serialize_array_type() {
         let t = CWLType::Array(Box::new(CWLType::String));
         assert_eq!(&serialize_type(&t), "string[]");
+    }
+
+    #[test]
+    pub fn test_matching_types() {
+        let default_value_null = DefaultValue::Any(Value::Null);
+        let default_value_bool = DefaultValue::Any(Value::Bool(true));
+        let default_value_int = DefaultValue::Any(Value::Number(42.into()));
+        let default_value_float = DefaultValue::Any(Value::Number(42.5.into()));
+        let default_value_string = DefaultValue::Any(Value::String("Hello".to_string()));
+        let default_value_array = DefaultValue::Any(Value::Sequence(vec![
+            Value::String("Hello".to_string()),
+            Value::String("World".to_string()),
+        ]));
+
+        //basic matching
+        assert!(default_value_bool.has_matching_type(&CWLType::Boolean)); // true matches boolean
+        assert!(default_value_int.has_matching_type(&CWLType::Int)); //42 matches int
+        assert!(default_value_int.has_matching_type(&CWLType::Long)); //42 matches long
+        assert!(default_value_float.has_matching_type(&CWLType::Float)); //42.4 matches float
+        assert!(default_value_float.has_matching_type(&CWLType::Double)); //42.5 matches float
+        assert!(default_value_string.has_matching_type(&CWLType::String)); // "Hello" is a string
+        assert!(!default_value_string.has_matching_type(&CWLType::Int)); // "Hello" is a string
+
+        //optional matching
+        assert!(default_value_bool.has_matching_type(&CWLType::Optional(Box::new(CWLType::Boolean)))); // true matches boolean
+        assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Int)))); //42 matches int
+        assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Long)))); //42 matches long
+        assert!(default_value_float.has_matching_type(&CWLType::Optional(Box::new(CWLType::Float)))); //42.4 matches float
+        assert!(default_value_float.has_matching_type(&CWLType::Optional(Box::new(CWLType::Double)))); //42.5 matches float
+        assert!(default_value_string.has_matching_type(&CWLType::Optional(Box::new(CWLType::String)))); // "Hello" is a string#
+        assert!(!default_value_string.has_matching_type(&CWLType::Optional(Box::new(CWLType::Int)))); // "Hello" is not int
+
+        //array matching
+        assert!(default_value_array.has_matching_type(&CWLType::Array(Box::new(CWLType::String)))); // array of string is detected
+        assert!(!default_value_array.has_matching_type(&CWLType::Optional(Box::new(CWLType::String)))); // is not optional
+        assert!(!default_value_array.has_matching_type(&CWLType::String)); // is not a string!
+        assert!(default_value_array.has_matching_type(&CWLType::Any)); //any type workd
+
+        //null matching
+        assert!(default_value_null.has_matching_type(&CWLType::Null)); //null matches Null
+        assert!(default_value_null.has_matching_type(&CWLType::Optional(Box::new(CWLType::String))));
+        //null is valid for optional
     }
 }
