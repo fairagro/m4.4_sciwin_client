@@ -1,4 +1,5 @@
 use crate::{
+    error::CommandError,
     execution::{
         runner::{run_commandlinetool, run_workflow},
         util::preprocess_cwl,
@@ -165,15 +166,20 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             let preprocessed_contents = preprocess_cwl(&contents, &args.file);
 
             let cwl_yaml: Value = serde_yaml::from_str(&preprocessed_contents).map_err(|e| format!("Could not load YAML: {}", e))?;
-            let class = cwl_yaml.get("class").expect("Could not get class");
+            let class = cwl_yaml.get("class").expect("Could not get class").as_str().unwrap();
             let is_workflow = class == "Workflow";
-
-            if !is_workflow {
+            let is_tool = class == "CommandLineTool";
+            if is_tool {
                 let mut tool: CommandLineTool = serde_yaml::from_value(cwl_yaml).map_err(|e| format!("Could not load CommandLineTool: {}", e))?;
                 run_commandlinetool(&mut tool, inputs, Some(&args.file), args.out_dir.clone())?;
-            } else {
+            } else if is_workflow {
                 let mut workflow: Workflow = serde_yaml::from_value(cwl_yaml).map_err(|e| format!("Could not load Workflow: {}", e))?;
                 run_workflow(&mut workflow, inputs, Some(&args.file), args.out_dir.clone())?;
+            } else {
+                Err(CommandError {
+                    exit_code: 33,
+                    message: format!("CWL Document of class {class:?} is not supported"),
+                })?
             }
 
             Ok(())

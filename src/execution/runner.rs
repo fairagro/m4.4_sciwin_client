@@ -230,7 +230,7 @@ pub fn run_commandlinetool(
 
     //run the tool command)
     run_command(tool, input_values).map_err(|e| CommandError {
-        message: format!("❌ Error in Tool execution: {}", e),
+        message: format!("Error in Tool execution: {}", e),
         exit_code: tool.get_error_code(),
     })?;
     //reset required environment variables
