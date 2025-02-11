@@ -103,9 +103,11 @@ fn execute_cwl_local(
 
     let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
     let yaml = create_input_yml(&input_refs, &path)?;
+    let yaml_str = path.replace(".cwl", "_inputs.yml");
 
     if !args.no_commit && !args.is_raw {
         stage_file(repo, path.as_str())?;
+        stage_file(repo, &yaml_str)?;
         commit(repo, &format!("Execution of `{}`", args.command.join(" ")))?;
     }
 
@@ -207,11 +209,26 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
         if !args.no_commit {
             for file in &files {
-                //could be cleaned before
-                if Path::new(file).exists() {
-                    stage_file(&repo, file.as_str()).unwrap();
+                let path = Path::new(file);
+                if path.exists() {
+                    //in case new dir was created
+                    if path.is_dir() {
+                        let paths = std::fs::read_dir(path).unwrap();
+                        for entry in paths {
+                            let entry = entry.unwrap();
+                            let file_path = entry.path();
+                            if file_path.is_file() {
+                                if let Err(e) = stage_file(&repo, file_path.to_str().unwrap()) {
+                                    eprintln!("Error staging file '{}': {}", file_path.display(), e);
+                                }
+                            }
+                        }
+                    } else {
+                        stage_file(&repo, file.as_str()).unwrap();
+                    }
                 }
             }
+            commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
         }
         // Add outputs if not specified
         if outputs.is_empty() {
@@ -221,8 +238,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         warn!("User requested no run, could not determine outputs!");
     }
     //if inputs.is_empty() && outputs.is_empty() {
-        post_process_cwl(&mut cwl);
-   // }
+    post_process_cwl(&mut cwl);
+    // }
     if !args.is_raw {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         let mut yaml = cwl.save(&path);
@@ -239,7 +256,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 Err(e) => return Err(Box::new(e)),
             }
         }
-        
+
         if !inputs.is_empty() {
             let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
             let _input_yaml = create_input_yml(&input_refs, &path)?;

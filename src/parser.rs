@@ -86,16 +86,6 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
     if let Some(inputs) = &inputs {
         let test_in = InitialWorkDirRequirement::from_files(inputs, commands[1]);
         tool = tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(test_in)]);
-        let input_parameters: Vec<CommandInputParameter> = inputs
-            .iter()
-            .map(|current| {
-                CommandInputParameter::default()
-                    .with_id(&current.replace(".", "_"))
-                    .with_type(guess_type(current))
-            })
-            .collect();
-        tool = tool.with_inputs(input_parameters);
-
         let mut updated_inputs = inputs.clone();
         if !updated_inputs.contains(&commands[1]) {
             updated_inputs.push(commands[1]);
@@ -103,6 +93,17 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
         let initial_dir_req = InitialWorkDirRequirement::from_files(&updated_inputs, commands[1]);
         let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
         let base_command_updated = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
+        let inputs_cmd = get_inputs(&commands[2..]);
+        let mut input_parameters: Vec<CommandInputParameter> = inputs
+            .iter()
+            .map(|current| {
+                CommandInputParameter::default()
+                    .with_id(&current.replace(".", "_"))
+                    .with_type(guess_type(current))
+            })
+            .collect();
+        input_parameters.extend(inputs_cmd);
+        tool = tool.with_inputs(input_parameters);
 
         tool = tool.with_base_command(base_command_updated);
         return tool;
@@ -164,10 +165,23 @@ fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &Initi
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
     files
         .iter()
-        .map(|f| {
+        .enumerate()
+        .map(|(index, f)| {
+            let filename = get_filename_without_extension(f).unwrap_or_else(|| f.to_string());
+            let id = if filename.starts_with('$') {
+                format!("output{}", index)
+            } else {
+                filename
+            };
+            let output_type = if Path::new(f).extension().is_some() && !f.contains("$(runtime.outdir)") {
+                CWLType::File
+            } else {
+                CWLType::Directory
+            };
+
             CommandOutputParameter::default()
-                .with_type(CWLType::File)
-                .with_id(get_filename_without_extension(f).unwrap_or(f.to_string()).as_str())
+                .with_type(output_type)
+                .with_id(&id)
                 .with_binding(CommandOutputBinding { glob: f.clone() })
         })
         .collect()
