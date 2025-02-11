@@ -246,7 +246,7 @@ pub fn run_commandlinetool(
 
     //remove staged files
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
-
+    
     //evaluate output files
     let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
 

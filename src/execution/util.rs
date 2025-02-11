@@ -21,7 +21,10 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
     if let Some(ref values) = input_values {
         if let Some(value) = values.get(&input.id) {
             if !value.has_matching_type(&input.type_) {
-                Err(format!("CWLType '{:?}' is not matching input type. Input was: \n{:#?}", &input.type_, value))?
+                Err(format!(
+                    "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
+                    &input.type_, value
+                ))?
             }
             return Ok(value.clone());
         } else if let Some(default_) = &input.default {
@@ -30,13 +33,13 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
     }
-    
+
     if let CWLType::Optional(_) = input.type_ {
         return Ok(DefaultValue::Any(Value::Null));
     } else {
         Err(format!("You did not include a value for {}", input.id).as_str())?;
     }
-    
+
     Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
 }
 
@@ -50,54 +53,58 @@ pub fn evaluate_outputs(
     //copy back requested output
     let mut outputs: HashMap<String, OutputItem> = HashMap::new();
     for output in tool_outputs {
-        if output.type_ == CWLType::File || output.type_ == CWLType::Stdout || output.type_ == CWLType::Stderr {
-            if let Some(binding) = &output.output_binding {
-                let path = &initial_dir.join(&binding.glob);
-                fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
-                eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
-            } else {
-                let filename = match output.type_ {
-                    CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
-                    CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
-                    _ => {
-                        let mut file_prefix = output.id.clone();
-                        file_prefix += match output.type_ {
-                            CWLType::Stdout => "_stdout",
-                            CWLType::Stderr => "_stderr",
-                            _ => "",
-                        };
-                        &get_first_file_with_prefix(".", &file_prefix).unwrap_or_default()
-                    }
-                };
-                let path = &initial_dir.join(filename);
-                fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
-                eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
-            }
-        } else if output.type_ == CWLType::Directory {
-            if let Some(binding) = &output.output_binding {
-                let dir = if &binding.glob != "." {
-                    &initial_dir.join(&binding.glob)
+        match output.type_ {
+            CWLType::File | CWLType::Stdout | CWLType::Stderr => {
+                if let Some(binding) = &output.output_binding {
+                    let path = &initial_dir.join(&binding.glob);
+                    fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
+                    eprintln!("📜 Wrote output file: {:?}", path);
+                    outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
                 } else {
-                    let working_dir = env::current_dir()?;
-                    let raw_basename = working_dir.file_name().unwrap().to_string_lossy();
-                    let glob_name = if let Some(stripped) = raw_basename.strip_prefix(".") {
-                        stripped.to_owned()
-                    } else {
-                        raw_basename.into_owned()
+                    let filename = match output.type_ {
+                        CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
+                        CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
+                        _ => {
+                            let mut file_prefix = output.id.clone();
+                            file_prefix += match output.type_ {
+                                CWLType::Stdout => "_stdout",
+                                CWLType::Stderr => "_stderr",
+                                _ => "",
+                            };
+                            &get_first_file_with_prefix(".", &file_prefix).unwrap_or_default()
+                        }
                     };
-                    &initial_dir.join(&glob_name)
-                };
-                fs::create_dir_all(dir)?;
-                let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
+                    let path = &initial_dir.join(filename);
+                    fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                    eprintln!("📜 Wrote output file: {:?}", path);
+                    outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
+                }
             }
-        } else if output.type_ == CWLType::String {
-            //string and has binding -> read file
-            if let Some(binding) = &output.output_binding {
-                let contents = fs::read_to_string(&binding.glob)?;
-                outputs.insert(output.id.clone(), OutputItem::Any(Value::String(contents)));
+            CWLType::Directory => {
+                if let Some(binding) = &output.output_binding {
+                    let dir = if &binding.glob != "." {
+                        &initial_dir.join(&binding.glob)
+                    } else {
+                        let working_dir = env::current_dir()?;
+                        let raw_basename = working_dir.file_name().unwrap().to_string_lossy();
+                        let glob_name = if let Some(stripped) = raw_basename.strip_prefix(".") {
+                            stripped.to_owned()
+                        } else {
+                            raw_basename.into_owned()
+                        };
+                        &initial_dir.join(&glob_name)
+                    };
+                    fs::create_dir_all(dir)?;
+                    let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
+                    outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
+                }
+            }
+            _ => {
+                //string and has binding -> read file
+                if let Some(binding) = &output.output_binding {
+                    let contents = fs::read_to_string(&binding.glob)?;
+                    outputs.insert(output.id.clone(), OutputItem::Any(Value::String(contents)));
+                }
             }
         }
     }
