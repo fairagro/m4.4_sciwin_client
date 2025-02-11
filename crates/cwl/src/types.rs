@@ -1,9 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
     #[default]
     Null,
@@ -13,14 +12,79 @@ pub enum CWLType {
     Float,
     Double,
     String,
-    #[serde(rename = "File")]
     File,
-    #[serde(rename = "Directory")]
     Directory,
-    #[serde(rename = "Any")]
     Any,
     Stdout,
     Stderr,
+    Optional(Box<CWLType>),
+    Array(Box<CWLType>),
+}
+
+impl FromStr for CWLType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some(inner) = s.strip_suffix('?') {
+            Ok(CWLType::Optional(Box::new(inner.parse()?)))
+        } else if let Some(inner) = s.strip_suffix("[]") {
+            Ok(CWLType::Array(Box::new(inner.parse()?)))
+        } else {
+            match s {
+                "null" => Ok(CWLType::Null),
+                "boolean" => Ok(CWLType::Boolean),
+                "int" => Ok(CWLType::Int),
+                "long" => Ok(CWLType::Long),
+                "float" => Ok(CWLType::Float),
+                "double" => Ok(CWLType::Double),
+                "string" => Ok(CWLType::String),
+                "File" => Ok(CWLType::File),
+                "Directory" => Ok(CWLType::Directory),
+                "Any" => Ok(CWLType::Any),
+                "stdout" => Ok(CWLType::Stdout),
+                "stderr" => Ok(CWLType::Stderr),
+                _ => Err(format!("Invalid CWLType: {}", s)),
+            }
+        }
+    }
+}
+
+fn serialize_type(t: &CWLType) -> String {
+    match t {
+        CWLType::Optional(inner) => format!("{}?", serialize_type(inner)),
+        CWLType::Array(inner) => format!("{}[]", serialize_type(inner)),
+        CWLType::Null => "null".to_string(),
+        CWLType::Boolean => "boolean".to_string(),
+        CWLType::Int => "int".to_string(),
+        CWLType::Long => "long".to_string(),
+        CWLType::Float => "float".to_string(),
+        CWLType::Double => "double".to_string(),
+        CWLType::String => "string".to_string(),
+        CWLType::File => "File".to_string(),
+        CWLType::Directory => "Directory".to_string(),
+        CWLType::Any => "Any".to_string(),
+        CWLType::Stdout => "stdout".to_string(),
+        CWLType::Stderr => "stderr".to_string(),
+    }
+}
+
+impl<'de> Deserialize<'de> for CWLType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for CWLType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        let s = serialize_type(self);
+        serializer.serialize_str(&s)
+    }
 }
 
 #[derive(Serialize, Debug, PartialEq, Clone)]
@@ -258,5 +322,52 @@ impl OutputItem {
             OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
             OutputItem::OutputString(output_string) => DefaultValue::Any(Value::String(output_string.to_string())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::inputs::CommandInputParameter;
+
+    #[test]
+    pub fn test_deserialize_nullable_type() {
+        let yaml = r"
+- str:
+  type: string?
+- number:
+  type: int?
+- boolean:
+  type: boolean
+";
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Optional(Box::new(CWLType::String)));
+        assert_eq!(inputs[1].type_, CWLType::Optional(Box::new(CWLType::Int)));
+        assert_eq!(inputs[2].type_, CWLType::Boolean);
+    }
+
+    #[test]
+    pub fn test_deserialize_array_type() {
+        let yaml = r"
+- str:
+  type: string[]
+- number:
+  type: int[]
+";
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Array(Box::new(CWLType::String)));
+        assert_eq!(inputs[1].type_, CWLType::Array(Box::new(CWLType::Int)));
+    }
+
+    #[test]
+    pub fn test_serialize_nullable_type() {
+        let t = CWLType::Optional(Box::new(CWLType::String));
+        assert_eq!(&serialize_type(&t), "string?");
+    }
+
+    #[test]
+    pub fn test_serialize_array_type() {
+        let t = CWLType::Array(Box::new(CWLType::String));
+        assert_eq!(&serialize_type(&t), "string[]");
     }
 }
