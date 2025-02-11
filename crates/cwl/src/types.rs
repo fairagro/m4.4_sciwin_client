@@ -114,7 +114,7 @@ impl DefaultValue {
             (DefaultValue::File(_), CWLType::File) => true,
             (DefaultValue::Directory(_), CWLType::Directory) => true,
             (DefaultValue::Any(Value::Null), CWLType::Optional(_)) => true,
-            (_, CWLType::Optional(inner)) => self.has_matching_type(&inner),
+            (_, CWLType::Optional(inner)) => self.has_matching_type(inner),
             (DefaultValue::Any(inner), cwl_type) => match inner {
                 Value::Bool(_) => matches!(cwl_type, CWLType::Boolean),
                 Value::Number(num) => {
