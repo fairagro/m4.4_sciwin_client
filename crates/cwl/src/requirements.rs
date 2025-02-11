@@ -14,6 +14,7 @@ pub enum Requirement {
     //as dummys, not used at this point
     SoftwareRequirement,
     NetworkAccess,
+    SchemaDefRequirement,
     ScatterFeatureRequirement,
     InlineJavascriptRequirement,
     MultipleInputFeatureRequirement,
