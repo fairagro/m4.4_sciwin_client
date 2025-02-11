@@ -93,7 +93,7 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
-    Any(serde_yaml::Value),
+    Any(serde_yaml::Value)
 }
 
 impl DefaultValue {

@@ -14,6 +14,7 @@ pub enum Requirement {
     //as dummys, not used at this point
     SoftwareRequirement,
     NetworkAccess,
+    ScatterFeatureRequirement,
     InlineJavascriptRequirement,
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
@@ -68,7 +69,7 @@ where
 
 fn get_entry_name(input: &str) -> String {
     // Read the content of the script file
-    let mut i2 = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_"); 
+    let mut i2 = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_");
     i2 = format!("$(inputs.{})", i2).to_string();
     i2
 }
@@ -91,21 +92,16 @@ impl InitialWorkDirRequirement {
     pub fn from_files(filenames: &Vec<&str>, script_name: &str) -> Self {
         InitialWorkDirRequirement {
             listing: filenames
-            .iter()
-            .map(|&filename| Listing {
-            entryname: filename.to_string(),
-            entry: Entry::Source(get_entry_name(filename)),
-            })
-            .chain(std::iter::once(Listing {
-                entryname: script_name
-                .rsplit(MAIN_SEPARATOR_STR)
-                .next()
-                .unwrap()
-                .to_string(),
-                entry: Entry::from_file(script_name),
-            }))
-            .collect(),
-                
+                .iter()
+                .map(|&filename| Listing {
+                    entryname: filename.to_string(),
+                    entry: Entry::Source(get_entry_name(filename)),
+                })
+                .chain(std::iter::once(Listing {
+                    entryname: script_name.rsplit(MAIN_SEPARATOR_STR).next().unwrap().to_string(),
+                    entry: Entry::from_file(script_name),
+                }))
+                .collect(),
         }
     }
     pub fn from_contents(entryname: &str, contents: &str) -> Self {
@@ -177,7 +173,7 @@ mod tests {
     pub fn test_initial_workdir_requirement_multiple() {
         let req = InitialWorkDirRequirement::from_files(
             &vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"],
-            "../../tests/test_data/echo.py", 
+            "../../tests/test_data/echo.py",
         );
         assert_eq!(req.listing.len(), 3);
     }

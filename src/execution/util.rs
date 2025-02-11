@@ -5,6 +5,7 @@ use cwl::{
     types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
 };
 use fancy_regex::Regex;
+use serde_yaml::Value;
 use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
 
 ///Either gets the default value for input or the provided one (preferred)
@@ -20,9 +21,7 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
     if let Some(ref values) = input_values {
         if let Some(value) = values.get(&input.id) {
             if !value.has_matching_type(&input.type_) {
-                //change handling accordingly in utils on main branch!
-                eprintln!("CWLType is not matching input type");
-                Err("CWLType is not matching input type")?;
+                Err(format!("CWLType '{:?}' is not matching input type. Input was: \n{:#?}", &input.type_, value))?
             }
             return Ok(value.clone());
         } else if let Some(default_) = &input.default {
@@ -30,11 +29,15 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
+    }
+    
+    if let CWLType::Optional(_) = input.type_ {
+        return Ok(DefaultValue::Any(Value::Null));
     } else {
-        eprintln!("You did not include a value for {}", input.id);
         Err(format!("You did not include a value for {}", input.id).as_str())?;
     }
-    Err(format!("Could not evaluate input: {}", input.id))?
+    
+    Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
 }
 
 ///Copies back requested outputs and writes to commandline

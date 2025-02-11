@@ -87,6 +87,13 @@ pub fn run_workflow(
                         }
                         if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
                             let value = evaluate_input(input, &Some(input_values.clone()))?;
+                            if step_inputs.contains_key(key) {
+                                if let DefaultValue::Any(val) = &value {
+                                    if val.is_null() {
+                                        continue; //do not overwrite existing value with null
+                                    }
+                                }
+                            }
                             step_inputs.insert(key.to_string(), value.to_owned());
                         }
                     }
