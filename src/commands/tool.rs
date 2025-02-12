@@ -85,6 +85,8 @@ pub struct ListToolArgs {
     pub list_all: bool,
 }
 
+#[allow(dead_code)]
+//remove if not needed!!!
 fn execute_cwl_local(
     mut cwl: CommandLineTool,
     args: &CreateToolArgs,
@@ -185,12 +187,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
-        if inputs.is_empty() && outputs.is_empty() {
-            if run_command(&cwl, None).is_err() {
-                return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
-            }
-        } else {
-            cwl = execute_cwl_local(cwl, args, &repo, inputs)?;
+        if run_command(&cwl, None).is_err() {
+            return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
         }
         // Check files that changed
         let files = get_modified_files(&repo);
@@ -244,22 +242,16 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         let mut yaml = cwl.save(&path);
         yaml = format_cwl(&yaml)?;
-        if (inputs.is_empty() && outputs.is_empty()) || args.no_run {
-            match create_and_write_file(path.as_str(), yaml.as_str()) {
-                Ok(_) => {
-                    info!("\n📄 Created CWL file {}", path.green().bold());
-                    if !args.no_commit {
-                        stage_file(&repo, path.as_str()).unwrap();
-                        commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
-                    }
-                }
-                Err(e) => return Err(Box::new(e)),
-            }
-        }
 
-        if !inputs.is_empty() {
-            let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
-            let _input_yaml = create_input_yml(&input_refs, &path)?;
+        match create_and_write_file(path.as_str(), yaml.as_str()) {
+            Ok(_) => {
+                info!("\n📄 Created CWL file {}", path.green().bold());
+                if !args.no_commit {
+                    stage_file(&repo, path.as_str()).unwrap();
+                    commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
+                }
+            }
+            Err(e) => return Err(Box::new(e)),
         }
     } else {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
