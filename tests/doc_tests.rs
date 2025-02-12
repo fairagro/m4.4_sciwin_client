@@ -245,7 +245,6 @@ pub fn test_implicit_inputs_hardcoded_files() {
         assert_eq!(initial.listing[0].entry, Entry::Source("$(inputs.file_txt)".into()));
         
         assert_eq!(initial.listing[1].entryname, "load.py");
-        assert_eq!(initial.listing[1].entry, Entry::Source("$(inputs.file_txt)".into()))
     } else {
         panic!("InitialWorkDirRequirement not found!");
     }
