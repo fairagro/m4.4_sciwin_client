@@ -1,7 +1,12 @@
 ///This file contains all examples described here: https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/
 mod common;
 use common::{check_git_user, setup_python};
-use cwl::{clt::Command, load_tool};
+use cwl::{
+    clt::Command,
+    load_tool,
+    requirements::{self, InitialWorkDirRequirement, Requirement},
+    types::{Entry, Listing},
+};
 use s4n::{
     commands::{
         init::init_s4n,
@@ -12,7 +17,6 @@ use s4n::{
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{tempdir, TempDir};
-
 
 fn setup() -> (PathBuf, TempDir) {
     let dir = tempdir().unwrap();
@@ -236,6 +240,18 @@ pub fn test_implicit_inputs_hardcoded_files() {
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
+    assert!(tool.requirements.is_some());
+    let requirements = tool.requirements.unwrap();
+    assert_eq!(requirements.len(), 1);
+
+    if let Requirement::InitialWorkDirRequirement(initial) = &requirements[0] {
+        assert_eq!(initial.listing.len(), 2);
+        assert_eq!(initial.listing[0].entryname, "file.txt");
+        assert_eq!(initial.listing[0].entry, Entry::Source("$(inputs.file_txt)".into()))
+    } else {
+        panic!("InitialWorkDirRequirement not found!");
+    }
+
     cleanup(current, dir);
 }
 
@@ -269,8 +285,8 @@ pub fn test_piping() {
     assert_eq!(tool.base_command, Command::Single("cat".to_string()));
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
-    assert!(tool.arguments.is_some());    
-    assert_eq!(tool.arguments.unwrap().len(), 6);    
+    assert!(tool.arguments.is_some());
+    assert_eq!(tool.arguments.unwrap().len(), 6);
 
     cleanup(current, dir);
 }
@@ -281,7 +297,14 @@ pub fn test_piping() {
 pub fn test_pulling_containers() {
     let (current, dir) = setup();
 
-    let command = &["python", "calculation.py", "--population", "population.csv", "--speakers", "speakers_revised.csv"];
+    let command = &[
+        "python",
+        "calculation.py",
+        "--population",
+        "population.csv",
+        "--speakers",
+        "speakers_revised.csv",
+    ];
 
     let name = "calculation";
     let args = &CreateToolArgs {
@@ -310,13 +333,15 @@ pub fn test_pulling_containers() {
     assert!(fs::exists(&tool_path).unwrap());
 
     let tool = load_tool(&tool_path).unwrap();
-    assert_eq!(tool.base_command, Command::Multiple(vec!["python".to_string(), "calculation.py".to_string()]));
+    assert_eq!(
+        tool.base_command,
+        Command::Multiple(vec!["python".to_string(), "calculation.py".to_string()])
+    );
     assert_eq!(tool.inputs.len(), 2);
-    assert_eq!(tool.outputs.len(), 1);   
+    assert_eq!(tool.outputs.len(), 1);
 
     cleanup(current, dir);
 }
-
 
 #[test]
 #[serial]
@@ -324,7 +349,14 @@ pub fn test_pulling_containers() {
 pub fn test_building_custom_containers() {
     let (current, dir) = setup();
 
-    let command = &["python", "calculation.py", "--population", "population.csv", "--speakers", "speakers_revised.csv"];
+    let command = &[
+        "python",
+        "calculation.py",
+        "--population",
+        "population.csv",
+        "--speakers",
+        "speakers_revised.csv",
+    ];
 
     let name = "calculation";
     let args = &CreateToolArgs {
@@ -353,9 +385,12 @@ pub fn test_building_custom_containers() {
     assert!(fs::exists(&tool_path).unwrap());
 
     let tool = load_tool(&tool_path).unwrap();
-    assert_eq!(tool.base_command, Command::Multiple(vec!["python".to_string(), "calculation.py".to_string()]));
+    assert_eq!(
+        tool.base_command,
+        Command::Multiple(vec!["python".to_string(), "calculation.py".to_string()])
+    );
     assert_eq!(tool.inputs.len(), 2);
-    assert_eq!(tool.outputs.len(), 1);   
+    assert_eq!(tool.outputs.len(), 1);
 
     cleanup(current, dir);
 }
