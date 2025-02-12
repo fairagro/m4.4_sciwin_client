@@ -11,6 +11,7 @@
 ## Other
 - Added Tests for all Documentation examples #76
 - Added CWL Conformance Tests to CI Workflow
+- Added more integration tests
 
 # 0.1.0 (2025-02-04)
 Initial Release
