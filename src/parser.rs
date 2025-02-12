@@ -2,7 +2,7 @@ use crate::{cwl::resolve_filename, io::get_filename_without_extension, split_vec
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
-    outputs::{CommandOutputBinding, CommandOutputParameter},
+    outputs::{self, CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
@@ -316,7 +316,7 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
     for input in &tool.inputs {
         if let Some(default) = &input.default {
             for output in tool.outputs.iter_mut() {
-                if let Some(binding) = &mut output.output_binding {
+                if let Some(binding) = &mut output.output_binding {                    
                     if binding.glob == default.as_value_string() {
                         binding.glob = process_input(input);
                         processed_once = true;
@@ -354,6 +354,15 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    for output in tool.outputs.iter_mut() {
+        if let Some(binding) = &mut output.output_binding{
+            if binding.glob == "." {
+                output.id = "output_directory".to_string();
+                binding.glob = "$(runtime.outdir)".into();
             }
         }
     }

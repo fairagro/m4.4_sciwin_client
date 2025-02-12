@@ -2,17 +2,22 @@ mod common;
 use common::{os_path, with_temp_repository};
 use cwl::{
     clt::{Argument, CommandLineTool},
-    requirements::{DockerRequirement, Requirement},
-    types::Entry,
     load_tool,
+    requirements::{DockerRequirement, Requirement},
+    types::{CWLType, Entry},
 };
 use git2::Repository;
 use s4n::{
-    commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
+    commands::{
+        init::init_s4n,
+        tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
+    },
+    io::copy_file,
     repo::get_modified_files,
 };
 use serial_test::serial;
-use std::{fs::read_to_string, path::Path};
+use std::{env, fs::read_to_string, path::Path};
+use tempfile::tempdir;
 
 #[test]
 #[serial]
@@ -357,4 +362,78 @@ pub fn test_tool_magic_arguments() {
             panic!()
         }
     });
+}
+
+#[test]
+#[serial]
+pub fn test_tool_output_is_dir() {
+    let dir = tempdir().unwrap();
+
+    copy_file("tests/test_data/create_dir.py", dir.path().join("create_dir.py").to_str().unwrap()).unwrap();
+
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+    init_s4n(None, false).expect("Could not init s4n");
+
+    let name = "create_dir";
+    let command = &["python", "create_dir.py"];
+    let args = CreateToolArgs {
+        name: None,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        inputs: None,
+        outputs: None,
+        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+    };
+
+    assert!(create_tool(&args).is_ok());
+
+    let tool = load_tool(format!("workflows/{name}/{name}.cwl")).unwrap();
+    assert_eq!(tool.inputs.len(), 0);
+    assert_eq!(tool.outputs.len(), 1); //only folder
+    assert_eq!(tool.outputs[0].id, "my_directory".to_string());
+    assert_eq!(tool.outputs[0].type_, CWLType::Directory);
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[test]
+#[serial]
+pub fn test_tool_output_complete_dir() {
+    let dir = tempdir().unwrap();
+
+    copy_file("tests/test_data/create_dir.py", dir.path().join("create_dir.py").to_str().unwrap()).unwrap();
+
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+    init_s4n(None, false).expect("Could not init s4n");
+
+    let name = "create_dir";
+    let command = &["python", "create_dir.py"];
+    let args = CreateToolArgs {
+        name: None,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        inputs: None,
+        outputs: Some(vec![".".into()]), //
+        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+    };
+
+    assert!(create_tool(&args).is_ok());
+
+    let tool = load_tool(format!("workflows/{name}/{name}.cwl")).unwrap();
+    assert_eq!(tool.inputs.len(), 0);
+    assert_eq!(tool.outputs.len(), 1); //only root folder
+
+    println!("{:#?}", tool.outputs);
+
+    env::set_current_dir(current).unwrap();
 }
