@@ -12,9 +12,10 @@ use cwl::{
     clt::CommandLineTool,
     types::{CWLType, DefaultValue, Directory, File, PathItem},
     wf::Workflow,
+    CWLDocument,
 };
 use log::info;
-use serde_yaml::Value;
+use serde_yaml::{Number, Value};
 use std::{
     collections::HashMap,
     error::Error,
@@ -26,6 +27,7 @@ use std::{
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ExecuteCommands::Local(args) => execute_local(args),
+        ExecuteCommands::MakeTemplate(args) => make_template(&args.cwl),
     }
 }
 
@@ -33,6 +35,14 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
 pub enum ExecuteCommands {
     #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias = "l")]
     Local(LocalExecuteArgs),
+    #[command(about = "Creates job file template for execution (e.g. inputs.yaml)")]
+    MakeTemplate(MakeTemplateArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct MakeTemplateArgs {
+    #[arg(help = "CWL File to create input template for")]
+    pub cwl: PathBuf,
 }
 
 #[derive(Args, Debug)]
@@ -184,5 +194,52 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             Ok(())
         }
+    }
+}
+
+pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(filename)?;
+    let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
+
+    let inputs = match cwl {
+        CWLDocument::CommandLineTool(tool) => tool.inputs,
+        CWLDocument::Workflow(workflow) => workflow.inputs,
+    };
+
+    let template = inputs
+        .iter()
+        .map(|i| {
+            let id = &i.id;
+            let dummy_value = match &i.type_ {
+                CWLType::Optional(cwltype) => default_values(cwltype),
+                CWLType::Array(cwltype) => DefaultValue::Any(Value::Sequence(vec![defaults(cwltype), defaults(cwltype)])),
+                cwltype => default_values(cwltype),
+            };
+            (id, dummy_value)
+        })
+        .collect::<HashMap<_, _>>();
+    let yaml = serde_yaml::to_string(&template)?;
+    println!("{yaml}");
+    Ok(())
+}
+
+fn default_values(cwltype: &CWLType) -> DefaultValue {
+    match cwltype {
+        CWLType::File => DefaultValue::File(File::from_location(&"./path/to/file.txt".into())),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&"./path/to/dir".into())),
+        _ => DefaultValue::Any(defaults(cwltype)),
+    }
+}
+
+fn defaults(cwltype: &CWLType) -> Value {
+    match cwltype {
+        CWLType::Boolean => Value::Bool(true),
+        CWLType::Int => Value::Number(Number::from(42)),
+        CWLType::Long => Value::Number(Number::from(42)),
+        CWLType::Float => Value::Number(Number::from(69.42)),
+        CWLType::Double => Value::Number(Number::from(69.42)),
+        CWLType::String => Value::String("Hello World".into()),
+        CWLType::Any => Value::String("Any Value".into()),
+        _ => Value::Null,
     }
 }

@@ -1,4 +1,5 @@
 use clt::CommandLineTool;
+use serde::Deserialize;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 use wf::Workflow;
 
@@ -10,6 +11,13 @@ pub mod outputs;
 pub mod requirements;
 pub mod types;
 pub mod wf;
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum CWLDocument {
+    CommandLineTool(CommandLineTool),
+    Workflow(Workflow),
+}
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML
 pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool, Box<dyn Error>> {
@@ -49,7 +57,7 @@ mod tests {
     fn test_load_multiple_tools(#[case] filename: &str) {
         let tool = load_tool(filename);
         assert!(tool.is_ok());
-    } 
+    }
 
     #[test]
     #[should_panic]
@@ -68,7 +76,7 @@ mod tests {
     fn test_load_multiple_wfs(#[case] filename: &str) {
         let workflow = load_workflow(filename);
         assert!(workflow.is_ok());
-    } 
+    }
 
     #[test]
     #[should_panic]
