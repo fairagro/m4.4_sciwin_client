@@ -6,7 +6,10 @@ use s4n::{
 };
 use serial_test::serial;
 use std::{
-    env, fs::{self}, iter, path::{Path, PathBuf}
+    env,
+    fs::{self},
+    iter,
+    path::{Path, PathBuf},
 };
 use tempfile::tempdir;
 
@@ -14,11 +17,8 @@ use tempfile::tempdir;
 #[serial]
 pub fn test_execute_local() {
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
-        out_dir: None,
-        is_quiet: false,
         file: PathBuf::from("tests/test_data/echo.cwl"),
-        args: vec![],
+        ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -39,14 +39,12 @@ pub fn test_execute_local() {
 #[serial]
 pub fn test_execute_local_with_args() {
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
-        out_dir: None,
-        is_quiet: false,
         file: PathBuf::from("tests/test_data/echo.cwl"),
         args: ["--test", "tests/test_data/input_alt.txt"]
             .iter()
             .map(ToString::to_string)
             .collect::<Vec<_>>(),
+        ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -67,11 +65,9 @@ pub fn test_execute_local_with_args() {
 #[serial]
 pub fn test_execute_local_with_file() {
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
-        out_dir: None,
-        is_quiet: false,
         file: PathBuf::from("tests/test_data/echo.cwl"),
         args: iter::once(&"tests/test_data/echo-job.yml").map(ToString::to_string).collect::<Vec<_>>(),
+        ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -93,11 +89,9 @@ pub fn test_execute_local_with_file() {
 pub fn test_execute_local_outdir() {
     let dir = tempdir().unwrap();
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(dir.path().to_string_lossy().into_owned()),
-        is_quiet: false,
         file: PathBuf::from("tests/test_data/echo.cwl"),
-        args: vec![],
+        ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -112,11 +106,9 @@ pub fn test_execute_local_outdir() {
 pub fn test_execute_local_is_quiet() {
     //does not really test if it is quiet but rather that the process works
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
-        out_dir: None,
         is_quiet: true,
         file: PathBuf::from("tests/test_data/echo.cwl"),
-        args: vec![],
+        ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
@@ -133,10 +125,8 @@ pub fn test_execute_local_cwltool() {
     if !cfg!(target_os = "windows") {
         let args = LocalExecuteArgs {
             runner: Runner::CWLTool,
-            out_dir: None,
-            is_quiet: false,
             file: PathBuf::from("tests/test_data/echo.cwl"),
-            args: vec![],
+            ..Default::default()
         };
 
         execute_local(&args).expect("Could not execute CommandLineTool");
@@ -165,11 +155,9 @@ pub fn test_execute_local_workflow() {
 
     //execute workflow
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
-        out_dir: None,
-        is_quiet: false,
         file: PathBuf::from(format!("{dir_str}/workflows/main/main.cwl")),
         args: vec!["inputs.yml".to_string()],
+        ..Default::default()
     };
     let result = execute_local(&args);
     println!("{result:#?}");
@@ -194,18 +182,17 @@ pub fn test_execute_local_tool_default_cwl() {
     let out_file = format!("{}/file.wtf", &out_dir);
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir.clone()),
         is_quiet: true,
         file: path.clone(),
-        args: vec![],
+        ..Default::default()
     };
     let args_override = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
         args: vec!["--file1".to_string(), "tests/test_data/input.txt".to_string()],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -228,11 +215,10 @@ pub fn test_execute_local_workflow_no_steps() {
     let out_dir = dir.path().to_string_lossy().into_owned();
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec![],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -247,11 +233,11 @@ pub fn test_execute_local_workflow_in_param() {
     let out_file = format!("{}/file.wtf", &out_dir);
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
         args: vec!["--pop".to_string(), "tests/test_data/input.txt".to_string()],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -270,11 +256,10 @@ pub fn test_execute_local_workflow_dir_out() {
     let out_path = format!("{}/test_dir", &out_dir);
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec![],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -292,11 +277,10 @@ pub fn test_execute_local_workflow_file_out() {
     let out_path = format!("{out_dir}/file.txt");
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec![],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -311,11 +295,11 @@ pub fn test_execute_local_workflow_directory_out() {
     let out_dir = dir.path().to_string_lossy().into_owned();
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
         args: vec!["--dirname".to_string(), "test_directory".to_string()],
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());
@@ -323,18 +307,17 @@ pub fn test_execute_local_workflow_directory_out() {
 
 #[test]
 #[serial]
-pub fn test_execute_local_with_binary_input(){
+pub fn test_execute_local_with_binary_input() {
     let path = PathBuf::from("tests/test_data/read_bin.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/output.txt", &out_dir);
 
     let args = LocalExecuteArgs {
-        runner: Runner::Custom,
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec![], //file has default
+        ..Default::default()
     };
 
     assert!(execute_local(&args).is_ok());

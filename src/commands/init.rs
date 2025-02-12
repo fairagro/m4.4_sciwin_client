@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct InitArgs {
     #[arg(short = 'p', long = "project", help = "Name of the project")]
     project: Option<String>,

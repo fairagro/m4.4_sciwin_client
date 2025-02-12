@@ -80,7 +80,7 @@ pub struct RemoveToolArgs {
     pub tool_names: Vec<String>,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct ListToolArgs {
     #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
     pub list_all: bool,

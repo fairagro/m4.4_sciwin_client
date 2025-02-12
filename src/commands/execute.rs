@@ -45,7 +45,7 @@ pub struct MakeTemplateArgs {
     pub cwl: PathBuf,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct LocalExecuteArgs {
     #[arg(value_enum, default_value_t = Runner::Custom, short = 'r', long = "runner", help="Choose your cwl runner implementation")]
     pub runner: Runner,
@@ -59,10 +59,11 @@ pub struct LocalExecuteArgs {
     pub args: Vec<String>,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Default)]
 pub enum Runner {
     #[clap(name = "cwltool")]
     CWLTool,
+    #[default]
     Custom,
 }
 

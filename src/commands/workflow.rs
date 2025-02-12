@@ -57,7 +57,7 @@ pub struct CreateWorkflowArgs {
     pub force: bool,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct ListWorkflowArgs {
     #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
     pub list_all: bool,
