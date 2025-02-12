@@ -2,7 +2,7 @@ use crate::{cwl::resolve_filename, io::get_filename_without_extension, split_vec
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
-    outputs::{self, CommandOutputBinding, CommandOutputParameter},
+    outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
