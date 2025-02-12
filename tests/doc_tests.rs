@@ -44,16 +44,8 @@ pub fn test_wrapping_echo() {
     let command = &["echo", "\"Hello World\""];
 
     let args = &CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -78,15 +70,8 @@ pub fn test_wrapping_echo_2() {
     let name = "echo2";
     let args = &CreateToolArgs {
         name: Some(name.to_string()),
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -113,15 +98,8 @@ pub fn test_wrapping_python_script() {
     let name = "echo_python";
     let args = &CreateToolArgs {
         name: Some(name.to_string()),
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -146,16 +124,9 @@ pub fn test_wrapping_a_long_running_script() {
 
     let name = "sleep";
     let args = &CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: true, //
-        is_clean: false,
-        inputs: None,
-        outputs: None,
+        no_run: true,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -181,15 +152,10 @@ pub fn test_wrapping_a_long_running_script2() {
     let name = "sleep2";
     let args = &CreateToolArgs {
         name: Some(name.to_string()),
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: true, //
-        is_clean: false,
-        inputs: None,
+        no_run: true,
         outputs: Some(vec!["sleep.txt".to_string()]),
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -214,16 +180,10 @@ pub fn test_implicit_inputs_hardcoded_files() {
 
     let name = "load";
     let args = &CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
         inputs: Some(vec!["file.txt".to_string()]),
         outputs: Some(vec!["out.txt".to_string()]),
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -243,7 +203,7 @@ pub fn test_implicit_inputs_hardcoded_files() {
         assert_eq!(initial.listing.len(), 2);
         assert_eq!(initial.listing[0].entryname, "file.txt");
         assert_eq!(initial.listing[0].entry, Entry::Source("$(inputs.file_txt)".into()));
-        
+
         assert_eq!(initial.listing[1].entryname, "load.py");
     } else {
         panic!("InitialWorkDirRequirement not found!");
@@ -262,16 +222,8 @@ pub fn test_piping() {
 
     let name = "cat";
     let args = &CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
     assert!(create_tool(args).is_ok());
 
@@ -305,16 +257,9 @@ pub fn test_pulling_containers() {
 
     let name = "calculation";
     let args = &CreateToolArgs {
-        name: None,
         container_image: Some("pandas/pandas:pip-all".to_string()),
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
 
     //setup python env
@@ -357,16 +302,10 @@ pub fn test_building_custom_containers() {
 
     let name = "calculation";
     let args = &CreateToolArgs {
-        name: None,
         container_image: Some("Dockerfile".to_string()),
         container_tag: Some("my-docker".to_string()),
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|&s| s.to_string()).collect(),
+        ..Default::default()
     };
 
     //setup python env

@@ -24,21 +24,13 @@ use tempfile::tempdir;
 pub fn tool_create_test() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -63,21 +55,14 @@ pub fn tool_create_test() {
 pub fn tool_create_test_is_raw() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: true, //look!
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
+            is_raw: true,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -95,21 +80,14 @@ pub fn tool_create_test_is_raw() {
 pub fn tool_create_test_no_commit() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
             no_commit: true, //look!
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -133,21 +111,14 @@ pub fn tool_create_test_no_commit() {
 pub fn tool_create_test_no_run() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: true, //look!
-            is_clean: false,
-            inputs: None,
-            outputs: None,
+            no_run: true,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -164,21 +135,14 @@ pub fn tool_create_test_no_run() {
 pub fn tool_create_test_is_clean() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: true, //look!
-            inputs: None,
-            outputs: None,
+            is_clean: true,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -196,21 +160,14 @@ pub fn tool_create_test_is_clean() {
 pub fn tool_create_test_container_image() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: Some("python".to_string()), //look!
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
+            container_image: Some("python".to_string()),
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -240,21 +197,15 @@ pub fn tool_create_test_container_image() {
 pub fn tool_create_test_dockerfile() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
-            name: None,
-            container_image: Some("Dockerfile".to_string()),  //look
-            container_tag: Some("sciwin-client".to_string()), //look!
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
+            container_image: Some("Dockerfile".to_string()),
+            container_tag: Some("sciwin-client".to_string()),
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
@@ -290,16 +241,10 @@ pub fn test_tool_magic_outputs() {
     with_temp_repository(|_| {
         let str = "touch output.txt";
         let args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
             no_commit: true,
-            no_run: false,
             is_clean: true,
-            inputs: None,
-            outputs: None,
             command: shlex::split(str).unwrap(),
+            ..Default::default()
         };
 
         assert!(create_tool(&args).is_ok());
@@ -316,16 +261,10 @@ pub fn test_tool_magic_stdout() {
     with_temp_repository(|_| {
         let str = "wc data/input.txt \\> data/input.txt";
         let args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
             no_commit: true,
-            no_run: false,
             is_clean: true,
-            inputs: None,
-            outputs: None,
             command: shlex::split(str).unwrap(),
+            ..Default::default()
         };
 
         assert!(create_tool(&args).is_ok());
@@ -341,16 +280,10 @@ pub fn test_tool_magic_arguments() {
     with_temp_repository(|_| {
         let str = "cat data/input.txt | grep -f data/input.txt";
         let args = CreateToolArgs {
-            name: None,
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
             no_commit: true,
-            no_run: false,
             is_clean: true,
-            inputs: None,
-            outputs: None,
             command: shlex::split(str).unwrap(),
+            ..Default::default()
         };
 
         assert!(create_tool(&args).is_ok());
@@ -378,16 +311,8 @@ pub fn test_tool_output_is_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        ..Default::default()
     };
 
     assert!(create_tool(&args).is_ok());
@@ -415,16 +340,9 @@ pub fn test_tool_output_complete_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
         outputs: Some(vec![".".into()]), //
         command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        ..Default::default()
     };
 
     assert!(create_tool(&args).is_ok());

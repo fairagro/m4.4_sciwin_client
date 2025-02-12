@@ -48,15 +48,6 @@ pub fn test_cli_s4n_workflow() {
 
     //create calculation tool
     create_tool(&CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: [
             "python".to_string(),
             "workflows/calculation/calculation.py".to_string(),
@@ -66,21 +57,13 @@ pub fn test_cli_s4n_workflow() {
             "data/population.csv".to_string(),
         ]
         .to_vec(),
+        ..Default::default()
     })
     .expect("Could not create calculation tool");
     assert!(fs::exists("workflows/calculation/calculation.cwl").unwrap());
 
     //create calculation tool
     create_tool(&CreateToolArgs {
-        name: None,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        inputs: None,
-        outputs: None,
         command: [
             "python".to_string(),
             "workflows/plot/plot.py".to_string(),
@@ -88,6 +71,7 @@ pub fn test_cli_s4n_workflow() {
             "results.csv".to_string(),
         ]
         .to_vec(),
+        ..Default::default()
     })
     .expect("Could not create plot tool");
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());

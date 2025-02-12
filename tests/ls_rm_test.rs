@@ -50,20 +50,13 @@ pub fn tool_remove_test() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
             name: Some("echo".to_string()),
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());
@@ -87,20 +80,13 @@ pub fn tool_remove_test_extension() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
             name: Some("echo".to_string()),
-            container_image: None,
-            container_tag: None,
-            is_raw: false,
-            no_commit: false,
-            no_run: false,
-            is_clean: false,
-            inputs: None,
-            outputs: None,
             command: vec![
                 "python".to_string(),
                 "scripts/echo.py".to_string(),
                 "--test".to_string(),
                 "data/input.txt".to_string(),
             ],
+            ..Default::default()
         };
         let cmd_create = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd_create).is_ok());

@@ -39,7 +39,7 @@ pub enum ToolCommands {
     Remove(RemoveToolArgs),
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct CreateToolArgs {
     #[arg(short = 'n', long = "name", help = "A name to be used for this tool")]
     pub name: Option<String>,
@@ -72,6 +72,7 @@ pub struct CreateToolArgs {
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
+
 
 #[derive(Args, Debug)]
 pub struct RemoveToolArgs {
