@@ -214,7 +214,7 @@ Like shown in the above example there is also the possibility to specify inputs 
         with open('out.txt', 'w') as out:
             out.write(data)
     ```
-=== ":simple-commonworkflowlanguage: calculation.cwl"
+=== ":simple-commonworkflowlanguage: load.cwl"
     ```yaml
     #!/usr/bin/env cwl-runner
     
