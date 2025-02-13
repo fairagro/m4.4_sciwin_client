@@ -139,24 +139,17 @@ fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &Initi
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
     files
         .iter()
-        .enumerate()
-        .map(|(index, f)| {
-            let filename = get_filename_without_extension(f).unwrap_or_else(|| f.to_string());
-            let id = if filename.starts_with('$') {
-                format!("output{}", index)
-            } else {
-                filename
-            };
-            let output_type = if Path::new(f).extension().is_some() && !f.contains("$(runtime.outdir)") {
+        .map(|f| {
+            let filename = get_filename_without_extension(f).unwrap_or(f.clone());
+            let output_type = if Path::new(f).extension().is_some() {
                 CWLType::File
             } else {
                 CWLType::Directory
             };
-
             CommandOutputParameter::default()
                 .with_type(output_type)
-                .with_id(&id)
-                .with_binding(CommandOutputBinding { glob: f.clone() })
+                .with_id(&filename)
+                .with_binding(CommandOutputBinding { glob: f.to_string() })
         })
         .collect()
 }

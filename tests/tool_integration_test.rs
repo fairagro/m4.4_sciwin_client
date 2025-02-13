@@ -52,6 +52,43 @@ pub fn tool_create_test() {
 
 #[test]
 #[serial]
+pub fn tool_create_test_inputs_outputs() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            //check RData case with archive
+            inputs: Some(vec![
+                "example_input.RData".to_string(),
+            ]),
+            outputs: Some(vec![
+                "example.RData".to_string(),
+            ]),
+            command: vec![
+                "Rscript".to_string(),
+                "scripts/test.R".to_string(),
+            ],
+            ..Default::default()
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check for files being present
+        let output_paths = vec![
+            dir.path().join(Path::new("example.RData")),
+            dir.path().join(Path::new("workflows/test/test.cwl")),
+        ];
+        for output_path in output_paths {
+            assert!(output_path.exists());
+        }
+
+        //no uncommitted left?
+        let repo = Repository::open(dir.path()).unwrap();
+        assert!(get_modified_files(&repo).is_empty());
+    });
+}
+
+
+#[test]
+#[serial]
 pub fn tool_create_test_is_raw() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
