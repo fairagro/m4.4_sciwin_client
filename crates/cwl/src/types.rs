@@ -276,13 +276,13 @@ pub enum EnviromentDefs {
     Map(HashMap<String, String>),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Listing {
     pub entryname: String,
     pub entry: Entry,
 }
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Entry {
     Source(String),

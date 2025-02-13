@@ -2,7 +2,7 @@ use super::{deserialize::Identifiable, types::CWLType};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputParameter {
     #[serde(default)]
@@ -80,7 +80,7 @@ where
 }
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
     pub glob: String,

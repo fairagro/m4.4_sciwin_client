@@ -12,7 +12,7 @@ use std::fmt::Display;
 /// non-interactive program which is invoked on some input, produces output, and then terminates.
 ///
 /// Reference: [CWL CommandLineTool Specification](https://www.commonwl.org/v1.2/CommandLineTool.html)
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub class: String,

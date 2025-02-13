@@ -3,7 +3,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 use std::path::MAIN_SEPARATOR_STR;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "class")]
 pub enum Requirement {
     InitialWorkDirRequirement(InitialWorkDirRequirement),
@@ -69,13 +69,11 @@ where
 }
 
 fn get_entry_name(input: &str) -> String {
-    // Read the content of the script file
-    let mut i2 = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_");
-    i2 = format!("$(inputs.{})", i2).to_string();
-    i2
+    let mut i = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_");
+    format!("$(inputs.{})", i).to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
     pub listing: Vec<Listing>,
@@ -115,7 +113,7 @@ impl InitialWorkDirRequirement {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum DockerRequirement {
     DockerPull(String),
@@ -140,7 +138,7 @@ impl DockerRequirement {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceRequirement {
     pub cores_min: Option<i32>,
@@ -153,7 +151,7 @@ pub struct ResourceRequirement {
     pub outdir_max: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,

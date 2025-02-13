@@ -1,4 +1,4 @@
-use crate::{cwl::resolve_filename, io::get_filename_without_extension, split_vec_at};
+use crate::{io::get_filename_without_extension, split_vec_at};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -12,9 +12,7 @@ use slugify::slugify;
 use std::error::Error;
 use std::{
     collections::HashMap,
-    env, fs,
-    io::Write,
-    path::{Path, MAIN_SEPARATOR},
+    path::Path,
 };
 
 //TODO complete list
@@ -26,51 +24,27 @@ struct FileEntry {
     path: String,
 }
 
-pub fn create_input_yml(inputs: &[&str], command: &str) -> Result<String, Box<dyn Error>> {
-    let mut yaml_data: HashMap<String, FileEntry> = HashMap::new();
+pub fn get_input_parameters(inputs: &[&str]) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
 
-    // Generate a base filename
-    let base_name = get_filename_without_extension(command).unwrap_or_else(|| "command".to_string());
-    let yaml_name = resolve_filename(&base_name);
-    let yaml_filename = match yaml_name.rsplit_once('.') {
-        Some((base, _)) => format!("{}_inputs.yml", base),
-        None => format!("{}_inputs.yml", yaml_name),
-    };
-
-    // Construct full path in the current directory
-    let yaml_path = env::current_dir()?.join(&yaml_filename);
-
-    // Populate YAML data
+    let mut yaml_data: HashMap<String, DefaultValue> = HashMap::new();
     for input in inputs {
         let key = input.replace('.', "_");
         let file_type = guess_type(input);
-        let type_str = match file_type {
-            CWLType::File => "File",
-            CWLType::Directory => "Directory",
-            CWLType::Float => "Float",
-            CWLType::Int => "Int",
-            CWLType::Boolean => "Boolean",
-            CWLType::Null => "Null",
-            _ => "String",
+        let value = match file_type {
+            CWLType::File => {
+                DefaultValue::File(File::from_location(&input.to_string()))
+            }
+            CWLType::Directory => {
+                DefaultValue::Directory(Directory::from_location(&input.to_string()))
+            }
+            _ => {
+                DefaultValue::from(DefaultValue::Any(Value::String(input.to_string()))) 
+            }
         };
-
-        yaml_data.insert(
-            key,
-            FileEntry {
-                class: type_str.to_string(),
-                path: format!("..{}..{}{}", MAIN_SEPARATOR, MAIN_SEPARATOR, input),
-            },
-        );
+        yaml_data.insert(key.clone(), value.clone());
     }
 
-    // Convert to YAML
-    let yaml_string = serde_yaml::to_string(&yaml_data)?;
-
-    // Write to file safely
-    let mut file = fs::File::create(&yaml_path)?;
-    file.write_all(yaml_string.as_bytes())?;
-
-    Ok(yaml_path.display().to_string())
+    Ok(yaml_data)
 }
 
 pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> CommandLineTool {

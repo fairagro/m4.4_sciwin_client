@@ -1,15 +1,13 @@
 use crate::{
-    commands::execute::{execute_local, LocalExecuteArgs, Runner},
     cwl::{highlight_cwl, Saveable},
-    execution::runner::run_command,
+    execution::runner::{run_command, run_commandlinetool},
     io::{create_and_write_file, get_qualified_filename},
-    parser::{self, create_input_yml, post_process_cwl},
+    parser::{self, get_input_parameters, post_process_cwl},
     print_list,
     repo::{commit, get_modified_files, stage_file},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use cwl::clt::CommandLineTool;
 use cwl::{
     format::format_cwl,
     requirements::{DockerRequirement, Requirement},
@@ -86,51 +84,6 @@ pub struct ListToolArgs {
     pub list_all: bool,
 }
 
-#[allow(dead_code)]
-//remove if not needed!!!
-fn execute_cwl_local(
-    mut cwl: CommandLineTool,
-    args: &CreateToolArgs,
-    repo: &Repository,
-    inputs: &[String],
-) -> Result<CommandLineTool, Box<dyn std::error::Error>> {
-    if args.is_raw {
-        warn!("Temporary files are created for local execution");
-    }
-    let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-    let mut yaml_cwl = cwl.save(&path);
-    yaml_cwl = format_cwl(&yaml_cwl)?;
-
-    std::fs::write(&path, yaml_cwl.as_bytes())?;
-    warn!("Execution requires CWLTool");
-
-    let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
-    let yaml = create_input_yml(&input_refs, &path)?;
-    let yaml_str = path.replace(".cwl", "_inputs.yml");
-
-    if !args.no_commit && !args.is_raw {
-        stage_file(repo, path.as_str())?;
-        stage_file(repo, &yaml_str)?;
-        commit(repo, &format!("Execution of `{}`", args.command.join(" ")))?;
-    }
-
-    // Execute locally
-    let args_exec = LocalExecuteArgs {
-        runner: Runner::CWLTool,
-        out_dir: None,
-        is_quiet: false,
-        file: PathBuf::from(&path),
-        args: vec![yaml.clone()],
-    };
-
-    execute_local(&args_exec)?;
-    if args.is_raw {
-        fs::remove_file(yaml)?;
-        fs::remove_file(&path)?;
-    }
-
-    Ok(cwl)
-}
 
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Check if git status is clean
@@ -188,9 +141,20 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
-        if run_command(&cwl, None).is_err() {
-            return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
+        if inputs.is_empty() && outputs.is_empty() {
+            if run_command(&cwl, None).is_err() {
+                return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
+            }
         }
+        else {
+            let path = get_qualified_filename(&cwl.base_command, args.name.clone());
+            let path_buf = PathBuf::from(path.clone());
+            let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
+            let yaml = get_input_parameters(&input_refs)?;
+            let mut cwl_old = cwl.clone();
+            run_commandlinetool(&mut cwl_old, Some(yaml), Some(&path_buf), None)?;
+        }
+    
         // Check files that changed
         let files = get_modified_files(&repo);
         if files.is_empty() && outputs.is_empty() {
@@ -236,9 +200,9 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     } else {
         warn!("User requested no run, could not determine outputs!");
     }
-    //if inputs.is_empty() && outputs.is_empty() {
+
     post_process_cwl(&mut cwl);
-    // }
+
     if !args.is_raw {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         let mut yaml = cwl.save(&path);
