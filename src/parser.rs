@@ -38,7 +38,7 @@ pub fn get_input_parameters(inputs: &[&str]) -> Result<HashMap<String, DefaultVa
                 DefaultValue::Directory(Directory::from_location(&input.to_string()))
             }
             _ => {
-                DefaultValue::from(DefaultValue::Any(Value::String(input.to_string()))) 
+                DefaultValue::Any(Value::String(input.to_string()))
             }
         };
         yaml_data.insert(key.clone(), value.clone());
