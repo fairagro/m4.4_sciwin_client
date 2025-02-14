@@ -2,6 +2,7 @@
 ## New Features
 - Allowed handling of nullable and array CWLTypes using `File?` or `File[]` notation
 - Added `s4n execute make-template ./path/to.cwl` to create job templates #75
+- Added support for the direct execution of files #79
 
 ## Bugfixes
 - Fixed setting correct InitialWorkDirRequirement when `-i` is used in `s4n tool create` #69
