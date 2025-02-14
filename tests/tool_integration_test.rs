@@ -16,11 +16,7 @@ use s4n::{
     repo::get_modified_files,
 };
 use serial_test::serial;
-use std::{
-    env,
-    fs::{self, read_to_string},
-    path::Path,
-};
+use std::{env, fs::read_to_string, path::Path};
 use tempfile::tempdir;
 
 #[test]
@@ -397,7 +393,7 @@ pub fn test_shell_script() {
 
     let script = dir.path().join("script.sh");
     copy_file("tests/test_data/script.sh", script.to_str().unwrap()).unwrap();
-    fs::set_permissions(script, <fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
+    std::fs::set_permissions(script, <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
