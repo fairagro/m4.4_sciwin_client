@@ -387,7 +387,7 @@ pub fn test_tool_output_complete_dir() {
 
 #[test]
 #[serial]
-#[cfg_attr(target_os = "windows", ignore)]
+#[cfg_attr(not(target_os = "linux"), ignore)]
 pub fn test_shell_script() {
     let dir = tempdir().unwrap();
 
