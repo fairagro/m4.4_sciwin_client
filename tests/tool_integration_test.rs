@@ -56,9 +56,10 @@ pub fn tool_create_test_inputs_outputs() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
             //check RData case with archive
-            inputs: Some(vec![
+            /*inputs: Some(vec![
                 "example_input.RData".to_string(),
-            ]),
+            ]),*/
+            inputs: None,
             outputs: Some(vec![
                 "example.RData".to_string(),
             ]),

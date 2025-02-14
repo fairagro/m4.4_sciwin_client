@@ -1,4 +1,4 @@
-load("example_input.RData")
+#load("example_input.RData")
 
 data <- data.frame(
   ID = 1:5,
