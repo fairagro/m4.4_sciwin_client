@@ -61,7 +61,9 @@ pub fn tool_create_test_inputs_outputs() {
             ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
-        assert!(handle_tool_commands(&cmd).is_ok());
+        let result = handle_tool_commands(&cmd);
+        println!("{result:#?}");
+        assert!(result.is_ok());
         /*
         //check for files being present
         let output_paths = vec![
