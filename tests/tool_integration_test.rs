@@ -16,7 +16,11 @@ use s4n::{
     repo::get_modified_files,
 };
 use serial_test::serial;
-use std::{env, fs::{self, read_to_string}, os::unix::fs::PermissionsExt, path::Path};
+use std::{
+    env,
+    fs::{self, read_to_string},
+    path::Path,
+};
 use tempfile::tempdir;
 
 #[test]
@@ -387,13 +391,13 @@ pub fn test_tool_output_complete_dir() {
 
 #[test]
 #[serial]
-#[cfg_attr(not(target_os = "linux"), ignore)]
+#[cfg(target_os = "linux")]
 pub fn test_shell_script() {
     let dir = tempdir().unwrap();
 
     let script = dir.path().join("script.sh");
     copy_file("tests/test_data/script.sh", script.to_str().unwrap()).unwrap();
-    fs::set_permissions(script, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(script, <fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -419,7 +423,7 @@ pub fn test_shell_script() {
         if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
             assert_eq!(iwdr.listing[0].entryname, "./script.sh");
         } else {
-            panic!("No an InitialWorkDirRequirement")
+            panic!("Not an InitialWorkDirRequirement")
         }
     } else {
         panic!("No requirements found")
