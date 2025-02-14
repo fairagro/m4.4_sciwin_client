@@ -16,7 +16,7 @@ use s4n::{
     repo::get_modified_files,
 };
 use serial_test::serial;
-use std::{env, fs::read_to_string, path::Path};
+use std::{env, fs::{self, read_to_string}, os::unix::fs::PermissionsExt, path::Path};
 use tempfile::tempdir;
 
 #[test]
@@ -55,16 +55,9 @@ pub fn tool_create_test() {
 pub fn tool_create_test_inputs_outputs() {
     with_temp_repository(|_dir| {
         let tool_create_args = CreateToolArgs {
-            inputs: Some(vec![
-                "data/input.txt".to_string(),
-            ]),
-            outputs: Some(vec![
-                "results.txt".to_string(),
-            ]),
-            command: vec![
-                "python".to_string(),
-                "scripts/echo_inline.py".to_string(),
-            ],
+            inputs: Some(vec!["data/input.txt".to_string()]),
+            outputs: Some(vec!["results.txt".to_string()]),
+            command: vec!["python".to_string(), "scripts/echo_inline.py".to_string()],
             ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
@@ -85,7 +78,6 @@ pub fn tool_create_test_inputs_outputs() {
         */
     });
 }
-
 
 #[test]
 #[serial]
@@ -389,6 +381,49 @@ pub fn test_tool_output_complete_dir() {
     assert_eq!(tool.outputs.len(), 1); //only root folder
 
     println!("{:#?}", tool.outputs);
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[test]
+#[serial]
+#[cfg_attr(target_os = "windows", ignore)]
+pub fn test_shell_script() {
+    let dir = tempdir().unwrap();
+
+    let script = dir.path().join("script.sh");
+    copy_file("tests/test_data/script.sh", script.to_str().unwrap()).unwrap();
+    fs::set_permissions(script, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+    init_s4n(None, false).expect("Could not init s4n");
+
+    let name = "script";
+    let command = &["./script.sh"];
+    let args = CreateToolArgs {
+        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        ..Default::default()
+    };
+
+    let result = create_tool(&args);
+    println!("{result:#?}");
+    assert!(result.is_ok());
+
+    let tool = load_tool(format!("workflows/{name}/{name}.cwl")).unwrap();
+    assert_eq!(tool.inputs.len(), 0);
+    assert_eq!(tool.outputs.len(), 0);
+
+    if let Some(req) = tool.requirements {
+        assert_eq!(req.len(), 1);
+        if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
+            assert_eq!(iwdr.listing[0].entryname, "./script.sh");
+        } else {
+            panic!("No an InitialWorkDirRequirement")
+        }
+    } else {
+        panic!("No requirements found")
+    }
 
     env::set_current_dir(current).unwrap();
 }

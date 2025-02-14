@@ -120,21 +120,19 @@ pub fn test_execute_local_is_quiet() {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 pub fn test_execute_local_cwltool() {
-    //as cwltool does not support windows, we can not test that
-    if !cfg!(target_os = "windows") {
-        let args = LocalExecuteArgs {
-            runner: Runner::CWLTool,
-            file: PathBuf::from("tests/test_data/echo.cwl"),
-            ..Default::default()
-        };
+    let args = LocalExecuteArgs {
+        runner: Runner::CWLTool,
+        file: PathBuf::from("tests/test_data/echo.cwl"),
+        ..Default::default()
+    };
 
-        execute_local(&args).expect("Could not execute CommandLineTool");
+    execute_local(&args).expect("Could not execute CommandLineTool");
 
-        let file = Path::new("results.txt");
-        assert!(file.exists());
-        fs::remove_file(file).unwrap();
-    }
+    let file = Path::new("results.txt");
+    assert!(file.exists());
+    fs::remove_file(file).unwrap();
 }
 
 #[test]

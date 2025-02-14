@@ -9,11 +9,8 @@ use cwl::{
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::error::Error;
-use std::{
-    collections::HashMap,
-    path::Path,
-};
+use std::{collections::HashMap, path::Path};
+use std::{error::Error, fs};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -25,21 +22,14 @@ struct FileEntry {
 }
 
 pub fn get_input_parameters(inputs: &[&str]) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
-
     let mut yaml_data: HashMap<String, DefaultValue> = HashMap::new();
     for input in inputs {
         let key = input.replace('.', "_");
         let file_type = guess_type(input);
         let value = match file_type {
-            CWLType::File => {
-                DefaultValue::File(File::from_location(&input.to_string()))
-            }
-            CWLType::Directory => {
-                DefaultValue::Directory(Directory::from_location(&input.to_string()))
-            }
-            _ => {
-                DefaultValue::Any(Value::String(input.to_string()))
-            }
+            CWLType::File => DefaultValue::File(File::from_location(&input.to_string())),
+            CWLType::Directory => DefaultValue::Directory(Directory::from_location(&input.to_string())),
+            _ => DefaultValue::Any(Value::String(input.to_string())),
         };
         yaml_data.insert(key.clone(), value.clone());
     }
@@ -99,7 +89,13 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
     }
 
     tool = match base_command {
-        Command::Single(_) => tool,
+        Command::Single(cmd) => {
+            //if command is an existing file, add to requirements
+            if fs::exists(&cmd).unwrap_or_default() {
+                return tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(&cmd))]);
+            }
+            tool
+        }
         Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
             &vec[1],
         ))]),
@@ -283,7 +279,7 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
     for input in &tool.inputs {
         if let Some(default) = &input.default {
             for output in tool.outputs.iter_mut() {
-                if let Some(binding) = &mut output.output_binding {                    
+                if let Some(binding) = &mut output.output_binding {
                     if binding.glob == default.as_value_string() {
                         binding.glob = process_input(input);
                         processed_once = true;
@@ -326,7 +322,7 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
     }
 
     for output in tool.outputs.iter_mut() {
-        if let Some(binding) = &mut output.output_binding{
+        if let Some(binding) = &mut output.output_binding {
             if binding.glob == "." {
                 output.id = "output_directory".to_string();
                 binding.glob = "$(runtime.outdir)".into();
