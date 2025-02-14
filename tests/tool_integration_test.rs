@@ -53,18 +53,16 @@ pub fn tool_create_test() {
 #[test]
 #[serial]
 pub fn tool_create_test_inputs_outputs() {
-    with_temp_repository(|_dir| {
+    with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
             inputs: Some(vec!["data/input.txt".to_string()]),
             outputs: Some(vec!["results.txt".to_string()]),
-            command: vec!["python".to_string(), "scripts/echo_inline.py".to_string()],
+            command: vec!["python".to_string(), "echo_inline.py".to_string()],
             ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
-        let result = handle_tool_commands(&cmd);
-        println!("{result:#?}");
-        assert!(result.is_ok());
-        /*
+        assert!(handle_tool_commands(&cmd).is_ok());
+        
         //check for files being present
         let output_paths = vec![
             dir.path().join(Path::new("results.txt")),
@@ -77,7 +75,7 @@ pub fn tool_create_test_inputs_outputs() {
         //no uncommitted left?
         let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
-        */
+        
     });
 }
 
