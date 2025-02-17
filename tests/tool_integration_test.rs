@@ -1,5 +1,5 @@
 mod common;
-use common::{os_path, with_temp_repository};
+use common::{check_git_user, os_path, with_temp_repository};
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
@@ -355,6 +355,7 @@ pub fn test_tool_output_is_dir() {
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
+    check_git_user().unwrap();
     init_s4n(None, false).expect("Could not init s4n");
 
     let name = "create_dir";
@@ -384,6 +385,7 @@ pub fn test_tool_output_complete_dir() {
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
+    check_git_user().unwrap();
     init_s4n(None, false).expect("Could not init s4n");
 
     let name = "create_dir";
@@ -422,6 +424,7 @@ pub fn test_shell_script() {
 
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
+    check_git_user().unwrap();
     init_s4n(None, false).expect("Could not init s4n");
 
     let name = "script";
