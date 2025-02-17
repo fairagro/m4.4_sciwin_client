@@ -192,7 +192,7 @@ pub trait PathItem {
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
@@ -211,9 +211,7 @@ impl File {
         File {
             class: String::from("File"),
             location: location.to_string(),
-            secondary_files: None,
-            basename: None,
-            format: None,
+            ..Default::default()
         }
     }
 }
@@ -232,7 +230,7 @@ impl PathItem for File {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,
@@ -249,8 +247,7 @@ impl Directory {
         Directory {
             class: String::from("Directory"),
             location: location.to_string(),
-            secondary_files: None,
-            basename: None,
+            ..Default::default()
         }
     }
 }
