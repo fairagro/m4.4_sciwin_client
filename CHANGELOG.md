@@ -8,6 +8,7 @@
 - Fixed setting correct InitialWorkDirRequirement when `-i` is used in `s4n tool create` #69
 - Fixed handling of json-Data #60
 - Fixed unreported Bug, where CWL CommandLineTool Output was ignored if not of type File, Directory, stdout, stderr or string. 781d20e
+- Fixed Command fail because of invalid git user config - prompts user if missing #78
 
 ## Other
 - Added Tests for all Documentation examples #76
