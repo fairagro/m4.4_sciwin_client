@@ -3,7 +3,7 @@ use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
     requirements::Requirement,
-    types::{DefaultValue, Directory, Entry, EnviromentDefs, File},
+    types::{DefaultValue, Directory, Entry, EnviromentDefs, File, PathItem},
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
@@ -101,7 +101,8 @@ pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap
 fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &str) -> DefaultValue {
     match value {
         DefaultValue::File(file) => {
-            let location = make_relative_to(&file.location, home_dir).trim_start_matches("../");
+            let file_loc = file.get_location();
+            let location = make_relative_to(&file_loc, home_dir).trim_start_matches("../");
             let test = env::current_dir().unwrap().join(location);
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {
@@ -222,7 +223,7 @@ fn get_input_value(
             if suffix == "format" {
                 file.format.clone()
             } else {
-                Some(get_file_property(&file.location, suffix))
+                Some(get_file_property(&file.get_location(), suffix))
             }
         } else {
             Some(value.as_value_string())

@@ -5,7 +5,7 @@ use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     requirements::Requirement,
-    types::{CWLType, DefaultValue, Entry},
+    types::{CWLType, DefaultValue, Entry, PathItem},
 };
 use std::{
     collections::HashMap,
@@ -196,7 +196,7 @@ fn handle_filename(value: &DefaultValue) -> String {
     };
 
     match value {
-        DefaultValue::File(item) => join_with_basename(&item.location, &item.basename),
+        DefaultValue::File(item) => join_with_basename(&item.get_location(), &item.basename),
         DefaultValue::Directory(item) => join_with_basename(&item.location, &item.basename),
         DefaultValue::Any(_) => String::new(),
     }

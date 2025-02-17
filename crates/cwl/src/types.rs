@@ -99,7 +99,7 @@ pub enum DefaultValue {
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
-            DefaultValue::File(item) => item.location.clone(),
+            DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Directory(item) => item.location.clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
@@ -187,7 +187,7 @@ impl<'de> Deserialize<'de> for DefaultValue {
 }
 
 pub trait PathItem {
-    fn location(&self) -> &String;
+    fn get_location(&self) -> String;
     fn set_location(&mut self, new_location: String);
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
@@ -196,8 +196,10 @@ pub trait PathItem {
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
-    #[serde(alias = "path")]
-    pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secondary_files: Option<Vec<DefaultValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -210,7 +212,7 @@ impl File {
     pub fn from_location(location: &String) -> Self {
         File {
             class: String::from("File"),
-            location: location.to_string(),
+            location: Some(location.to_string()),
             ..Default::default()
         }
     }
@@ -218,16 +220,16 @@ impl File {
 
 impl PathItem for File {
     fn set_location(&mut self, new_location: String) {
-        self.location = new_location;
+        self.location = Some(new_location);
     }
 
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
         self.secondary_files.as_mut()
     }
 
-    fn location(&self) -> &String {
-        &self.location
-    }
+    fn get_location(&self) -> String {
+            self.location.as_ref().unwrap_or(&String::new()).clone()
+        }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -261,8 +263,8 @@ impl PathItem for Directory {
         self.secondary_files.as_mut()
     }
 
-    fn location(&self) -> &String {
-        &self.location
+    fn get_location(&self) -> String {
+        self.location.clone()
     }
 }
 

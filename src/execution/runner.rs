@@ -12,7 +12,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    types::{CWLType, DefaultValue, OutputItem},
+    types::{CWLType, DefaultValue, OutputItem, PathItem},
     wf::Workflow,
 };
 use log::info;
@@ -149,8 +149,8 @@ pub fn run_workflow(
             let result = evaluate_input(input, &input_values_)?;
             let value = match &result {
                 DefaultValue::File(file) => {
-                    let dest = format!("{}/{}", output_directory, file.location);
-                    fs::copy(workflow_folder.join(&file.location), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    let dest = format!("{}/{}", output_directory, file.get_location());
+                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
                     OutputItem::OutputFile(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
                 DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
