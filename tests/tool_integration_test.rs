@@ -55,7 +55,7 @@ pub fn tool_create_test() {
 pub fn tool_create_test_inputs_outputs() {
     with_temp_repository(|dir| {
         let script = "scripts/echo_inline.py".to_string();
-        let input = "data/input.txt".to_string();
+        let input = "../data/input.txt".to_string();
 
         let tool_create_args = CreateToolArgs {
             inputs: Some(vec![input.clone()]),

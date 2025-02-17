@@ -9,7 +9,7 @@ use cwl::{
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, thread::current};
 use std::{error::Error, fs};
 
 //TODO complete list
@@ -37,7 +37,7 @@ pub fn get_input_parameters(inputs: &[&str]) -> Result<HashMap<String, DefaultVa
     Ok(yaml_data)
 }
 
-pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> CommandLineTool {
+pub fn parse_command_line(commands: Vec<&str>) -> CommandLineTool {
     let base_command = get_base_command(&commands);
 
     let remainder = match &base_command {
@@ -47,31 +47,7 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
 
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
-    if let Some(inputs) = &inputs {
-        let test_in = InitialWorkDirRequirement::from_files(inputs, commands[1]);
-        tool = tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(test_in)]);
-        let mut updated_inputs = inputs.clone();
-        if !updated_inputs.contains(&commands[1]) {
-            updated_inputs.push(commands[1]);
-        }
-        let initial_dir_req = InitialWorkDirRequirement::from_files(&updated_inputs, commands[1]);
-        let updated_commands = update_commands_with_entrynames(commands.clone(), &initial_dir_req);
-        let base_command_updated = get_base_command(&updated_commands.iter().map(String::as_str).collect::<Vec<_>>());
-        let inputs_cmd = get_inputs(&commands[2..]);
-        let mut input_parameters: Vec<CommandInputParameter> = inputs
-            .iter()
-            .map(|current| {
-                CommandInputParameter::default()
-                    .with_id(&current.replace(".", "_"))
-                    .with_type(guess_type(current))
-            })
-            .collect();
-        input_parameters.extend(inputs_cmd);
-        tool = tool.with_inputs(input_parameters);
-
-        tool = tool.with_base_command(base_command_updated);
-        return tool;
-    } else if !remainder.is_empty() {
+    if !remainder.is_empty() {
         let (cmd, piped) = split_vec_at(remainder, "|");
 
         let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
@@ -109,6 +85,31 @@ pub fn parse_command_line(commands: Vec<&str>, inputs: Option<Vec<&str>>) -> Com
         }
     }
     tool
+}
+
+pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
+    if let Some(req) = &mut tool.requirements {
+        for item in req.iter_mut() {
+            if let Requirement::InitialWorkDirRequirement(req) = item {
+                req.add_files(&inputs);
+                break;
+            }
+        }
+    } else {
+        tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
+            &inputs,
+        ))])
+    }
+
+    let params = inputs
+        .iter()
+        .map(|i| {
+            CommandInputParameter::default()
+                .with_id(&slugify!(i, separator = "_"))
+                .with_type(guess_type(i))
+        })
+        .collect::<Vec<_>>();
+    tool.inputs.extend(params);
 }
 
 fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &InitialWorkDirRequirement) -> Vec<String> {

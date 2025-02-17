@@ -88,7 +88,7 @@ impl InitialWorkDirRequirement {
             }],
         }
     }
-    pub fn from_files(filenames: &Vec<&str>, script_name: &str) -> Self {
+    pub fn from_files(filenames: &Vec<&str>) -> Self {
         InitialWorkDirRequirement {
             listing: filenames
                 .iter()
@@ -96,10 +96,6 @@ impl InitialWorkDirRequirement {
                     entryname: filename.to_string(),
                     entry: Entry::Source(get_entry_name(filename)),
                 })
-                .chain(std::iter::once(Listing {
-                    entryname: script_name.rsplit(MAIN_SEPARATOR_STR).next().unwrap().to_string(),
-                    entry: Entry::from_file(script_name),
-                }))
                 .collect(),
         }
     }
@@ -110,6 +106,13 @@ impl InitialWorkDirRequirement {
                 entry: Entry::Source(contents.to_string()),
             }],
         }
+    }
+
+    pub fn add_files(&mut self, filenames: &Vec<&str>) {
+        self.listing.extend(filenames.iter().map(|&f| Listing {
+            entryname: f.to_string(),
+            entry: Entry::Source(get_entry_name(f)),
+        }));
     }
 }
 
@@ -170,10 +173,7 @@ mod tests {
 
     #[test]
     pub fn test_initial_workdir_requirement_multiple() {
-        let req = InitialWorkDirRequirement::from_files(
-            &vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"],
-            "../../tests/test_data/echo.py",
-        );
-        assert_eq!(req.listing.len(), 3);
+        let req = InitialWorkDirRequirement::from_files(&vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"]);
+        assert_eq!(req.listing.len(), 2);
     }
 }

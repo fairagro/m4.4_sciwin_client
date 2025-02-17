@@ -10,6 +10,7 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
+    inputs,
     requirements::{DockerRequirement, Requirement},
 };
 use git2::Repository;
@@ -71,7 +72,6 @@ pub struct CreateToolArgs {
     pub command: Vec<String>,
 }
 
-
 #[derive(Args, Debug)]
 pub struct RemoveToolArgs {
     #[arg(trailing_var_arg = true, help = "Remove a tool")]
@@ -83,7 +83,6 @@ pub struct ListToolArgs {
     #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
     pub list_all: bool,
 }
-
 
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Check if git status is clean
@@ -108,14 +107,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         return Err("No commandline string given!".into());
     }
 
-    let mut cwl = parser::parse_command_line(
-        args.command.iter().map(|s| s.as_str()).collect(),
-        if inputs.is_empty() {
-            None
-        } else {
-            Some(inputs.iter().map(|s| s.as_str()).collect())
-        },
-    );
+    let mut cwl = parser::parse_command_line(args.command.iter().map(|s| s.as_str()).collect());
 
     // Handle outputs
     if !outputs.is_empty() {
@@ -141,20 +133,15 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
-        if inputs.is_empty() && outputs.is_empty() {
-            if run_command(&cwl, None).is_err() {
-                return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
-            }
+        if run_command(&cwl, None).is_err() {
+            return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
         }
-        else {
-            let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-            let path_buf = PathBuf::from(path.clone());
-            let input_refs: Vec<&str> = inputs.iter().map(|s| s.as_str()).collect();
-            let yaml = get_input_parameters(&input_refs)?;
-            let mut cwl_old = cwl.clone();
-            run_commandlinetool(&mut cwl_old, Some(yaml), Some(&path_buf), None)?;
+
+        //add fixed inputs
+        if let Some(fixed_inputs) = &args.inputs {
+            parser::add_fixed_inputs(&mut cwl, fixed_inputs.iter().map(|i| i.as_str()).collect::<Vec<_>>());
         }
-    
+
         // Check files that changed
         let files = get_modified_files(&repo);
         if files.is_empty() && outputs.is_empty() {

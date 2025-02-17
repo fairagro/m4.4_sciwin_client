@@ -86,7 +86,7 @@ pub fn test_cases() -> Vec<(String, CommandLineTool)> {
 pub fn test_parse_command_line() {
     for (input, expected) in test_cases() {
         let args = shlex::split(input.as_str()).expect("Parsing test case failed");
-        let result = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
+        let result = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         assert_eq!(result, expected);
         println!("{result:?}");
     }
@@ -98,7 +98,7 @@ pub fn test_parse_command_line_testdata() {
     with_temp_repository(|_| {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
+        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         let expected = CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "scripts/echo.py".to_string()]))
             .with_inputs(vec![CommandInputParameter::default()
@@ -117,7 +117,7 @@ pub fn test_parse_command_line_testdata() {
 pub fn test_cwl_execute_command_single() {
     let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
-    let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
+    let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
     assert!(run_command(&cwl, None).is_ok());
 }
 
@@ -127,7 +127,7 @@ pub fn test_cwl_execute_command_multiple() {
     with_temp_repository(|dir| {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect(), None);
+        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
         assert!(run_command(&cwl, None).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
@@ -161,7 +161,7 @@ pub fn test_get_outputs() {
 pub fn test_parse_redirect() {
     let command = "cat tests/test_data/input.txt \\> output.txt";
     let split_params = shlex::split(command).unwrap();
-    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect(), None);
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
 
     assert!(tool.stdout == Some("output.txt".to_string()));
 }
@@ -170,7 +170,7 @@ pub fn test_parse_redirect() {
 pub fn test_parse_redirect_stderr() {
     let command = "cat tests/test_data/inputtxt 2\\> err.txt";
     let split_params = shlex::split(command).unwrap();
-    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect(), None);
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
 
     assert!(tool.stderr == Some("err.txt".to_string()));
 }
@@ -179,7 +179,7 @@ pub fn test_parse_redirect_stderr() {
 pub fn test_parse_pipe_op() {
     let command = "df \\| grep --line-buffered tmpfs \\> df.log";
     let split_params = shlex::split(command).unwrap();
-    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect(), None);
+    let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
 
     assert!(tool.arguments.is_some());
     assert!(tool.has_shell_command_requirement());
