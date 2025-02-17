@@ -289,10 +289,10 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_file_metadata() {
-        let path = env::current_dir().unwrap().join("tests/test_data/file.txt");
+        let path = env::current_dir().unwrap().join("tests").join("test_data").join("file.txt");
         let result = get_file_metadata(path.clone(), None);
         let expected = OutputFile {
-            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            location: Some(format!("file://{}", path.canonicalize().unwrap().to_string_lossy().into_owned())),
             basename: Some("file.txt".to_string()),
             class: "File".to_string(),
             nameext: Some("txt".into()),
@@ -336,8 +336,8 @@ mod tests {
             _ => Some(String::new()),
         });
 
-        let file = current.join("file.txt").to_string_lossy().into_owned();
-        let input = current.join("input.txt").to_string_lossy().into_owned();
+        let file = current.join("file.txt").canonicalize().unwrap().to_string_lossy().into_owned();
+        let input = current.join("input.txt").canonicalize().unwrap().to_string_lossy().into_owned();
 
         let expected = OutputDirectory {
             location: format!("file://{cwd}"),

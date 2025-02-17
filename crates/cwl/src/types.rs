@@ -253,7 +253,6 @@ impl File {
         let path = Path::new(&loc);
         let absolute_path = path.canonicalize().unwrap_or_default();
         let absolute_str = absolute_path.display().to_string();
-        let absolute_str = absolute_str.strip_prefix(r"\\?\").unwrap_or(&absolute_str); //windows
         let metadata = fs::metadata(path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
         let hash = fs::read(path).ok().map(|f| {
