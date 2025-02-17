@@ -9,6 +9,7 @@
 - Fixed handling of json-Data #60
 - Fixed unreported Bug, where CWL CommandLineTool Output was ignored if not of type File, Directory, stdout, stderr or string. 781d20e
 - Fixed Command fail because of invalid git user config - prompts user if missing #78
+- Fixed cleanup if init fails #77
 
 ## Other
 - Added Tests for all Documentation examples #76
