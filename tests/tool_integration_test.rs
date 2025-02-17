@@ -399,6 +399,11 @@ pub fn test_tool_output_complete_dir() {
     let tool = load_tool(format!("workflows/{name}/{name}.cwl")).unwrap();
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1); //only root folder
+    if let Some(binding) = &tool.outputs[0].output_binding {
+        assert_eq!(binding.glob, "$(runtime.outdir)".to_string())
+    } else {
+        panic!("No Binding")
+    }
 
     println!("{:#?}", tool.outputs);
 
