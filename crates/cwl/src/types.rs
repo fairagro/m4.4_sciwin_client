@@ -93,7 +93,7 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
-    Any(serde_yaml::Value)
+    Any(serde_yaml::Value),
 }
 
 impl DefaultValue {
@@ -197,15 +197,27 @@ pub trait PathItem {
 pub struct File {
     pub class: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<String>,    
+    pub location: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub secondary_files: Option<Vec<DefaultValue>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub dirname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nameroot: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nameext: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checksum: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contents: Option<String>,
 }
 
 impl File {
@@ -228,8 +240,8 @@ impl PathItem for File {
     }
 
     fn get_location(&self) -> String {
-            self.location.as_ref().unwrap_or(&String::new()).clone()
-        }
+        self.location.as_ref().unwrap_or(&String::new()).clone()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
