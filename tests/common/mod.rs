@@ -75,6 +75,7 @@ fn set_up_repository() -> TempDir {
             }
         }
     }
+    check_git_user().unwrap();
     let repo = Repository::init(&dir).expect("Failed to create a blank repository");
     stage_all(&repo).expect("Could not stage files");
 
