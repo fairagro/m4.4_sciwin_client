@@ -3,7 +3,13 @@ use log::{error, LevelFilter};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
-        annotate::handle_annotation_command, execute::handle_execute_commands, init::handle_init_command, sync::handle_sync, tool::{create_tool, handle_tool_commands}, workflow::handle_workflow_commands
+        annotate::handle_annotation_command,
+        check_git_config,
+        execute::handle_execute_commands,
+        init::handle_init_command,
+        sync::handle_sync,
+        tool::{create_tool, handle_tool_commands},
+        workflow::handle_workflow_commands,
     },
     error::{CommandError, ExitCode},
     log::LOGGER,
@@ -27,6 +33,7 @@ fn main() {
 fn run() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
 
+    check_git_config()?;
     match &args.command {
         Commands::Init(args) => handle_init_command(args),
         Commands::Tool { command } => handle_tool_commands(command),
