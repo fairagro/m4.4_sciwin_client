@@ -57,7 +57,7 @@ fn set_up_repository() -> TempDir {
         (Path::new("./tests/test_data/echo2.py").to_path_buf(), "scripts/echo2.py"),
         (Path::new("./tests/test_data/echo3.py").to_path_buf(), "scripts/echo3.py"),
         (Path::new("./tests/test_data/script_test.py").to_path_buf(), "scripts/script_test.py"),
-        (Path::new("./tests/test_data/echo_inline.py").to_path_buf(), "echo_inline.py"),
+        (Path::new("./tests/test_data/echo_inline.py").to_path_buf(), "scripts/echo_inline.py"),
         (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
         (Path::new("./tests/test_data/input2.txt").to_path_buf(), "data/input2.txt"),
         (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),

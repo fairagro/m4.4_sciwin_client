@@ -54,28 +54,48 @@ pub fn tool_create_test() {
 #[serial]
 pub fn tool_create_test_inputs_outputs() {
     with_temp_repository(|dir| {
+        let script = "scripts/echo_inline.py".to_string();
+        let input = "data/input.txt".to_string();
+
         let tool_create_args = CreateToolArgs {
-            inputs: Some(vec!["data/input.txt".to_string()]),
+            inputs: Some(vec![input.clone()]),
             outputs: Some(vec!["results.txt".to_string()]),
-            command: vec!["python".to_string(), "echo_inline.py".to_string()],
+            command: vec!["python".to_string(), script.clone()],
             ..Default::default()
         };
         let cmd = ToolCommands::Create(tool_create_args);
         assert!(handle_tool_commands(&cmd).is_ok());
-        
+
+        let tool_path = Path::new("workflows/echo_inline/echo_inline.cwl");
+
         //check for files being present
-        let output_paths = vec![
-            dir.path().join(Path::new("results.txt")),
-            dir.path().join(Path::new("workflows/echo_inline/echo_inline.cwl")),
-        ];
+        let output_paths = vec![dir.path().join(Path::new("results.txt")), dir.path().join(tool_path)];
+
         for output_path in output_paths {
             assert!(output_path.exists());
+        }
+
+        //check tool props
+        let tool = load_tool(tool_path).unwrap();
+
+        assert_eq!(tool.inputs.len(), 1);
+        assert_eq!(tool.outputs.len(), 1);
+
+        if let Some(req) = tool.requirements {
+            if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
+                assert_eq!(iwdr.listing.len(), 2);
+                assert_eq!(iwdr.listing[0].entryname, script);
+                assert_eq!(iwdr.listing[1].entryname, input);
+            } else {
+                panic!("Not an InitialWorkDirRequirement")
+            }
+        } else {
+            panic!("No Requirements set")
         }
 
         //no uncommitted left?
         let repo = Repository::open(dir.path()).unwrap();
         assert!(get_modified_files(&repo).is_empty());
-        
     });
 }
 
