@@ -116,7 +116,8 @@ fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &st
             }
         }
         DefaultValue::Directory(directory) => {
-            let location = make_relative_to(&directory.location, home_dir).trim_start_matches("../");
+            let dir_loc = directory.get_location();
+            let location = make_relative_to(&dir_loc, home_dir).trim_start_matches("../");
             let test = env::current_dir().unwrap().join(location);
             if let Some(diff) = diff_paths(test, staged_file) {
                 if diff.to_str() == Some("") {

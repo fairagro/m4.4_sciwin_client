@@ -34,7 +34,7 @@ impl Saveable for CommandLineTool {
                 value.location = Some(resolve_path(value.get_location(), path));
             }
             if let Some(DefaultValue::Directory(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
+                value.location = Some(resolve_path(value.get_location(), path));
             }
         }
 

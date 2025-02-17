@@ -55,9 +55,10 @@ pub fn evaluate_outputs(
     for output in tool_outputs {
         match &output.type_ {
             CWLType::Optional(inner) => {
-                evaluate_output_impl(output, inner, initial_dir, tool_stdout, tool_stderr, &mut outputs).ok(); //ignores all errors
+                evaluate_output_impl(output, inner, initial_dir, tool_stdout, tool_stderr, &mut outputs).ok();
+                //ignores all errors
             }
-            _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?
+            _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?,
         }
     }
     if print_output() {
@@ -141,11 +142,10 @@ pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>
 
 pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
     OutputDirectory {
-        location: format!("file://{}", path.as_ref().display()),
-        basename: path.as_ref().file_name().unwrap().to_string_lossy().into_owned(),
-        class: "Directory".to_string(),
-        listing: vec![],
-        path: path.as_ref().to_string_lossy().into_owned(),
+        location: Some(format!("file://{}", path.as_ref().display())),
+        basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
+        path: Some(path.as_ref().to_string_lossy().into_owned()),
+        ..Default::default()
     }
 }
 
@@ -159,10 +159,18 @@ pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Resul
         let dest_path = dest.as_ref().join(entry.file_name());
         if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            dir.listing.push(OutputItem::OutputDirectory(sub_dir));
+            if let Some(listing) = &mut dir.listing {
+                listing.push(OutputItem::OutputDirectory(sub_dir));
+            } else {
+                dir.listing = Some(vec![OutputItem::OutputDirectory(sub_dir)])
+            }
         } else {
             copy_file(src_path, &dest_path)?;
-            dir.listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)))
+            if let Some(listing) = &mut dir.listing {
+                listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)));
+            } else {
+                dir.listing = Some(vec![OutputItem::OutputFile(get_file_metadata(dest_path, None))])
+            }
         }
     }
     Ok(dir)
@@ -292,7 +300,7 @@ mod tests {
         let path = env::current_dir().unwrap().join("tests").join("test_data").join("file.txt");
         let result = get_file_metadata(path.clone(), None);
         let expected = OutputFile {
-            location: Some(format!("file://{}", path.canonicalize().unwrap().to_string_lossy().into_owned())),
+            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
             basename: Some("file.txt".to_string()),
             class: "File".to_string(),
             nameext: Some("txt".into()),
@@ -312,11 +320,10 @@ mod tests {
         let path = env::current_dir().unwrap().join("tests/test_data");
         let result = get_diretory_metadata(path.clone());
         let expected = OutputDirectory {
-            location: format!("file://{}", path.to_string_lossy().into_owned()),
-            basename: path.file_name().unwrap().to_string_lossy().into_owned(),
-            class: "Directory".to_string(),
-            listing: vec![],
-            path: path.to_string_lossy().into_owned(),
+            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            basename: Some(path.file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(path.to_string_lossy().into_owned()),
+            ..Default::default()
         };
         assert_eq!(result, expected);
     }
@@ -331,19 +338,21 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing.sort_by_key(|item| match item {
-            OutputItem::OutputFile(file) => file.basename.clone(),
-            _ => Some(String::new()),
+        result.listing = result.listing.map(|mut listing| {
+            listing.sort_by_key(|item| match item {
+                OutputItem::OutputFile(file) => file.basename.clone(),
+                _ => Some(String::new()),
+            });
+            listing
         });
 
-        let file = current.join("file.txt").canonicalize().unwrap().to_string_lossy().into_owned();
-        let input = current.join("input.txt").canonicalize().unwrap().to_string_lossy().into_owned();
+        let file = current.join("file.txt").to_string_lossy().into_owned();
+        let input = current.join("input.txt").to_string_lossy().into_owned();
 
         let expected = OutputDirectory {
-            location: format!("file://{cwd}"),
-            basename: "test_dir".to_string(),
-            class: "Directory".to_string(),
-            listing: vec![
+            location: Some(format!("file://{cwd}")),
+            basename: Some("test_dir".to_string()),
+            listing: Some(vec![
                 OutputItem::OutputFile(OutputFile {
                     class: "File".into(),
                     location: Some(format!("file://{file}")),
@@ -363,13 +372,14 @@ mod tests {
                     basename: Some("input.txt".to_string()),
                     checksum: Some("sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string()),
                     size: Some(26),
-                    path:Some( input),
+                    path: Some(input),
                     ..Default::default()
                 }),
-            ],
-            path: cwd.to_string(),
+            ]),
+            path: Some(cwd.to_string()),
+            ..Default::default()
         };
 
         assert_eq!(result, expected);
-    }    
+    }
 }

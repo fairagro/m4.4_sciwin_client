@@ -135,12 +135,13 @@ pub fn run_workflow(
                     file.location = Some(format!("file://{}", new_loc));
                     OutputItem::OutputFile(file)
                 }
-                OutputItem::OutputDirectory(dir) => {
-                    let new_loc = Path::new(&dir.path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_dir(&dir.path, &new_loc)?;
+                OutputItem::OutputDirectory(dir) => {                    
+                    let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
+                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_dir(&path, &new_loc)?;
                     let mut dir = dir.clone();
-                    dir.path = new_loc.to_string();
-                    dir.location = format!("file://{}", new_loc);
+                    dir.path = Some(new_loc.to_string());
+                    dir.location = Some(format!("file://{}", new_loc));
                     OutputItem::OutputDirectory(dir)
                 }
                 OutputItem::Any(str) => OutputItem::Any(str.clone()),
@@ -156,8 +157,8 @@ pub fn run_workflow(
                 }
                 DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
                     copy_output_dir(
-                        workflow_folder.join(&directory.location),
-                        format!("{}/{}", &output_directory, &directory.location),
+                        workflow_folder.join(directory.get_location()),
+                        format!("{}/{}", &output_directory, &directory.get_location()),
                     )
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),

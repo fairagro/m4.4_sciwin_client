@@ -150,7 +150,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
                             DefaultValue::File(file) => {
                                 file.set_location(join_path_string(path_prefix, &file.get_location()));
                             }
-                            DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.location)),
+                            DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.get_location())),
                             DefaultValue::Any(_) => (),
                         }
                     }

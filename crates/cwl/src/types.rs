@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, fs, path::Path, str::FromStr};
+use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -101,7 +101,7 @@ impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
             DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
-            DefaultValue::Directory(item) => item.location.clone(),
+            DefaultValue::Directory(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
@@ -251,7 +251,8 @@ impl File {
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
         let path = Path::new(&loc);
-        let absolute_path = path.canonicalize().unwrap_or_default();
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
@@ -301,23 +302,39 @@ impl PathItem for File {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,
-    #[serde(alias = "path")]
-    pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secondary_files: Option<Vec<DefaultValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listing: Option<Vec<OutputItem>>,
+}
+
+impl Default for Directory {
+    fn default() -> Self {
+        Self {
+            class: String::from("Directory"),
+            location: Default::default(),
+            path: Default::default(),
+            secondary_files: Default::default(),
+            basename: Default::default(),
+            listing: Default::default(),
+        }
+    }
 }
 
 impl Directory {
     pub fn from_location(location: &String) -> Self {
         Directory {
-            class: String::from("Directory"),
-            location: location.to_string(),
+            location: Some(location.to_string()),
             ..Default::default()
         }
     }
@@ -325,7 +342,7 @@ impl Directory {
 
 impl PathItem for Directory {
     fn set_location(&mut self, new_location: String) {
-        self.location = new_location;
+        self.location = Some(new_location);
     }
 
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
@@ -333,7 +350,7 @@ impl PathItem for Directory {
     }
 
     fn get_location(&self) -> String {
-        self.location.clone()
+        self.location.as_ref().unwrap_or(&String::new()).clone()
     }
 }
 
@@ -377,15 +394,7 @@ pub struct EnvironmentDef {
 }
 
 pub type OutputFile = File;
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputDirectory {
-    pub location: String,
-    pub basename: String,
-    pub class: String,
-    pub listing: Vec<OutputItem>,
-    pub path: String,
-}
+pub type OutputDirectory = Directory;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
@@ -399,7 +408,9 @@ impl OutputItem {
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(output_file.path.as_ref().unwrap_or(&String::new()))),
-            OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
+            OutputItem::OutputDirectory(output_directory) => {
+                DefaultValue::Directory(Directory::from_location(output_directory.path.as_ref().unwrap_or(&String::new())))
+            }
             OutputItem::Any(output_value) => DefaultValue::Any(output_value.clone()),
         }
     }
