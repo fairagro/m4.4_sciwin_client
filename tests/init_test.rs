@@ -1,9 +1,9 @@
 mod common;
 use calamine::{open_workbook, Reader, Xlsx};
 use common::check_git_user;
-use s4n::commands::init::{create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
+use s4n::commands::init::{create_arc_folder_structure, git_cleanup, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
 use serial_test::serial;
-use std::{env, path::PathBuf};
+use std::{env, path::{PathBuf, Path}};
 use tempfile::{tempdir, Builder, NamedTempFile};
 
 #[test]
@@ -46,6 +46,27 @@ fn test_init_s4n_without_folder() {
 
 #[test]
 #[serial]
+fn test_cleanup_no_folder() {
+    let temp_dir = tempdir().expect("Failed to create a temporary directory");
+    println!("Temporary directory: {temp_dir:?}");
+    check_git_user().unwrap();
+    // Create a subdirectory in the temporary directory
+    std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
+
+    // Change to the temporary directory
+    env::set_current_dir(&temp_dir).unwrap();
+    println!("Current directory changed to: {}", env::current_dir().unwrap().display());
+
+    let git_folder = ".git";
+    std::fs::create_dir(git_folder).unwrap();
+    assert!(Path::new(git_folder).exists());
+    
+    git_cleanup(None);
+    assert!(!Path::new(git_folder).exists());
+}
+
+#[test]
+#[serial]
 fn test_init_s4n_without_folder_with_arc() {
     //create a temp dir
     let temp_dir = tempdir().expect("Failed to create a temporary directory");
@@ -84,6 +105,21 @@ fn test_init_git_repo() {
     // Verify that the .git directory was created
     let git_dir = base_folder.join(".git");
     assert!(git_dir.exists(), "Expected .git directory to be created");
+}
+
+#[test]
+#[serial]
+fn test_cleanup_failed_init() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let test_folder = temp_dir.path().join("my_repo");
+    let result = init_git_repo(Some(test_folder.to_str().unwrap()));
+    assert!(result.is_ok(), "Expected successful initialization");
+    assert!(Path::new(&test_folder).exists());
+    let git_dir = test_folder.join(".git");
+    assert!(git_dir.exists(), "Expected .git directory to be created");
+    git_cleanup(Some(test_folder.display().to_string()));
+    assert!(!Path::new(&test_folder).exists());
+    assert!(!git_dir.exists(), "Expected .git directory to be deleted");
 }
 
 #[test]

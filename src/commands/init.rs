@@ -1,7 +1,7 @@
 use crate::repo::{commit, get_modified_files, initial_commit, stage_all};
 use clap::Args;
 use git2::Repository;
-use log::{error, info};
+use log::{error, info, warn};
 use rust_xlsxwriter::Workbook;
 use std::{
     env,
@@ -18,7 +18,11 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    init_s4n(args.project.clone(), args.arc).map_err(|e| format!("Could not init {}", e))?;
+    if let Err(e) = init_s4n(args.project.clone(), args.arc) {
+        error!("s4n init failed: {}", e);
+        git_cleanup(args.project.clone());
+        return Err(e); 
+    }
     Ok(())
 }
 
@@ -61,6 +65,26 @@ pub fn is_git_repo(path: Option<&str>) -> bool {
     };
 
     Repository::open(&base_dir).is_ok()
+}
+
+pub fn git_cleanup(folder_name: Option<String>) {
+    // init project in folder name failed, delete it
+    if let Some(folder) = folder_name {
+        if std::fs::remove_dir_all(&folder).is_ok() {
+            info!("Cleaned up failed init in folder: {}", folder);
+        } else {
+            warn!("Failed to clean up folder: {}", folder);
+        }
+    }
+    // init project in current folder failed, only delete .git folder
+    else {
+        let git_folder = ".git";
+        if std::fs::remove_dir_all(git_folder).is_ok() {
+            info!("Cleaned up .git folder in current directory");
+        } else {
+            warn!("Failed to clean up .git folder in current directory");
+        }
+    }
 }
 
 pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn std::error::Error>> {
@@ -214,3 +238,4 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
     Ok(())
 }
+
