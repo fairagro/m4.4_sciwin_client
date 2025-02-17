@@ -248,8 +248,9 @@ fn get_input_value(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::io::get_file_size;
+
+    use super::*;
     use cwl::types::{CWLType, File};
     use serde_yaml::Value;
 

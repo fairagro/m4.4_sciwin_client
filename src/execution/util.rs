@@ -1,8 +1,8 @@
-use crate::io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output};
+use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
-    types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
+    types::{CWLType, DefaultValue, File, OutputDirectory, OutputFile, OutputItem},
 };
 use fancy_regex::Regex;
 use serde_yaml::Value;
@@ -134,31 +134,9 @@ fn evaluate_output_impl(
 }
 
 pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> OutputFile {
-    let basename = path.as_ref().file_name().and_then(|n| n.to_str()).unwrap().to_string();
-    let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
-    let checksum = format!(
-        "sha1${}",
-        get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path))
-    );
-
-    OutputFile {
-        location: format!("file://{}", &path.as_ref().display()),
-        basename,
-        class: "File".to_string(),
-        checksum,
-        size,
-        path: path.as_ref().to_string_lossy().into_owned(),
-        format: resolve_format(format),
-    }
-}
-
-fn resolve_format(format: Option<String>) -> Option<String> {
-    if let Some(format) = format {
-        let edam_url = "http://edamontology.org/";
-        Some(format.replace("edam:", edam_url))
-    } else {
-        None
-    }
+    let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
+    f.format = format;
+    f.snapshot()
 }
 
 pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
@@ -314,13 +292,15 @@ mod tests {
         let path = env::current_dir().unwrap().join("tests/test_data/file.txt");
         let result = get_file_metadata(path.clone(), None);
         let expected = OutputFile {
-            location: format!("file://{}", path.to_string_lossy().into_owned()),
-            basename: "file.txt".to_string(),
+            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            basename: Some("file.txt".to_string()),
             class: "File".to_string(),
-            checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
-            size: 4,
-            path: path.to_string_lossy().into_owned(),
-            format: None,
+            nameext: Some("txt".into()),
+            nameroot: Some("file".into()),
+            checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
+            size: Some(4),
+            path: Some(path.to_string_lossy().into_owned()),
+            ..Default::default()
         };
 
         assert_eq!(result, expected);
@@ -353,7 +333,7 @@ mod tests {
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
         result.listing.sort_by_key(|item| match item {
             OutputItem::OutputFile(file) => file.basename.clone(),
-            _ => String::new(),
+            _ => Some(String::new()),
         });
 
         let file = current.join("file.txt").to_string_lossy().into_owned();
@@ -365,35 +345,31 @@ mod tests {
             class: "Directory".to_string(),
             listing: vec![
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{file}"),
-                    basename: "file.txt".to_string(),
-                    class: "File".to_string(),
-                    checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
-                    size: 4,
-                    path: file,
-                    format: None,
+                    class: "File".into(),
+                    location: Some(format!("file://{file}")),
+                    nameroot: Some("file".into()),
+                    nameext: Some("txt".into()),
+                    basename: Some("file.txt".into()),
+                    checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
+                    size: Some(4),
+                    path: Some(file),
+                    ..Default::default()
                 }),
                 OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{input}"),
-                    basename: "input.txt".to_string(),
                     class: "File".to_string(),
-                    checksum: "sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string(),
-                    size: 26,
-                    path: input,
-                    format: None,
+                    location: Some(format!("file://{input}")),
+                    nameroot: Some("input".into()),
+                    nameext: Some("txt".into()),
+                    basename: Some("input.txt".to_string()),
+                    checksum: Some("sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string()),
+                    size: Some(26),
+                    path:Some( input),
+                    ..Default::default()
                 }),
             ],
             path: cwd.to_string(),
         };
 
         assert_eq!(result, expected);
-    }
-
-    #[test]
-    pub fn test_resolve_format() {
-        let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
-        let expected = "http://edamontology.org/format_1234";
-
-        assert_eq!(result, expected.to_string());
-    }
+    }    
 }

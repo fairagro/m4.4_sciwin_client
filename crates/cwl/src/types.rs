@@ -1,6 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, str::FromStr};
+use sha1::{Digest, Sha1};
+use std::{collections::HashMap, fs, path::Path, str::FromStr};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -192,7 +193,7 @@ pub trait PathItem {
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
@@ -220,13 +221,68 @@ pub struct File {
     pub contents: Option<String>,
 }
 
+impl Default for File {
+    fn default() -> Self {
+        Self {
+            class: String::from("File"),
+            location: Default::default(),
+            path: Default::default(),
+            basename: Default::default(),
+            dirname: Default::default(),
+            nameroot: Default::default(),
+            nameext: Default::default(),
+            checksum: Default::default(),
+            size: Default::default(),
+            secondary_files: Default::default(),
+            format: Default::default(),
+            contents: Default::default(),
+        }
+    }
+}
+
 impl File {
     pub fn from_location(location: &String) -> Self {
         File {
-            class: String::from("File"),
             location: Some(location.to_string()),
             ..Default::default()
         }
+    }
+
+    pub fn snapshot(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let path = Path::new(&loc);
+        let absolute_path = path.canonicalize().unwrap_or_default();
+        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let mut hasher = Sha1::new();
+        let hash = fs::read(path).ok().map(|f| {
+            hasher.update(&f);
+            let hash = hasher.finalize();
+            format!("sha1${hash:x}")
+        });
+
+        Self {
+            location: Some(format!("file://{}", absolute_path.display())),
+            path: Some(loc.clone()),
+            basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
+            dirname: None,
+            nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
+            checksum: hash,
+            size: Some(metadata.len()),
+            secondary_files: self.secondary_files.clone(),
+            format: resolve_format(self.format.clone()),
+            contents: None,
+            ..Default::default()
+        }
+    }
+}
+
+fn resolve_format(format: Option<String>) -> Option<String> {
+    if let Some(format) = format {
+        let edam_url = "http://edamontology.org/";
+        Some(format.replace("edam:", edam_url))
+    } else {
+        None
     }
 }
 
@@ -319,17 +375,7 @@ pub struct EnvironmentDef {
     pub env_value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputFile {
-    pub location: String,
-    pub basename: String,
-    pub class: String,
-    pub checksum: String,
-    pub size: u64,
-    pub path: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
-}
+pub type OutputFile = File;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputDirectory {
@@ -351,7 +397,7 @@ pub enum OutputItem {
 impl OutputItem {
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
-            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(&output_file.path)),
+            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(output_file.path.as_ref().unwrap_or(&String::new()))),
             OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
             OutputItem::Any(output_value) => DefaultValue::Any(output_value.clone()),
         }
@@ -444,5 +490,13 @@ mod tests {
         assert!(default_value_null.has_matching_type(&CWLType::Null)); //null matches Null
         assert!(default_value_null.has_matching_type(&CWLType::Optional(Box::new(CWLType::String))));
         //null is valid for optional
+    }
+
+    #[test]
+    pub fn test_resolve_format() {
+        let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
+        let expected = "http://edamontology.org/format_1234";
+
+        assert_eq!(result, expected.to_string());
     }
 }

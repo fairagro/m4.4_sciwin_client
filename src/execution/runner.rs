@@ -127,11 +127,12 @@ pub fn run_workflow(
         if let Some(value) = &outputs.get(source) {
             let value = match value {
                 OutputItem::OutputFile(file) => {
-                    let new_loc = Path::new(&file.path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_file(&file.path, &new_loc)?;
+                    let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
+                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_file(&path, &new_loc)?;
                     let mut file = file.clone();
-                    file.path = new_loc.to_string();
-                    file.location = format!("file://{}", new_loc);
+                    file.path = Some(new_loc.to_string());
+                    file.location = Some(format!("file://{}", new_loc));
                     OutputItem::OutputFile(file)
                 }
                 OutputItem::OutputDirectory(dir) => {
