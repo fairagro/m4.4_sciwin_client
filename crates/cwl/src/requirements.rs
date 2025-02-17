@@ -1,7 +1,6 @@
 use super::types::{Entry, EnviromentDefs, Listing};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
-use std::path::MAIN_SEPARATOR_STR;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "class")]

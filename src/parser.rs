@@ -9,8 +9,7 @@ use cwl::{
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{collections::HashMap, path::Path, thread::current};
-use std::{error::Error, fs};
+use std::{fs, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -19,22 +18,6 @@ static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
 struct FileEntry {
     class: String,
     path: String,
-}
-
-pub fn get_input_parameters(inputs: &[&str]) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
-    let mut yaml_data: HashMap<String, DefaultValue> = HashMap::new();
-    for input in inputs {
-        let key = input.replace('.', "_");
-        let file_type = guess_type(input);
-        let value = match file_type {
-            CWLType::File => DefaultValue::File(File::from_location(&input.to_string())),
-            CWLType::Directory => DefaultValue::Directory(Directory::from_location(&input.to_string())),
-            _ => DefaultValue::Any(Value::String(input.to_string())),
-        };
-        yaml_data.insert(key.clone(), value.clone());
-    }
-
-    Ok(yaml_data)
 }
 
 pub fn parse_command_line(commands: Vec<&str>) -> CommandLineTool {
@@ -110,27 +93,6 @@ pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
         })
         .collect::<Vec<_>>();
     tool.inputs.extend(params);
-}
-
-fn update_commands_with_entrynames(commands: Vec<&str>, initial_work_dir: &InitialWorkDirRequirement) -> Vec<String> {
-    let entry_map: HashMap<&str, &str> = initial_work_dir
-        .listing
-        .iter()
-        .map(|listing| (listing.entryname.as_str(), listing.entryname.as_str()))
-        .collect();
-
-    commands
-        .into_iter()
-        .map(|command| {
-            let mut updated_command = command.to_string();
-            for (entry, entryname) in &entry_map {
-                if command.contains(entry) {
-                    updated_command = updated_command.replace(command, entryname);
-                }
-            }
-            updated_command
-        })
-        .collect()
 }
 
 pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {

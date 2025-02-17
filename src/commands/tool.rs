@@ -1,8 +1,8 @@
 use crate::{
     cwl::{highlight_cwl, Saveable},
-    execution::runner::{run_command, run_commandlinetool},
+    execution::runner::run_command,
     io::{create_and_write_file, get_qualified_filename},
-    parser::{self, get_input_parameters, post_process_cwl},
+    parser::{self, post_process_cwl},
     print_list,
     repo::{commit, get_modified_files, stage_file},
 };
@@ -10,7 +10,6 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    inputs,
     requirements::{DockerRequirement, Requirement},
 };
 use git2::Repository;
@@ -91,9 +90,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         info!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
     }
 
-    let inputs = args.inputs.as_deref().unwrap_or(&[]);
-    let outputs = args.outputs.as_deref().unwrap_or(&[]);
-
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
     if !modified.is_empty() {
@@ -110,6 +106,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let mut cwl = parser::parse_command_line(args.command.iter().map(|s| s.as_str()).collect());
 
     // Handle outputs
+    let outputs = args.outputs.as_deref().unwrap_or(&[]);
     if !outputs.is_empty() {
         cwl = cwl.with_outputs(parser::get_outputs(outputs.to_vec()));
     }
