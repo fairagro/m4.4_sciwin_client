@@ -136,6 +136,16 @@ impl DefaultValue {
             _ => false,
         }
     }
+
+    pub fn to_default_value(&self) -> DefaultValue {
+        match self {
+            DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
+            DefaultValue::Directory(dir) => {
+                DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new())))
+            }
+            DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for DefaultValue {
@@ -315,7 +325,7 @@ pub struct Directory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub listing: Option<Vec<OutputItem>>,
+    pub listing: Option<Vec<DefaultValue>>,
 }
 
 impl Default for Directory {
@@ -391,29 +401,6 @@ pub struct Include {
 pub struct EnvironmentDef {
     pub env_name: String,
     pub env_value: String,
-}
-
-pub type OutputFile = File;
-pub type OutputDirectory = Directory;
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum OutputItem {
-    OutputFile(OutputFile),
-    OutputDirectory(OutputDirectory),
-    Any(Value),
-}
-
-impl OutputItem {
-    pub fn to_default_value(&self) -> DefaultValue {
-        match self {
-            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(output_file.path.as_ref().unwrap_or(&String::new()))),
-            OutputItem::OutputDirectory(output_directory) => {
-                DefaultValue::Directory(Directory::from_location(output_directory.path.as_ref().unwrap_or(&String::new())))
-            }
-            OutputItem::Any(output_value) => DefaultValue::Any(output_value.clone()),
-        }
-    }
 }
 
 #[cfg(test)]

@@ -2,7 +2,7 @@ use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
-    types::{CWLType, DefaultValue, File, OutputDirectory, OutputFile, OutputItem},
+    types::{CWLType, DefaultValue, Directory, File},
 };
 use fancy_regex::Regex;
 use serde_yaml::Value;
@@ -49,9 +49,9 @@ pub fn evaluate_outputs(
     initial_dir: &Path,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
-) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //copy back requested output
-    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
+    let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for output in tool_outputs {
         match &output.type_ {
             CWLType::Optional(inner) => {
@@ -75,7 +75,7 @@ fn evaluate_output_impl(
     initial_dir: &Path,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
-    outputs: &mut HashMap<String, OutputItem>,
+    outputs: &mut HashMap<String, DefaultValue>,
 ) -> Result<(), Box<dyn Error>> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
@@ -83,7 +83,7 @@ fn evaluate_output_impl(
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
+                outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             } else {
                 let filename = match output.type_ {
                     CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
@@ -101,7 +101,7 @@ fn evaluate_output_impl(
                 let path = &initial_dir.join(filename);
                 fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
+                outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             }
         }
         CWLType::Directory => {
@@ -120,28 +120,28 @@ fn evaluate_output_impl(
                 };
                 fs::create_dir_all(dir)?;
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
+                outputs.insert(output.id.clone(), DefaultValue::Directory(out_dir));
             }
         }
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
                 let contents = fs::read_to_string(&binding.glob)?;
-                outputs.insert(output.id.clone(), OutputItem::Any(Value::String(contents)));
+                outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
             }
         }
     }
     Ok(())
 }
 
-pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> OutputFile {
+pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
     let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
     f.format = format;
     f.snapshot()
 }
 
-pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
-    OutputDirectory {
+pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
+    Directory {
         location: Some(format!("file://{}", path.as_ref().display())),
         basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
         path: Some(path.as_ref().to_string_lossy().into_owned()),
@@ -149,7 +149,7 @@ pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
     }
 }
 
-pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<OutputDirectory, std::io::Error> {
+pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
 
@@ -160,16 +160,16 @@ pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Resul
         if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
             if let Some(listing) = &mut dir.listing {
-                listing.push(OutputItem::OutputDirectory(sub_dir));
+                listing.push(DefaultValue::Directory(sub_dir));
             } else {
-                dir.listing = Some(vec![OutputItem::OutputDirectory(sub_dir)])
+                dir.listing = Some(vec![DefaultValue::Directory(sub_dir)])
             }
         } else {
             copy_file(src_path, &dest_path)?;
             if let Some(listing) = &mut dir.listing {
-                listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)));
+                listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
             } else {
-                dir.listing = Some(vec![OutputItem::OutputFile(get_file_metadata(dest_path, None))])
+                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))])
             }
         }
     }
@@ -299,7 +299,7 @@ mod tests {
     pub fn test_get_file_metadata() {
         let path = env::current_dir().unwrap().join("tests").join("test_data").join("file.txt");
         let result = get_file_metadata(path.clone(), None);
-        let expected = OutputFile {
+        let expected = File {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
             basename: Some("file.txt".to_string()),
             class: "File".to_string(),
@@ -319,7 +319,7 @@ mod tests {
     pub fn test_get_directory_metadata() {
         let path = env::current_dir().unwrap().join("tests/test_data");
         let result = get_diretory_metadata(path.clone());
-        let expected = OutputDirectory {
+        let expected = Directory {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
             basename: Some(path.file_name().unwrap().to_string_lossy().into_owned()),
             path: Some(path.to_string_lossy().into_owned()),
@@ -340,7 +340,7 @@ mod tests {
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
         result.listing = result.listing.map(|mut listing| {
             listing.sort_by_key(|item| match item {
-                OutputItem::OutputFile(file) => file.basename.clone(),
+                DefaultValue::File(file) => file.basename.clone(),
                 _ => Some(String::new()),
             });
             listing
@@ -349,11 +349,11 @@ mod tests {
         let file = current.join("file.txt").to_string_lossy().into_owned();
         let input = current.join("input.txt").to_string_lossy().into_owned();
 
-        let expected = OutputDirectory {
+        let expected = Directory {
             location: Some(format!("file://{cwd}")),
             basename: Some("test_dir".to_string()),
             listing: Some(vec![
-                OutputItem::OutputFile(OutputFile {
+                DefaultValue::File(File {
                     class: "File".into(),
                     location: Some(format!("file://{file}")),
                     nameroot: Some("file".into()),
@@ -364,7 +364,7 @@ mod tests {
                     path: Some(file),
                     ..Default::default()
                 }),
-                OutputItem::OutputFile(OutputFile {
+                DefaultValue::File(File {
                     class: "File".to_string(),
                     location: Some(format!("file://{input}")),
                     nameroot: Some("input".into()),
