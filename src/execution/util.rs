@@ -1,8 +1,8 @@
-use crate::io::{copy_file, get_file_checksum, get_file_size, get_first_file_with_prefix, print_output};
+use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
-    types::{CWLType, DefaultValue, OutputDirectory, OutputFile, OutputItem},
+    types::{CWLType, DefaultValue, Directory, File},
 };
 use fancy_regex::Regex;
 use serde_yaml::Value;
@@ -49,15 +49,16 @@ pub fn evaluate_outputs(
     initial_dir: &Path,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
-) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //copy back requested output
-    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
+    let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for output in tool_outputs {
         match &output.type_ {
             CWLType::Optional(inner) => {
-                evaluate_output_impl(output, inner, initial_dir, tool_stdout, tool_stderr, &mut outputs).ok(); //ignores all errors
+                evaluate_output_impl(output, inner, initial_dir, tool_stdout, tool_stderr, &mut outputs).ok();
+                //ignores all errors
             }
-            _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?
+            _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?,
         }
     }
     if print_output() {
@@ -74,7 +75,7 @@ fn evaluate_output_impl(
     initial_dir: &Path,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
-    outputs: &mut HashMap<String, OutputItem>,
+    outputs: &mut HashMap<String, DefaultValue>,
 ) -> Result<(), Box<dyn Error>> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
@@ -82,7 +83,7 @@ fn evaluate_output_impl(
                 let path = &initial_dir.join(&binding.glob);
                 fs::copy(&binding.glob, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &binding.glob, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
+                outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             } else {
                 let filename = match output.type_ {
                     CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
@@ -100,7 +101,7 @@ fn evaluate_output_impl(
                 let path = &initial_dir.join(filename);
                 fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
-                outputs.insert(output.id.clone(), OutputItem::OutputFile(get_file_metadata(path, output.format.clone())));
+                outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             }
         }
         CWLType::Directory => {
@@ -119,59 +120,36 @@ fn evaluate_output_impl(
                 };
                 fs::create_dir_all(dir)?;
                 let out_dir = copy_output_dir(&binding.glob, dir.to_str().unwrap()).map_err(|e| format!("Failed to copy: {}", e))?;
-                outputs.insert(output.id.clone(), OutputItem::OutputDirectory(out_dir));
+                outputs.insert(output.id.clone(), DefaultValue::Directory(out_dir));
             }
         }
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
                 let contents = fs::read_to_string(&binding.glob)?;
-                outputs.insert(output.id.clone(), OutputItem::Any(Value::String(contents)));
+                outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
             }
         }
     }
     Ok(())
 }
 
-pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> OutputFile {
-    let basename = path.as_ref().file_name().and_then(|n| n.to_str()).unwrap().to_string();
-    let size = get_file_size(&path).unwrap_or_else(|_| panic!("Could not get filesize: {:?}", path));
-    let checksum = format!(
-        "sha1${}",
-        get_file_checksum(&path).unwrap_or_else(|_| panic!("Could not get checksum: {:?}", path))
-    );
+pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
+    let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
+    f.format = format;
+    f.snapshot()
+}
 
-    OutputFile {
-        location: format!("file://{}", &path.as_ref().display()),
-        basename,
-        class: "File".to_string(),
-        checksum,
-        size,
-        path: path.as_ref().to_string_lossy().into_owned(),
-        format: resolve_format(format),
+pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
+    Directory {
+        location: Some(format!("file://{}", path.as_ref().display())),
+        basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
+        path: Some(path.as_ref().to_string_lossy().into_owned()),
+        ..Default::default()
     }
 }
 
-fn resolve_format(format: Option<String>) -> Option<String> {
-    if let Some(format) = format {
-        let edam_url = "http://edamontology.org/";
-        Some(format.replace("edam:", edam_url))
-    } else {
-        None
-    }
-}
-
-pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> OutputDirectory {
-    OutputDirectory {
-        location: format!("file://{}", path.as_ref().display()),
-        basename: path.as_ref().file_name().unwrap().to_string_lossy().into_owned(),
-        class: "Directory".to_string(),
-        listing: vec![],
-        path: path.as_ref().to_string_lossy().into_owned(),
-    }
-}
-
-pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<OutputDirectory, std::io::Error> {
+pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
 
@@ -181,10 +159,18 @@ pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Resul
         let dest_path = dest.as_ref().join(entry.file_name());
         if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            dir.listing.push(OutputItem::OutputDirectory(sub_dir));
+            if let Some(listing) = &mut dir.listing {
+                listing.push(DefaultValue::Directory(sub_dir));
+            } else {
+                dir.listing = Some(vec![DefaultValue::Directory(sub_dir)])
+            }
         } else {
             copy_file(src_path, &dest_path)?;
-            dir.listing.push(OutputItem::OutputFile(get_file_metadata(dest_path, None)))
+            if let Some(listing) = &mut dir.listing {
+                listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
+            } else {
+                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))])
+            }
         }
     }
     Ok(dir)
@@ -311,16 +297,18 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_file_metadata() {
-        let path = env::current_dir().unwrap().join("tests/test_data/file.txt");
+        let path = env::current_dir().unwrap().join("tests").join("test_data").join("file.txt");
         let result = get_file_metadata(path.clone(), None);
-        let expected = OutputFile {
-            location: format!("file://{}", path.to_string_lossy().into_owned()),
-            basename: "file.txt".to_string(),
+        let expected = File {
+            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            basename: Some("file.txt".to_string()),
             class: "File".to_string(),
-            checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
-            size: 4,
-            path: path.to_string_lossy().into_owned(),
-            format: None,
+            nameext: Some("txt".into()),
+            nameroot: Some("file".into()),
+            checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
+            size: Some(4),
+            path: Some(path.to_string_lossy().into_owned()),
+            ..Default::default()
         };
 
         assert_eq!(result, expected);
@@ -331,12 +319,11 @@ mod tests {
     pub fn test_get_directory_metadata() {
         let path = env::current_dir().unwrap().join("tests/test_data");
         let result = get_diretory_metadata(path.clone());
-        let expected = OutputDirectory {
-            location: format!("file://{}", path.to_string_lossy().into_owned()),
-            basename: path.file_name().unwrap().to_string_lossy().into_owned(),
-            class: "Directory".to_string(),
-            listing: vec![],
-            path: path.to_string_lossy().into_owned(),
+        let expected = Directory {
+            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            basename: Some(path.file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(path.to_string_lossy().into_owned()),
+            ..Default::default()
         };
         assert_eq!(result, expected);
     }
@@ -351,49 +338,48 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing.sort_by_key(|item| match item {
-            OutputItem::OutputFile(file) => file.basename.clone(),
-            _ => String::new(),
+        result.listing = result.listing.map(|mut listing| {
+            listing.sort_by_key(|item| match item {
+                DefaultValue::File(file) => file.basename.clone(),
+                _ => Some(String::new()),
+            });
+            listing
         });
 
         let file = current.join("file.txt").to_string_lossy().into_owned();
         let input = current.join("input.txt").to_string_lossy().into_owned();
 
-        let expected = OutputDirectory {
-            location: format!("file://{cwd}"),
-            basename: "test_dir".to_string(),
-            class: "Directory".to_string(),
-            listing: vec![
-                OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{file}"),
-                    basename: "file.txt".to_string(),
-                    class: "File".to_string(),
-                    checksum: "sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string(),
-                    size: 4,
-                    path: file,
-                    format: None,
+        let expected = Directory {
+            location: Some(format!("file://{cwd}")),
+            basename: Some("test_dir".to_string()),
+            listing: Some(vec![
+                DefaultValue::File(File {
+                    class: "File".into(),
+                    location: Some(format!("file://{file}")),
+                    nameroot: Some("file".into()),
+                    nameext: Some("txt".into()),
+                    basename: Some("file.txt".into()),
+                    checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
+                    size: Some(4),
+                    path: Some(file),
+                    ..Default::default()
                 }),
-                OutputItem::OutputFile(OutputFile {
-                    location: format!("file://{input}"),
-                    basename: "input.txt".to_string(),
+                DefaultValue::File(File {
                     class: "File".to_string(),
-                    checksum: "sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string(),
-                    size: 26,
-                    path: input,
-                    format: None,
+                    location: Some(format!("file://{input}")),
+                    nameroot: Some("input".into()),
+                    nameext: Some("txt".into()),
+                    basename: Some("input.txt".to_string()),
+                    checksum: Some("sha1$22959e5335b177539ffcd81a5426b9eca4f4cbec".to_string()),
+                    size: Some(26),
+                    path: Some(input),
+                    ..Default::default()
                 }),
-            ],
-            path: cwd.to_string(),
+            ]),
+            path: Some(cwd.to_string()),
+            ..Default::default()
         };
 
         assert_eq!(result, expected);
-    }
-
-    #[test]
-    pub fn test_resolve_format() {
-        let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
-        let expected = "http://edamontology.org/format_1234";
-
-        assert_eq!(result, expected.to_string());
     }
 }

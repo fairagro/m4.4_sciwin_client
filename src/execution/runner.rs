@@ -12,7 +12,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    types::{CWLType, DefaultValue, OutputItem},
+    types::{CWLType, DefaultValue, PathItem},
     wf::Workflow,
 };
 use log::info;
@@ -52,7 +52,7 @@ pub fn run_workflow(
     //prevent tool from outputting
     set_print_output(false);
 
-    let mut outputs: HashMap<String, OutputItem> = HashMap::new();
+    let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
             let path = workflow_folder.join(step.run.clone());
@@ -126,41 +126,43 @@ pub fn run_workflow(
         let source = &output.output_source;
         if let Some(value) = &outputs.get(source) {
             let value = match value {
-                OutputItem::OutputFile(file) => {
-                    let new_loc = Path::new(&file.path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_file(&file.path, &new_loc)?;
+                DefaultValue::File(file) => {
+                    let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
+                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_file(&path, &new_loc)?;
                     let mut file = file.clone();
-                    file.path = new_loc.to_string();
-                    file.location = format!("file://{}", new_loc);
-                    OutputItem::OutputFile(file)
+                    file.path = Some(new_loc.to_string());
+                    file.location = Some(format!("file://{}", new_loc));
+                    DefaultValue::File(file)
                 }
-                OutputItem::OutputDirectory(dir) => {
-                    let new_loc = Path::new(&dir.path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_dir(&dir.path, &new_loc)?;
+                DefaultValue::Directory(dir) => {                    
+                    let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
+                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
+                    copy_dir(&path, &new_loc)?;
                     let mut dir = dir.clone();
-                    dir.path = new_loc.to_string();
-                    dir.location = format!("file://{}", new_loc);
-                    OutputItem::OutputDirectory(dir)
+                    dir.path = Some(new_loc.to_string());
+                    dir.location = Some(format!("file://{}", new_loc));
+                    DefaultValue::Directory(dir)
                 }
-                OutputItem::Any(str) => OutputItem::Any(str.clone()),
+                DefaultValue::Any(str) => DefaultValue::Any(str.clone()),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
             let result = evaluate_input(input, &input_values_)?;
             let value = match &result {
                 DefaultValue::File(file) => {
-                    let dest = format!("{}/{}", output_directory, file.location);
-                    fs::copy(workflow_folder.join(&file.location), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
-                    OutputItem::OutputFile(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
+                    let dest = format!("{}/{}", output_directory, file.get_location());
+                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    DefaultValue::File(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
-                DefaultValue::Directory(directory) => OutputItem::OutputDirectory(
+                DefaultValue::Directory(directory) => DefaultValue::Directory(
                     copy_output_dir(
-                        workflow_folder.join(&directory.location),
-                        format!("{}/{}", &output_directory, &directory.location),
+                        workflow_folder.join(directory.get_location()),
+                        format!("{}/{}", &output_directory, &directory.get_location()),
                     )
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
-                DefaultValue::Any(inner) => OutputItem::Any(inner.clone()),
+                DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
             };
             output_values.insert(&output.id, value);
         }
@@ -181,7 +183,7 @@ pub fn run_commandlinetool(
     input_values: Option<HashMap<String, DefaultValue>>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
-) -> Result<HashMap<String, OutputItem>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
     if !print_output() {

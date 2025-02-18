@@ -438,6 +438,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_yaml",
+ "sha1",
 ]
 
 [[package]]
@@ -1819,7 +1820,6 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serial_test",
- "sha1",
  "shlex",
  "slugify",
  "syntect",

@@ -142,15 +142,15 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             }
 
             fn correct_path<T: PathItem>(item: &mut T, path_prefix: &Path) {
-                let location = item.location().clone();
+                let location = item.get_location().clone();
                 item.set_location(join_path_string(path_prefix, &location));
                 if let Some(secondary_files) = item.secondary_files_mut() {
                     for sec_file in secondary_files {
                         match sec_file {
                             DefaultValue::File(file) => {
-                                file.set_location(join_path_string(path_prefix, &file.location));
+                                file.set_location(join_path_string(path_prefix, &file.get_location()));
                             }
-                            DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.location)),
+                            DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.get_location())),
                             DefaultValue::Any(_) => (),
                         }
                     }

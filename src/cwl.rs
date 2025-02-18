@@ -5,7 +5,7 @@ use cwl::{
     load_tool,
     outputs::WorkflowOutputParameter,
     requirements::{DockerRequirement, Requirement},
-    types::{DefaultValue, Entry},
+    types::{DefaultValue, Entry, PathItem},
     wf::{Workflow, WorkflowStep},
 };
 use log::{info, warn};
@@ -31,10 +31,10 @@ impl Saveable for CommandLineTool {
         //rewire paths to new location
         for input in &mut self.inputs {
             if let Some(DefaultValue::File(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
+                value.location = Some(resolve_path(value.get_location(), path));
             }
             if let Some(DefaultValue::Directory(value)) = &mut input.default {
-                value.location = resolve_path(&value.location, path);
+                value.location = Some(resolve_path(value.get_location(), path));
             }
         }
 

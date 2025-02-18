@@ -1,13 +1,11 @@
 use cwl::clt::Command;
 use rand::{distributions::Alphanumeric, Rng};
-use sha1::{Digest, Sha1};
 use std::{
     cell::RefCell,
-    fs::{self, File},
-    io::{self, Error, Read, Write},
+    fs::{self},
+    io::{self, Error, Write},
     path::{Path, MAIN_SEPARATOR_STR},
     process::Command as SystemCommand,
-    vec,
 };
 pub fn get_filename_without_extension<S: AsRef<str>>(relative_path: S) -> Option<String> {
     let path = Path::new(relative_path.as_ref());
@@ -122,18 +120,6 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
 pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
     let metadata = std::fs::metadata(path)?;
     Ok(metadata.len())
-}
-
-pub fn get_file_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
-    let mut file = File::open(path)?;
-    let mut hasher = Sha1::new();
-
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    hasher.update(&buffer);
-
-    let result = hasher.finalize();
-    Ok(format!("{result:x}"))
 }
 
 pub fn get_shell_command() -> SystemCommand {

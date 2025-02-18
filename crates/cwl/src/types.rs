@@ -1,6 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, str::FromStr};
+use sha1::{Digest, Sha1};
+use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -93,14 +94,14 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
-    Any(serde_yaml::Value)
+    Any(serde_yaml::Value),
 }
 
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
-            DefaultValue::File(item) => item.location.clone(),
-            DefaultValue::Directory(item) => item.location.clone(),
+            DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
+            DefaultValue::Directory(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
@@ -133,6 +134,16 @@ impl DefaultValue {
                 _ => false,
             },
             _ => false,
+        }
+    }
+
+    pub fn to_default_value(&self) -> DefaultValue {
+        match self {
+            DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
+            DefaultValue::Directory(dir) => {
+                DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new())))
+            }
+            DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
         }
     }
 }
@@ -187,7 +198,7 @@ impl<'de> Deserialize<'de> for DefaultValue {
 }
 
 pub trait PathItem {
-    fn location(&self) -> &String;
+    fn get_location(&self) -> String;
     fn set_location(&mut self, new_location: String);
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
@@ -196,39 +207,108 @@ pub trait PathItem {
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
-    #[serde(alias = "path")]
-    pub location: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub secondary_files: Option<Vec<DefaultValue>>,
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub dirname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nameroot: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nameext: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checksum: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secondary_files: Option<Vec<DefaultValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contents: Option<String>,
+}
+
+impl Default for File {
+    fn default() -> Self {
+        Self {
+            class: String::from("File"),
+            location: Default::default(),
+            path: Default::default(),
+            basename: Default::default(),
+            dirname: Default::default(),
+            nameroot: Default::default(),
+            nameext: Default::default(),
+            checksum: Default::default(),
+            size: Default::default(),
+            secondary_files: Default::default(),
+            format: Default::default(),
+            contents: Default::default(),
+        }
+    }
 }
 
 impl File {
     pub fn from_location(location: &String) -> Self {
         File {
-            class: String::from("File"),
-            location: location.to_string(),
-            secondary_files: None,
-            basename: None,
-            format: None,
+            location: Some(location.to_string()),
+            ..Default::default()
         }
+    }
+
+    pub fn snapshot(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let path = Path::new(&loc);
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
+        let absolute_str = absolute_path.display().to_string();
+        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let mut hasher = Sha1::new();
+        let hash = fs::read(path).ok().map(|f| {
+            hasher.update(&f);
+            let hash = hasher.finalize();
+            format!("sha1${hash:x}")
+        });
+
+        Self {
+            location: Some(format!("file://{absolute_str}")),
+            path: Some(loc.clone()),
+            basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
+            dirname: None,
+            nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
+            checksum: hash,
+            size: Some(metadata.len()),
+            secondary_files: self.secondary_files.clone(),
+            format: resolve_format(self.format.clone()),
+            contents: None,
+            ..Default::default()
+        }
+    }
+}
+
+fn resolve_format(format: Option<String>) -> Option<String> {
+    if let Some(format) = format {
+        let edam_url = "http://edamontology.org/";
+        Some(format.replace("edam:", edam_url))
+    } else {
+        None
     }
 }
 
 impl PathItem for File {
     fn set_location(&mut self, new_location: String) {
-        self.location = new_location;
+        self.location = Some(new_location);
     }
 
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
         self.secondary_files.as_mut()
     }
 
-    fn location(&self) -> &String {
-        &self.location
+    fn get_location(&self) -> String {
+        self.location.as_ref().unwrap_or(&String::new()).clone()
     }
 }
 
@@ -236,36 +316,51 @@ impl PathItem for File {
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,
-    #[serde(alias = "path")]
-    pub location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secondary_files: Option<Vec<DefaultValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listing: Option<Vec<DefaultValue>>,
+}
+
+impl Default for Directory {
+    fn default() -> Self {
+        Self {
+            class: String::from("Directory"),
+            location: Default::default(),
+            path: Default::default(),
+            secondary_files: Default::default(),
+            basename: Default::default(),
+            listing: Default::default(),
+        }
+    }
 }
 
 impl Directory {
     pub fn from_location(location: &String) -> Self {
         Directory {
-            class: String::from("Directory"),
-            location: location.to_string(),
-            secondary_files: None,
-            basename: None,
+            location: Some(location.to_string()),
+            ..Default::default()
         }
     }
 }
 
 impl PathItem for Directory {
     fn set_location(&mut self, new_location: String) {
-        self.location = new_location;
+        self.location = Some(new_location);
     }
 
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
         self.secondary_files.as_mut()
     }
 
-    fn location(&self) -> &String {
-        &self.location
+    fn get_location(&self) -> String {
+        self.location.as_ref().unwrap_or(&String::new()).clone()
     }
 }
 
@@ -306,45 +401,6 @@ pub struct Include {
 pub struct EnvironmentDef {
     pub env_name: String,
     pub env_value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputFile {
-    pub location: String,
-    pub basename: String,
-    pub class: String,
-    pub checksum: String,
-    pub size: u64,
-    pub path: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputDirectory {
-    pub location: String,
-    pub basename: String,
-    pub class: String,
-    pub listing: Vec<OutputItem>,
-    pub path: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum OutputItem {
-    OutputFile(OutputFile),
-    OutputDirectory(OutputDirectory),
-    Any(Value),
-}
-
-impl OutputItem {
-    pub fn to_default_value(&self) -> DefaultValue {
-        match self {
-            OutputItem::OutputFile(output_file) => DefaultValue::File(File::from_location(&output_file.path)),
-            OutputItem::OutputDirectory(output_directory) => DefaultValue::Directory(Directory::from_location(&output_directory.path)),
-            OutputItem::Any(output_value) => DefaultValue::Any(output_value.clone()),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -433,5 +489,13 @@ mod tests {
         assert!(default_value_null.has_matching_type(&CWLType::Null)); //null matches Null
         assert!(default_value_null.has_matching_type(&CWLType::Optional(Box::new(CWLType::String))));
         //null is valid for optional
+    }
+
+    #[test]
+    pub fn test_resolve_format() {
+        let result = resolve_format(Some("edam:format_1234".to_string())).unwrap();
+        let expected = "http://edamontology.org/format_1234";
+
+        assert_eq!(result, expected.to_string());
     }
 }
