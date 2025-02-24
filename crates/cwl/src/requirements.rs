@@ -68,7 +68,7 @@ where
 }
 
 fn get_entry_name(input: &str) -> String {
-    let i = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_");
+    let i = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_").replace("/", "_");
     format!("$(inputs.{})", i.to_lowercase()).to_string()
 }
 
