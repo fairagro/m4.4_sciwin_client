@@ -69,7 +69,7 @@ where
 
 fn get_entry_name(input: &str) -> String {
     let i = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_");
-    format!("$(inputs.{})", i).to_string()
+    format!("$(inputs.{})", i.to_lowercase()).to_string()
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
