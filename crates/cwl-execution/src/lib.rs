@@ -4,7 +4,7 @@ pub mod util;
 
 use cwl::{clt::CommandLineTool, inputs, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
-use expression::{eval, prepare_engine, reset_engine};
+use expression::{eval, prepare_expression_engine, reset_expression_engine};
 use std::{
     collections::HashMap,
     env, fs,
@@ -57,12 +57,10 @@ fn run_commandlinetool(
         inputs: collect_inputs(tool, &inputs)?,
         environment: collect_env_vars(tool)
     };
-
-    prepare_engine(&runtime)?;
+    prepare_expression_engine(&runtime)?;
     
-    eval("console.log(inputs);")?;
 
     env::set_current_dir(current_dir)?;
-    reset_engine()?;
+    reset_expression_engine()?;
     Ok(())
 }

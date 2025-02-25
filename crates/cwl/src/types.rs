@@ -273,7 +273,7 @@ impl File {
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
-        let metadata = fs::metadata(path).expect(&format!("Could not get metadata: {}", absolute_str));
+        let metadata = fs::metadata(path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
         let hash = fs::read(path).ok().map(|f| {
             hasher.update(&f);
