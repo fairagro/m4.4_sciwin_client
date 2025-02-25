@@ -137,6 +137,14 @@ impl DefaultValue {
         }
     }
 
+    pub fn load(&self) -> Self {
+        match self {
+            DefaultValue::File(file) => DefaultValue::File(file.snapshot()),
+            DefaultValue::Directory(directory) => todo!(),
+            DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+        }
+    }
+
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
@@ -260,11 +268,12 @@ impl File {
 
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
+        let loc = loc.strip_prefix("file://").unwrap_or(&loc);
         let path = Path::new(&loc);
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
-        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let metadata = fs::metadata(path).expect(&format!("Could not get metadata: {}", absolute_str));
         let mut hasher = Sha1::new();
         let hash = fs::read(path).ok().map(|f| {
             hasher.update(&f);
@@ -274,7 +283,7 @@ impl File {
 
         Self {
             location: Some(format!("file://{absolute_str}")),
-            path: Some(loc.clone()),
+            path: Some(loc.to_string()),
             basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
             dirname: None,
             nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),

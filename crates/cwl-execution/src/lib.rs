@@ -3,7 +3,7 @@ pub mod expression;
 pub mod util;
 
 use cwl::{clt::CommandLineTool, inputs, types::DefaultValue, CWLDocument};
-use environment::RuntimeEnvironment;
+use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
 use expression::{eval, prepare_engine, reset_engine};
 use std::{
     collections::HashMap,
@@ -15,7 +15,7 @@ use util::preprocess_imports;
 
 pub fn execute(
     path: impl AsRef<Path>,
-    inputs: Option<HashMap<String, DefaultValue>>,
+    inputs: HashMap<String, DefaultValue>,
     outdir: Option<impl AsRef<Path>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let contents = fs::read_to_string(&path)?;
@@ -34,7 +34,7 @@ pub fn execute(
 
 fn run_commandlinetool(
     tool: &CommandLineTool,
-    inputs: Option<HashMap<String, DefaultValue>>,
+    inputs: HashMap<String, DefaultValue>,
     tool_path: impl AsRef<Path>,
     outdir: Option<impl AsRef<Path>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -42,9 +42,9 @@ fn run_commandlinetool(
     let runtime_dir = dir.path();
     let tool_dir = tool_path.as_ref().parent().unwrap_or(Path::new("."));
     let current_dir = env::current_dir()?;
-    let out_dir: &PathBuf = &outdir.map(|d| d.as_ref().to_path_buf()).unwrap_or(current_dir);
+    let out_dir: &PathBuf = &outdir.map(|d| d.as_ref().to_path_buf()).unwrap_or(current_dir.clone());
 
-    
+    env::set_current_dir(tool_dir)?;
 
     let runtime = RuntimeEnvironment {
         runtime: HashMap::from([
@@ -54,12 +54,15 @@ fn run_commandlinetool(
             ("cores".to_string(), 0.to_string()),
             ("ram".to_string(), 0.to_string()),
         ]),
-        ..Default::default()
+        inputs: collect_inputs(tool, &inputs)?,
+        environment: collect_env_vars(tool)
     };
 
     prepare_engine(&runtime)?;
     
+    eval("console.log(inputs);")?;
 
+    env::set_current_dir(current_dir)?;
     reset_engine()?;
     Ok(())
 }
