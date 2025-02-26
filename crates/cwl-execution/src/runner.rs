@@ -11,13 +11,23 @@ use cwl::{
     types::{CWLType, DefaultValue},
 };
 use serde_yaml::Value;
-use std::{collections::HashMap, process::Command as SystemCommand};
+use std::{
+    collections::HashMap,
+    env,
+    path::PathBuf,
+    process::Command as SystemCommand,
+};
 
 pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
     let mut command = build_command(tool, runtime)?;
 
     //execute command
     let output = command.output()?;
+    let dir = if let Some(runtime) = runtime {
+        PathBuf::from(runtime.runtime["outdir"].clone())
+    } else {
+        env::current_dir()?
+    };
 
     //handle redirection of stdout
     if !output.stdout.is_empty() {
@@ -31,7 +41,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>)
             } else {
                 &get_random_filename(&format!("{}_stdout", output.id), "out")
             };
-            create_file(filename, out)?;
+            create_file(dir.join(filename), out)?;
         } else {
             eprintln!("{}", out);
         }
@@ -49,7 +59,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>)
             } else {
                 &get_random_filename(&format!("{}_stderr", output.id), "out")
             };
-            create_file(filename, out)?;
+            create_file(dir.join(filename), out)?;
         } else {
             eprintln!("❌ {}", out);
         }

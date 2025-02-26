@@ -6,6 +6,7 @@ use cwl::{
 };
 use glob::glob;
 use pathdiff::diff_paths;
+use serde::de;
 use serde_yaml::Value;
 use std::{collections::HashMap, path::PathBuf};
 
@@ -93,6 +94,27 @@ fn evaluate_output(
                 let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_file(file, &destination)?;
+                map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
+            } else {
+                let filename = match output.type_ {
+                    CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
+                    CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
+                    _ => {
+                        let mut file_prefix = output.id.clone();
+                        file_prefix += match output.type_ {
+                            CWLType::Stdout => "_stdout",
+                            CWLType::Stderr => "_stderr",
+                            _ => "",
+                        };
+                        let pattern = format!("{}/{}*", &runtime.runtime["outdir"], file_prefix);
+                        &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0]
+                            .to_string_lossy()
+                            .into_owned()
+                    }
+                };
+                let relative_path = diff_paths(filename, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&filename));
+                let destination = outdir.join(relative_path);
+                copy_file(filename, &destination)?;
                 map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
             }
         }
