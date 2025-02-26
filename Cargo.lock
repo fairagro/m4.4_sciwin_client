@@ -750,6 +750,8 @@ version = "0.1.0"
 dependencies = [
  "cwl",
  "fancy-regex 0.14.0",
+ "glob",
+ "rand",
  "rustyscript",
  "serde",
  "serde_json",

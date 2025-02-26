@@ -1,10 +1,12 @@
 use cwl::{
     clt::CommandLineTool,
+    outputs::CommandOutputParameter,
     requirements::Requirement,
-    types::{CWLType, DefaultValue, EnviromentDefs},
+    types::{CWLType, DefaultValue, EnviromentDefs, File},
 };
+use glob::glob;
 use serde_yaml::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, Default)]
 pub struct RuntimeEnvironment {
@@ -30,7 +32,7 @@ pub(crate) fn collect_inputs(
                 return Ok((i.id.clone(), default.load()));
             }
 
-            if let CWLType::Optional(_) = i.type_ {
+            if i.type_.is_optional() {
                 return Ok((i.id.clone(), DefaultValue::Any(Value::Null)));
             }
             Err(format!("No Input provided for {:?}", i.id))?
@@ -55,4 +57,41 @@ pub(crate) fn collect_env_vars(tool: &CommandLineTool) -> HashMap<String, String
         })
         .flatten()
         .collect::<HashMap<_, _>>()
+}
+
+pub(crate) fn collect_outputs(tool: &CommandLineTool, outdir: &PathBuf, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn std::error::Error>> {
+    for output in &tool.outputs {
+        match &output.type_ {
+            CWLType::Optional(inner) => {
+                evaluate_output(output, inner, outdir, runtime, &tool.stdout, &tool.stderr).ok();
+            }
+            _ => evaluate_output(output, &output.type_, outdir, runtime, &tool.stdout, &tool.stderr)?,
+        }
+    }
+    Ok(())
+}
+
+fn evaluate_output(
+    output: &CommandOutputParameter,
+    type_: &CWLType,
+    outdir: &PathBuf,
+    runtime: &RuntimeEnvironment,
+    tool_stdout: &Option<String>,
+    tool_stderr: &Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match type_ {
+        CWLType::File | CWLType::String | CWLType::Stderr => {
+            if let Some(binding) = &output.output_binding {
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let files = glob(&pattern)?
+                    .map(|f| {
+                        Ok(File::from_file(f?))
+                    })
+                    .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
+                println!("{files:?}");
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }

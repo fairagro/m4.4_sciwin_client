@@ -1,3 +1,4 @@
+use rand::{distributions::Alphanumeric, Rng};
 use std::{fs, path::Path, process::Command};
 
 pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
@@ -43,6 +44,25 @@ pub fn create_file<P: AsRef<Path>>(file: P, contents: &str) -> std::io::Result<(
     fs::write(file, contents)?;
 
     Ok(())
+}
+
+pub fn get_random_filename(prefix: &str, extension: &str) -> String {
+    let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
+    format!("{prefix}_{rnd}.{extension}")
+}
+
+pub fn format_command(command: &Command) -> String {
+    let program = command.get_program().to_string_lossy();
+
+    let args: Vec<String> = command
+        .get_args()
+        .map(|arg| {
+            let arg_str = arg.to_string_lossy();
+            arg_str.to_string()
+        })
+        .collect();
+
+    format!("{} {}", program, args.join(" "))
 }
 
 #[cfg(test)]

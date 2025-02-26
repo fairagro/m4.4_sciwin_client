@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
+use std::{collections::HashMap, env, fs, path::{Path, PathBuf}, str::FromStr};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -106,8 +106,8 @@ pub enum DefaultValue {
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
-            DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
-            DefaultValue::Directory(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
+            DefaultValue::File(item) => item.path.as_ref().unwrap_or(&String::new()).clone(),
+            DefaultValue::Directory(item) => item.path.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
@@ -268,6 +268,30 @@ impl File {
     pub fn from_location(location: &String) -> Self {
         File {
             location: Some(location.to_string()),
+            ..Default::default()
+        }
+    }
+    pub fn from_file(path: impl AsRef<Path>) -> Self {
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.as_ref().is_absolute() { path.as_ref() } else { &current.join(&path) };
+        let absolute_str = absolute_path.display().to_string();
+        let metadata = fs::metadata(&path).expect("Could not get metadata");
+        let mut hasher = Sha1::new();
+        let hash = fs::read(&path).ok().map(|f| {
+            hasher.update(&f);
+            let hash = hasher.finalize();
+            format!("sha1${hash:x}")
+        });
+
+        Self {
+            location: Some(format!("file://{absolute_str}")),
+            path: Some(absolute_str),
+            basename: path.as_ref().file_name().map(|f| f.to_string_lossy().into_owned()),
+            dirname: None,
+            nameroot: path.as_ref().file_stem().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.as_ref().extension().map(|f| f.to_string_lossy().into_owned()),
+            checksum: hash,
+            size: Some(metadata.len()),
             ..Default::default()
         }
     }

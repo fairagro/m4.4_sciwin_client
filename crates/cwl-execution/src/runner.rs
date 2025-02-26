@@ -2,18 +2,66 @@ use crate::{
     collect_inputs,
     expression::{set_self, unset_self},
     replace_expressions,
-    util::get_shell_command,
+    util::{create_file, get_random_filename, get_shell_command},
     RuntimeEnvironment,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandLineBinding,
-    types::DefaultValue,
+    types::{CWLType, DefaultValue},
 };
 use serde_yaml::Value;
 use std::{collections::HashMap, process::Command as SystemCommand};
 
-pub fn build_command(tool: &CommandLineTool, runtime: Option<RuntimeEnvironment>) -> Result<SystemCommand, Box<dyn std::error::Error>> {
+pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
+    let mut command = build_command(tool, runtime)?;
+
+    //execute command
+    let output = command.output()?;
+
+    //handle redirection of stdout
+    if !output.stdout.is_empty() {
+        let out = &String::from_utf8_lossy(&output.stdout);
+        if let Some(stdout) = &tool.stdout {
+            create_file(stdout, out)?;
+        } else if tool.has_stdout_output() {
+            let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
+            let filename = if let Some(binding) = &output.output_binding {
+                &binding.glob
+            } else {
+                &get_random_filename(&format!("{}_stdout", output.id), "out")
+            };
+            create_file(filename, out)?;
+        } else {
+            eprintln!("{}", out);
+        }
+    }
+
+    //handle redirection of stderr
+    if !output.stderr.is_empty() {
+        let out = &String::from_utf8_lossy(&output.stderr);
+        if let Some(stderr) = &tool.stderr {
+            create_file(stderr, out)?;
+        } else if tool.has_stderr_output() {
+            let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
+            let filename = if let Some(binding) = &output.output_binding {
+                &binding.glob
+            } else {
+                &get_random_filename(&format!("{}_stderr", output.id), "out")
+            };
+            create_file(filename, out)?;
+        } else {
+            eprintln!("❌ {}", out);
+        }
+    }
+
+    match output.status.success() {
+        true => Ok(()),
+        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
+    }
+}
+
+fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<SystemCommand, Box<dyn std::error::Error>> {
     let mut args: Vec<String> = vec![];
     let inputs = if let Some(rt) = &runtime {
         rt.inputs.clone()
@@ -136,7 +184,8 @@ pub fn build_command(tool: &CommandLineTool, runtime: Option<RuntimeEnvironment>
 
     //put in env vars
     if let Some(runtime) = runtime {
-        command.envs(runtime.environment);
+        command.envs(runtime.environment.clone());
+        command.current_dir(&runtime.runtime["outdir"]);
     }
 
     Ok(command)
