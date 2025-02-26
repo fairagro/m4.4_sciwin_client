@@ -271,7 +271,7 @@ impl File {
             ..Default::default()
         }
     }
-    pub fn from_file(path: impl AsRef<Path>) -> Self {
+    pub fn from_file(path: impl AsRef<Path>, format: Option<String>) -> Self {
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.as_ref().is_absolute() { path.as_ref() } else { &current.join(&path) };
         let absolute_str = absolute_path.display().to_string();
@@ -291,6 +291,7 @@ impl File {
             nameroot: path.as_ref().file_stem().map(|f| f.to_string_lossy().into_owned()),
             nameext: path.as_ref().extension().map(|f| f.to_string_lossy().into_owned()),
             checksum: hash,
+            format: resolve_format(format),
             size: Some(metadata.len()),
             ..Default::default()
         }

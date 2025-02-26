@@ -5,8 +5,11 @@ use cwl::{
     types::{CWLType, DefaultValue, EnviromentDefs, File},
 };
 use glob::glob;
+use pathdiff::diff_paths;
 use serde_yaml::Value;
 use std::{collections::HashMap, path::PathBuf};
+
+use crate::util::copy_file;
 
 #[derive(Debug, Default)]
 pub struct RuntimeEnvironment {
@@ -60,14 +63,16 @@ pub(crate) fn collect_env_vars(tool: &CommandLineTool) -> HashMap<String, String
 }
 
 pub(crate) fn collect_outputs(tool: &CommandLineTool, outdir: &PathBuf, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn std::error::Error>> {
+    let mut map = HashMap::new();
     for output in &tool.outputs {
         match &output.type_ {
             CWLType::Optional(inner) => {
-                evaluate_output(output, inner, outdir, runtime, &tool.stdout, &tool.stderr).ok();
+                evaluate_output(output, inner, outdir, runtime, &tool.stdout, &tool.stderr, &mut map).ok();
             }
-            _ => evaluate_output(output, &output.type_, outdir, runtime, &tool.stdout, &tool.stderr)?,
+            _ => evaluate_output(output, &output.type_, outdir, runtime, &tool.stdout, &tool.stderr, &mut map)?,
         }
     }
+    println!("{:#?}", map);
     Ok(())
 }
 
@@ -78,17 +83,17 @@ fn evaluate_output(
     runtime: &RuntimeEnvironment,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
+    map: &mut HashMap<String, DefaultValue>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match type_ {
-        CWLType::File | CWLType::String | CWLType::Stderr => {
+        CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let files = glob(&pattern)?
-                    .map(|f| {
-                        Ok(File::from_file(f?))
-                    })
-                    .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
-                println!("{files:?}");
+                let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
+                let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
+                let destination = outdir.join(relative_path);
+                copy_file(file, &destination)?;
+                map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
             }
         }
         _ => {}

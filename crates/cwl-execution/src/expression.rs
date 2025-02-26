@@ -1,6 +1,7 @@
 use crate::{util::split_ranges, RuntimeEnvironment};
+use cwl::types::DefaultValue;
 use rustyscript::static_runtime;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, ops::Range};
 
@@ -16,7 +17,11 @@ pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Res
 }
 
 pub(crate) fn eval(expression: &str) -> Result<Value, rustyscript::Error> {
-    RUNTIME::with(|rt| rt.eval::<Value>(expression))
+    eval_generic(expression)
+}
+
+pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
+    RUNTIME::with(|rt| rt.eval::<T>(expression))
 }
 
 pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), rustyscript::Error> {
@@ -46,9 +51,8 @@ pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn std::er
     let evaluations = expressions
         .iter()
         .map(|e| {
-            eval(&e.expression()).map(|v| match v {
-                Value::String(s) => s,
-                _ => v.to_string(),
+            eval_generic::<DefaultValue>(&e.expression()).map(|v| {
+                v.load().as_value_string()
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
