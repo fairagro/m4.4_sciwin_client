@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::{Path, PathBuf}, str::FromStr};
+use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -50,7 +50,7 @@ impl FromStr for CWLType {
     }
 }
 
-impl CWLType{
+impl CWLType {
     pub fn is_optional(&self) -> bool {
         matches!(self, CWLType::Optional(_))
     }
@@ -154,9 +154,7 @@ impl DefaultValue {
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
-            DefaultValue::Directory(dir) => {
-                DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new())))
-            }
+            DefaultValue::Directory(dir) => DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
         }
     }
@@ -273,7 +271,11 @@ impl File {
     }
     pub fn from_file(path: impl AsRef<Path>, format: Option<String>) -> Self {
         let current = env::current_dir().unwrap_or_default();
-        let absolute_path = if path.as_ref().is_absolute() { path.as_ref() } else { &current.join(&path) };
+        let absolute_path = if path.as_ref().is_absolute() {
+            path.as_ref()
+        } else {
+            &current.join(&path)
+        };
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(&path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
