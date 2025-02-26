@@ -50,6 +50,12 @@ impl FromStr for CWLType {
     }
 }
 
+impl CWLType{
+    pub fn is_optional(&self) -> bool {
+        matches!(self, CWLType::Optional(_))
+    }
+}
+
 fn serialize_type(t: &CWLType) -> String {
     match t {
         CWLType::Optional(inner) => format!("{}?", serialize_type(inner)),

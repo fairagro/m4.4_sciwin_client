@@ -1,6 +1,7 @@
 pub mod environment;
 pub mod expression;
 pub mod preprocess;
+pub mod runner;
 pub mod staging;
 pub mod util;
 
@@ -8,6 +9,7 @@ use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
 use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
 use preprocess::{preprocess_imports, process_expressions};
+use runner::build_command;
 use staging::stage_required_files;
 use std::{
     collections::HashMap,
@@ -68,7 +70,8 @@ fn run_commandlinetool(
 
     stage_required_files(&tool, runtime_dir)?;
 
-    
+    let cmd = build_command(&tool, Some(runtime))?;
+    println!("{cmd:#?}");
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;

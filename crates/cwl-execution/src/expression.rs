@@ -1,5 +1,6 @@
 use crate::{util::split_ranges, RuntimeEnvironment};
 use rustyscript::static_runtime;
+use serde::Serialize;
 use serde_json::Value;
 use std::{collections::HashMap, ops::Range};
 
@@ -16,6 +17,17 @@ pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Res
 
 pub(crate) fn eval(expression: &str) -> Result<Value, rustyscript::Error> {
     RUNTIME::with(|rt| rt.eval::<Value>(expression))
+}
+
+pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), rustyscript::Error> {
+    let json = serde_json::to_string(me)?;
+    RUNTIME::with(|rt| rt.eval::<()>(format!("var self = {json};")))?;
+    Ok(())
+}
+
+pub(crate) fn unset_self() -> Result<(), rustyscript::Error> {
+    RUNTIME::with(|rt| rt.eval::<()>("var self = undefined;".to_string()))?;
+    Ok(())
 }
 
 pub(crate) fn reset_expression_engine() -> Result<(), rustyscript::Error> {

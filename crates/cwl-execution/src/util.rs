@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::Command};
 
 pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
     let mut slices = Vec::new();
@@ -16,6 +16,14 @@ pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
     }
 
     slices
+}
+
+pub(crate) fn get_shell_command() -> Command {
+    let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
+    let param = if cfg!(target_os = "windows") { "/C" } else { "-c" };
+    let mut cmd = Command::new(shell);
+    cmd.arg(param);
+    cmd
 }
 
 pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<()> {
