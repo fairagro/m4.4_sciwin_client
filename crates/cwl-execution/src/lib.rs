@@ -2,9 +2,9 @@ pub mod environment;
 pub mod expression;
 pub mod util;
 
-use cwl::{clt::CommandLineTool, inputs, types::DefaultValue, CWLDocument};
+use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
-use expression::{eval, prepare_expression_engine, replace_expressions, reset_expression_engine};
+use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
 use std::{
     collections::HashMap,
     env, fs,
@@ -58,13 +58,7 @@ fn run_commandlinetool(
         environment: collect_env_vars(tool),
     };
     prepare_expression_engine(&runtime)?;
-
-    let expr = replace_expressions(
-        r#"Hallo $(runtime.outdir), Es ist $(parseInt(7))! Döner $3,50 ${
-        return parseInt("161");
-}"#,
-    )?;
-    println!("{expr}");
+    let mut tool = tool; //make tool mutable
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;

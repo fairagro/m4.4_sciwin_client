@@ -1,8 +1,7 @@
 use crate::{util::split_ranges, RuntimeEnvironment};
-use core::slice;
-use rustyscript::{static_runtime, tokio::task::id};
+use rustyscript::static_runtime;
 use serde_json::Value;
-use std::{collections::HashMap, fmt::format, ops::Range};
+use std::{collections::HashMap, ops::Range};
 
 static_runtime!(RUNTIME);
 
@@ -76,7 +75,7 @@ pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {
         } else {
             ExpressionType::Bracket
         };
-        
+
         //get expression body
         for i in *start..*end {
             if map[&i] == opening {
@@ -117,5 +116,55 @@ impl Expression {
             ExpressionType::Paren => self.expression.clone(),
             ExpressionType::Bracket => format!("(() => {{{}}})();", self.expression),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_expression() {
+        let expression = "parseInt(\"161\")";
+        let result = eval(expression).unwrap_or_default().as_u64().unwrap_or_default();
+        assert_eq!(result, 161);
+    }
+
+    #[test]
+    fn test_parse_expressions() {
+        let input = "This is $(\"a \")$(\"string\") for $2,50";
+        let result = parse_expressions(input);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_replace_expressions() {
+        let input = "This is $(\"a \")$(\"string\")";
+        let result = replace_expressions(input).unwrap_or_default();
+        assert_eq!(result, "This is a string".to_string());
+    }
+
+    #[test]
+    fn test_replace_bodied_expression() {
+        let input = r#"My favorite number is ${
+        return parseInt("161");
+    }"#;
+        let result = replace_expressions(input).unwrap_or_default();
+        assert_eq!(result, "My favorite number is 161".to_string());
+    }
+
+    #[test]
+    fn test_engine_values() {
+        let runtime = RuntimeEnvironment {
+            runtime: HashMap::from([("my_value".to_string(), "Hello World!".to_string())]),
+            ..Default::default()
+        };
+        let input = "$(runtime.my_value)";
+        prepare_expression_engine(&runtime).unwrap();
+        let result = replace_expressions(input).unwrap_or_default();
+        assert_eq!(result, "Hello World!".to_string());
+        reset_expression_engine().unwrap();
+        let result = replace_expressions(input);
+        assert!(result.is_err());
     }
 }
