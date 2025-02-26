@@ -1,17 +1,18 @@
 pub mod environment;
 pub mod expression;
+pub mod preprocess;
 pub mod util;
 
 use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
 use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
+use preprocess::{preprocess_imports, process_expressions};
 use std::{
     collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
 use tempfile::tempdir;
-use util::preprocess_imports;
 
 pub fn execute(
     path: impl AsRef<Path>,
@@ -46,7 +47,7 @@ fn run_commandlinetool(
 
     env::set_current_dir(tool_dir)?;
 
-    let runtime = RuntimeEnvironment {
+    let mut runtime = RuntimeEnvironment {
         runtime: HashMap::from([
             ("tooldir".to_string(), tool_dir.to_string_lossy().into_owned()),
             ("outdir".to_string(), runtime_dir.to_string_lossy().into_owned()),
@@ -55,10 +56,15 @@ fn run_commandlinetool(
             ("ram".to_string(), 0.to_string()),
         ]),
         inputs: collect_inputs(tool, &inputs)?,
-        environment: collect_env_vars(tool),
+        ..Default::default()
     };
     prepare_expression_engine(&runtime)?;
-    let mut tool = tool; //make tool mutable
+
+    let mut tool = tool.clone(); //make tool mutable
+    process_expressions(&mut tool);
+    runtime.environment  = collect_env_vars(&tool);
+
+    println!("{tool:#?}");
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;

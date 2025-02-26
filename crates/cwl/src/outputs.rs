@@ -39,7 +39,6 @@ impl Identifiable for CommandOutputParameter {
     }
 }
 
-
 pub fn deserialize_outputs<'de, D>(deserializer: D) -> Result<Vec<CommandOutputParameter>, D::Error>
 where
     D: Deserializer<'de>,
@@ -79,11 +78,14 @@ where
     Ok(parameters)
 }
 
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
-    pub glob: String,
+    pub glob: String,    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub load_contents: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_eval: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
@@ -117,7 +119,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_identifyable_output(){
+    pub fn test_identifyable_output() {
         let mut output = CommandOutputParameter::default();
         assert_eq!(output.id(), "");
         output.set_id("test".to_string());

@@ -251,8 +251,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stdout".to_string(),
             type_: CWLType::Stdout,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stdout_output());
     }
@@ -262,8 +261,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stderr".to_string(),
             type_: CWLType::Stderr,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stderr_output());
     }

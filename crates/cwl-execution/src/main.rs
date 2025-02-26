@@ -5,7 +5,7 @@ use std::{collections::HashMap, env, fs, path::Path};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new("/home/ubuntu/cwl-v1.2/tests");
 
-    let cwl = path.join("wc2-tool.cwl");
+    let cwl = path.join("wc4-tool.cwl");
     let job = path.join("wc-job.json");
 
     let job_contents = fs::read_to_string(job)?;
