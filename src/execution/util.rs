@@ -282,6 +282,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
                 glob: "tests/test_data/file.txt".to_string(),
+                ..Default::default()
             });
 
         fs::create_dir_all(dir.path().join("tests/test_data")).expect("Could not create folders");

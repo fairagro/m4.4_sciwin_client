@@ -346,6 +346,7 @@ mod tests {
 
         let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
             glob: "tests/test_data/input.txt".to_string(),
+            ..Default::default()
         });
 
         let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();

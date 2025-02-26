@@ -1,12 +1,14 @@
 pub mod environment;
 pub mod expression;
 pub mod preprocess;
+pub mod staging;
 pub mod util;
 
 use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, RuntimeEnvironment};
 use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
 use preprocess::{preprocess_imports, process_expressions};
+use staging::stage_required_files;
 use std::{
     collections::HashMap,
     env, fs,
@@ -62,9 +64,11 @@ fn run_commandlinetool(
 
     let mut tool = tool.clone(); //make tool mutable
     process_expressions(&mut tool);
-    runtime.environment  = collect_env_vars(&tool);
+    runtime.environment = collect_env_vars(&tool);
 
-    println!("{tool:#?}");
+    stage_required_files(&tool, runtime_dir)?;
+
+    
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;

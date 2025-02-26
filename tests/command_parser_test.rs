@@ -144,12 +144,14 @@ pub fn test_get_outputs() {
             .with_id("my-file")
             .with_binding(CommandOutputBinding {
                 glob: "my-file.txt".to_string(),
+                ..Default::default()
             }),
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("archive")
             .with_binding(CommandOutputBinding {
                 glob: "archive.tar.gz".to_string(),
+                ..Default::default()
             }),
     ];
 

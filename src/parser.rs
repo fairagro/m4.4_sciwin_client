@@ -108,7 +108,10 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
             CommandOutputParameter::default()
                 .with_type(output_type)
                 .with_id(&filename)
-                .with_binding(CommandOutputBinding { glob: f.to_string() })
+                .with_binding(CommandOutputBinding {
+                    glob: f.to_string(),
+                    ..Default::default()
+                })
         })
         .collect()
 }
