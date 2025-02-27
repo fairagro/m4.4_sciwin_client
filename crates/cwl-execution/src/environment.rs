@@ -112,8 +112,8 @@ fn evaluate_output(
                 );
             } else {
                 let filename = match output.type_ {
-                    CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
-                    CWLType::Stderr if tool_stderr.is_some() => tool_stderr.as_ref().unwrap(),
+                    CWLType::Stdout if tool_stdout.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stdout.as_ref().unwrap()),
+                    CWLType::Stderr if tool_stderr.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stderr.as_ref().unwrap()),
                     _ => {
                         let mut file_prefix = output.id.clone();
                         file_prefix += match output.type_ {

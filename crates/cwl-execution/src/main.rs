@@ -1,21 +1,27 @@
+use clap::Parser;
 use cwl::types::DefaultValue;
 use cwl_execution::execute;
-use std::{collections::HashMap, env, fs, path::Path};
+use std::{collections::HashMap, env::{self}, fs, path::{Path, PathBuf}};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = Path::new("/home/ubuntu/cwl-v1.2/tests");
+    let args = ExecutionParameters::parse();
+    let cwl = args.file;
+    let job = args.inputs;
+    let outdir = args.out_dir;
+    //let path = Path::new("/home/ubuntu/cwl-v1.2");
+    //let cwl = path.join("tests/cat3-tool-mediumcut.cwl");
+    //let job = path.join("tests/cat-job.json");
+    //let outdir: Option<String> = None;
 
-    let cwl = path.join("wc2-tool.cwl");
-    let job = path.join("wc-job.json");
+    let job_contents = fs::read_to_string(&job)?;
 
-    let job_contents = fs::read_to_string(job)?;
+    let path = job.parent().unwrap();
     let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(&job_contents)?;
     let inputs = inputs
         .iter()
         .map(|(k, v)| Ok((k.clone(), load_input(v.clone(), path)?)))
         .collect::<Result<HashMap<_, _>, Box<dyn std::error::Error>>>()?;
 
-    let outdir: Option<&Path> = None;
 
     execute(cwl, inputs, outdir)?;
 
@@ -28,4 +34,16 @@ fn load_input(input: DefaultValue, relative_to: impl AsRef<Path>) -> Result<Defa
     let result = input.load();
     env::set_current_dir(current)?;
     Ok(result)
+}
+
+
+#[derive(Parser, Debug, Default)]
+#[command(version, about, long_about = None)]
+struct ExecutionParameters{
+    pub file: PathBuf,
+    pub inputs: PathBuf,
+    #[arg(long = "outdir", help = "A path to output resulting files to")]
+    pub out_dir: Option<String>,
+    #[arg(long = "quiet", help = "Runner does not print to stdout")]
+    pub is_quiet: bool,
 }
