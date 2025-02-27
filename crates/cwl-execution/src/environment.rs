@@ -7,7 +7,7 @@ use cwl::{
 use glob::glob;
 use pathdiff::diff_paths;
 use serde_yaml::Value;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::util::copy_file;
 
@@ -90,6 +90,10 @@ fn evaluate_output(
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
                 let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
+                if !file.is_file() {
+                    let metadata = fs::metadata(file)?;
+                    return Err(format!("File requested, got: {:?}", metadata.file_type()).into());
+                }
                 let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_file(file, &destination)?;
@@ -120,16 +124,25 @@ fn evaluate_output(
         CWLType::Directory => {
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>();
-                println!("{pattern} ---> {files:#?}");
+                let dir = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
+                if !dir.is_dir() {
+                    let metadata = fs::metadata(dir)?;
+                    return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
+                }
             }
         }
         CWLType::Array(inner) if matches!(**inner, CWLType::File) => {}
         CWLType::Array(inner) if matches!(**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>();
-                println!("{pattern} ---> {files:#?}");
+                let dirs = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+                for dir in&dirs {
+                    if !dir.is_dir() {
+                        let metadata = fs::metadata(dir)?;
+                        return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
+                    }
+                }
+                println!("{dirs:#?}");
             }
         }
         _ => {}
