@@ -1,3 +1,7 @@
+use crate::{
+    expression::{evaluate_expression, set_self, unset_self},
+    util::{copy_dir, copy_file},
+};
 use cwl::{
     clt::CommandLineTool,
     outputs::CommandOutputParameter,
@@ -7,9 +11,11 @@ use cwl::{
 use glob::glob;
 use pathdiff::diff_paths;
 use serde_yaml::Value;
-use std::{collections::HashMap, fs, path::PathBuf};
-
-use crate::util::{copy_dir, copy_file};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Default)]
 pub struct RuntimeEnvironment {
@@ -62,7 +68,11 @@ pub(crate) fn collect_env_vars(tool: &CommandLineTool) -> HashMap<String, String
         .collect::<HashMap<_, _>>()
 }
 
-pub(crate) fn collect_outputs(tool: &CommandLineTool, outdir: &PathBuf, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn collect_outputs(
+    tool: &CommandLineTool,
+    outdir: &Path,
+    runtime: &RuntimeEnvironment,
+) -> Result<HashMap<String, OutputItem>, Box<dyn std::error::Error>> {
     let mut map = HashMap::new();
     for output in &tool.outputs {
         match &output.type_ {
@@ -72,14 +82,13 @@ pub(crate) fn collect_outputs(tool: &CommandLineTool, outdir: &PathBuf, runtime:
             _ => evaluate_output(output, &output.type_, outdir, runtime, &tool.stdout, &tool.stderr, &mut map)?,
         }
     }
-    println!("{:#?}", map);
-    Ok(())
+    Ok(map)
 }
 
 fn evaluate_output(
     output: &CommandOutputParameter,
     type_: &CWLType,
-    outdir: &PathBuf,
+    outdir: &Path,
     runtime: &RuntimeEnvironment,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
@@ -182,7 +191,26 @@ fn evaluate_output(
                 map.insert(output.id.clone(), OutputItem::Vec(output_result));
             }
         }
-        _ => {}
+        _ => {
+            if let Some(binding) = &output.output_binding {
+                //if there is a binding we can read the file
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
+
+                let content = fs::read_to_string(file)?;
+                if let Some(expression) = &binding.output_eval {
+                    let mut me = File::from_file(file, None);
+                    me.contents = Some(content);
+                    set_self(&vec![me])?;
+                    let result = evaluate_expression(expression)?;
+                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                    map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(value)));
+                    unset_self()?;
+                } else {
+                    map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::String(content))));
+                }
+            }
+        }
     }
     Ok(())
 }

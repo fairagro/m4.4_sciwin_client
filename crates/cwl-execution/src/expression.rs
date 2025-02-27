@@ -50,11 +50,7 @@ pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn std::er
     let expressions = parse_expressions(input);
     let evaluations = expressions
         .iter()
-        .map(|e| {
-            eval_generic::<DefaultValue>(&e.expression()).map(|v| {
-                v.load().as_value_string()
-            })
-        })
+        .map(|e| eval_generic::<DefaultValue>(&e.expression()).map(|v| v.load().as_value_string()))
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut result = input.to_string();
@@ -64,6 +60,18 @@ pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn std::er
         result = result.replace(expr, &evaluations[i]);
     }
     Ok(result)
+}
+
+pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
+    let expressions = parse_expressions(input);
+
+    if !expressions.is_empty() {
+        let expression = &expressions[0];
+        let result = eval(&expression.expression())?;
+        return Ok(result);
+    }
+
+    Ok(Value::String(input.to_string()))
 }
 
 pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {

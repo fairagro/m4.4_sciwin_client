@@ -33,7 +33,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>)
     if !output.stdout.is_empty() {
         let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
-            create_file(stdout, out)?;
+            create_file(dir.join(stdout), out)?;
         } else if tool.has_stdout_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {
@@ -51,7 +51,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>)
     if !output.stderr.is_empty() {
         let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
-            create_file(stderr, out)?;
+            create_file(dir.join(stderr), out)?;
         } else if tool.has_stderr_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {

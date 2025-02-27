@@ -72,7 +72,9 @@ fn run_commandlinetool(
     run_command(&tool, Some(&runtime))?;
 
     unstage_required_files(&tool, runtime_dir)?;
-    collect_outputs(&tool, out_dir, &runtime)?;
+    let outputs = collect_outputs(&tool, out_dir, &runtime)?;
+    let json = serde_json::to_string(&outputs)?;
+    println!("{json:#?}");
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;
