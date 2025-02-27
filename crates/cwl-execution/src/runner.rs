@@ -15,7 +15,7 @@ use std::{collections::HashMap, env, path::PathBuf, process::Command as SystemCo
 
 pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
     let mut command = build_command(tool, runtime)?;
-    
+
     //execute command
     let output = command.output()?;
     let dir = if let Some(runtime) = runtime {
@@ -77,13 +77,22 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
     //get executable
     let cmd = match &tool.base_command {
         Command::Single(cmd) => cmd,
-        Command::Multiple(vec) => &vec[0],
+        Command::Multiple(vec) => {
+            if !vec.is_empty() {
+                &vec[0]
+            } else {
+                &String::new()
+            }
+        }
     };
 
-    args.push(cmd.to_string());
-    //append rest of base command as args
-    if let Command::Multiple(ref vec) = &tool.base_command {
-        args.extend(vec[1..].iter().cloned());
+    if !cmd.is_empty() {
+        args.push(cmd.to_string());
+
+        //append rest of base command as args
+        if let Command::Multiple(ref vec) = &tool.base_command {
+            args.extend(vec[1..].iter().cloned());
+        }
     }
 
     let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
@@ -200,6 +209,8 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
     //put in env vars
     if let Some(runtime) = runtime {
         command.envs(runtime.environment.clone());
+        command.env("HOME", &runtime.runtime["outdir"]);
+        command.env("TMPDIR", &runtime.runtime["tmpdir"]);
         command.current_dir(&runtime.runtime["outdir"]);
     }
 

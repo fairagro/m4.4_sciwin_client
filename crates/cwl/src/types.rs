@@ -293,7 +293,7 @@ impl File {
             basename: path.as_ref().file_name().map(|f| f.to_string_lossy().into_owned()),
             dirname: parent.map(|f| f.to_string_lossy().into_owned()),
             nameroot: path.as_ref().file_stem().map(|f| f.to_string_lossy().into_owned()),
-            nameext: path.as_ref().extension().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.as_ref().extension().map(|f| format!(".{}", f.to_string_lossy())),
             checksum: hash,
             format: resolve_format(format),
             size: Some(metadata.len()),
