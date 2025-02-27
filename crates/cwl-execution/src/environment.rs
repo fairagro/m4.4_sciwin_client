@@ -97,7 +97,10 @@ fn evaluate_output(
                 let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_file(file, &destination)?;
-                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))));
+                map.insert(
+                    output.id.clone(),
+                    OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
+                );
             } else {
                 let filename = match output.type_ {
                     CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
@@ -118,7 +121,10 @@ fn evaluate_output(
                 let relative_path = diff_paths(filename, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&filename));
                 let destination = outdir.join(relative_path);
                 copy_file(filename, &destination)?;
-                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))));
+                map.insert(
+                    output.id.clone(),
+                    OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
+                );
             }
         }
         CWLType::Directory => {
@@ -132,15 +138,36 @@ fn evaluate_output(
                 let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_dir(dir, &destination)?;
-                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Directory(Directory::from_path(&destination))));
-               
+                map.insert(
+                    output.id.clone(),
+                    OutputItem::Value(DefaultValue::Directory(Directory::from_path(&destination))),
+                );
             }
         }
-        CWLType::Array(inner) if matches!(**inner, CWLType::File) => {}
+        CWLType::Array(inner) if matches!(**inner, CWLType::File) => {
+            if let Some(binding) = &output.output_binding {
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+
+                let mut output_result = vec![];
+                for file in &files {
+                    if !file.is_file() {
+                        let metadata = fs::metadata(file)?;
+                        return Err(format!("File requested, got: {:?}", metadata.file_type()).into());
+                    }
+                    let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
+                    let destination = outdir.join(relative_path);
+                    copy_file(file, &destination)?;
+                    output_result.push(DefaultValue::File(File::from_file(destination, output.format.clone())));
+                }
+                map.insert(output.id.clone(), OutputItem::Vec(output_result));
+            }
+        }
         CWLType::Array(inner) if matches!(**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
                 let dirs = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+
                 let mut output_result = vec![];
                 for dir in &dirs {
                     if !dir.is_dir() {
