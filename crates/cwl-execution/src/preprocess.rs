@@ -6,7 +6,7 @@ use cwl::{
 use fancy_regex::{Captures, Regex};
 use std::{fs, path::Path};
 
-use crate::{expression::evaluate_expression, replace_expressions};
+use crate::{expression::{eval_generic, evaluate_expression}, replace_expressions};
 
 pub(crate) fn preprocess_imports(contents: &str, path: impl AsRef<Path>) -> String {
     let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
@@ -127,6 +127,13 @@ fn process_requirement(req: &mut Requirement) {
                 Entry::Include(include) => Entry::Include(Include {
                     include: eval(&include.include),
                 }),
+            }
+        }
+    }
+    if let Requirement::InlineJavascriptRequirement(ijr) = req {
+        if let Some(lib) = &ijr.expression_lib {
+            for item in lib {
+                eval_generic::<()>(item).unwrap_or_default();
             }
         }
     }

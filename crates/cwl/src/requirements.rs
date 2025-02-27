@@ -9,13 +9,13 @@ pub enum Requirement {
     DockerRequirement(DockerRequirement),
     ResourceRequirement(ResourceRequirement),
     EnvVarRequirement(EnvVarRequirement),
+    InlineJavascriptRequirement(InlineJavascriptRequirement),
     ShellCommandRequirement,
     //as dummys, not used at this point
     SoftwareRequirement,
     NetworkAccess,
     SchemaDefRequirement,
     ScatterFeatureRequirement,
-    InlineJavascriptRequirement,
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
@@ -157,6 +157,12 @@ pub struct ResourceRequirement {
 #[serde(rename_all = "camelCase")]
 pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct InlineJavascriptRequirement {
+    pub expression_lib: Option<Vec<String>>
 }
 
 #[cfg(test)]

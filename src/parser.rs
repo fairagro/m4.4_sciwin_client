@@ -298,9 +298,9 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
 
     if processed_once {
         if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::InlineJavascriptRequirement);
+            requirements.push(Requirement::InlineJavascriptRequirement(Default::default()));
         } else {
-            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
+            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement(Default::default())]);
         }
     }
 }
