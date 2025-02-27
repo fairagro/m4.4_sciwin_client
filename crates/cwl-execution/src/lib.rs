@@ -16,6 +16,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
 };
+use std::{error::Error, fmt::Display};
 use tempfile::tempdir;
 
 pub fn execute(
@@ -69,7 +70,10 @@ fn run_commandlinetool(
     runtime.environment = collect_env_vars(&tool);
     stage_required_files(&tool, runtime_dir)?;
 
-    run_command(&tool, Some(&runtime))?;
+    run_command(&tool, Some(&runtime)).map_err(|e| CommandError {
+        message: format!("Error in Tool execution: {}", e),
+        exit_code: tool.get_error_code(),
+    })?;
 
     unstage_required_files(&tool, runtime_dir)?;
     let outputs = collect_outputs(&tool, out_dir, &runtime)?;
@@ -79,4 +83,28 @@ fn run_commandlinetool(
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;
     Ok(())
+}
+
+pub trait ExitCode {
+    fn exit_code(&self) -> i32;
+}
+
+#[derive(Debug)]
+pub struct CommandError {
+    pub message: String,
+    pub exit_code: i32,
+}
+
+impl Error for CommandError {}
+
+impl Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}, code: {}", self.message, self.exit_code)
+    }
+}
+
+impl ExitCode for CommandError {
+    fn exit_code(&self) -> i32 {
+        self.exit_code
+    }
 }

@@ -11,16 +11,11 @@ use cwl::{
     types::{CWLType, DefaultValue},
 };
 use serde_yaml::Value;
-use std::{
-    collections::HashMap,
-    env,
-    path::PathBuf,
-    process::Command as SystemCommand,
-};
+use std::{collections::HashMap, env, path::PathBuf, process::Command as SystemCommand};
 
 pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
     let mut command = build_command(tool, runtime)?;
-
+    
     //execute command
     let output = command.output()?;
     let dir = if let Some(runtime) = runtime {
@@ -129,7 +124,17 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
                     }
                 }
             } else {
-                binding.value_from = Some(inputs.get(&input.id).unwrap_or(&DefaultValue::Any(Value::Null)).as_value_string());
+                let val = inputs.get(&input.id).unwrap_or(&DefaultValue::Any(Value::Null));
+                if let DefaultValue::Any(Value::Sequence(vec)) = val {
+                    for item in vec {
+                        binding.value_from = Some(serde_yaml::to_string(item)?.trim().to_string()); //will not support all types, TODO!!
+                        if vec.last().unwrap() != item {
+                            bindings.push((position, i + index, binding.clone()));
+                        }
+                    }
+                } else {
+                    binding.value_from = Some(val.as_value_string())
+                };
             }
             binding.value_from = binding.value_from.map(|v| v.replace("'", ""));
             unset_self()?;

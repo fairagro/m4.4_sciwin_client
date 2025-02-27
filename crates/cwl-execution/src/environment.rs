@@ -95,64 +95,10 @@ fn evaluate_output(
     map: &mut HashMap<String, OutputItem>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match type_ {
-        CWLType::File | CWLType::Stdout | CWLType::Stderr => {
-            if let Some(binding) = &output.output_binding {
-                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
-                if !file.is_file() {
-                    let metadata = fs::metadata(file)?;
-                    return Err(format!("File requested, got: {:?}", metadata.file_type()).into());
-                }
-                let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
-                let destination = outdir.join(relative_path);
-                copy_file(file, &destination)?;
-                map.insert(
-                    output.id.clone(),
-                    OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
-                );
-            } else {
-                let filename = match output.type_ {
-                    CWLType::Stdout if tool_stdout.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stdout.as_ref().unwrap()),
-                    CWLType::Stderr if tool_stderr.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stderr.as_ref().unwrap()),
-                    _ => {
-                        let mut file_prefix = output.id.clone();
-                        file_prefix += match output.type_ {
-                            CWLType::Stdout => "_stdout",
-                            CWLType::Stderr => "_stderr",
-                            _ => "",
-                        };
-                        let pattern = format!("{}/{}*", &runtime.runtime["outdir"], file_prefix);
-                        &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0]
-                            .to_string_lossy()
-                            .into_owned()
-                    }
-                };
-                let relative_path = diff_paths(filename, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&filename));
-                let destination = outdir.join(relative_path);
-                copy_file(filename, &destination)?;
-                map.insert(
-                    output.id.clone(),
-                    OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
-                );
-            }
-        }
-        CWLType::Directory => {
-            if let Some(binding) = &output.output_binding {
-                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let dir = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
-                if !dir.is_dir() {
-                    let metadata = fs::metadata(dir)?;
-                    return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
-                }
-                let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
-                let destination = outdir.join(relative_path);
-                copy_dir(dir, &destination)?;
-                map.insert(
-                    output.id.clone(),
-                    OutputItem::Value(DefaultValue::Directory(Directory::from_path(&destination))),
-                );
-            }
-        }
+        CWLType::File | CWLType::Stdout | CWLType::Stderr => file_processing(output, outdir, runtime, tool_stdout, tool_stderr, map)?,
+        CWLType::Optional(inner) if matches!(**inner, CWLType::File) => file_processing(output, outdir, runtime, tool_stdout, tool_stderr, map)?,
+        CWLType::Directory => directory_processing(output, outdir, runtime, map)?,
+        CWLType::Optional(inner) if matches!(**inner, CWLType::Directory) => directory_processing(output, outdir, runtime, map)?,
         CWLType::Array(inner) if matches!(**inner, CWLType::File) => {
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
@@ -211,6 +157,94 @@ fn evaluate_output(
                 }
             }
         }
+    }
+    Ok(())
+}
+
+fn file_processing(
+    output: &CommandOutputParameter,
+    outdir: &Path,
+    runtime: &RuntimeEnvironment,
+    tool_stdout: &Option<String>,
+    tool_stderr: &Option<String>,
+    map: &mut HashMap<String, OutputItem>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(binding) = &output.output_binding {
+        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+        let files = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+        if let CWLType::Optional(_) = output.type_ {
+            if files.is_empty() {
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::Null)));
+                return Ok(());
+            }
+        }
+        let file = &files[0];
+        if !file.is_file() {
+            let metadata = fs::metadata(file)?;
+            return Err(format!("File requested, got: {:?}", metadata.file_type()).into());
+        }
+        let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
+        let destination = outdir.join(relative_path);
+        copy_file(file, &destination)?;
+        map.insert(
+            output.id.clone(),
+            OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
+        );
+    } else {
+        let filename = match output.type_ {
+            CWLType::Stdout if tool_stdout.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stdout.as_ref().unwrap()),
+            CWLType::Stderr if tool_stderr.is_some() => &format!("{}/{}", &runtime.runtime["outdir"], tool_stderr.as_ref().unwrap()),
+            _ => {
+                let mut file_prefix = output.id.clone();
+                file_prefix += match output.type_ {
+                    CWLType::Stdout => "_stdout",
+                    CWLType::Stderr => "_stderr",
+                    _ => "",
+                };
+                let pattern = format!("{}/{}*", &runtime.runtime["outdir"], file_prefix);
+                &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0]
+                    .to_string_lossy()
+                    .into_owned()
+            }
+        };
+        let relative_path = diff_paths(filename, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&filename));
+        let destination = outdir.join(relative_path);
+        copy_file(filename, &destination)?;
+        map.insert(
+            output.id.clone(),
+            OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))),
+        );
+    }
+    Ok(())
+}
+
+fn directory_processing(
+    output: &CommandOutputParameter,
+    outdir: &Path,
+    runtime: &RuntimeEnvironment,
+    map: &mut HashMap<String, OutputItem>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(binding) = &output.output_binding {
+        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+        let dirs = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+        if let CWLType::Optional(_) = output.type_ {
+            if dirs.is_empty() {
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::Null)));
+                return Ok(());
+            }
+        }
+        let dir = &dirs[0];
+        if !dir.is_dir() {
+            let metadata = fs::metadata(dir)?;
+            return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
+        }
+        let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
+        let destination = outdir.join(relative_path);
+        copy_dir(dir, &destination)?;
+        map.insert(
+            output.id.clone(),
+            OutputItem::Value(DefaultValue::Directory(Directory::from_path(&destination))),
+        );
     }
     Ok(())
 }

@@ -276,7 +276,8 @@ impl File {
             path.as_ref()
         } else {
             &current.join(&path)
-        };
+        };        
+        let parent = absolute_path.parent();
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(&path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
@@ -290,7 +291,7 @@ impl File {
             location: Some(format!("file://{absolute_str}")),
             path: Some(absolute_str),
             basename: path.as_ref().file_name().map(|f| f.to_string_lossy().into_owned()),
-            dirname: None,
+            dirname: parent.map(|f| f.to_string_lossy().into_owned()),
             nameroot: path.as_ref().file_stem().map(|f| f.to_string_lossy().into_owned()),
             nameext: path.as_ref().extension().map(|f| f.to_string_lossy().into_owned()),
             checksum: hash,
@@ -307,6 +308,7 @@ impl File {
         let path = Path::new(&loc);
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
+        let parent = absolute_path.parent();
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
@@ -320,7 +322,7 @@ impl File {
             location: Some(format!("file://{absolute_str}")),
             path: Some(loc.to_string()),
             basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
-            dirname: None,
+            dirname: parent.map(|f| f.to_string_lossy().into_owned()),
             nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
             nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
             checksum: hash,
@@ -407,7 +409,10 @@ impl Directory {
             basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
             path: Some(absolute_str),
             ..Default::default()
-        }.load().expect("Could not load directory").to_owned()
+        }
+        .load()
+        .expect("Could not load directory")
+        .to_owned()
     }
 
     fn load(&mut self) -> std::io::Result<&mut Self> {
@@ -467,7 +472,7 @@ impl PathItem for Directory {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-pub enum OutputItem{
+pub enum OutputItem {
     Value(DefaultValue),
     Vec(Vec<DefaultValue>),
 }

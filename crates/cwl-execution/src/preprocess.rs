@@ -6,7 +6,7 @@ use cwl::{
 use fancy_regex::{Captures, Regex};
 use std::{fs, path::Path};
 
-use crate::replace_expressions;
+use crate::{expression::evaluate_expression, replace_expressions};
 
 pub(crate) fn preprocess_imports(contents: &str, path: impl AsRef<Path>) -> String {
     let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
@@ -63,7 +63,10 @@ pub(crate) fn process_expressions(tool: &mut CommandLineTool) {
     //evaluate output.output_binding & output.format
     for output in tool.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
-            binding.glob = eval(&binding.glob);
+            let value = evaluate_expression(&binding.glob)
+                .map(|r| serde_json::to_string(&r).unwrap().replace(r#"""#, ""))
+                .unwrap_or(binding.glob.clone());
+            binding.glob = value;
         }
         if let Some(format) = &mut output.format {
             *format = eval(format);
