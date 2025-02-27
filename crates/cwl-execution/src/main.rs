@@ -5,8 +5,8 @@ use std::{collections::HashMap, env, fs, path::Path};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new("/home/ubuntu/cwl-v1.2/tests");
 
-    let cwl = path.join("colon:test.cwl");
-    let job = path.join("colon:test:job.yaml");
+    let cwl = path.join("glob_directory.cwl");
+    let job = path.join("empty.json");
 
     let job_contents = fs::read_to_string(job)?;
     let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(&job_contents)?;

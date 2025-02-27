@@ -2,7 +2,7 @@ use cwl::{
     clt::CommandLineTool,
     outputs::CommandOutputParameter,
     requirements::Requirement,
-    types::{CWLType, DefaultValue, Directory, EnviromentDefs, File},
+    types::{CWLType, DefaultValue, Directory, EnviromentDefs, File, OutputItem},
 };
 use glob::glob;
 use pathdiff::diff_paths;
@@ -83,7 +83,7 @@ fn evaluate_output(
     runtime: &RuntimeEnvironment,
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
-    map: &mut HashMap<String, DefaultValue>,
+    map: &mut HashMap<String, OutputItem>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
@@ -97,7 +97,7 @@ fn evaluate_output(
                 let relative_path = diff_paths(file, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&file.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_file(file, &destination)?;
-                map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))));
             } else {
                 let filename = match output.type_ {
                     CWLType::Stdout if tool_stdout.is_some() => tool_stdout.as_ref().unwrap(),
@@ -118,7 +118,7 @@ fn evaluate_output(
                 let relative_path = diff_paths(filename, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&filename));
                 let destination = outdir.join(relative_path);
                 copy_file(filename, &destination)?;
-                map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::File(File::from_file(destination, output.format.clone()))));
             }
         }
         CWLType::Directory => {
@@ -132,7 +132,7 @@ fn evaluate_output(
                 let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
                 let destination = outdir.join(relative_path);
                 copy_dir(dir, &destination)?;
-                map.insert(output.id.clone(), DefaultValue::Directory(Directory::from_path(&destination)));
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Directory(Directory::from_path(&destination))));
                
             }
         }
@@ -141,14 +141,18 @@ fn evaluate_output(
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
                 let dirs = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
+                let mut output_result = vec![];
                 for dir in &dirs {
                     if !dir.is_dir() {
                         let metadata = fs::metadata(dir)?;
                         return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
                     }
+                    let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
+                    let destination = outdir.join(relative_path);
+                    copy_dir(dir, &destination)?;
+                    output_result.push(DefaultValue::Directory(Directory::from_path(&destination)));
                 }
-
-                println!("{dirs:#?}");
+                map.insert(output.id.clone(), OutputItem::Vec(output_result));
             }
         }
         _ => {}

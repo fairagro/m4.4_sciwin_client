@@ -465,6 +465,13 @@ impl PathItem for Directory {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum OutputItem{
+    Value(DefaultValue),
+    Vec(Vec<DefaultValue>),
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum EnviromentDefs {
