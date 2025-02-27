@@ -36,6 +36,22 @@ pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Res
     Ok(())
 }
 
+pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> std::io::Result<()> {
+    fs::create_dir_all(&dest)?;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dest_path = Path::new(dest.as_ref()).join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir(src_path, dest_path)?;
+        } else {
+            copy_file(src_path, dest_path)?;
+        }
+    }
+    Ok(())
+}
+
 pub fn create_file<P: AsRef<Path>>(file: P, contents: &str) -> std::io::Result<()> {
     if let Some(parent) = file.as_ref().parent() {
         fs::create_dir_all(parent)?;

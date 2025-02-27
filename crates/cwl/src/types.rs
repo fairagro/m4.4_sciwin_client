@@ -1,7 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, env, fs, path::Path, str::FromStr};
+use urlencoding::decode;
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -301,6 +302,7 @@ impl File {
 
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
+        let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
         let loc = loc.strip_prefix("file://").unwrap_or(&loc);
         let path = Path::new(&loc);
         let current = env::current_dir().unwrap_or_default();
@@ -390,8 +392,50 @@ impl Directory {
             ..Default::default()
         }
     }
+
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.as_ref().is_absolute() {
+            path.as_ref()
+        } else {
+            &current.join(&path)
+        };
+        let absolute_str = absolute_path.display().to_string();
+
+        Directory {
+            location: Some(format!("file://{}", absolute_str)),
+            basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(absolute_str),
+            ..Default::default()
+        }.load().expect("Could not load directory").to_owned()
+    }
+
+    fn load(&mut self) -> std::io::Result<&mut Self> {
+        for entry in fs::read_dir(self.path.as_ref().unwrap())? {
+            let path = entry?.path();
+            if path.is_dir() {
+                let mut sub_dir = Directory::from_path(path);
+                let sub_dir = sub_dir.load()?;
+                if let Some(listing) = &mut self.listing {
+                    listing.push(DefaultValue::Directory(sub_dir.to_owned()));
+                } else {
+                    self.listing = Some(vec![DefaultValue::Directory(sub_dir.to_owned())]);
+                }
+            } else {
+                let file = DefaultValue::File(File::from_file(path, None));
+                if let Some(listing) = &mut self.listing {
+                    listing.push(file);
+                } else {
+                    self.listing = Some(vec![file])
+                }
+            }
+        }
+        Ok(self)
+    }
+
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
+        let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
         let loc = loc.strip_prefix("file://").unwrap_or(&loc);
         let path = Path::new(&loc);
         let current = env::current_dir().unwrap_or_default();

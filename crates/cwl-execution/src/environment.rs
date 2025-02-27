@@ -2,14 +2,14 @@ use cwl::{
     clt::CommandLineTool,
     outputs::CommandOutputParameter,
     requirements::Requirement,
-    types::{CWLType, DefaultValue, EnviromentDefs, File},
+    types::{CWLType, DefaultValue, Directory, EnviromentDefs, File},
 };
 use glob::glob;
 use pathdiff::diff_paths;
 use serde_yaml::Value;
 use std::{collections::HashMap, fs, path::PathBuf};
 
-use crate::util::copy_file;
+use crate::util::{copy_dir, copy_file};
 
 #[derive(Debug, Default)]
 pub struct RuntimeEnvironment {
@@ -129,6 +129,11 @@ fn evaluate_output(
                     let metadata = fs::metadata(dir)?;
                     return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
                 }
+                let relative_path = diff_paths(dir, &runtime.runtime["outdir"]).unwrap_or(PathBuf::from(&dir.file_name().unwrap()));
+                let destination = outdir.join(relative_path);
+                copy_dir(dir, &destination)?;
+                map.insert(output.id.clone(), DefaultValue::Directory(Directory::from_path(&destination)));
+               
             }
         }
         CWLType::Array(inner) if matches!(**inner, CWLType::File) => {}
@@ -136,12 +141,13 @@ fn evaluate_output(
             if let Some(binding) = &output.output_binding {
                 let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
                 let dirs = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
-                for dir in&dirs {
+                for dir in &dirs {
                     if !dir.is_dir() {
                         let metadata = fs::metadata(dir)?;
                         return Err(format!("Directory requested, got: {:?}", metadata.file_type()).into());
                     }
                 }
+
                 println!("{dirs:#?}");
             }
         }

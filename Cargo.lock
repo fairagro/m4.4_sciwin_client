@@ -742,6 +742,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "sha1",
+ "urlencoding",
 ]
 
 [[package]]

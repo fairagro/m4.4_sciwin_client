@@ -66,6 +66,7 @@ members = ["crates/*", "."]
 
 [workspace.dependencies]
 fancy-regex = "0.14.0"
+glob = "0.3.2"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.138"
 serde_yaml = "0.9"
