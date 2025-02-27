@@ -117,6 +117,21 @@ fn evaluate_output(
                 map.insert(output.id.clone(), DefaultValue::File(File::from_file(destination, output.format.clone())));
             }
         }
+        CWLType::Directory => {
+            if let Some(binding) = &output.output_binding {
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>();
+                println!("{pattern} ---> {files:#?}");
+            }
+        }
+        CWLType::Array(inner) if matches!(**inner, CWLType::File) => {}
+        CWLType::Array(inner) if matches!(**inner, CWLType::Directory) => {
+            if let Some(binding) = &output.output_binding {
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>();
+                println!("{pattern} ---> {files:#?}");
+            }
+        }
         _ => {}
     }
     Ok(())

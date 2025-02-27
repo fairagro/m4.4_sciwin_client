@@ -146,7 +146,7 @@ impl DefaultValue {
     pub fn load(&self) -> Self {
         match self {
             DefaultValue::File(file) => DefaultValue::File(file.snapshot()),
-            DefaultValue::Directory(directory) => todo!(),
+            DefaultValue::Directory(directory) => DefaultValue::Directory(directory.snapshot()),
             DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
         }
     }
@@ -387,6 +387,21 @@ impl Directory {
     pub fn from_location(location: &String) -> Self {
         Directory {
             location: Some(location.to_string()),
+            ..Default::default()
+        }
+    }
+    pub fn snapshot(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let loc = loc.strip_prefix("file://").unwrap_or(&loc);
+        let path = Path::new(&loc);
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
+        let absolute_str = absolute_path.display().to_string();
+
+        Directory {
+            location: Some(format!("file://{}", absolute_str)),
+            basename: Some(path.file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(absolute_str),
             ..Default::default()
         }
     }
