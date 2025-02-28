@@ -1,7 +1,8 @@
-use crate::util::{copy_file, create_file};
-use cwl::{clt::CommandLineTool, requirements::Requirement, types::Entry};
+use crate::{environment::RuntimeEnvironment, util::{copy_file, create_file}};
+use cwl::{clt::CommandLineTool, requirements::Requirement, types::{DefaultValue, Entry, File}};
 use glob::glob;
-use std::{fs, path::Path};
+use pathdiff::diff_paths;
+use std::{fs, path::{Path, PathBuf}};
 
 pub(crate) fn stage_required_files(tool: &CommandLineTool, outdir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
     for requirement in tool.requirements.iter().chain(tool.hints.iter()).flatten() {
@@ -21,6 +22,30 @@ pub(crate) fn stage_required_files(tool: &CommandLineTool, outdir: impl AsRef<Pa
                     }
                 }
             }
+        }
+    }
+    Ok(())
+}
+
+pub (crate) fn stage_inputs(runtime: &mut RuntimeEnvironment, outdir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+    for (key, input) in runtime.inputs.iter_mut() {
+        match input {
+            DefaultValue::File(file) => {
+                let path = file.path.clone().unwrap(); //we can unwrap here safely, because path has been filled prior!
+                let relative_path = diff_paths(&path, &runtime.runtime["tooldir"]).unwrap();
+                let destination = outdir.as_ref().join(relative_path);
+                copy_file(&path, &destination)?;
+                let mut secondary_files = file.secondary_files.clone(); //need to copy!
+                let mut new_file = File::from_file(path, file.format.clone());
+                for sec_file in secondary_files.iter_mut() {
+                    let path = sec_file.path.clone().unwrap();
+                }
+                new_file.secondary_files = secondary_files;
+
+                *file = new_file;
+            },
+            DefaultValue::Directory(directory) => todo!(),
+            _ => {},
         }
     }
     Ok(())

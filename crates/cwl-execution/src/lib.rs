@@ -10,11 +10,11 @@ use environment::{collect_env_vars, collect_inputs, collect_outputs, RuntimeEnvi
 use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
 use preprocess::{preprocess_imports, process_expressions};
 use runner::run_command;
-use staging::{stage_required_files, unstage_required_files};
+use staging::{stage_inputs, stage_required_files, unstage_required_files};
 use std::{
     collections::HashMap,
     env, fs,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, process::Command,
 };
 use std::{error::Error, fmt::Display};
 use tempfile::tempdir;
@@ -63,8 +63,9 @@ fn run_commandlinetool(
         inputs: collect_inputs(tool, &inputs)?,
         ..Default::default()
     };
+    stage_inputs(&mut runtime, runtime_dir)?;
+    
     prepare_expression_engine(&runtime)?;
-
     let mut tool = tool.clone(); //make tool mutable
     process_expressions(&mut tool);
     runtime.environment = collect_env_vars(&tool);

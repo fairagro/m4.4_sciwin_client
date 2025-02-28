@@ -10,14 +10,14 @@ use std::{
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //let args = ExecutionParameters::parse();
-    //let cwl = args.file;
-    //let job = args.inputs;
-    //let outdir = args.out_dir;
-    let path = Path::new("/home/ubuntu/cwl-v1.2");
-    let cwl = path.join("tests/template-tool.cwl");
-    let job = path.join("tests/cat-job.json");
-    let outdir: Option<String> = None;
+    let args = ExecutionParameters::parse();
+    let cwl = args.file;
+    let job = args.inputs;
+    let outdir = args.out_dir;
+    //let path = Path::new("/home/ubuntu/cwl-v1.2");
+    //let cwl = path.join("tests/cat3-tool.cwl");
+    //let job = path.join("tests/file-literal.yml");
+    //let outdir: Option<String> = None;
 
     let job_contents = fs::read_to_string(&job)?;
 

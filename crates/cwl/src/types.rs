@@ -169,40 +169,59 @@ impl<'de> Deserialize<'de> for DefaultValue {
         let value: Value = Deserialize::deserialize(deserializer)?;
 
         let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
+        let class = value.get("class").and_then(Value::as_str);
+        if let Some(class) = class {
+            if let Some(location_str) = location {
+                let secondary_files = value
+                    .get("secondaryFiles")
+                    .map(|v| serde_yaml::from_value(v.clone()))
+                    .transpose()
+                    .map_err(serde::de::Error::custom)?;
 
-        if let Some(location_str) = location {
-            let secondary_files = value
-                .get("secondaryFiles")
-                .map(|v| serde_yaml::from_value(v.clone()))
-                .transpose()
-                .map_err(serde::de::Error::custom)?;
+                let basename = value
+                    .get("basename")
+                    .map(|v| serde_yaml::from_value(v.clone()))
+                    .transpose()
+                    .map_err(serde::de::Error::custom)?;
 
-            let basename = value
-                .get("basename")
-                .map(|v| serde_yaml::from_value(v.clone()))
-                .transpose()
-                .map_err(serde::de::Error::custom)?;
-
-            match value.get("class").and_then(Value::as_str) {
-                Some("File") => {
-                    let format = value
-                        .get("format")
-                        .map(|v| serde_yaml::from_value(v.clone()))
-                        .transpose()
-                        .map_err(serde::de::Error::custom)?;
-                    let mut item = File::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
-                    item.format = format;
-                    Ok(DefaultValue::File(item))
+                match class {
+                    "File" => {
+                        let format = value
+                            .get("format")
+                            .map(|v| serde_yaml::from_value(v.clone()))
+                            .transpose()
+                            .map_err(serde::de::Error::custom)?;
+                        let mut item = File::from_location(&location_str.to_string());
+                        item.secondary_files = secondary_files;
+                        item.basename = basename;
+                        item.format = format;
+                        Ok(DefaultValue::File(item))
+                    }
+                    "Directory" => {
+                        let mut item = Directory::from_location(&location_str.to_string());
+                        item.secondary_files = secondary_files;
+                        item.basename = basename;
+                        Ok(DefaultValue::Directory(item))
+                    }
+                    _ => Ok(DefaultValue::Any(value)),
                 }
-                Some("Directory") => {
-                    let mut item = Directory::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
-                    Ok(DefaultValue::Directory(item))
+            } else {
+                match class {
+                    "File" => {
+                        let contents = value
+                            .get("contents")
+                            .map(|v| serde_yaml::from_value(v.clone()))
+                            .transpose()
+                            .map_err(serde::de::Error::custom)?;
+                        Ok(DefaultValue::File(File {
+                            contents,
+                            ..Default::default()
+                        }))
+                    }
+                    _ => {
+                        unreachable!() //Directory needs location, other classes are not valid
+                    }
                 }
-                _ => Ok(DefaultValue::Any(value)),
             }
         } else {
             Ok(DefaultValue::Any(value))
@@ -276,7 +295,7 @@ impl File {
             path.as_ref()
         } else {
             &current.join(&path)
-        };        
+        };
         let parent = absolute_path.parent();
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(&path).expect("Could not get metadata");
@@ -305,7 +324,13 @@ impl File {
         let loc = self.location.clone().unwrap_or_default();
         let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
         let loc = loc.strip_prefix("file://").unwrap_or(&loc);
-        let path = Path::new(&loc);
+        let mut path = Path::new(&loc);
+
+        if !path.exists() && self.contents.is_some() {
+            path = Path::new(".literal");
+            fs::write(path, self.contents.as_ref().unwrap()).ok();
+        }
+
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let parent = absolute_path.parent();
