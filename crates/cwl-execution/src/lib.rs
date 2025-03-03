@@ -7,6 +7,7 @@ pub mod util;
 
 use cwl::{
     clt::CommandLineTool,
+    et::ExpressionTool,
     inputs::WorkflowStepInput,
     requirements::check_timelimit,
     types::{DefaultValue, Directory, File, OutputItem},
@@ -14,10 +15,11 @@ use cwl::{
     CWLDocument,
 };
 use environment::{collect_env_vars, collect_inputs, collect_outputs, evaluate_input, RuntimeEnvironment};
-use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
+use expression::{eval_tool, parse_expressions, prepare_expression_engine, replace_expressions, reset_expression_engine};
 use pathdiff::diff_paths;
 use preprocess::{preprocess_imports, process_expressions};
 use runner::run_command;
+use serde_json::Value;
 use staging::{stage_input_files, stage_required_files, unstage_required_files};
 use std::{
     collections::HashMap,
@@ -44,6 +46,7 @@ pub fn execute(
     let outputs = match doc {
         CWLDocument::CommandLineTool(tool) => run_commandlinetool(&tool, inputs, path, outdir)?,
         CWLDocument::Workflow(workflow) => run_workflow(&workflow, inputs, path, outdir)?,
+        CWLDocument::ExpressionTool(expression) => run_expressiontool(&expression, inputs, path)?,
     };
     Ok(outputs)
 }
@@ -181,7 +184,7 @@ fn run_commandlinetool(
             ("cores".to_string(), 0.to_string()),
             ("ram".to_string(), 0.to_string()),
         ]),
-        inputs: collect_inputs(tool, &inputs)?,
+        inputs: collect_inputs(&tool.inputs, &inputs)?,
         time_limit: check_timelimit(tool).unwrap_or(0),
         ..Default::default()
     };
@@ -203,6 +206,55 @@ fn run_commandlinetool(
 
     env::set_current_dir(current_dir)?;
     reset_expression_engine()?;
+    Ok(outputs)
+}
+
+fn run_expressiontool(
+    tool: &ExpressionTool,
+    inputs: HashMap<String, DefaultValue>,
+    tool_path: impl AsRef<Path>,
+) -> Result<HashMap<String, OutputItem>, Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
+    let runtime_dir = dir.path();
+    let tool_dir = tool_path.as_ref().parent().unwrap_or(Path::new("."));
+    let current_dir = env::current_dir()?;
+
+    env::set_current_dir(tool_dir)?;
+    let mut runtime = RuntimeEnvironment {
+        runtime: HashMap::from([
+            ("tooldir".to_string(), tool_dir.to_string_lossy().into_owned()),
+            ("outdir".to_string(), runtime_dir.to_string_lossy().into_owned()),
+            ("tmpdir".to_string(), runtime_dir.to_string_lossy().into_owned()),
+            ("cores".to_string(), 0.to_string()),
+            ("ram".to_string(), 0.to_string()),
+        ]),
+        inputs: collect_inputs(&tool.inputs, &inputs)?,
+        ..Default::default()
+    };
+    stage_input_files(&mut runtime, runtime_dir)?;
+
+    prepare_expression_engine(&runtime)?;
+    let expressions = parse_expressions(&tool.expression);
+    let value = eval_tool::<Value>(&expressions[0].expression())?;
+    
+    reset_expression_engine()?;
+    env::set_current_dir(current_dir)?;
+    
+    let mut outputs = HashMap::new();
+    for output in &tool.outputs {
+        if let Some(result) = value.get(&output.id) {
+            match value {
+                Value::Null if output.type_.is_optional() => {
+                    outputs.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(serde_yaml::Value::Null)));
+                }
+                _ => {
+                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                    outputs.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(value)));
+                }
+            }
+        }
+    }
+
     Ok(outputs)
 }
 

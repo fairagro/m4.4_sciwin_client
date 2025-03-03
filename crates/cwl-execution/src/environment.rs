@@ -27,12 +27,12 @@ pub struct RuntimeEnvironment {
 }
 
 pub(crate) fn collect_inputs(
-    tool: &CommandLineTool,
+    tool_inputs: &[CommandInputParameter],
     inputs: &HashMap<String, DefaultValue>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn std::error::Error>> {
-    tool.inputs
+    tool_inputs
         .iter()
-        .map(|i| evaluate_input(&i, inputs))
+        .map(|i| evaluate_input(i, inputs))
         .collect::<Result<HashMap<_, _>, Box<dyn std::error::Error>>>()
 }
 
@@ -41,6 +41,11 @@ pub(crate) fn evaluate_input(
     inputs: &HashMap<String, DefaultValue>,
 ) -> Result<(String, DefaultValue), Box<dyn std::error::Error>> {
     if let Some(value) = inputs.get(&i.id) {
+        if let Some(default) = &i.default {
+            if (matches!(i.type_, CWLType::Any) || i.type_.is_optional()) && matches!(value, DefaultValue::Any(Value::Null)) {
+                return Ok((i.id.clone(), default.clone())); //Any or Optional is null and default value is given!
+            }
+        }
         if value.has_matching_type(&i.type_) {
             return Ok((i.id.clone(), value.clone()));
         } else {

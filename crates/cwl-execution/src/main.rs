@@ -1,10 +1,10 @@
 use clap::Parser;
-use cwl::{load_tool, types::DefaultValue};
+use cwl::types::DefaultValue;
 use cwl_execution::{execute, CommandError, ExitCode};
 use std::{
     collections::HashMap,
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::exit,
 };
 
@@ -14,10 +14,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let job = args.inputs;
     let outdir = args.out_dir;
     //let path = Path::new("/home/ubuntu/cwl-v1.2");
-    //let cwl = path.join("tests/any-type-compat.cwl");
-    //let job = path.join("tests/any-type-job.json");
+    //let cwl = path.join("tests/null-expression1-tool.cwl");
+    //let job = path.join("tests/empty.json");
     //let outdir: Option<String> = None;
-
+    
     let job_contents = fs::read_to_string(&job)?;
     let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(&job_contents)?;
     match execute(cwl, inputs, outdir) {
@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{json}");
         }
         Err(e) => {
+            eprintln!("{e}");
             if let Some(cmd_err) = e.downcast_ref::<CommandError>() {
                 exit(cmd_err.exit_code());
             } else {

@@ -2,7 +2,7 @@ use crate::{
     collect_inputs,
     expression::{set_self, unset_self},
     replace_expressions,
-    util::{create_file, format_command, get_random_filename, get_shell_command},
+    util::{create_file, get_random_filename, get_shell_command},
     RuntimeEnvironment,
 };
 use cwl::{
@@ -16,7 +16,6 @@ use wait_timeout::ChildExt;
 
 pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
     let mut command = build_command(tool, runtime)?;
-    eprintln!("{}", format_command(&command));
 
     let timelimit = if let Some(runtime) = runtime { runtime.time_limit } else { 0 };
     let output = if timelimit > 0 {
@@ -84,7 +83,7 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
     let inputs = if let Some(rt) = &runtime {
         rt.inputs.clone()
     } else {
-        collect_inputs(tool, &HashMap::new())? //for tool create!
+        collect_inputs(&tool.inputs, &HashMap::new())? //for tool create!
     };
 
     //get executable

@@ -24,6 +24,10 @@ pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, r
     RUNTIME::with(|rt| rt.eval::<T>(expression))
 }
 
+pub (crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
+    RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))
+}
+
 pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), rustyscript::Error> {
     let json = serde_json::to_string(me)?;
     RUNTIME::with(|rt| rt.eval::<()>(format!("var self = {json};")))?;

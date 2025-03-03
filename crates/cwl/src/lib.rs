@@ -1,10 +1,12 @@
 use clt::CommandLineTool;
+use et::ExpressionTool;
 use serde::Deserialize;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 use wf::Workflow;
 
 pub mod clt;
 pub mod deserialize;
+pub mod et;
 pub mod format;
 pub mod inputs;
 pub mod outputs;
@@ -17,6 +19,7 @@ pub mod wf;
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
     Workflow(Workflow),
+    ExpressionTool(ExpressionTool),
 }
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML
@@ -27,6 +30,18 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
     }
     let contents = fs::read_to_string(path)?;
     let tool: CommandLineTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CommandLineTool {:?}: {}", filename, e))?;
+
+    Ok(tool)
+}
+
+/// Loads a CWL CommandLineTool from disk and parses given YAML
+pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<ExpressionTool, Box<dyn Error>> {
+    let path = filename.as_ref();
+    if !path.exists() {
+        return Err(format!("❌ ExpressionTool {:?} does not exist.", filename).into());
+    }
+    let contents = fs::read_to_string(path)?;
+    let tool: ExpressionTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read ExpressionTool {:?}: {}", filename, e))?;
 
     Ok(tool)
 }
