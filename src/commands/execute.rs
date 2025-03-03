@@ -1,17 +1,7 @@
-use crate::{
-    error::CommandError,
-    execution::{
-        runner::{run_commandlinetool, run_workflow},
-        util::preprocess_cwl,
-    },
-    io::join_path_string,
-    parser::guess_type,
-};
+use crate::{io::join_path_string, parser::guess_type};
 use clap::{Args, Subcommand, ValueEnum};
 use cwl::{
-    clt::CommandLineTool,
     types::{CWLType, DefaultValue, Directory, File, PathItem},
-    wf::Workflow,
     CWLDocument,
 };
 use cwl_execution::execute;
@@ -104,7 +94,6 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             }
 
             //gather inputs
-            let job_contents = fs::read_to_string(&args.file).map_err(|e| format!("Could not load File {:?}: {}", args.file, e))?;
             let mut inputs: HashMap<String, DefaultValue> = HashMap::new();
             let is_file_input = args.args.len() == 1 && !&args.args[0].starts_with("-");
 
@@ -176,7 +165,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             let cwl = &args.file;
             let outdir = args.out_dir.clone();
 
-            if let Ok(outputs) = execute(&cwl, inputs, outdir) {
+            if let Ok(outputs) = execute(cwl, inputs, outdir) {
                 let json = serde_json::to_string_pretty(&outputs)?;
                 println!("{json}");
             }

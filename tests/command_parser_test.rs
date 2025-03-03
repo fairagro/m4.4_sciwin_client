@@ -7,10 +7,8 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, File},
 };
-use s4n::{
-    execution::runner::run_command,
-    parser::{get_outputs, parse_command_line},
-};
+use cwl_execution::runner::run_command;
+use s4n::parser::{get_outputs, parse_command_line};
 use serde_yaml::Value;
 use serial_test::serial;
 use std::{path::Path, vec};
@@ -143,14 +141,14 @@ pub fn test_get_outputs() {
             .with_type(CWLType::File)
             .with_id("my-file")
             .with_binding(CommandOutputBinding {
-                glob: "my-file.txt".to_string(),
+                glob: Some("my-file.txt".to_string()),
                 ..Default::default()
             }),
         CommandOutputParameter::default()
             .with_type(CWLType::File)
             .with_id("archive")
             .with_binding(CommandOutputBinding {
-                glob: "archive.tar.gz".to_string(),
+                glob: Some("archive.tar.gz".to_string()),
                 ..Default::default()
             }),
     ];

@@ -2,7 +2,6 @@ pub mod cli;
 pub mod commands;
 pub mod cwl;
 pub mod error;
-pub mod execution;
 pub mod io;
 pub mod log;
 pub mod parser;
