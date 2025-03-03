@@ -114,6 +114,7 @@ impl DefaultValue {
             DefaultValue::Directory(item) => item.path.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
+                serde_yaml::Value::String(s) => s.to_string(),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
         }
