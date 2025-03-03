@@ -3134,6 +3134,7 @@ dependencies = [
  "clap_complete",
  "colored",
  "cwl",
+ "cwl-execution",
  "dialoguer",
  "fancy-regex 0.14.0",
  "git2",

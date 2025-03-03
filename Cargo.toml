@@ -23,6 +23,7 @@ categories = ["science"]
 
 [dependencies]
 cwl = { path = "crates/cwl" }
+cwl-execution = { path = "crates/cwl-execution" }
 fancy-regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
