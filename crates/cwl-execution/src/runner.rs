@@ -2,7 +2,7 @@ use crate::{
     collect_inputs,
     expression::{set_self, unset_self},
     replace_expressions,
-    util::{create_file, get_random_filename, get_shell_command},
+    util::{create_file, format_command, get_random_filename, get_shell_command},
     RuntimeEnvironment,
 };
 use cwl::{
@@ -11,13 +11,26 @@ use cwl::{
     types::{CWLType, DefaultValue},
 };
 use serde_yaml::Value;
-use std::{collections::HashMap, env, path::PathBuf, process::Command as SystemCommand};
+use std::{collections::HashMap, env, path::PathBuf, process::Command as SystemCommand, time::Duration};
+use wait_timeout::ChildExt;
 
 pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -> Result<(), Box<dyn std::error::Error>> {
     let mut command = build_command(tool, runtime)?;
+    eprintln!("{}", format_command(&command));
 
-    //execute command
-    let output = command.output()?;
+    let timelimit = if let Some(runtime) = runtime { runtime.time_limit } else { 0 };
+    let output = if timelimit > 0 {
+        let mut child = command.spawn()?;
+        if child.wait_timeout(Duration::from_secs(timelimit))?.is_none() {
+            child.kill()?;
+            return Err("Time elapsed".into());
+        }
+        child.wait_with_output()?
+    } else {
+        //execute command with no timelimit
+        command.output()?
+    };
+
     let dir = if let Some(runtime) = runtime {
         PathBuf::from(runtime.runtime["outdir"].clone())
     } else {
@@ -25,37 +38,37 @@ pub fn run_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>)
     };
 
     //handle redirection of stdout
-    if !output.stdout.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
             create_file(dir.join(stdout), out)?;
         } else if tool.has_stdout_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
+                binding.glob.as_ref().unwrap() //must have glob if file
             } else {
                 &get_random_filename(&format!("{}_stdout", output.id), "out")
             };
             create_file(dir.join(filename), out)?;
-        } else {
+        } else if !output.stdout.is_empty() {
             eprintln!("{}", out);
         }
     }
 
     //handle redirection of stderr
-    if !output.stderr.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
             create_file(dir.join(stderr), out)?;
         } else if tool.has_stderr_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
             let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
+                binding.glob.as_ref().unwrap() //must have glob if file
             } else {
                 &get_random_filename(&format!("{}_stderr", output.id), "out")
             };
             create_file(dir.join(filename), out)?;
-        } else {
+        } else if !output.stderr.is_empty() {
             eprintln!("❌ {}", out);
         }
     }
@@ -177,7 +190,7 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
                         args.push(value.to_string())
                     }
                 } else {
-                    args.push(value.to_string())
+                    args.push(format!("\"{}\"", value));
                 }
             } else {
                 args.push(value.to_string())

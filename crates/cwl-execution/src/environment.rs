@@ -17,11 +17,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RuntimeEnvironment {
     pub inputs: HashMap<String, DefaultValue>,
     pub runtime: HashMap<String, String>,
     pub environment: HashMap<String, String>,
+    pub time_limit: u64
 }
 
 pub(crate) fn collect_inputs(
@@ -33,12 +34,12 @@ pub(crate) fn collect_inputs(
         .map(|i| {
             if let Some(value) = inputs.get(&i.id) {
                 if value.has_matching_type(&i.type_) {
-                    return Ok((i.id.clone(), value.load()));
+                    return Ok((i.id.clone(), value.clone()));
                 } else {
                     Err(format!("CWLType {:?} is not matching input value: \n{:#?}", i.type_, value))?
                 }
             } else if let Some(default) = &i.default {
-                return Ok((i.id.clone(), default.load()));
+                return Ok((i.id.clone(), default.clone()));
             }
 
             if i.type_.is_optional() {
@@ -101,7 +102,7 @@ fn evaluate_output(
         CWLType::Optional(inner) if matches!(**inner, CWLType::Directory) => directory_processing(output, outdir, runtime, map)?,
         CWLType::Array(inner) if matches!(**inner, CWLType::File) => {
             if let Some(binding) = &output.output_binding {
-                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob.as_ref().unwrap());
                 let files = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
 
                 let mut output_result = vec![];
@@ -120,7 +121,7 @@ fn evaluate_output(
         }
         CWLType::Array(inner) if matches!(**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
-                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob.as_ref().unwrap());
                 let dirs = glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
 
                 let mut output_result = vec![];
@@ -140,21 +141,29 @@ fn evaluate_output(
         _ => {
             if let Some(binding) = &output.output_binding {
                 //if there is a binding we can read the file
-                let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
-                let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
+                if let Some(glob_) = &binding.glob {
+                    let pattern = format!("{}/{}", &runtime.runtime["outdir"], glob_);
+                    let file = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?[0];
 
-                let content = fs::read_to_string(file)?;
-                if let Some(expression) = &binding.output_eval {
-                    let mut me = File::from_file(file, None);
-                    me.contents = Some(content);
-                    set_self(&vec![me])?;
+                    let content = fs::read_to_string(file)?;
+                    if let Some(expression) = &binding.output_eval {
+                        let mut me = File::from_file(file, None);
+                        me.contents = Some(content);
+                        set_self(&vec![me])?;
+                        let result = evaluate_expression(expression)?;
+                        let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                        map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(value)));
+                        unset_self()?;
+                    } else {
+                        map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::String(content))));
+                    }
+                } else if let Some(expression) = &binding.output_eval {
                     let result = evaluate_expression(expression)?;
                     let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
                     map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(value)));
-                    unset_self()?;
-                } else {
-                    map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::String(content))));
                 }
+            } else if output.type_.is_array() {
+                map.insert(output.id.clone(), OutputItem::Value(DefaultValue::Any(Value::Sequence(vec![]))));
             }
         }
     }
@@ -170,7 +179,7 @@ fn file_processing(
     map: &mut HashMap<String, OutputItem>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(binding) = &output.output_binding {
-        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob.as_ref().unwrap());
         let files = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
         if let CWLType::Optional(_) = output.type_ {
             if files.is_empty() {
@@ -225,7 +234,7 @@ fn directory_processing(
     map: &mut HashMap<String, OutputItem>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(binding) = &output.output_binding {
-        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob);
+        let pattern = format!("{}/{}", &runtime.runtime["outdir"], &binding.glob.as_ref().unwrap());
         let dirs = &glob(&pattern)?.collect::<Result<Vec<_>, glob::GlobError>>()?;
         if let CWLType::Optional(_) = output.type_ {
             if dirs.is_empty() {

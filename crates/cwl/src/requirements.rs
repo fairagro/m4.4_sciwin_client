@@ -1,3 +1,5 @@
+use crate::clt::CommandLineTool;
+
 use super::types::{Entry, EnviromentDefs, Listing};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
@@ -10,6 +12,7 @@ pub enum Requirement {
     ResourceRequirement(ResourceRequirement),
     EnvVarRequirement(EnvVarRequirement),
     InlineJavascriptRequirement(InlineJavascriptRequirement),
+    ToolTimeLimit(ToolTimeLimit),
     ShellCommandRequirement,
     //as dummys, not used at this point
     SoftwareRequirement,
@@ -19,7 +22,7 @@ pub enum Requirement {
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
-    ToolTimeLimit,
+    WorkReuse,
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
@@ -75,7 +78,32 @@ fn get_entry_name(input: &str) -> String {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
+    #[serde(deserialize_with = "deserialize_listing")]
     pub listing: Vec<Listing>,
+}
+
+pub fn deserialize_listing<'de, D>(deserializer: D) -> Result<Vec<Listing>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+    let listings = match value {
+        Value::Sequence(values) => values.into_iter().map(|v| {
+            if v.is_string() {
+                let string: String = Deserialize::deserialize(v).map_err(serde::de::Error::custom)?;
+                Ok(Listing {
+                    entry: Entry::Source(string.clone()),
+                    entryname: string,
+                })
+            } else {
+                let listing: Listing = Deserialize::deserialize(v).map_err(serde::de::Error::custom)?;
+                Ok(listing)
+            }
+        }),
+        _ => Err(serde::de::Error::custom("Invalid type"))?,
+    }
+    .collect::<Result<Vec<_>, _>>()?;
+    Ok(listings)
 }
 
 impl InitialWorkDirRequirement {
@@ -162,7 +190,29 @@ pub struct EnvVarRequirement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InlineJavascriptRequirement {
-    pub expression_lib: Option<Vec<String>>
+    pub expression_lib: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum NumberOrString{
+    Number(u64),
+    String(String)
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolTimeLimit {
+    pub timelimit: u64,
+}
+
+pub fn check_timelimit(tool: &CommandLineTool) -> Option<u64> {
+    tool.requirements.iter().chain(tool.hints.iter()).flatten().map(|f| {
+        if let Requirement::ToolTimeLimit(time) = f {
+            Some(time.timelimit)
+        } else {
+            None
+        }
+    }).find(|r| r.is_some()).flatten()
 }
 
 #[cfg(test)]

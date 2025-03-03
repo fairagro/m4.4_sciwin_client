@@ -5,16 +5,16 @@ pub mod runner;
 pub(crate) mod staging;
 pub mod util;
 
-use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
+use cwl::{clt::CommandLineTool, requirements::check_timelimit, types::DefaultValue, CWLDocument};
 use environment::{collect_env_vars, collect_inputs, collect_outputs, RuntimeEnvironment};
 use expression::{prepare_expression_engine, replace_expressions, reset_expression_engine};
 use preprocess::{preprocess_imports, process_expressions};
 use runner::run_command;
-use staging::{stage_inputs, stage_required_files, unstage_required_files};
+use staging::{stage_input_files, stage_required_files, unstage_required_files};
 use std::{
     collections::HashMap,
     env, fs,
-    path::{Path, PathBuf}, process::Command,
+    path::{Path, PathBuf},
 };
 use std::{error::Error, fmt::Display};
 use tempfile::tempdir;
@@ -61,10 +61,11 @@ fn run_commandlinetool(
             ("ram".to_string(), 0.to_string()),
         ]),
         inputs: collect_inputs(tool, &inputs)?,
+        time_limit: check_timelimit(tool).unwrap_or(0),
         ..Default::default()
     };
-    stage_inputs(&mut runtime, runtime_dir)?;
-    
+    stage_input_files(&mut runtime, runtime_dir)?;
+
     prepare_expression_engine(&runtime)?;
     let mut tool = tool.clone(); //make tool mutable
     process_expressions(&mut tool);

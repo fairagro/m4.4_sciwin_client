@@ -55,6 +55,9 @@ impl CWLType {
     pub fn is_optional(&self) -> bool {
         matches!(self, CWLType::Optional(_))
     }
+    pub fn is_array(&self) -> bool {
+        matches!(self, CWLType::Array(_))
+    }
 }
 
 fn serialize_type(t: &CWLType) -> String {
@@ -199,7 +202,6 @@ impl<'de> Deserialize<'de> for DefaultValue {
                     }
                     "Directory" => {
                         let mut item = Directory::from_location(&location_str.to_string());
-                        item.secondary_files = secondary_files;
                         item.basename = basename;
                         Ok(DefaultValue::Directory(item))
                     }
@@ -232,7 +234,6 @@ impl<'de> Deserialize<'de> for DefaultValue {
 pub trait PathItem {
     fn get_location(&self) -> String;
     fn set_location(&mut self, new_location: String);
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -324,12 +325,7 @@ impl File {
         let loc = self.location.clone().unwrap_or_default();
         let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
         let loc = loc.strip_prefix("file://").unwrap_or(&loc);
-        let mut path = Path::new(&loc);
-
-        if !path.exists() && self.contents.is_some() {
-            path = Path::new(".literal");
-            fs::write(path, self.contents.as_ref().unwrap()).ok();
-        }
+        let path = Path::new(&loc);
 
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
@@ -343,16 +339,25 @@ impl File {
             format!("sha1${hash:x}")
         });
 
+        let secondary_files = self
+            .secondary_files
+            .as_ref()
+            .map(|sec_files| sec_files.iter().map(|f| f.load()).collect::<Vec<_>>());
+
         Self {
             location: Some(format!("file://{absolute_str}")),
             path: Some(loc.to_string()),
-            basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
+            basename: if self.basename.is_some() {
+                self.basename.clone()
+            } else {
+                path.file_name().map(|f| f.to_string_lossy().into_owned())
+            },
             dirname: parent.map(|f| f.to_string_lossy().into_owned()),
             nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
             nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
             checksum: hash,
             size: Some(metadata.len()),
-            secondary_files: self.secondary_files.clone(),
+            secondary_files,
             format: resolve_format(self.format.clone()),
             contents: None,
             ..Default::default()
@@ -374,10 +379,6 @@ impl PathItem for File {
         self.location = Some(new_location);
     }
 
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
-        self.secondary_files.as_mut()
-    }
-
     fn get_location(&self) -> String {
         self.location.as_ref().unwrap_or(&String::new()).clone()
     }
@@ -392,8 +393,6 @@ pub struct Directory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub secondary_files: Option<Vec<DefaultValue>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub listing: Option<Vec<DefaultValue>>,
@@ -405,7 +404,6 @@ impl Default for Directory {
             class: String::from("Directory"),
             location: Default::default(),
             path: Default::default(),
-            secondary_files: Default::default(),
             basename: Default::default(),
             listing: Default::default(),
         }
@@ -484,10 +482,6 @@ impl Directory {
 impl PathItem for Directory {
     fn set_location(&mut self, new_location: String) {
         self.location = Some(new_location);
-    }
-
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
-        self.secondary_files.as_mut()
     }
 
     fn get_location(&self) -> String {

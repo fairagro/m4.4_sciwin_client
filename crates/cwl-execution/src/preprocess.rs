@@ -62,10 +62,12 @@ pub(crate) fn process_expressions(tool: &mut CommandLineTool) {
     //evaluate output.output_binding & output.format
     for output in tool.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
-            let value = evaluate_expression(&binding.glob)
-                .map(|r| serde_json::to_string(&r).unwrap().replace(r#"""#, ""))
-                .unwrap_or(binding.glob.clone());
-            binding.glob = value;
+            if let Some(glob) = &mut binding.glob {
+                let value = evaluate_expression(glob)
+                    .map(|r| serde_json::to_string(&r).unwrap().replace(r#"""#, ""))
+                    .unwrap_or(glob.clone());
+                *glob = value;
+            }
         }
         if let Some(format) = &mut output.format {
             *format = eval(format);
