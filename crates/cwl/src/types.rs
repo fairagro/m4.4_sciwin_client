@@ -496,6 +496,16 @@ pub enum OutputItem {
     Vec(Vec<DefaultValue>),
 }
 
+impl OutputItem {
+    pub fn to_default_value(&self) -> DefaultValue {
+        if let OutputItem::Value(value) = self {
+            value.clone()
+        } else {
+            panic!("This is not available, yet! ")
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum EnviromentDefs {

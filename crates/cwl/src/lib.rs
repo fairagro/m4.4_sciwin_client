@@ -13,7 +13,7 @@ pub mod types;
 pub mod wf;
 
 #[derive(Deserialize, Debug)]
-#[serde(untagged)]
+#[serde(tag = "class")]
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
     Workflow(Workflow),

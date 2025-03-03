@@ -4,6 +4,7 @@ use crate::{
 };
 use cwl::{
     clt::CommandLineTool,
+    inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     requirements::Requirement,
     types::{CWLType, DefaultValue, Directory, EnviromentDefs, File, OutputItem},
@@ -22,7 +23,7 @@ pub struct RuntimeEnvironment {
     pub inputs: HashMap<String, DefaultValue>,
     pub runtime: HashMap<String, String>,
     pub environment: HashMap<String, String>,
-    pub time_limit: u64
+    pub time_limit: u64,
 }
 
 pub(crate) fn collect_inputs(
@@ -31,23 +32,28 @@ pub(crate) fn collect_inputs(
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn std::error::Error>> {
     tool.inputs
         .iter()
-        .map(|i| {
-            if let Some(value) = inputs.get(&i.id) {
-                if value.has_matching_type(&i.type_) {
-                    return Ok((i.id.clone(), value.clone()));
-                } else {
-                    Err(format!("CWLType {:?} is not matching input value: \n{:#?}", i.type_, value))?
-                }
-            } else if let Some(default) = &i.default {
-                return Ok((i.id.clone(), default.clone()));
-            }
-
-            if i.type_.is_optional() {
-                return Ok((i.id.clone(), DefaultValue::Any(Value::Null)));
-            }
-            Err(format!("No Input provided for {:?}", i.id))?
-        })
+        .map(|i| evaluate_input(&i, inputs))
         .collect::<Result<HashMap<_, _>, Box<dyn std::error::Error>>>()
+}
+
+pub(crate) fn evaluate_input(
+    i: &CommandInputParameter,
+    inputs: &HashMap<String, DefaultValue>,
+) -> Result<(String, DefaultValue), Box<dyn std::error::Error>> {
+    if let Some(value) = inputs.get(&i.id) {
+        if value.has_matching_type(&i.type_) {
+            return Ok((i.id.clone(), value.clone()));
+        } else {
+            Err(format!("CWLType {:?} is not matching input value: \n{:#?}", i.type_, value))?
+        }
+    } else if let Some(default) = &i.default {
+        return Ok((i.id.clone(), default.clone()));
+    }
+
+    if i.type_.is_optional() {
+        return Ok((i.id.clone(), DefaultValue::Any(Value::Null)));
+    }
+    Err(format!("No Input provided for {:?}", i.id))?
 }
 
 pub(crate) fn collect_env_vars(tool: &CommandLineTool) -> HashMap<String, String> {
