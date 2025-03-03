@@ -109,7 +109,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
                 .with_type(output_type)
                 .with_id(&filename)
                 .with_binding(CommandOutputBinding {
-                    glob: f.to_string(),
+                    glob: Some(f.to_string()),
                     ..Default::default()
                 })
         })
@@ -246,8 +246,8 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
         if let Some(default) = &input.default {
             for output in tool.outputs.iter_mut() {
                 if let Some(binding) = &mut output.output_binding {
-                    if binding.glob == default.as_value_string() {
-                        binding.glob = process_input(input);
+                    if binding.glob == Some(default.as_value_string()) {
+                        binding.glob = Some(process_input(input));
                         processed_once = true;
                     }
                 }
@@ -289,9 +289,11 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
 
     for output in tool.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
-            if binding.glob == "." {
-                output.id = "output_directory".to_string();
-                binding.glob = "$(runtime.outdir)".into();
+            if let Some(glob) = &binding.glob {
+                if glob == "." {
+                    output.id = "output_directory".to_string();
+                    binding.glob = Some("$(runtime.outdir)".into());
+                }
             }
         }
     }
