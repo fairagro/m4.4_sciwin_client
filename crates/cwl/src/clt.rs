@@ -16,6 +16,7 @@ use std::fmt::Display;
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
     pub cwl_version: String,
+    pub class: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,6 +59,7 @@ impl Default for CommandLineTool {
             id: None,
             label: None,
             doc: None,
+            class: String::from("CommandLineTool"),
             cwl_version: String::from("v1.2"),
             base_command: Default::default(),
             stdin: Default::default(),

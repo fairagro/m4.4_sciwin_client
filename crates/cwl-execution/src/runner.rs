@@ -83,7 +83,10 @@ fn build_command(tool: &CommandLineTool, runtime: Option<&RuntimeEnvironment>) -
     let inputs = if let Some(rt) = &runtime {
         rt.inputs.clone()
     } else {
-        collect_inputs(&tool.inputs, &HashMap::new())? //for tool create!
+        collect_inputs(&tool.inputs, &HashMap::new())?
+            .into_iter()
+            .map(|(k, v)| (k, v.load()))
+            .collect::<HashMap<_, _>>() //for tool create
     };
 
     //get executable

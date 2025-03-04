@@ -1,6 +1,7 @@
 use clt::CommandLineTool;
 use et::ExpressionTool;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_yaml::Value;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 use wf::Workflow;
 
@@ -14,12 +15,33 @@ pub mod requirements;
 pub mod types;
 pub mod wf;
 
-#[derive(Deserialize, Debug)]
-#[serde(tag = "class")]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
     Workflow(Workflow),
     ExpressionTool(ExpressionTool),
+}
+
+impl<'de> Deserialize<'de> for CWLDocument {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        let class = value
+            .get("class")
+            .ok_or_else(|| serde::de::Error::missing_field("class"))?
+            .as_str()
+            .ok_or_else(|| serde::de::Error::missing_field("class must be of type string"))?;
+
+        match class {
+            "CommandLineTool" => serde_yaml::from_value(value).map(CWLDocument::CommandLineTool).map_err(serde::de::Error::custom),
+            "ExpressionTool" => serde_yaml::from_value(value).map(CWLDocument::ExpressionTool).map_err(serde::de::Error::custom),
+            "Workflow" => serde_yaml::from_value(value).map(CWLDocument::Workflow).map_err(serde::de::Error::custom),
+            _ => Err(serde::de::Error::custom(format!("Unknown variant of CWL file: {class}")))
+        }
+    }
 }
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML

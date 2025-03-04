@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct ExpressionTool {
     pub cwl_version: String,
+    pub class: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -28,4 +29,21 @@ pub struct ExpressionTool {
     #[serde(deserialize_with = "deserialize_requirements")]
     #[serde(default)]
     pub hints: Option<Vec<Requirement>>,
+}
+
+impl Default for ExpressionTool {
+    fn default() -> Self {
+        Self {
+            cwl_version: Default::default(),
+            class: String::from("ExpressionTool"),
+            id: Default::default(),
+            label: Default::default(),
+            doc: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            expression: Default::default(),
+            requirements: Default::default(),
+            hints: Default::default(),
+        }
+    }
 }
