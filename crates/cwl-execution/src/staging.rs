@@ -18,7 +18,7 @@ use std::{
 };
 use urlencoding::decode;
 
-pub fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
+pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     tool: &CommandLineTool,
     input_values: &Option<HashMap<String, DefaultValue>>,
     tool_path: P,
@@ -40,11 +40,11 @@ pub fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     //do not remove file multiple times if input matches InitialWorkDirRequirement filename
     staged_files.sort_unstable();
     staged_files.dedup();
-    
+
     Ok(staged_files)
 }
 
-pub fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>> {
+pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>> {
     for file in staged_files {
         let mut should_remove = true;
 

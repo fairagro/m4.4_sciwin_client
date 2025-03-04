@@ -10,7 +10,7 @@ use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
 use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 
 ///Either gets the default value for input or the provided one (preferred)
-pub fn evaluate_input_as_string(
+pub(crate) fn evaluate_input_as_string(
     input: &CommandInputParameter,
     input_values: &Option<HashMap<String, DefaultValue>>,
 ) -> Result<String, Box<dyn Error>> {
@@ -18,7 +18,10 @@ pub fn evaluate_input_as_string(
 }
 
 ///Either gets the default value for input or the provided one (preferred)
-pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashMap<String, DefaultValue>>) -> Result<DefaultValue, Box<dyn Error>> {
+pub(crate) fn evaluate_input(
+    input: &CommandInputParameter,
+    input_values: &Option<HashMap<String, DefaultValue>>,
+) -> Result<DefaultValue, Box<dyn Error>> {
     if let Some(ref values) = input_values {
         if let Some(value) = values.get(&input.id) {
             if !value.has_matching_type(&input.type_) {
@@ -45,7 +48,7 @@ pub fn evaluate_input(input: &CommandInputParameter, input_values: &Option<HashM
 }
 
 ///Copies back requested outputs and writes to commandline
-pub fn evaluate_outputs(
+pub(crate) fn evaluate_outputs(
     tool_outputs: &Vec<CommandOutputParameter>,
     initial_dir: &Path,
     tool_stdout: &Option<String>,
@@ -135,13 +138,13 @@ fn evaluate_output_impl(
     Ok(())
 }
 
-pub fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
+pub(crate) fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
     let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
     f.format = format;
     f.snapshot()
 }
 
-pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
+pub(crate) fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
     Directory {
         location: Some(format!("file://{}", path.as_ref().display())),
         basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
@@ -150,7 +153,7 @@ pub fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
     }
 }
 
-pub fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
+pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
 

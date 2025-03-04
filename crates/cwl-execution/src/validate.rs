@@ -11,7 +11,11 @@ use std::{collections::HashMap, env};
 use crate::io::{get_file_property, make_relative_to};
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
-pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>, runtime: &HashMap<String, String>) {
+pub(crate) fn set_placeholder_values(
+    cwl: &mut CommandLineTool,
+    input_values: Option<&HashMap<String, DefaultValue>>,
+    runtime: &HashMap<String, String>,
+) {
     //set values in baseCommand
     cwl.base_command = match &cwl.base_command {
         Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &cwl.inputs)),
@@ -75,7 +79,12 @@ pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&H
     }
 }
 
-pub fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut Option<HashMap<String, DefaultValue>>, staged_files: &[String], home_dir: &str) {
+pub(crate) fn rewire_paths(
+    cwl: &mut CommandLineTool,
+    input_values: &mut Option<HashMap<String, DefaultValue>>,
+    staged_files: &[String],
+    home_dir: &str,
+) {
     //rewire in inputs
     for input in cwl.inputs.iter_mut() {
         if let Some(default) = &mut input.default {

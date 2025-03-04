@@ -77,12 +77,12 @@ pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<S
     Ok(files)
 }
 
-pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
+pub(crate) fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
     let metadata = std::fs::metadata(path)?;
     Ok(metadata.len())
 }
 
-pub fn get_shell_command() -> Command {
+pub(crate) fn get_shell_command() -> Command {
     let shell = if cfg!(target_os = "windows") { "cmd" } else { "sh" };
     let param = if cfg!(target_os = "windows") { "/C" } else { "-c" };
     let mut cmd = Command::new(shell);

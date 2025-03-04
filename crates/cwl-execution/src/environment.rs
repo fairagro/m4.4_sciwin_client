@@ -5,7 +5,7 @@ use cwl::{
 };
 use std::env;
 
-pub fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String> {
+pub(crate) fn set_tool_environment_vars(tool: &CommandLineTool) -> Vec<String> {
     let mut keys = vec![];
 
     for req in tool.requirements.iter().chain(tool.hints.iter()).flatten() {
