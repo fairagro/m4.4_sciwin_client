@@ -23,7 +23,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: Install Tarpaulin 📈
-        run: cargo install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --force 
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run coverage
