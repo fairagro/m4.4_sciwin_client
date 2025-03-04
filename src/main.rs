@@ -1,4 +1,5 @@
 use clap::{CommandFactory, Parser};
+use cwl_execution::{CommandError, ExitCode};
 use log::{error, LevelFilter};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
@@ -11,7 +12,6 @@ use s4n::{
         tool::{create_tool, handle_tool_commands},
         workflow::handle_workflow_commands,
     },
-    error::{CommandError, ExitCode},
     log::LOGGER,
 };
 use std::{error::Error, process::exit};
