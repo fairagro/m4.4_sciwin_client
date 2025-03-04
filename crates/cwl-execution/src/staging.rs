@@ -59,8 +59,8 @@ pub(crate) fn stage_input_files(runtime: &mut RuntimeEnvironment, outdir: impl A
                 } else {
                     PathBuf::from(path)
                 };
-                let destination = &outdir.as_ref().join(relative);
-                copy_file(path, destination)?;
+                let destination = &outdir.as_ref().join(relative.strip_prefix("../").unwrap_or(&relative));
+                copy_file(path, destination).map_err(|e| format!("Could not copy file {:?} to {:?}: {}", path, destination, e))?;
                 let mut new_file = File::from_file(destination, file.format.clone());
                 if let Some(secondary_files) = &file.secondary_files {
                     new_file.secondary_files = Some(stage_secondary_files(secondary_files, outdir.as_ref(), &new_file)?);

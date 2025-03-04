@@ -6,13 +6,10 @@ use cwl::{
 };
 use cwl_execution::execute;
 use log::info;
+use pathdiff::diff_paths;
 use serde_yaml::{Number, Value};
 use std::{
-    collections::HashMap,
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
+    collections::HashMap, error::Error, fs, path::{Path, PathBuf}, process::Command
 };
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
@@ -133,8 +130,10 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             let path_prefix = if is_file_input {
                 Path::new(&args.args[0]).parent().unwrap()
             } else {
-                Path::new(".")
+                Path::new("")
             };
+            let cwl_folder = args.file.parent().unwrap_or(&args.file);
+            let path_prefix = &diff_paths(path_prefix, cwl_folder).unwrap();
             for value in inputs.values_mut() {
                 match value {
                     DefaultValue::File(file) => {
@@ -164,13 +163,16 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 
             let cwl = &args.file;
             let outdir = args.out_dir.clone();
-
-            if let Ok(outputs) = execute(cwl, inputs, outdir) {
-                let json = serde_json::to_string_pretty(&outputs)?;
-                println!("{json}");
+            match execute(cwl, inputs, outdir) {
+                Ok(outputs) => {
+                    let json = serde_json::to_string_pretty(&outputs)?;
+                    println!("{json}");
+                    Ok(())
+                }
+                Err(e) => {
+                    Err(e)
+                },
             }
-
-            Ok(())
         }
     }
 }
