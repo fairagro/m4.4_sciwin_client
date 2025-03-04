@@ -1,30 +1,12 @@
 use rand::{distributions::Alphanumeric, Rng};
 use std::{
     cell::RefCell,
+    ffi::OsStr,
     fs::{self},
     io::{self, Error, Write},
     path::{Path, MAIN_SEPARATOR_STR},
     process::Command,
 };
-
-pub fn get_filename_without_extension<S: AsRef<str>>(relative_path: S) -> Option<String> {
-    let path = Path::new(relative_path.as_ref());
-
-    path.file_name()
-        .and_then(|name| name.to_str().map(|s| s.split('.').next().unwrap_or(s).to_string()))
-}
-
-fn get_basename<S: AsRef<str>>(filename: S) -> String {
-    let path = Path::new(filename.as_ref());
-
-    path.file_name().unwrap_or_default().to_string_lossy().into_owned()
-}
-
-fn get_extension<S: AsRef<str>>(filename: S) -> String {
-    let path = Path::new(filename.as_ref());
-
-    path.extension().unwrap_or_default().to_string_lossy().into_owned()
-}
 
 pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
     create_and_write_file_internal(filename, contents, false)
@@ -90,23 +72,27 @@ pub(crate) fn get_shell_command() -> Command {
     cmd
 }
 
-pub fn get_file_property(filename: &str, property_name: &str) -> String {
+pub fn get_file_property(filename: impl AsRef<Path>, property_name: &str) -> String {
     match property_name {
         "size" => get_file_size(filename).unwrap_or(1).to_string(),
-        "basename" => get_basename(filename),
-        "nameroot" => get_filename_without_extension(filename).unwrap(),
-        "nameext" => get_extension(filename),
-        "path" => filename.to_string(),
+        "basename" => make_string(filename.as_ref().file_name()),
+        "nameroot" => make_string(filename.as_ref().file_stem()),
+        "nameext" => make_string(filename.as_ref().extension()),
+        "path" => filename.as_ref().to_string_lossy().into_owned(),
         "dirname" => {
-            let path = Path::new(filename);
+            let path = filename.as_ref();
             let parent = path.parent().unwrap_or(path).to_string_lossy().into_owned();
             if parent.is_empty() {
                 return ".".to_string();
             }
             parent
         }
-        _ => filename.to_string(),
+        _ => filename.as_ref().to_string_lossy().into_owned(),
     }
+}
+
+fn make_string(input: Option<&OsStr>) -> String {
+    input.unwrap_or_default().to_string_lossy().to_string()
 }
 
 pub fn get_random_filename(prefix: &str, extension: &str) -> String {

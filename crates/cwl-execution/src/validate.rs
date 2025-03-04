@@ -234,7 +234,7 @@ fn get_input_value(
             if suffix == "format" {
                 file.format.clone()
             } else {
-                Some(get_file_property(&file.get_location(), suffix))
+                Some(get_file_property(file.get_location(), suffix))
             }
         } else {
             Some(value.as_value_string())

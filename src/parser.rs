@@ -1,4 +1,4 @@
-use crate::split_vec_at;
+use crate::{io::get_filename_without_extension, split_vec_at};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -6,7 +6,6 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
-use cwl_execution::io::get_filename_without_extension;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
@@ -100,7 +99,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
     files
         .iter()
         .map(|f| {
-            let filename = get_filename_without_extension(f).unwrap_or(f.clone());
+            let filename = get_filename_without_extension(f);
             let output_type = if Path::new(f).extension().is_some() {
                 CWLType::File
             } else {

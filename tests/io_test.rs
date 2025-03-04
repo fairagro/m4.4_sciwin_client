@@ -1,10 +1,9 @@
 mod common;
 use common::os_path;
 use cwl::{clt::Command, types::CWLType};
-use cwl_execution::io::get_filename_without_extension;
 use s4n::{
+    io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path},
     parser::guess_type,
-    io::{get_qualified_filename, get_workflows_folder, resolve_path},
 };
 use std::vec;
 
@@ -14,7 +13,7 @@ pub fn test_get_filename_without_extension() {
     let outputs = &["results", "path", "archive"];
 
     for i in 0..inputs.len() {
-        let result = get_filename_without_extension(inputs[i]).expect("operation failed");
+        let result = get_filename_without_extension(inputs[i]);
         assert_eq!(result, outputs[i]);
     }
 }
