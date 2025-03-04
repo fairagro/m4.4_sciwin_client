@@ -1,9 +1,10 @@
 mod common;
 use common::os_path;
 use cwl::{clt::Command, types::CWLType};
+use cwl_execution::io::get_filename_without_extension;
 use s4n::{
     parser::guess_type,
-    io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path},
+    io::{get_qualified_filename, get_workflows_folder, resolve_path},
 };
 use std::vec;
 

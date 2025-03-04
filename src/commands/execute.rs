@@ -1,11 +1,5 @@
 use crate::{
-    error::CommandError,
-    execution::{
-        runner::{run_commandlinetool, run_workflow},
-        util::preprocess_cwl,
-    },
-    io::join_path_string,
-    parser::guess_type,
+    error::CommandError, io::join_path_string, parser::guess_type
 };
 use clap::{Args, Subcommand, ValueEnum};
 use cwl::{
@@ -14,6 +8,7 @@ use cwl::{
     wf::Workflow,
     CWLDocument,
 };
+use cwl_execution::{runner::{run_commandlinetool, run_workflow}, util::preprocess_cwl};
 use log::info;
 use serde_yaml::{Number, Value};
 use std::{

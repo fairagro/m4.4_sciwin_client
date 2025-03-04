@@ -6,13 +6,13 @@ use cwl::{
     requirements::{DockerRequirement, Requirement},
     types::{CWLType, Entry},
 };
+use cwl_execution::io::copy_file;
 use git2::Repository;
 use s4n::{
     commands::{
         init::init_s4n,
         tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
     },
-    io::copy_file,
     repo::get_modified_files,
 };
 use serial_test::serial;

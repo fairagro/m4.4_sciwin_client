@@ -2,16 +2,14 @@ mod common;
 use assert_cmd::Command;
 use common::check_git_user;
 use cwl::load_workflow;
+use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
-use s4n::{
-    commands::{
-        init::init_s4n,
-        workflow::{
-            connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, list_workflows, remove_workflow, ConnectWorkflowArgs,
-            CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
-        },
+use s4n::commands::{
+    init::init_s4n,
+    workflow::{
+        connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, list_workflows, remove_workflow, ConnectWorkflowArgs, CreateWorkflowArgs,
+        ListWorkflowArgs, RemoveWorkflowArgs,
     },
-    io::create_and_write_file,
 };
 use serial_test::serial;
 use std::{env, fs, path::Path};

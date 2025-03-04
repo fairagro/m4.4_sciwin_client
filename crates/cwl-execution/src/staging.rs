@@ -1,5 +1,6 @@
-use super::util::evaluate_input;
 use crate::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
+
+use super::util::evaluate_input;
 use cwl::{
     clt::CommandLineTool,
     inputs::CommandInputParameter,

@@ -1,7 +1,7 @@
+use cwl_execution::{io::create_and_write_file, runner::run_command};
 use crate::{
     cwl::{highlight_cwl, Saveable},
-    execution::runner::run_command,
-    io::{create_and_write_file, get_qualified_filename},
+    io::{ get_qualified_filename},
     parser::{self, post_process_cwl},
     print_list,
     repo::{commit, get_modified_files, stage_file},

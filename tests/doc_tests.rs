@@ -2,13 +2,11 @@
 mod common;
 use common::{check_git_user, setup_python};
 use cwl::{clt::Command, load_tool, requirements::Requirement, types::Entry};
-use s4n::{
-    commands::{
+use cwl_execution::io::copy_dir;
+use s4n::commands::{
         init::init_s4n,
         tool::{create_tool, CreateToolArgs},
-    },
-    io::copy_dir,
-};
+    };
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{tempdir, TempDir};

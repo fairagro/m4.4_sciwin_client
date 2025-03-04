@@ -1,4 +1,4 @@
-use crate::{io::get_filename_without_extension, split_vec_at};
+use crate::split_vec_at;
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -6,6 +6,7 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{CWLType, DefaultValue, Directory, File},
 };
+use cwl_execution::io::get_filename_without_extension;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;

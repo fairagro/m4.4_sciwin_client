@@ -1,15 +1,13 @@
 mod common;
 use common::{check_git_user, setup_python};
 use cwl::load_workflow;
-use s4n::{
-    commands::{
+use cwl_execution::io::copy_dir;
+use s4n::commands::{
         execute::{execute_local, LocalExecuteArgs, Runner},
         init::init_s4n,
         tool::{create_tool, list_tools, CreateToolArgs},
         workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
-    },
-    io::copy_dir,
-};
+    };
 use serial_test::serial;
 use std::{
     env,

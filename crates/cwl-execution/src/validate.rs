@@ -1,4 +1,3 @@
-use crate::io::{get_file_property, make_relative_to};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
@@ -8,6 +7,8 @@ use cwl::{
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
 use std::{collections::HashMap, env};
+
+use crate::io::{get_file_property, make_relative_to};
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
 pub fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: Option<&HashMap<String, DefaultValue>>, runtime: &HashMap<String, String>) {

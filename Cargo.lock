@@ -442,6 +442,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cwl-execution"
+version = "0.1.0"
+dependencies = [
+ "cwl",
+ "fancy-regex 0.14.0",
+ "log",
+ "pathdiff",
+ "rand",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "serial_test",
+ "sysinfo",
+ "tempfile",
+ "urlencoding",
+]
+
+[[package]]
 name = "derive_arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1806,14 +1824,13 @@ dependencies = [
  "clap_complete",
  "colored",
  "cwl",
+ "cwl-execution",
  "dialoguer",
- "fancy-regex 0.14.0",
  "git2",
  "log",
  "pathdiff",
  "predicates",
  "prettytable-rs",
- "rand",
  "reqwest",
  "rust_xlsxwriter",
  "serde",
@@ -1823,10 +1840,8 @@ dependencies = [
  "shlex",
  "slugify",
  "syntect",
- "sysinfo",
  "tempfile",
  "tokio",
- "urlencoding",
  "walkdir",
  "whoami",
 ]

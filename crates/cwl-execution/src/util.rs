@@ -1,4 +1,3 @@
-use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -7,6 +6,8 @@ use cwl::{
 use fancy_regex::Regex;
 use serde_yaml::Value;
 use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
+
+use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 
 ///Either gets the default value for input or the provided one (preferred)
 pub fn evaluate_input_as_string(

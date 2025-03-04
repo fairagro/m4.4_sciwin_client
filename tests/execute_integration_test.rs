@@ -1,9 +1,7 @@
 mod common;
 use common::setup_python;
-use s4n::{
-    commands::execute::{execute_local, LocalExecuteArgs, Runner},
-    io::copy_dir,
-};
+use cwl_execution::io::copy_dir;
+use s4n::commands::execute::{execute_local, LocalExecuteArgs, Runner};
 use serial_test::serial;
 use std::{
     env,

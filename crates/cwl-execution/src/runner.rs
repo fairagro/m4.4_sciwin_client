@@ -1,13 +1,5 @@
 use crate::{
-    error::CommandError,
-    execution::{
-        environment::{set_tool_environment_vars, unset_environment_vars},
-        staging::{stage_required_files, unstage_files},
-        util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
-        validate::{rewire_paths, set_placeholder_values},
-    },
-    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
-    {format_command, get_available_ram, get_processor_count},
+    environment::{set_tool_environment_vars, unset_environment_vars}, format_command, get_available_ram, get_processor_count, io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output}, staging::{stage_required_files, unstage_files}, util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl}, validate::{rewire_paths, set_placeholder_values}, CommandError
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
@@ -135,7 +127,7 @@ pub fn run_workflow(
                     file.location = Some(format!("file://{}", new_loc));
                     DefaultValue::File(file)
                 }
-                DefaultValue::Directory(dir) => {                    
+                DefaultValue::Directory(dir) => {
                     let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
                     let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
                     copy_dir(&path, &new_loc)?;
@@ -248,7 +240,7 @@ pub fn run_commandlinetool(
 
     //remove staged files
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
-    
+
     //evaluate output files
     let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
 

@@ -1,6 +1,6 @@
 use crate::{
     cwl::Connectable,
-    io::{create_and_write_file, get_workflows_folder},
+    io::get_workflows_folder,
     repo::{commit, stage_file},
 };
 use clap::{Args, Subcommand};
@@ -11,6 +11,7 @@ use cwl::{
     wf::Workflow,
     {load_tool, load_workflow},
 };
+use cwl_execution::io::create_and_write_file;
 use git2::Repository;
 use log::{error, info};
 use prettytable::{row, Cell, Row, Table};

@@ -2,44 +2,17 @@ pub mod cli;
 pub mod commands;
 pub mod cwl;
 pub mod error;
-pub mod execution;
 pub mod io;
 pub mod log;
 pub mod parser;
 pub mod repo;
 
 use ::log::info;
-use std::{num::NonZero, process::Command, thread};
-use sysinfo::System;
 
 pub fn print_list(list: &Vec<String>) {
     for item in list {
         info!("\t- {item}");
     }
-}
-
-pub fn get_processor_count() -> usize {
-    thread::available_parallelism().map(NonZero::get).unwrap_or(1)
-}
-
-pub fn get_available_ram() -> u64 {
-    let mut system = System::new_all();
-    system.refresh_all();
-    system.free_memory() / 1024
-}
-
-pub fn format_command(command: &Command) -> String {
-    let program = command.get_program().to_string_lossy();
-
-    let args: Vec<String> = command
-        .get_args()
-        .map(|arg| {
-            let arg_str = arg.to_string_lossy();
-            arg_str.to_string()
-        })
-        .collect();
-
-    format!("{} {}", program, args.join(" "))
 }
 
 pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: T) -> (Vec<T>, Vec<T>) {
