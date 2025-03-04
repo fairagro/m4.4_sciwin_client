@@ -286,10 +286,10 @@ mod tests {
             });
 
         fs::create_dir_all(dir.path().join("tests/test_data")).expect("Could not create folders");
-        fs::copy("tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
+        fs::copy("../../tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
         env::set_current_dir(dir.path()).unwrap();
 
-        let result = evaluate_outputs(&vec![output], &current, &None, &None);
+        let result = evaluate_outputs(&vec![output], &current.join("../../"), &None, &None);
         assert!(result.is_ok());
 
         env::set_current_dir(current).unwrap();
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_file_metadata() {
-        let path = env::current_dir().unwrap().join("tests").join("test_data").join("file.txt");
+        let path = env::current_dir().unwrap().join("../../tests").join("test_data").join("file.txt");
         let result = get_file_metadata(path.clone(), None);
         let expected = File {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_directory_metadata() {
-        let path = env::current_dir().unwrap().join("tests/test_data");
+        let path = env::current_dir().unwrap().join("../../tests/test_data");
         let result = get_diretory_metadata(path.clone());
         let expected = Directory {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
@@ -334,7 +334,7 @@ mod tests {
     pub fn test_copy_output_dir() {
         let dir = tempdir().unwrap();
         let stage = dir.path().join("tests").join("test_data").join("test_dir");
-        let current = env::current_dir().unwrap().join("tests").join("test_data").join("test_dir");
+        let current = env::current_dir().unwrap().join("../../tests").join("test_data").join("test_dir");
         let cwd = current.to_str().unwrap();
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 

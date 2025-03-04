@@ -224,7 +224,7 @@ mod tests {
         let test_file = "tests/test_data/input.txt";
 
         let requirement = Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(test_file));
-        let list = stage_requirements(&Some(vec![requirement]), Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_requirements(&Some(vec![requirement]), Path::new("../../"), tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join(test_file);
 
@@ -241,7 +241,7 @@ mod tests {
         let test_contents = "Hello fellow CWL-enjoyers";
 
         let requirement = Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_contents("input.txt", test_contents));
-        let list = stage_requirements(&Some(vec![requirement]), Path::new("."), tmp_dir.path()).unwrap();
+        let list = stage_requirements(&Some(vec![requirement]), Path::new("../../"), tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join("input.txt");
 
@@ -266,7 +266,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -287,7 +287,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -307,7 +307,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -326,7 +326,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -349,7 +349,7 @@ mod tests {
             glob: "tests/test_data/input.txt".to_string(),
         });
 
-        let list = stage_input_files(&[input], &None, Path::new("."), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there
@@ -361,15 +361,15 @@ mod tests {
     fn test_stage_secondary_files() {
         let tmp_dir = tempdir().unwrap();
 
-        let test_file = "tests/test_data/input.txt";
-        let secondary_file = "tests/test_data/echo.py";
+        let test_file = "../../tests/test_data/input.txt";
+        let secondary_file = "../../tests/test_data/echo.py";
         let mut file = File::from_location(&test_file.to_string());
         file.secondary_files = Some(vec![DefaultValue::File(File::from_location(&secondary_file.to_string()))]);
         let data = DefaultValue::File(file);
 
         let list = stage_secondary_files(data, tmp_dir.path()).unwrap();
 
-        let expected_path = tmp_dir.path().join(secondary_file);
+        let expected_path = tmp_dir.path().join(secondary_file.strip_prefix("../../").unwrap());
         //secondary file should be there
         assert_eq!(list, vec![expected_path.to_string_lossy()]);
         assert!(expected_path.exists());

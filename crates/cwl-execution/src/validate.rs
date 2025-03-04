@@ -329,7 +329,7 @@ outputs:
     #[test]
     pub fn test_set_placeholder_values_in_string_size() {
         let text = "File has size $(inputs.infile.size)";
-        let file = "tests/test_data/input.txt";
+        let file = "../../tests/test_data/input.txt";
         let size = get_file_size(file).unwrap();
         let runtime: HashMap<String, String> = HashMap::new();
         let inputs = vec![CommandInputParameter::default()
