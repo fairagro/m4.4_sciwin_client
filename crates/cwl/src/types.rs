@@ -1,7 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, env, fs, path::Path, str::FromStr};
+use urlencoding::decode;
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum CWLType {
@@ -47,6 +48,15 @@ impl FromStr for CWLType {
                 _ => Err(format!("Invalid CWLType: {}", s)),
             }
         }
+    }
+}
+
+impl CWLType {
+    pub fn is_optional(&self) -> bool {
+        matches!(self, CWLType::Optional(_))
+    }
+    pub fn is_array(&self) -> bool {
+        matches!(self, CWLType::Array(_))
     }
 }
 
@@ -100,10 +110,11 @@ pub enum DefaultValue {
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
-            DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
-            DefaultValue::Directory(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
+            DefaultValue::File(item) => item.path.as_ref().unwrap_or(&String::new()).clone(),
+            DefaultValue::Directory(item) => item.path.as_ref().unwrap_or(&String::new()).clone(),
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
+                serde_yaml::Value::String(s) => s.to_string(),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
         }
@@ -137,12 +148,18 @@ impl DefaultValue {
         }
     }
 
+    pub fn load(&self) -> Self {
+        match self {
+            DefaultValue::File(file) => DefaultValue::File(file.snapshot()),
+            DefaultValue::Directory(directory) => DefaultValue::Directory(directory.snapshot()),
+            DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+        }
+    }
+
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
-            DefaultValue::Directory(dir) => {
-                DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new())))
-            }
+            DefaultValue::Directory(dir) => DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
         }
     }
@@ -156,40 +173,58 @@ impl<'de> Deserialize<'de> for DefaultValue {
         let value: Value = Deserialize::deserialize(deserializer)?;
 
         let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
+        let class = value.get("class").and_then(Value::as_str);
+        if let Some(class) = class {
+            if let Some(location_str) = location {
+                let secondary_files = value
+                    .get("secondaryFiles")
+                    .map(|v| serde_yaml::from_value(v.clone()))
+                    .transpose()
+                    .map_err(serde::de::Error::custom)?;
 
-        if let Some(location_str) = location {
-            let secondary_files = value
-                .get("secondaryFiles")
-                .map(|v| serde_yaml::from_value(v.clone()))
-                .transpose()
-                .map_err(serde::de::Error::custom)?;
+                let basename = value
+                    .get("basename")
+                    .map(|v| serde_yaml::from_value(v.clone()))
+                    .transpose()
+                    .map_err(serde::de::Error::custom)?;
 
-            let basename = value
-                .get("basename")
-                .map(|v| serde_yaml::from_value(v.clone()))
-                .transpose()
-                .map_err(serde::de::Error::custom)?;
-
-            match value.get("class").and_then(Value::as_str) {
-                Some("File") => {
-                    let format = value
-                        .get("format")
-                        .map(|v| serde_yaml::from_value(v.clone()))
-                        .transpose()
-                        .map_err(serde::de::Error::custom)?;
-                    let mut item = File::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
-                    item.format = format;
-                    Ok(DefaultValue::File(item))
+                match class {
+                    "File" => {
+                        let format = value
+                            .get("format")
+                            .map(|v| serde_yaml::from_value(v.clone()))
+                            .transpose()
+                            .map_err(serde::de::Error::custom)?;
+                        let mut item = File::from_location(&location_str.to_string());
+                        item.secondary_files = secondary_files;
+                        item.basename = basename;
+                        item.format = format;
+                        Ok(DefaultValue::File(item))
+                    }
+                    "Directory" => {
+                        let mut item = Directory::from_location(&location_str.to_string());
+                        item.basename = basename;
+                        Ok(DefaultValue::Directory(item))
+                    }
+                    _ => Ok(DefaultValue::Any(value)),
                 }
-                Some("Directory") => {
-                    let mut item = Directory::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
-                    Ok(DefaultValue::Directory(item))
+            } else {
+                match class {
+                    "File" => {
+                        let contents = value
+                            .get("contents")
+                            .map(|v| serde_yaml::from_value(v.clone()))
+                            .transpose()
+                            .map_err(serde::de::Error::custom)?;
+                        Ok(DefaultValue::File(File {
+                            contents,
+                            ..Default::default()
+                        }))
+                    }
+                    _ => {
+                        unreachable!() //Directory needs location, other classes are not valid
+                    }
                 }
-                _ => Ok(DefaultValue::Any(value)),
             }
         } else {
             Ok(DefaultValue::Any(value))
@@ -200,7 +235,6 @@ impl<'de> Deserialize<'de> for DefaultValue {
 pub trait PathItem {
     fn get_location(&self) -> String;
     fn set_location(&mut self, new_location: String);
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -257,12 +291,46 @@ impl File {
             ..Default::default()
         }
     }
+    pub fn from_file(path: impl AsRef<Path>, format: Option<String>) -> Self {
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.as_ref().is_absolute() {
+            path.as_ref()
+        } else {
+            &current.join(&path)
+        };
+        let parent = absolute_path.parent();
+        let absolute_str = absolute_path.display().to_string();
+        let metadata = fs::metadata(&path).expect("Could not get metadata");
+        let mut hasher = Sha1::new();
+        let hash = fs::read(&path).ok().map(|f| {
+            hasher.update(&f);
+            let hash = hasher.finalize();
+            format!("sha1${hash:x}")
+        });
+
+        Self {
+            location: Some(format!("file://{absolute_str}")),
+            path: Some(absolute_str),
+            basename: path.as_ref().file_name().map(|f| f.to_string_lossy().into_owned()),
+            dirname: parent.map(|f| f.to_string_lossy().into_owned()),
+            nameroot: path.as_ref().file_stem().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.as_ref().extension().map(|f| format!(".{}", f.to_string_lossy())),
+            checksum: hash,
+            format: resolve_format(format),
+            size: Some(metadata.len()),
+            ..Default::default()
+        }
+    }
 
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
+        let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
+        let loc = loc.strip_prefix("file://").unwrap_or(&loc);
         let path = Path::new(&loc);
+
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
+        let parent = absolute_path.parent();
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(path).expect("Could not get metadata");
         let mut hasher = Sha1::new();
@@ -272,16 +340,25 @@ impl File {
             format!("sha1${hash:x}")
         });
 
+        let secondary_files = self
+            .secondary_files
+            .as_ref()
+            .map(|sec_files| sec_files.iter().map(|f| f.load()).collect::<Vec<_>>());
+
         Self {
             location: Some(format!("file://{absolute_str}")),
-            path: Some(loc.clone()),
-            basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
-            dirname: None,
+            path: Some(loc.to_string()),
+            basename: if self.basename.is_some() {
+                self.basename.clone()
+            } else {
+                path.file_name().map(|f| f.to_string_lossy().into_owned())
+            },
+            dirname: parent.map(|f| f.to_string_lossy().into_owned()),
             nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
             nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
             checksum: hash,
             size: Some(metadata.len()),
-            secondary_files: self.secondary_files.clone(),
+            secondary_files,
             format: resolve_format(self.format.clone()),
             contents: None,
             ..Default::default()
@@ -303,10 +380,6 @@ impl PathItem for File {
         self.location = Some(new_location);
     }
 
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
-        self.secondary_files.as_mut()
-    }
-
     fn get_location(&self) -> String {
         self.location.as_ref().unwrap_or(&String::new()).clone()
     }
@@ -321,8 +394,6 @@ pub struct Directory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub secondary_files: Option<Vec<DefaultValue>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub listing: Option<Vec<DefaultValue>>,
@@ -334,7 +405,6 @@ impl Default for Directory {
             class: String::from("Directory"),
             location: Default::default(),
             path: Default::default(),
-            secondary_files: Default::default(),
             basename: Default::default(),
             listing: Default::default(),
         }
@@ -348,6 +418,66 @@ impl Directory {
             ..Default::default()
         }
     }
+
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.as_ref().is_absolute() {
+            path.as_ref()
+        } else {
+            &current.join(&path)
+        };
+        let absolute_str = absolute_path.display().to_string();
+
+        Directory {
+            location: Some(format!("file://{}", absolute_str)),
+            basename: Some(path.as_ref().file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(absolute_str),
+            ..Default::default()
+        }
+        .load()
+        .expect("Could not load directory")
+        .to_owned()
+    }
+
+    fn load(&mut self) -> std::io::Result<&mut Self> {
+        for entry in fs::read_dir(self.path.as_ref().unwrap())? {
+            let path = entry?.path();
+            if path.is_dir() {
+                let mut sub_dir = Directory::from_path(path);
+                let sub_dir = sub_dir.load()?;
+                if let Some(listing) = &mut self.listing {
+                    listing.push(DefaultValue::Directory(sub_dir.to_owned()));
+                } else {
+                    self.listing = Some(vec![DefaultValue::Directory(sub_dir.to_owned())]);
+                }
+            } else {
+                let file = DefaultValue::File(File::from_file(path, None));
+                if let Some(listing) = &mut self.listing {
+                    listing.push(file);
+                } else {
+                    self.listing = Some(vec![file])
+                }
+            }
+        }
+        Ok(self)
+    }
+
+    pub fn snapshot(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let loc = decode(&loc).unwrap_or_else(|_| Cow::Borrowed(&loc));
+        let loc = loc.strip_prefix("file://").unwrap_or(&loc);
+        let path = Path::new(&loc);
+        let current = env::current_dir().unwrap_or_default();
+        let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
+        let absolute_str = absolute_path.display().to_string();
+
+        Directory {
+            location: Some(format!("file://{}", absolute_str)),
+            basename: Some(path.file_name().unwrap().to_string_lossy().into_owned()),
+            path: Some(absolute_str),
+            ..Default::default()
+        }
+    }
 }
 
 impl PathItem for Directory {
@@ -355,12 +485,25 @@ impl PathItem for Directory {
         self.location = Some(new_location);
     }
 
-    fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>> {
-        self.secondary_files.as_mut()
-    }
-
     fn get_location(&self) -> String {
         self.location.as_ref().unwrap_or(&String::new()).clone()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum OutputItem {
+    Value(DefaultValue),
+    Vec(Vec<DefaultValue>),
+}
+
+impl OutputItem {
+    pub fn to_default_value(&self) -> DefaultValue {
+        if let OutputItem::Value(value) = self {
+            value.clone()
+        } else {
+            panic!("This is not available, yet! ")
+        }
     }
 }
 

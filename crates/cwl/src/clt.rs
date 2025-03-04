@@ -15,8 +15,8 @@ use std::fmt::Display;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
-    pub class: String,
     pub cwl_version: String,
+    pub class: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -251,8 +251,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stdout".to_string(),
             type_: CWLType::Stdout,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stdout_output());
     }
@@ -262,8 +261,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stderr".to_string(),
             type_: CWLType::Stderr,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stderr_output());
     }

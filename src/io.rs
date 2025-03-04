@@ -114,7 +114,7 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     let foldername = filename.clone();
     filename.push_str(".cwl");
 
-    get_workflows_folder() + &foldername + "/" + &filename
+    format!("{}{}/{}", get_workflows_folder(), &foldername, &filename)
 }
 
 pub fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {

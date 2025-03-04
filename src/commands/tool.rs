@@ -1,6 +1,5 @@
 use crate::{
     cwl::{highlight_cwl, Saveable},
-    execution::runner::run_command,
     io::{create_and_write_file, get_qualified_filename},
     parser::{self, post_process_cwl},
     print_list,
@@ -12,6 +11,7 @@ use cwl::{
     format::format_cwl,
     requirements::{DockerRequirement, Requirement},
 };
+use cwl_execution::runner::run_command;
 use git2::Repository;
 use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};
