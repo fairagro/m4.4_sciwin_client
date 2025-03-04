@@ -205,6 +205,7 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let inputs = match cwl {
         CWLDocument::CommandLineTool(tool) => tool.inputs,
         CWLDocument::Workflow(workflow) => workflow.inputs,
+        CWLDocument::ExpressionTool(expression_tool) => expression_tool.inputs,
     };
 
     let template = inputs
