@@ -20,6 +20,9 @@ pub enum Requirement {
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
+    LoadListingRequirement,
+    InplaceUpdateRequirement,
+    WorkReuse,
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
@@ -68,7 +71,11 @@ where
 }
 
 fn get_entry_name(input: &str) -> String {
-    let i = input.trim_start_matches(|c: char| !c.is_alphabetic()).to_string().replace(".", "_").replace("/", "_");
+    let i = input
+        .trim_start_matches(|c: char| !c.is_alphabetic())
+        .to_string()
+        .replace(".", "_")
+        .replace("/", "_");
     format!("$(inputs.{})", i.to_lowercase()).to_string()
 }
 
@@ -161,16 +168,14 @@ pub struct EnvVarRequirement {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ToolTimeLimit {
-    pub timelimit: i64
+    pub timelimit: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkAccess {
-    pub network_access: bool
+    pub network_access: bool,
 }
-
-
 
 #[cfg(test)]
 mod tests {
