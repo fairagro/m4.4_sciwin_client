@@ -10,16 +10,16 @@ pub enum Requirement {
     ResourceRequirement(ResourceRequirement),
     EnvVarRequirement(EnvVarRequirement),
     ShellCommandRequirement,
+    ToolTimeLimit(ToolTimeLimit),
+    NetworkAccess(NetworkAccess),
     //as dummys, not used at this point
     SoftwareRequirement,
-    NetworkAccess,
     SchemaDefRequirement,
     ScatterFeatureRequirement,
     InlineJavascriptRequirement,
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
-    ToolTimeLimit,
 }
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
@@ -158,6 +158,19 @@ pub struct ResourceRequirement {
 pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct ToolTimeLimit {
+    pub timelimit: i64
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkAccess {
+    pub network_access: bool
+}
+
+
 
 #[cfg(test)]
 mod tests {
