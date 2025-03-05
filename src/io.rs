@@ -45,8 +45,3 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
 
     get_workflows_folder() + &foldername + "/" + &filename
 }
-
-pub fn join_path_string<P: AsRef<Path>>(path: P, location: &str) -> String {
-    let new_location = path.as_ref().join(location);
-    new_location.to_string_lossy().into_owned()
-}

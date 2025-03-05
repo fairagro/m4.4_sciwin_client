@@ -4,7 +4,7 @@ use cwl::{
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
     requirements::{InitialWorkDirRequirement, Requirement},
-    types::{CWLType, DefaultValue, Directory, File},
+    types::{guess_type, CWLType, DefaultValue, Directory, File},
 };
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
@@ -299,33 +299,6 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
         } else {
             tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
         }
-    }
-}
-
-pub fn guess_type(value: &str) -> CWLType {
-    let path = Path::new(value);
-    if path.exists() {
-        if path.is_file() {
-            return CWLType::File;
-        }
-        if path.is_dir() {
-            return CWLType::Directory;
-        }
-    }
-    //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
-    let yaml_value: Value = serde_yaml::from_str(value).unwrap();
-    match yaml_value {
-        Value::Null => CWLType::Null,
-        Value::Bool(_) => CWLType::Boolean,
-        Value::Number(number) => {
-            if number.is_f64() {
-                CWLType::Float
-            } else {
-                CWLType::Int
-            }
-        }
-        Value::String(_) => CWLType::String,
-        _ => CWLType::String,
     }
 }
 

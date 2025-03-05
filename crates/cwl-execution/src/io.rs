@@ -138,3 +138,8 @@ pub fn set_print_output(value: bool) {
 pub fn print_output() -> bool {
     PRINT_OUTPUT.with(|print_output| *print_output.borrow())
 }
+
+pub fn join_path_string<P: AsRef<Path>>(path: P, location: &str) -> String {
+    let new_location = path.as_ref().join(location);
+    new_location.to_string_lossy().into_owned()
+}

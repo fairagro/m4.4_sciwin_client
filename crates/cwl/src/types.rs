@@ -140,9 +140,7 @@ impl DefaultValue {
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
-            DefaultValue::Directory(dir) => {
-                DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new())))
-            }
+            DefaultValue::Directory(dir) => DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
         }
     }
@@ -194,6 +192,34 @@ impl<'de> Deserialize<'de> for DefaultValue {
         } else {
             Ok(DefaultValue::Any(value))
         }
+    }
+}
+
+/// Tries to guess the CWLType of a given value
+pub fn guess_type(value: &str) -> CWLType {
+    let path = Path::new(value);
+    if path.exists() {
+        if path.is_file() {
+            return CWLType::File;
+        }
+        if path.is_dir() {
+            return CWLType::Directory;
+        }
+    }
+    //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
+    let yaml_value: Value = serde_yaml::from_str(value).unwrap();
+    match yaml_value {
+        Value::Null => CWLType::Null,
+        Value::Bool(_) => CWLType::Boolean,
+        Value::Number(number) => {
+            if number.is_f64() {
+                CWLType::Float
+            } else {
+                CWLType::Int
+            }
+        }
+        Value::String(_) => CWLType::String,
+        _ => CWLType::String,
     }
 }
 
@@ -497,5 +523,23 @@ mod tests {
         let expected = "http://edamontology.org/format_1234";
 
         assert_eq!(result, expected.to_string());
+    }
+    
+    #[test]
+    pub fn test_guess_type() {
+        let inputs = &[
+            ("../../README.md", CWLType::File),
+            ("/some/path/that/does/not/exist.txt", CWLType::String),
+            ("src/", CWLType::Directory),
+            ("--option", CWLType::String),
+            ("2", CWLType::Int),
+            ("1.5", CWLType::Float),
+        ];
+
+        for input in inputs {
+            let t = guess_type(input.0);
+            println!("{:?}=>{:?}", input.0, input.1);
+            assert_eq!(t, input.1);
+        }
     }
 }

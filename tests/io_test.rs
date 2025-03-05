@@ -1,10 +1,7 @@
 mod common;
 use common::os_path;
-use cwl::{clt::Command, types::CWLType};
-use s4n::{
-    io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path},
-    parser::guess_type,
-};
+use cwl::clt::Command;
+use s4n::io::{get_filename_without_extension, get_qualified_filename, get_workflows_folder, resolve_path};
 use std::vec;
 
 #[test]
@@ -15,24 +12,6 @@ pub fn test_get_filename_without_extension() {
     for i in 0..inputs.len() {
         let result = get_filename_without_extension(inputs[i]);
         assert_eq!(result, outputs[i]);
-    }
-}
-
-#[test]
-pub fn test_guess_type() {
-    let inputs = &[
-        ("./README.md", CWLType::File),
-        ("/some/path/that/does/not/exist.txt", CWLType::String),
-        ("src/", CWLType::Directory),
-        ("--option", CWLType::String),
-        ("2", CWLType::Int),
-        ("1.5", CWLType::Float),
-    ];
-
-    for input in inputs {
-        let t = guess_type(input.0);
-        println!("{:?}=>{:?}", input.0, input.1);
-        assert_eq!(t, input.1);
     }
 }
 
