@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use super::{
     inputs::{deserialize_inputs, CommandInputParameter},
     outputs::{deserialize_outputs, CommandOutputParameter},
@@ -44,6 +46,28 @@ impl Default for ExpressionTool {
             expression: Default::default(),
             requirements: Default::default(),
             hints: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ExpressionType {
+    Paren,
+    Bracket,
+}
+
+#[derive(Debug)]
+pub struct Expression {
+    pub type_: ExpressionType,
+    pub expression: String,
+    pub indices: Range<usize>,
+}
+
+impl Expression {
+    pub fn expression(&self) -> String {
+        match self.type_ {
+            ExpressionType::Paren => self.expression.clone(),
+            ExpressionType::Bracket => format!("(() => {{{}}})();", self.expression),
         }
     }
 }
