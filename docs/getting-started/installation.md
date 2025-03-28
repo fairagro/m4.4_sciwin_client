@@ -6,25 +6,25 @@ Installation details can be found at the [current release](https://github.com/fa
 ### Install prebuilt binaries via shell script
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-installer.sh | sh
 ```
 
 ### Install prebuilt binaries via powershell script
 
 ```sh
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-installer.ps1 | iex"
 ```
 
 ## Download s4n 0.2.0
 
 |  File  | Platform | Checksum |
 |--------|----------|----------|
-| [s4n-aarch64-apple-darwin.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-aarch64-apple-darwin.tar.xz) | Apple Silicon macOS | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-aarch64-apple-darwin.tar.xz.sha256) |
-| [s4n-x86_64-apple-darwin.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-apple-darwin.tar.xz) | Intel macOS | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-apple-darwin.tar.xz.sha256) |
-| [s4n-x86_64-pc-windows-msvc.zip](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-pc-windows-msvc.zip) | x64 Windows | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-pc-windows-msvc.zip.sha256) |
-| [s4n-x86_64-pc-windows-msvc.msi](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-pc-windows-msvc.msi) | x64 Windows | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-pc-windows-msvc.msi.sha256) |
-| [s4n-aarch64-unknown-linux-gnu.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-aarch64-unknown-linux-gnu.tar.xz) | ARM64 Linux | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-aarch64-unknown-linux-gnu.tar.xz.sha256) |
-| [s4n-x86_64-unknown-linux-gnu.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-unknown-linux-gnu.tar.xz) | x64 Linux | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.1.0/s4n-x86_64-unknown-linux-gnu.tar.xz.sha256) |
+| [s4n-aarch64-apple-darwin.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-aarch64-apple-darwin.tar.xz) | Apple Silicon macOS | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-aarch64-apple-darwin.tar.xz.sha256) |
+| [s4n-x86_64-apple-darwin.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-apple-darwin.tar.xz) | Intel macOS | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-apple-darwin.tar.xz.sha256) |
+| [s4n-x86_64-pc-windows-msvc.zip](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-pc-windows-msvc.zip) | x64 Windows | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-pc-windows-msvc.zip.sha256) |
+| [s4n-x86_64-pc-windows-msvc.msi](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-pc-windows-msvc.msi) | x64 Windows | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-pc-windows-msvc.msi.sha256) |
+| [s4n-aarch64-unknown-linux-gnu.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-aarch64-unknown-linux-gnu.tar.xz) | ARM64 Linux | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-aarch64-unknown-linux-gnu.tar.xz.sha256) |
+| [s4n-x86_64-unknown-linux-gnu.tar.xz](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-unknown-linux-gnu.tar.xz) | x64 Linux | [checksum](https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.2.0/s4n-x86_64-unknown-linux-gnu.tar.xz.sha256) |
 
 
 ## Install s4n 0.1.0
