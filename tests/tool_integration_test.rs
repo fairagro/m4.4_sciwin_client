@@ -483,3 +483,26 @@ pub fn test_tool_uncommitted_no_run() {
 
     env::set_current_dir(current).unwrap();
 }
+
+#[test]
+#[serial]
+/// see Issue [#88](https://github.com/fairagro/m4.4_sciwin_client/issues/88)
+pub fn test_tool_output_subfolders() {
+    let dir = tempdir().unwrap();
+
+    fs::copy("tests/test_data/subfolders.py", dir.path().join("subfolders.py")).unwrap();
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+
+    check_git_user().unwrap();
+    init_s4n(None, false).expect("Could not init s4n");
+
+    let args = CreateToolArgs {
+        command: ["python".to_string(), "subfolders.py".to_string()].to_vec(),
+        ..Default::default()
+    };
+    //should be ok to not commit changes, as tool does not run
+    assert!(create_tool(&args).is_ok());
+
+    env::set_current_dir(current).unwrap();
+}
