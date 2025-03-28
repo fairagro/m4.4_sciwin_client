@@ -1,6 +1,6 @@
 # Unreleased
 
-# 0.2.0 (2025-03-28)
+# v0.2.0
 ## New Features
 - Allowed handling of nullable and array CWLTypes using `File?` or `File[]` notation
 - Added `s4n execute make-template ./path/to.cwl` to create job templates #75
@@ -22,5 +22,5 @@
 - Added CWL Conformance Tests to CI Workflow
 - Added more integration tests
 
-# 0.1.0 (2025-02-04)
+# v0.1.0
 Initial Release
