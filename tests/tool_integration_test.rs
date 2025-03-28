@@ -16,7 +16,11 @@ use s4n::{
     repo::get_modified_files,
 };
 use serial_test::serial;
-use std::{env, fs::read_to_string, path::Path};
+use std::{
+    env,
+    fs::{self, read_to_string},
+    path::Path,
+};
 use tempfile::tempdir;
 
 #[test]
@@ -452,6 +456,30 @@ pub fn test_shell_script() {
     } else {
         panic!("No requirements found")
     }
+
+    env::set_current_dir(current).unwrap();
+}
+
+#[test]
+#[serial]
+/// see Issue [#89](https://github.com/fairagro/m4.4_sciwin_client/issues/89)
+pub fn test_tool_uncommitted_no_run() {
+    let dir = tempdir().unwrap();
+
+    let current = env::current_dir().unwrap();
+    env::set_current_dir(dir.path()).unwrap();
+
+    check_git_user().unwrap();
+    init_s4n(None, false).expect("Could not init s4n");
+
+    fs::copy(current.join("tests/test_data/input.txt"), dir.path().join("input.txt")).unwrap(); //repo is not in a clean state now!
+    let args = CreateToolArgs {
+        command: ["echo".to_string(), "Hello World".to_string()].to_vec(),
+        no_run: true,
+        ..Default::default()
+    };
+    //should be ok to not commit changes, as tool does not run
+    assert!(create_tool(&args).is_ok());
 
     env::set_current_dir(current).unwrap();
 }

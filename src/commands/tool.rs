@@ -1,7 +1,6 @@
-use cwl_execution::{io::create_and_write_file, runner::run_command};
 use crate::{
     cwl::{highlight_cwl, Saveable},
-    io::{ get_qualified_filename},
+    io::get_qualified_filename,
     parser::{self, post_process_cwl},
     print_list,
     repo::{commit, get_modified_files, stage_file},
@@ -12,6 +11,7 @@ use cwl::{
     format::format_cwl,
     requirements::{DockerRequirement, Requirement},
 };
+use cwl_execution::{io::create_and_write_file, runner::run_command};
 use git2::Repository;
 use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};
@@ -92,7 +92,9 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
     let modified = get_modified_files(&repo);
-    if !modified.is_empty() {
+
+    //check for uncommited changes if a run will be made
+    if !args.no_run && !modified.is_empty() {
         error!("Uncommitted changes detected:");
         print_list(&modified);
         return Err("Uncommitted changes detected".into());
@@ -140,7 +142,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         }
 
         // Check files that changed
-        let files = get_modified_files(&repo);
+        let mut files = get_modified_files(&repo);
+        files.retain(|f| !modified.contains(f)); //remove files that were changed before run
         if files.is_empty() && outputs.is_empty() {
             warn!("No output produced!")
         } else if !args.is_raw {
@@ -175,7 +178,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                     }
                 }
             }
-            commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
         }
         // Add outputs if not specified
         if outputs.is_empty() {
