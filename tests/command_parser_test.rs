@@ -12,7 +12,6 @@ use s4n::parser::{get_outputs, parse_command_line};
 use serial_test::serial;
 use std::{path::Path, vec};
 
-
 #[test]
 #[serial]
 pub fn test_parse_command_line_testdata() {
@@ -39,7 +38,7 @@ pub fn test_cwl_execute_command_single() {
     let command = "ls -la .";
     let args = shlex::split(command).expect("parsing failed");
     let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
-    assert!(run_command(&cwl, None).is_ok());
+    assert!(run_command(&cwl, &Default::default()).is_ok());
 }
 
 #[test]
@@ -49,7 +48,7 @@ pub fn test_cwl_execute_command_multiple() {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
         let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
-        assert!(run_command(&cwl, None).is_ok());
+        assert!(run_command(&cwl, &Default::default()).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
         assert!(output_path.exists());

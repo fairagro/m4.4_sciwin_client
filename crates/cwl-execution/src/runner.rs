@@ -1,5 +1,11 @@
 use crate::{
-    environment::{set_tool_environment_vars, unset_environment_vars}, format_command, get_available_ram, get_processor_count, io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output}, staging::{stage_required_files, unstage_files}, util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl}, validate::{rewire_paths, set_placeholder_values}, CommandError
+    environment::{collect_environment, RuntimeEnvironment},
+    format_command, get_available_ram, get_processor_count,
+    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
+    staging::{stage_required_files, unstage_files},
+    util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
+    validate::{rewire_paths, set_placeholder_values},
+    CommandError,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
@@ -21,14 +27,13 @@ use tempfile::tempdir;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
-    input_values: Option<HashMap<String, DefaultValue>>,
+    input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
     let clock = Instant::now();
 
     let sorted_step_ids = workflow.sort_steps()?;
-    let input_values = input_values.unwrap_or_default();
 
     let dir = tempdir()?;
     let tmp_path = dir.path().to_string_lossy().into_owned();
@@ -60,7 +65,7 @@ pub fn run_workflow(
                         if parts.len() == 2 {
                             step_inputs.insert(key.to_string(), outputs.get(in_string).unwrap().to_default_value());
                         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
-                            let value = evaluate_input(input, &Some(input_values.clone()))?;
+                            let value = evaluate_input(input, &input_values.clone())?;
                             step_inputs.insert(key.to_string(), value.to_owned());
                         }
                     }
@@ -78,7 +83,7 @@ pub fn run_workflow(
                             step_inputs.insert(key.to_string(), default.to_owned());
                         }
                         if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                            let value = evaluate_input(input, &Some(input_values.clone()))?;
+                            let value = evaluate_input(input, &input_values.clone())?;
                             if step_inputs.contains_key(key) {
                                 if let DefaultValue::Any(val) = &value {
                                     if val.is_null() {
@@ -101,7 +106,7 @@ pub fn run_workflow(
                     message: format!("CWL Document of class {:?} is not supported, expected 'CommandLineTool'", tool.class),
                 })?
             }
-            let tool_outputs = run_commandlinetool(&mut tool, Some(step_inputs), Some(&path), Some(tmp_path.clone()))?;
+            let tool_outputs = run_commandlinetool(&mut tool, step_inputs, Some(&path), Some(tmp_path.clone()))?;
             for (key, value) in tool_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
@@ -113,7 +118,6 @@ pub fn run_workflow(
     set_print_output(true);
 
     let mut output_values = HashMap::new();
-    let input_values_ = Some(input_values);
     for output in &workflow.outputs {
         let source = &output.output_source;
         if let Some(value) = &outputs.get(source) {
@@ -140,7 +144,7 @@ pub fn run_workflow(
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-            let result = evaluate_input(input, &input_values_)?;
+            let result = evaluate_input(input, &input_values)?;
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
@@ -172,7 +176,7 @@ pub fn run_workflow(
 
 pub fn run_commandlinetool(
     tool: &mut CommandLineTool,
-    input_values: Option<HashMap<String, DefaultValue>>,
+    input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -197,55 +201,45 @@ pub fn run_commandlinetool(
     };
 
     //build runtime object
-    let runtime = HashMap::from([
-        (
-            "tooldir".to_string(),
-            tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned(),
-        ),
-        ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
-        ("tmpdir".to_string(), dir.path().to_string_lossy().into_owned()),
-        ("cores".to_string(), get_processor_count().to_string()),
-        ("ram".to_string(), get_available_ram().to_string()),
-    ]);
+    let mut runtime = RuntimeEnvironment {
+        runtime: HashMap::from([
+            (
+                "tooldir".to_string(),
+                tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned(),
+            ),
+            ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
+            ("tmpdir".to_string(), dir.path().to_string_lossy().into_owned()),
+            ("cores".to_string(), get_processor_count().to_string()),
+            ("ram".to_string(), get_available_ram().to_string()),
+        ]),
+        inputs: input_values,
+        ..Default::default()
+    };
 
     //replace inputs and runtime placeholders in tool with the actual values
-    set_placeholder_values(tool, input_values.as_ref(), &runtime);
+    set_placeholder_values(tool, &runtime.inputs, &runtime.runtime);
+    runtime.environment = collect_environment(tool);
+
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, tool_path, dir.path(), output_directory)?;
+    let staged_files = stage_required_files(tool, &runtime.inputs, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
-    //set environment variables
-    let environment_variables = set_tool_environment_vars(tool);
-
     //rewire files in tool to staged ones
-    let mut input_values = input_values;
-    rewire_paths(tool, &mut input_values, &staged_files, &output_directory.to_string_lossy());
-
-    //set required environment variables
-    let home_directory = env::var("HOME").unwrap_or_default();
-    let tmp_directory = env::temp_dir();
-    env::set_var("HOME", &runtime["outdir"]);
-    env::set_var("TMPDIR", &runtime["tmpdir"]);
+    rewire_paths(tool, &mut runtime.inputs, &staged_files, &output_directory.to_string_lossy());
 
     //run the tool command)
-    run_command(tool, input_values).map_err(|e| CommandError {
+    run_command(tool, &runtime).map_err(|e| CommandError {
         message: format!("Error in Tool execution: {}", e),
         exit_code: tool.get_error_code(),
     })?;
-    //reset required environment variables
-    env::set_var("HOME", home_directory);
-    env::set_var("TMPDIR", tmp_directory);
 
     //remove staged files
     unstage_files(&staged_files, dir.path(), &tool.outputs)?;
 
     //evaluate output files
     let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
-
-    //unset environment variables
-    unset_environment_vars(&environment_variables);
 
     //come back to original directory
     env::set_current_dir(current)?;
@@ -258,8 +252,9 @@ pub fn run_commandlinetool(
     Ok(outputs)
 }
 
-pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<(), Box<dyn Error>> {
-    let mut command = build_command(tool, input_values)?;
+pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+    let mut command = build_command(tool, runtime)?;
+
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
     let output = command.output()?;
@@ -305,7 +300,7 @@ pub fn run_command(tool: &CommandLineTool, input_values: Option<HashMap<String, 
     }
 }
 
-fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, DefaultValue>>) -> Result<SystemCommand, Box<dyn Error>> {
+fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<SystemCommand, Box<dyn Error>> {
     let mut args: Vec<String> = vec![];
 
     //get executable
@@ -347,7 +342,7 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
         if let Some(ref binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
-            binding.value_from = Some(evaluate_input_as_string(input, &input_values)?.replace("'", ""));
+            binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
             bindings.push((position, i + index, binding))
         }
     }
@@ -406,6 +401,14 @@ fn build_command(tool: &CommandLineTool, input_values: Option<HashMap<String, De
         command.arg(stdin);
     }
 
+    let current_dir = env::current_dir()?.to_string_lossy().into_owned();
+
+    //set environment for run
+    command.envs(runtime.environment.clone());
+    command.env("HOME", runtime.runtime.get("outdir").unwrap_or(&current_dir));
+    command.env("TMPDIR", runtime.runtime.get("tmpdir").unwrap_or(&current_dir));
+    command.current_dir(runtime.runtime.get("outdir").unwrap_or(&current_dir));
+
     Ok(command)
 }
 
@@ -438,8 +441,11 @@ stdout: output.txt";
 }"#;
 
         let input_values = serde_json::from_str(inputs).unwrap();
-
-        let cmd = build_command(tool, input_values).unwrap();
+        let runtime = RuntimeEnvironment {
+            inputs: input_values,
+            ..Default::default()
+        };
+        let cmd = build_command(tool, &runtime).unwrap();
 
         assert_eq!(format_command(&cmd), "cat hello.txt");
     }
@@ -455,7 +461,7 @@ baseCommand: [cat]
 stdin: hello.txt";
         let tool = &serde_yaml::from_str(yaml).unwrap();
 
-        let cmd = build_command(tool, None).unwrap();
+        let cmd = build_command(tool, &Default::default()).unwrap();
 
         assert_eq!(format_command(&cmd), "cat hello.txt");
     }
@@ -483,9 +489,12 @@ stdout: output.txt"#;
   class: Directory
   location: testdir";
         let tool = &serde_yaml::from_str(yaml).unwrap();
-        let input_values: HashMap<String, DefaultValue> = serde_yaml::from_str(in_yaml).unwrap();
-
-        let cmd = build_command(tool, Some(input_values)).unwrap();
+        let input_values = serde_yaml::from_str(in_yaml).unwrap();
+        let runtime = RuntimeEnvironment {
+            inputs: input_values,
+            ..Default::default()
+        };
+        let cmd = build_command(tool, &runtime).unwrap();
 
         let shell_cmd = get_shell_command();
         let shell = shell_cmd.get_program().to_string_lossy();

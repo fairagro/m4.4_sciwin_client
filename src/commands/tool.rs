@@ -16,7 +16,12 @@ use git2::Repository;
 use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};
 use serde_yaml::Value;
-use std::{env, error::Error, fs, fs::remove_file, path::Path, path::PathBuf};
+use std::{
+    env,
+    error::Error,
+    fs::{self, remove_file},
+    path::{Path, PathBuf},
+};
 use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
@@ -132,7 +137,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
-        if run_command(&cwl, None).is_err() {
+        if run_command(&cwl, &Default::default()).is_err() {
             return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
         }
 

@@ -12,28 +12,21 @@ use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 ///Either gets the default value for input or the provided one (preferred)
 pub(crate) fn evaluate_input_as_string(
     input: &CommandInputParameter,
-    input_values: &Option<HashMap<String, DefaultValue>>,
+    input_values: &HashMap<String, DefaultValue>,
 ) -> Result<String, Box<dyn Error>> {
     Ok(evaluate_input(input, input_values)?.as_value_string())
 }
 
 ///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input(
-    input: &CommandInputParameter,
-    input_values: &Option<HashMap<String, DefaultValue>>,
-) -> Result<DefaultValue, Box<dyn Error>> {
-    if let Some(ref values) = input_values {
-        if let Some(value) = values.get(&input.id) {
-            if !value.has_matching_type(&input.type_) {
-                Err(format!(
-                    "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
-                    &input.type_, value
-                ))?
-            }
-            return Ok(value.clone());
-        } else if let Some(default_) = &input.default {
-            return Ok(default_.clone());
+pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
+    if let Some(value) = input_values.get(&input.id) {
+        if !value.has_matching_type(&input.type_) {
+            Err(format!(
+                "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
+                &input.type_, value
+            ))?
         }
+        return Ok(value.clone());
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
     }
@@ -231,7 +224,7 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
-        let evaluation = evaluate_input(&input, &Some(values.clone())).unwrap();
+        let evaluation = evaluate_input(&input, &values.clone()).unwrap();
 
         assert_eq!(evaluation, values["test"]);
     }
@@ -245,7 +238,7 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
-        let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
+        let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
 
         assert_eq!(evaluation, values["test"].as_value_string());
     }
@@ -258,7 +251,7 @@ mod tests {
             .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let values = HashMap::new();
-        let evaluation = evaluate_input_as_string(&input, &Some(values.clone())).unwrap();
+        let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
 
         assert_eq!(evaluation, "Nice".to_string());
     }
@@ -270,7 +263,7 @@ mod tests {
             .with_type(CWLType::String)
             .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
-        let evaluation = evaluate_input_as_string(&input, &None).unwrap();
+        let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
         assert_eq!(evaluation, "Nice".to_string());
     }

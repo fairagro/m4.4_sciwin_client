@@ -20,7 +20,7 @@ use urlencoding::decode;
 
 pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     tool: &CommandLineTool,
-    input_values: &Option<HashMap<String, DefaultValue>>,
+    input_values: &HashMap<String, DefaultValue>,
     tool_path: P,
     path: Q,
     out_dir: R,
@@ -112,7 +112,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
 
 fn stage_input_files(
     inputs: &[CommandInputParameter],
-    input_values: &Option<HashMap<String, DefaultValue>>,
+    input_values: &HashMap<String, DefaultValue>,
     tool_path: &Path,
     path: &Path,
     out_dir: &Path,
@@ -266,7 +266,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -287,7 +287,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -307,7 +307,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -326,7 +326,7 @@ mod tests {
             .with_type(CWLType::Directory)
             .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
 
-        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -349,7 +349,7 @@ mod tests {
             glob: "tests/test_data/input.txt".to_string(),
         });
 
-        let list = stage_input_files(&[input], &None, Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there

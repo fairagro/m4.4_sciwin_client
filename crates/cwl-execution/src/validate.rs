@@ -11,11 +11,7 @@ use std::{collections::HashMap, env};
 use crate::io::{get_file_property, make_relative_to};
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
-pub(crate) fn set_placeholder_values(
-    cwl: &mut CommandLineTool,
-    input_values: Option<&HashMap<String, DefaultValue>>,
-    runtime: &HashMap<String, String>,
-) {
+pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &HashMap<String, DefaultValue>, runtime: &HashMap<String, String>) {
     //set values in baseCommand
     cwl.base_command = match &cwl.base_command {
         Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &cwl.inputs)),
@@ -79,12 +75,7 @@ pub(crate) fn set_placeholder_values(
     }
 }
 
-pub(crate) fn rewire_paths(
-    cwl: &mut CommandLineTool,
-    input_values: &mut Option<HashMap<String, DefaultValue>>,
-    staged_files: &[String],
-    home_dir: &str,
-) {
+pub(crate) fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut HashMap<String, DefaultValue>, staged_files: &[String], home_dir: &str) {
     //rewire in inputs
     for input in cwl.inputs.iter_mut() {
         if let Some(default) = &mut input.default {
@@ -96,14 +87,12 @@ pub(crate) fn rewire_paths(
         }
 
         //rewire in values
-        if let Some(values) = input_values {
-            if let Some(existing_value) = values.get(&input.id) {
-                let mut new_value = existing_value.clone();
-                for staged_file in staged_files {
-                    new_value = rewire_default_value(new_value.clone(), staged_file, home_dir);
-                }
-                values.insert(input.id.clone(), new_value);
+        if let Some(existing_value) = input_values.get(&input.id) {
+            let mut new_value = existing_value.clone();
+            for staged_file in staged_files {
+                new_value = rewire_default_value(new_value.clone(), staged_file, home_dir);
             }
+            input_values.insert(input.id.clone(), new_value);
         }
     }
 }
@@ -146,7 +135,7 @@ fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &st
 
 fn set_placeholder_values_requirements(
     requirements: &mut Vec<Requirement>,
-    input_values: Option<&HashMap<String, DefaultValue>>,
+    input_values: &HashMap<String, DefaultValue>,
     runtime: &HashMap<String, String>,
     inputs: &[CommandInputParameter],
 ) {
@@ -189,7 +178,7 @@ fn set_placeholder_values_requirements(
 
 fn set_placeholder_values_in_string(
     text: &str,
-    input_values: Option<&HashMap<String, DefaultValue>>,
+    input_values: &HashMap<String, DefaultValue>,
     runtime: &HashMap<String, String>,
     inputs: &[CommandInputParameter],
 ) -> String {
@@ -221,12 +210,7 @@ fn set_placeholder_values_in_string(
 }
 
 /// Evaluate inputs and given parameters for given key
-fn get_input_value(
-    key: &str,
-    input_values: Option<&HashMap<String, DefaultValue>>,
-    inputs: &[CommandInputParameter],
-    suffix: &str,
-) -> Option<String> {
+fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inputs: &[CommandInputParameter], suffix: &str) -> Option<String> {
     let mut value = None;
 
     fn evaluate(value: &DefaultValue, suffix: &str) -> Option<String> {
@@ -249,19 +233,16 @@ fn get_input_value(
         }
     }
 
-    if let Some(values) = input_values {
-        if values.contains_key(key) {
-            value = evaluate(&values[key], suffix);
-        }
+    if input_values.contains_key(key) {
+        value = evaluate(&input_values[key], suffix);
     }
     value
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::io::get_file_size;
-
     use super::*;
+    use crate::io::get_file_size;
     use cwl::types::{CWLType, File};
     use serde_yaml::Value;
 
@@ -312,7 +293,7 @@ outputs:
         );
 
         let mut cwl_test: CommandLineTool = serde_yaml::from_str(cwl_str).unwrap();
-        set_placeholder_values(&mut cwl_test, Some(&input_values), &runtime);
+        set_placeholder_values(&mut cwl_test, &input_values, &runtime);
 
         let cwl_expected: CommandLineTool = serde_yaml::from_str(expected_str).unwrap();
 
@@ -329,7 +310,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, &HashMap::new(), &runtime, &inputs);
         let expected = format!("Searching for file {file}");
 
         assert_eq!(result, expected);
@@ -346,7 +327,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, &HashMap::new(), &runtime, &inputs);
         let expected = format!("File has size {size}");
 
         assert_eq!(result, expected);
@@ -362,7 +343,7 @@ outputs:
             .with_type(CWLType::File)
             .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
 
-        let result = set_placeholder_values_in_string(text, None, &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, &HashMap::new(), &runtime, &inputs);
         let expected = "Greeting: tests/test_data/input.txt";
 
         assert_eq!(result, expected);
@@ -379,7 +360,7 @@ outputs:
 
         let inputs = vec![CommandInputParameter::default().with_id("infile").with_type(CWLType::File)];
 
-        let result = set_placeholder_values_in_string(text, Some(&values), &runtime, &inputs);
+        let result = set_placeholder_values_in_string(text, &values, &runtime, &inputs);
         let expected = "Greeting: tests/test_data/input.txt";
 
         assert_eq!(result, expected);
@@ -392,7 +373,7 @@ outputs:
         let mut runtime: HashMap<String, String> = HashMap::new();
         runtime.insert("whatever_value".to_string(), "Hello World".to_string());
 
-        let result = set_placeholder_values_in_string(text, None, &runtime, &[]);
+        let result = set_placeholder_values_in_string(text, &HashMap::new(), &runtime, &[]);
         let expected = "Greeting: Hello World!";
 
         assert_eq!(result, expected);

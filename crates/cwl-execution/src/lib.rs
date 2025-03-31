@@ -87,7 +87,7 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
         CWLDocument::CommandLineTool(mut tool) => {
             run_commandlinetool(
                 &mut tool,
-                Some(inputs),
+                inputs,
                 Some(&cwlfile.as_ref().to_path_buf()),
                 outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
             )?;
@@ -95,7 +95,7 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
         CWLDocument::Workflow(mut workflow) => {
             run_workflow(
                 &mut workflow,
-                Some(inputs),
+                inputs,
                 Some(&cwlfile.as_ref().to_path_buf()),
                 outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
             )?;
