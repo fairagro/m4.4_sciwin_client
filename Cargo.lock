@@ -414,7 +414,7 @@ dependencies = [
 
 [[package]]
 name = "cwl"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "rstest",
  "serde",
@@ -424,7 +424,7 @@ dependencies = [
 
 [[package]]
 name = "cwl-execution"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "cwl",
  "fancy-regex 0.14.0",
