@@ -19,32 +19,29 @@ use sysinfo::System;
 use util::preprocess_cwl;
 
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
-    //is a file input if len is 1, input does not start with "-", file exists
-    let is_file_input = raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") && fs::exists(&raw_inputs[0]).unwrap_or(false);
-    let mut inputs = HashMap::new();
-
     //gather inputs
-    if is_file_input {
+    let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
         let yaml = fs::read_to_string(&raw_inputs[0])?;
-        inputs = serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?;
+        serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?
     } else {
-        let mut i = 0;
-        while i < raw_inputs.len() {
-            if raw_inputs[i].starts_with("-") {
-                let key = raw_inputs[i].trim_start_matches("--");
-                let raw_value = &raw_inputs[i + 1];
-                let value = match guess_type(raw_value) {
-                    CWLType::File => DefaultValue::File(File::from_location(raw_value)),
-                    CWLType::Directory => DefaultValue::Directory(Directory::from_location(raw_value)),
-                    CWLType::String => DefaultValue::Any(Value::String(raw_value.to_string())),
-                    _ => DefaultValue::Any(serde_yaml::from_str(raw_value)?),
-                };
-                inputs.insert(key.to_string(), value);
-                i += 1;
-            }
-            i += 1;
-        }
-    }
+        raw_inputs
+            .chunks_exact(2)
+            .filter_map(|pair| {
+                if let Some(key) = pair[0].strip_prefix("--") {
+                    let raw_value = &pair[1];
+                    let value = match guess_type(raw_value) {
+                        CWLType::File => DefaultValue::File(File::from_location(raw_value)),
+                        CWLType::Directory => DefaultValue::Directory(Directory::from_location(raw_value)),
+                        CWLType::String => DefaultValue::Any(Value::String(raw_value.to_string())),
+                        _ => DefaultValue::Any(serde_yaml::from_str(raw_value).expect("Could not read input")),
+                    };
+                    Some((key.to_string(), value))
+                } else {
+                    None
+                }
+            })
+            .collect::<HashMap<_, _>>()
+    };
 
     fn correct_path<T: PathItem>(item: &mut T, path_prefix: &Path) {
         let location = item.get_location().clone();
@@ -63,7 +60,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
     }
 
     //make paths relative to calling object
-    let path_prefix = if is_file_input {
+    let path_prefix = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
         Path::new(&raw_inputs[0]).parent().unwrap() //path of job file
     } else {
         Path::new(".")
