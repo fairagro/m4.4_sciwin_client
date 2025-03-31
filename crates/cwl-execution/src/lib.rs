@@ -73,10 +73,14 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
         }
     }
 
-    execute(cwlfile, inputs, outdir)
+    let output_values = execute(cwlfile, inputs, outdir)?;
+    let json = serde_json::to_string_pretty(&output_values)?;
+    println!("{}", json);
+    
+    Ok(())
 }
 
-pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>, outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
+pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>, outdir: Option<impl AsRef<Path>>) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //load cwl
     let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
     let contents = preprocess_cwl(&contents, &cwlfile);
@@ -90,7 +94,7 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
                 inputs,
                 Some(&cwlfile.as_ref().to_path_buf()),
                 outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
-            )?;
+            )
         }
         CWLDocument::Workflow(mut workflow) => {
             run_workflow(
@@ -98,11 +102,10 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
                 inputs,
                 Some(&cwlfile.as_ref().to_path_buf()),
                 outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
-            )?;
+            )
         }
         CWLDocument::ExpressionTool(_) => todo!(),
     }
-    Ok(())
 }
 
 pub trait ExitCode {

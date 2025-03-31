@@ -1,9 +1,9 @@
 use crate::{
     environment::{collect_environment, RuntimeEnvironment},
-    format_command, get_available_ram, get_processor_count,
+    execute, format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
-    util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata, preprocess_cwl},
+    util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata},
     validate::{rewire_paths, set_placeholder_values},
     CommandError,
 };
@@ -32,7 +32,7 @@ pub fn run_workflow(
     input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let clock = Instant::now();
 
     let sorted_step_ids = workflow.sort_steps()?;
@@ -55,7 +55,6 @@ pub fn run_workflow(
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
             let path = workflow_folder.join(step.run.clone());
-            let file = fs::read_to_string(&path).map_err(|e| format!("Unable to find Step {} at {:?}: {}", step.id, path, e))?;
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
@@ -99,17 +98,8 @@ pub fn run_workflow(
                 }
             }
 
-            let preprocessed_file = preprocess_cwl(&file, &path);
-            let mut tool: CommandLineTool = serde_yaml::from_str(&preprocessed_file)?;
-
-            if tool.class != "CommandLineTool" {
-                Err(CommandError {
-                    exit_code: 33,
-                    message: format!("CWL Document of class {:?} is not supported, expected 'CommandLineTool'", tool.class),
-                })?
-            }
-            let tool_outputs = run_commandlinetool(&mut tool, step_inputs, Some(&path), Some(tmp_path.clone()))?;
-            for (key, value) in tool_outputs {
+            let step_outputs = execute(&path, step_inputs, Some(tmp_path.clone()))?;
+            for (key, value) in step_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
         } else {
@@ -165,15 +155,13 @@ pub fn run_workflow(
             output_values.insert(&output.id, value);
         }
     }
-    let json = serde_json::to_string_pretty(&output_values)?;
-    println!("{}", json);
 
     info!(
         "✔️  Workflow {:?} executed successfully in {:.0?}!",
         &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
     );
-    Ok(())
+    Ok(output_values.into_iter().map(|(k, v)| (k.clone(), v)).collect())
 }
 
 pub fn run_commandlinetool(
