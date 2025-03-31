@@ -190,6 +190,9 @@ pub fn run_commandlinetool(
         Path::new(".")
     };
 
+    //create runtime tmpdir
+    let tmp_dir = tempdir()?;
+
     //build runtime object
     let mut runtime = RuntimeEnvironment {
         runtime: HashMap::from([
@@ -198,7 +201,7 @@ pub fn run_commandlinetool(
                 tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned(),
             ),
             ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
-            ("tmpdir".to_string(), dir.path().to_string_lossy().into_owned()),
+            ("tmpdir".to_string(), tmp_dir.path().to_string_lossy().into_owned()),
             ("cores".to_string(), get_processor_count().to_string()),
             ("ram".to_string(), get_available_ram().to_string()),
         ]),
