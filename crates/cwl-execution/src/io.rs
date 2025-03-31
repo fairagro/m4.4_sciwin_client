@@ -1,4 +1,4 @@
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use std::{
     cell::RefCell,
     ffi::OsStr,
@@ -96,7 +96,7 @@ fn make_string(input: Option<&OsStr>) -> String {
 }
 
 pub fn get_random_filename(prefix: &str, extension: &str) -> String {
-    let rnd: String = rand::thread_rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
+    let rnd: String = rand::rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect();
     format!("{prefix}_{rnd}.{extension}")
 }
 
