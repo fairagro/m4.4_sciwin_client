@@ -10,6 +10,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
+    requirements::check_timelimit,
     types::{CWLType, DefaultValue, PathItem},
     wf::Workflow,
 };
@@ -21,9 +22,10 @@ use std::{
     fs::{self},
     path::{Path, PathBuf},
     process::Command as SystemCommand,
-    time::Instant,
+    time::{Duration, Instant},
 };
 use tempfile::tempdir;
+use wait_timeout::ChildExt;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
@@ -213,6 +215,7 @@ pub fn run_commandlinetool(
             ("ram".to_string(), get_available_ram().to_string()),
         ]),
         inputs: input_values,
+        time_limit: check_timelimit(tool).unwrap_or(0),
         ..Default::default()
     };
 
@@ -257,7 +260,17 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
 
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
-    let output = command.output()?;
+
+    let output = if runtime.time_limit > 0 {
+        let mut child = command.spawn()?;
+        if child.wait_timeout(Duration::from_secs(runtime.time_limit))?.is_none() {
+            child.kill()?;
+            return Err("Time elapsed".into());
+        }
+        child.wait_with_output()?
+    } else {
+        command.output()?
+    };
 
     //handle redirection of stdout
     if !output.stdout.is_empty() {

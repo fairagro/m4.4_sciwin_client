@@ -1,4 +1,5 @@
 use super::types::{Entry, EnviromentDefs, Listing};
+use crate::clt::CommandLineTool;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 
@@ -168,7 +169,23 @@ pub struct EnvVarRequirement {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ToolTimeLimit {
-    pub timelimit: i64,
+    pub timelimit: u64,
+}
+
+pub fn check_timelimit(tool: &CommandLineTool) -> Option<u64> {
+    tool.requirements
+        .iter()
+        .chain(tool.hints.iter())
+        .flatten()
+        .map(|f| {
+            if let Requirement::ToolTimeLimit(time) = f {
+                Some(time.timelimit)
+            } else {
+                None
+            }
+        })
+        .find(|r| r.is_some())
+        .flatten()
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
