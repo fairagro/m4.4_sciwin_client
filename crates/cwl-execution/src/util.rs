@@ -1,3 +1,4 @@
+use crate::io::{copy_file, get_first_file_with_prefix};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -6,8 +7,6 @@ use cwl::{
 use fancy_regex::Regex;
 use serde_yaml::Value;
 use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
-
-use crate::io::{copy_file, get_first_file_with_prefix, print_output};
 
 ///Either gets the default value for input or the provided one (preferred)
 pub(crate) fn evaluate_input_as_string(
@@ -57,11 +56,6 @@ pub(crate) fn evaluate_outputs(
             }
             _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?,
         }
-    }
-    if print_output() {
-        //print output metadata
-        let json = serde_json::to_string_pretty(&outputs)?;
-        println!("{}", json);
     }
     Ok(outputs)
 }
