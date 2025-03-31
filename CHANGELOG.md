@@ -1,4 +1,6 @@
 # Unreleased
+## Bugxixes
+- Fixed some bugs in CWL Runner
 
 # v0.2.0
 ## New Features
