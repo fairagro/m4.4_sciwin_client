@@ -12,13 +12,14 @@ use crate::io::{get_file_property, make_relative_to};
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
 pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &HashMap<String, DefaultValue>, runtime: &HashMap<String, String>) {
+    let inputs = cwl.inputs.clone();
     //set values in baseCommand
     cwl.base_command = match &cwl.base_command {
-        Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &cwl.inputs)),
+        Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &inputs)),
         Command::Multiple(vec) => {
             let mut new_command = vec![];
             for item in vec {
-                new_command.push(set_placeholder_values_in_string(item, input_values, runtime, &cwl.inputs));
+                new_command.push(set_placeholder_values_in_string(item, input_values, runtime, &inputs));
             }
             Command::Multiple(new_command)
         }
@@ -29,13 +30,13 @@ pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &H
         for arg in args.iter_mut() {
             *arg = match arg {
                 Argument::String(str) => {
-                    let new_str = set_placeholder_values_in_string(str, input_values, runtime, &cwl.inputs);
+                    let new_str = set_placeholder_values_in_string(str, input_values, runtime, &inputs);
                     Argument::String(new_str)
                 }
                 Argument::Binding(binding) => {
                     let mut new_binding = binding.clone();
                     if let Some(value_from) = &mut new_binding.value_from {
-                        *value_from = set_placeholder_values_in_string(value_from, input_values, runtime, &cwl.inputs);
+                        *value_from = set_placeholder_values_in_string(value_from, input_values, runtime, &inputs);
                     }
                     Argument::Binding(new_binding)
                 }
@@ -46,7 +47,7 @@ pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &H
     //set values in output glob
     for output in cwl.outputs.iter_mut() {
         if let Some(binding) = &mut output.output_binding {
-            let glob = set_placeholder_values_in_string(&binding.glob, input_values, runtime, &cwl.inputs);
+            let glob = set_placeholder_values_in_string(&binding.glob, input_values, runtime, &inputs);
             binding.glob = glob;
         }
     }
@@ -54,24 +55,24 @@ pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &H
     //set values in output format
     for output in cwl.outputs.iter_mut() {
         if let Some(format) = &mut output.format {
-            let format = set_placeholder_values_in_string(format, input_values, runtime, &cwl.inputs);
+            let format = set_placeholder_values_in_string(format, input_values, runtime, &inputs);
             output.format = Some(format);
         }
     }
 
     //set values in requirements
     if let Some(requirements) = &mut cwl.requirements {
-        set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, &inputs);
     }
 
     //set values in hints
     if let Some(requirements) = &mut cwl.hints {
-        set_placeholder_values_requirements(requirements, input_values, runtime, &cwl.inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, &inputs);
     }
 
     //set values in stdin
     if let Some(stdin) = &mut cwl.stdin {
-        *stdin = set_placeholder_values_in_string(stdin, input_values, runtime, &cwl.inputs);
+        *stdin = set_placeholder_values_in_string(stdin, input_values, runtime, &inputs);
     }
 }
 

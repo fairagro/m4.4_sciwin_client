@@ -85,7 +85,7 @@ pub fn tool_create_test_inputs_outputs() {
         assert_eq!(tool.inputs.len(), 1);
         assert_eq!(tool.outputs.len(), 1);
 
-        if let Some(req) = tool.requirements {
+        if let Some(req) = &tool.requirements {
             if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
                 assert_eq!(iwdr.listing.len(), 2);
                 assert_eq!(iwdr.listing[0].entryname, script);
@@ -230,7 +230,7 @@ pub fn tool_create_test_container_image() {
         let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
         let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-        let requirements = cwl.requirements.expect("No requirements found!");
+        let requirements = cwl.requirements.clone().expect("No requirements found!");
         assert_eq!(requirements.len(), 2);
 
         if let Requirement::DockerRequirement(DockerRequirement::DockerPull(image)) = &requirements[1] {
@@ -268,7 +268,7 @@ pub fn tool_create_test_dockerfile() {
         let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
         let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-        let requirements = cwl.requirements.expect("No requirements found!");
+        let requirements = cwl.requirements.clone().expect("No requirements found!");
         assert_eq!(requirements.len(), 2);
 
         if let Requirement::DockerRequirement(DockerRequirement::DockerFile {
@@ -446,7 +446,7 @@ pub fn test_shell_script() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 0);
 
-    if let Some(req) = tool.requirements {
+    if let Some(req) = &tool.requirements {
         assert_eq!(req.len(), 1);
         if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
             assert_eq!(iwdr.listing[0].entryname, "./script.sh");

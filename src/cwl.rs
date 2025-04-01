@@ -320,7 +320,7 @@ mod tests {
             clt.inputs[0].default,
             Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
         );
-        let requirements = &clt.requirements.unwrap();
+        let requirements = &clt.requirements.as_ref().unwrap();
         let req_0 = &requirements[0];
         let req_1 = &requirements[1];
         assert_eq!(

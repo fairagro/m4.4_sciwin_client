@@ -1,11 +1,14 @@
 use super::{
     deserialize::{deserialize_list, Identifiable},
-    inputs::{deserialize_inputs, CommandInputParameter, WorkflowStepInput},
+    inputs::WorkflowStepInput,
     outputs::WorkflowOutputParameter,
-    requirements::{deserialize_requirements, Requirement},
 };
+use crate::DocumentBase;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    ops::{Deref, DerefMut},
+};
 
 /// Represents a CWL Workflow, a  process characterized by multiple subprocess steps,
 /// where step outputs are connected to the inputs of downstream steps to form a
@@ -15,24 +18,8 @@ use std::collections::{HashMap, VecDeque};
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
-    pub class: String,
-    pub cwl_version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deserialize_requirements")]
-    #[serde(default)]
-    pub requirements: Option<Vec<Requirement>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    #[serde(deserialize_with = "deserialize_requirements")]
-    pub hints: Option<Vec<Requirement>>,
-    #[serde(deserialize_with = "deserialize_inputs")]
-    pub inputs: Vec<CommandInputParameter>,
+    #[serde(flatten)]
+    base: DocumentBase,
     #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<WorkflowOutputParameter>,
     #[serde(deserialize_with = "deserialize_list")]
@@ -42,17 +29,33 @@ pub struct Workflow {
 impl Default for Workflow {
     fn default() -> Self {
         Self {
-            id: None,
-            label: None,
-            doc: None,
-            class: String::from("Workflow"),
-            cwl_version: String::from("v1.2"),
-            requirements: Default::default(),
-            hints: Default::default(),
-            inputs: Default::default(),
+            base: DocumentBase {
+                id: None,
+                label: None,
+                doc: None,
+                class: String::from("Workflow"),
+                cwl_version: String::from("v1.2"),
+                requirements: Default::default(),
+                hints: Default::default(),
+                inputs: Default::default(),
+            },
             outputs: Default::default(),
             steps: Default::default(),
         }
+    }
+}
+
+impl Deref for Workflow {
+    type Target = DocumentBase;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl DerefMut for Workflow {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
     }
 }
 

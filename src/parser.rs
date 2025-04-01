@@ -239,7 +239,8 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
     }
 
     let mut processed_once = false;
-    for input in &tool.inputs {
+    let inputs = tool.inputs.clone();
+    for input in &inputs {
         if let Some(default) = &input.default {
             for output in tool.outputs.iter_mut() {
                 if let Some(binding) = &mut output.output_binding {

@@ -6,13 +6,7 @@ use cwl::{
 use cwl_execution::execute_cwlfile;
 use log::info;
 use serde_yaml::{Number, Value};
-use std::{
-    collections::HashMap,
-    error::Error,
-    fs,
-    path::PathBuf,
-    process::Command,
-};
+use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -102,9 +96,9 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
 
     let inputs = match cwl {
-        CWLDocument::CommandLineTool(tool) => tool.inputs,
-        CWLDocument::Workflow(workflow) => workflow.inputs,
-        CWLDocument::ExpressionTool(expression_tool) => expression_tool.inputs,
+        CWLDocument::CommandLineTool(tool) => tool.inputs.clone(),
+        CWLDocument::Workflow(workflow) => workflow.inputs.clone(),
+        CWLDocument::ExpressionTool(expression_tool) => expression_tool.inputs.clone(),
     };
 
     let template = inputs

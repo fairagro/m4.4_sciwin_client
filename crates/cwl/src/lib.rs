@@ -1,5 +1,9 @@
 use clt::CommandLineTool;
 use et::ExpressionTool;
+use inputs::deserialize_inputs;
+use inputs::CommandInputParameter;
+use requirements::deserialize_requirements;
+use requirements::Requirement;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::{error::Error, fmt::Debug, fs, path::Path};
@@ -20,7 +24,7 @@ pub mod wf;
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
     Workflow(Workflow),
-    ExpressionTool(ExpressionTool)
+    ExpressionTool(ExpressionTool),
 }
 
 impl<'de> Deserialize<'de> for CWLDocument {
@@ -36,12 +40,39 @@ impl<'de> Deserialize<'de> for CWLDocument {
             .ok_or_else(|| serde::de::Error::missing_field("class must be of type string"))?;
 
         match class {
-            "CommandLineTool" => serde_yaml::from_value(value).map(CWLDocument::CommandLineTool).map_err(serde::de::Error::custom),
-            "ExpressionTool" => serde_yaml::from_value(value).map(CWLDocument::ExpressionTool).map_err(serde::de::Error::custom),
+            "CommandLineTool" => serde_yaml::from_value(value)
+                .map(CWLDocument::CommandLineTool)
+                .map_err(serde::de::Error::custom),
+            "ExpressionTool" => serde_yaml::from_value(value)
+                .map(CWLDocument::ExpressionTool)
+                .map_err(serde::de::Error::custom),
             "Workflow" => serde_yaml::from_value(value).map(CWLDocument::Workflow).map_err(serde::de::Error::custom),
-            _ => Err(serde::de::Error::custom(format!("Unknown variant of CWL file: {class}")))
+            _ => Err(serde::de::Error::custom(format!("Unknown variant of CWL file: {class}"))),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentBase {
+    pub class: String,
+    pub cwl_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc: Option<String>,
+    #[serde(deserialize_with = "deserialize_inputs")]
+    pub inputs: Vec<CommandInputParameter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
+    pub requirements: Option<Vec<Requirement>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
+    pub hints: Option<Vec<Requirement>>,
 }
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML

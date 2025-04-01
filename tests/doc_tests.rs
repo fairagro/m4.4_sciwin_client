@@ -194,7 +194,7 @@ pub fn test_implicit_inputs_hardcoded_files() {
     assert_eq!(tool.outputs.len(), 1);
 
     assert!(tool.requirements.is_some());
-    let requirements = tool.requirements.unwrap();
+    let requirements = tool.requirements.clone().unwrap();
     assert_eq!(requirements.len(), 1);
 
     if let Requirement::InitialWorkDirRequirement(initial) = &requirements[0] {

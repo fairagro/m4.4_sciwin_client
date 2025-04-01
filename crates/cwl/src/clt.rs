@@ -1,12 +1,16 @@
 use super::{
-    inputs::{deserialize_inputs, CommandInputParameter, CommandLineBinding},
+    inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{deserialize_outputs, CommandOutputParameter},
-    requirements::{deserialize_requirements, Requirement},
+    requirements::Requirement,
     types::CWLType,
 };
+use crate::DocumentBase;
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut},
+};
 
 /// Represents a CWL CommandLineTool, a process characterized by the execution of a standalone,
 /// non-interactive program which is invoked on some input, produces output, and then terminates.
@@ -15,14 +19,8 @@ use std::fmt::Display;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
-    pub class: String,
-    pub cwl_version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc: Option<String>,
+    #[serde(flatten)]
+    pub base: DocumentBase,
     #[serde(default)]
     pub base_command: Command,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,18 +29,8 @@ pub struct CommandLineTool {
     pub stdout: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stderr: Option<String>,
-    #[serde(deserialize_with = "deserialize_inputs")]
-    pub inputs: Vec<CommandInputParameter>,
     #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deserialize_requirements")]
-    #[serde(default)]
-    pub requirements: Option<Vec<Requirement>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deserialize_requirements")]
-    #[serde(default)]
-    pub hints: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arguments: Option<Vec<Argument>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -56,24 +44,40 @@ pub struct CommandLineTool {
 impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
-            id: None,
-            label: None,
-            doc: None,
-            class: String::from("CommandLineTool"),
-            cwl_version: String::from("v1.2"),
+            base: DocumentBase {
+                id: None,
+                label: None,
+                doc: None,
+                class: String::from("CommandLineTool"),
+                cwl_version: String::from("v1.2"),
+                inputs: Default::default(),
+                requirements: Default::default(),
+                hints: Default::default(),
+            },
             base_command: Default::default(),
             stdin: Default::default(),
             stdout: Default::default(),
             stderr: Default::default(),
-            inputs: Default::default(),
             outputs: Default::default(),
-            requirements: Default::default(),
-            hints: Default::default(),
             arguments: Default::default(),
             success_codes: None,
             permanent_fail_codes: None,
             temporary_fail_codes: None,
         }
+    }
+}
+
+impl Deref for CommandLineTool {
+    type Target = DocumentBase;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl DerefMut for CommandLineTool {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
     }
 }
 
