@@ -58,6 +58,8 @@ jobs:
         if: ${{ startsWith(matrix.os, 'windows') }}
         uses: microsoft/setup-msbuild@v2
       - name: Build
+        env: 
+          V8_FROM_SOURCE: ${{matrix.target == 'aarch64-pc-windows-msvc' && 1 || 0}}
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
       - name: Copy
         id: archive
