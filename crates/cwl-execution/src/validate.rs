@@ -3,6 +3,7 @@ use cwl::{
     inputs::CommandInputParameter,
     requirements::Requirement,
     types::{DefaultValue, Directory, Entry, EnviromentDefs, File, PathItem},
+    CWLDocument,
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
@@ -11,72 +12,24 @@ use std::{collections::HashMap, env};
 use crate::io::{get_file_property, make_relative_to};
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
-pub(crate) fn set_placeholder_values(cwl: &mut CommandLineTool, input_values: &HashMap<String, DefaultValue>, runtime: &HashMap<String, String>) {
-    let inputs = cwl.inputs.clone();
-    //set values in baseCommand
-    cwl.base_command = match &cwl.base_command {
-        Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &inputs)),
-        Command::Multiple(vec) => {
-            let mut new_command = vec![];
-            for item in vec {
-                new_command.push(set_placeholder_values_in_string(item, input_values, runtime, &inputs));
-            }
-            Command::Multiple(new_command)
-        }
-    };
-
-    //set values in arguments
-    if let Some(args) = &mut cwl.arguments {
-        for arg in args.iter_mut() {
-            *arg = match arg {
-                Argument::String(str) => {
-                    let new_str = set_placeholder_values_in_string(str, input_values, runtime, &inputs);
-                    Argument::String(new_str)
-                }
-                Argument::Binding(binding) => {
-                    let mut new_binding = binding.clone();
-                    if let Some(value_from) = &mut new_binding.value_from {
-                        *value_from = set_placeholder_values_in_string(value_from, input_values, runtime, &inputs);
-                    }
-                    Argument::Binding(new_binding)
-                }
-            }
-        }
-    }
-
-    //set values in output glob
-    for output in cwl.outputs.iter_mut() {
-        if let Some(binding) = &mut output.output_binding {
-            let glob = set_placeholder_values_in_string(&binding.glob, input_values, runtime, &inputs);
-            binding.glob = glob;
-        }
-    }
-
-    //set values in output format
-    for output in cwl.outputs.iter_mut() {
-        if let Some(format) = &mut output.format {
-            let format = set_placeholder_values_in_string(format, input_values, runtime, &inputs);
-            output.format = Some(format);
-        }
-    }
-
+pub(crate) fn set_placeholder_values(cwl: &mut CWLDocument, input_values: &HashMap<String, DefaultValue>, runtime: &HashMap<String, String>) {
+    let inputs = &cwl.inputs.clone();
     //set values in requirements
     if let Some(requirements) = &mut cwl.requirements {
-        set_placeholder_values_requirements(requirements, input_values, runtime, &inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, inputs);
     }
 
     //set values in hints
     if let Some(requirements) = &mut cwl.hints {
-        set_placeholder_values_requirements(requirements, input_values, runtime, &inputs);
+        set_placeholder_values_requirements(requirements, input_values, runtime, inputs);
     }
 
-    //set values in stdin
-    if let Some(stdin) = &mut cwl.stdin {
-        *stdin = set_placeholder_values_in_string(stdin, input_values, runtime, &inputs);
+    if let CWLDocument::CommandLineTool(clt) = cwl {
+        set_placeholder_values_tool(clt, input_values, runtime);
     }
 }
 
-pub(crate) fn rewire_paths(cwl: &mut CommandLineTool, input_values: &mut HashMap<String, DefaultValue>, staged_files: &[String], home_dir: &str) {
+pub(crate) fn rewire_paths(cwl: &mut CWLDocument, input_values: &mut HashMap<String, DefaultValue>, staged_files: &[String], home_dir: &str) {
     //rewire in inputs
     for input in cwl.inputs.iter_mut() {
         if let Some(default) = &mut input.default {
@@ -131,6 +84,60 @@ fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &st
             }
         }
         DefaultValue::Any(value) => DefaultValue::Any(value),
+    }
+}
+
+fn set_placeholder_values_tool(clt: &mut CommandLineTool, input_values: &HashMap<String, DefaultValue>, runtime: &HashMap<String, String>) {
+    //set values in baseCommand
+    clt.base_command = match &clt.base_command {
+        Command::Single(cmd) => Command::Single(set_placeholder_values_in_string(cmd, input_values, runtime, &clt.base.inputs)),
+        Command::Multiple(vec) => {
+            let mut new_command = vec![];
+            for item in vec {
+                new_command.push(set_placeholder_values_in_string(item, input_values, runtime, &clt.base.inputs));
+            }
+            Command::Multiple(new_command)
+        }
+    };
+
+    //set values in arguments
+    if let Some(args) = &mut clt.arguments {
+        for arg in args.iter_mut() {
+            *arg = match arg {
+                Argument::String(str) => {
+                    let new_str = set_placeholder_values_in_string(str, input_values, runtime, &clt.base.inputs);
+                    Argument::String(new_str)
+                }
+                Argument::Binding(binding) => {
+                    let mut new_binding = binding.clone();
+                    if let Some(value_from) = &mut new_binding.value_from {
+                        *value_from = set_placeholder_values_in_string(value_from, input_values, runtime, &clt.base.inputs);
+                    }
+                    Argument::Binding(new_binding)
+                }
+            }
+        }
+    }
+
+    //set values in output glob
+    for output in clt.outputs.iter_mut() {
+        if let Some(binding) = &mut output.output_binding {
+            let glob = set_placeholder_values_in_string(&binding.glob, input_values, runtime, &clt.base.inputs);
+            binding.glob = glob;
+        }
+    }
+
+    //set values in output format
+    for output in clt.outputs.iter_mut() {
+        if let Some(format) = &mut output.format {
+            let format = set_placeholder_values_in_string(format, input_values, runtime, &clt.base.inputs);
+            output.format = Some(format);
+        }
+    }
+
+    //set values in stdin
+    if let Some(stdin) = &mut clt.stdin {
+        *stdin = set_placeholder_values_in_string(stdin, input_values, runtime, &clt.base.inputs);
     }
 }
 
@@ -293,10 +300,10 @@ outputs:
             DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())),
         );
 
-        let mut cwl_test: CommandLineTool = serde_yaml::from_str(cwl_str).unwrap();
+        let mut cwl_test: CWLDocument = serde_yaml::from_str(cwl_str).unwrap();
         set_placeholder_values(&mut cwl_test, &input_values, &runtime);
 
-        let cwl_expected: CommandLineTool = serde_yaml::from_str(expected_str).unwrap();
+        let cwl_expected: CWLDocument = serde_yaml::from_str(expected_str).unwrap();
 
         assert_eq!(cwl_test, cwl_expected);
     }

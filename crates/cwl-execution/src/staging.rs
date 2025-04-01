@@ -1,12 +1,11 @@
-use crate::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
-
 use super::util::evaluate_input;
+use crate::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
 use cwl::{
-    clt::CommandLineTool,
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     requirements::Requirement,
     types::{CWLType, DefaultValue, Entry, PathItem},
+    CWLDocument,
 };
 use std::{
     collections::HashMap,
@@ -19,7 +18,7 @@ use std::{
 use urlencoding::decode;
 
 pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
-    tool: &CommandLineTool,
+    tool: &CWLDocument,
     input_values: &HashMap<String, DefaultValue>,
     tool_path: P,
     path: Q,

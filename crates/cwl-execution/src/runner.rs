@@ -3,7 +3,7 @@ use crate::{
     execute, format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
-    util::{copy_output_dir, evaluate_input, evaluate_input_as_string, evaluate_outputs, get_file_metadata},
+    util::{copy_output_dir, evaluate_command_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
     validate::{rewire_paths, set_placeholder_values},
     CommandError,
 };
@@ -13,6 +13,7 @@ use cwl::{
     requirements::check_timelimit,
     types::{CWLType, DefaultValue, PathItem},
     wf::Workflow,
+    CWLDocument,
 };
 use log::info;
 use std::{
@@ -165,7 +166,7 @@ pub fn run_workflow(
 }
 
 pub fn run_commandlinetool(
-    tool: &mut CommandLineTool,
+    tool: &mut CWLDocument,
     input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
@@ -224,17 +225,27 @@ pub fn run_commandlinetool(
     rewire_paths(tool, &mut runtime.inputs, &staged_files, &output_directory.to_string_lossy());
 
     //run the tool command)
-    run_command(tool, &runtime).map_err(|e| CommandError {
-        message: format!("Error in Tool execution: {}", e),
-        exit_code: tool.get_error_code(),
-    })?;
+    if let CWLDocument::CommandLineTool(clt) = tool {
+        run_command(clt, &runtime).map_err(|e| CommandError {
+            message: format!("Error in Tool execution: {}", e),
+            exit_code: clt.get_error_code(),
+        })?;
+    }
 
     //remove staged files
-    unstage_files(&staged_files, dir.path(), &tool.outputs)?;
+    let outputs = match &tool {
+        CWLDocument::CommandLineTool(clt) => &clt.outputs,
+        CWLDocument::ExpressionTool(et) => &et.outputs,
+        CWLDocument::Workflow(_) => unreachable!(),
+    };
+    unstage_files(&staged_files, dir.path(), outputs)?;
 
     //evaluate output files
-    let outputs = evaluate_outputs(&tool.outputs, output_directory, &tool.stdout, &tool.stderr)?;
-
+    let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
+        evaluate_command_outputs(clt, output_directory)?
+    } else {
+        HashMap::new()
+    };
     //come back to original directory
     env::set_current_dir(current)?;
 

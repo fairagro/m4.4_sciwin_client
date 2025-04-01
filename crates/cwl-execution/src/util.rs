@@ -1,5 +1,6 @@
 use crate::io::{copy_file, get_first_file_with_prefix};
 use cwl::{
+    clt::CommandLineTool,
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     types::{CWLType, DefaultValue, Directory, File},
@@ -40,21 +41,16 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
 }
 
 ///Copies back requested outputs and writes to commandline
-pub(crate) fn evaluate_outputs(
-    tool_outputs: &Vec<CommandOutputParameter>,
-    initial_dir: &Path,
-    tool_stdout: &Option<String>,
-    tool_stderr: &Option<String>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //copy back requested output
     let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
-    for output in tool_outputs {
+    for output in &tool.outputs {
         match &output.type_ {
             CWLType::Optional(inner) => {
-                evaluate_output_impl(output, inner, initial_dir, tool_stdout, tool_stderr, &mut outputs).ok();
+                evaluate_output_impl(output, inner, initial_dir, &tool.stdout, &tool.stderr, &mut outputs).ok();
                 //ignores all errors
             }
-            _ => evaluate_output_impl(output, &output.type_, initial_dir, tool_stdout, tool_stderr, &mut outputs)?,
+            _ => evaluate_output_impl(output, &output.type_, initial_dir, &tool.stdout, &tool.stderr, &mut outputs)?,
         }
     }
     Ok(outputs)
@@ -279,7 +275,9 @@ mod tests {
         fs::copy("../../tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
         env::set_current_dir(dir.path()).unwrap();
 
-        let result = evaluate_outputs(&vec![output], &current.join("../../"), &None, &None);
+        let tool = CommandLineTool::default().with_outputs(vec![output]);
+
+        let result = evaluate_command_outputs(&tool, &current.join("../../"));
         assert!(result.is_ok());
 
         env::set_current_dir(current).unwrap();

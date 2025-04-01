@@ -85,12 +85,12 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
     let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
     let contents = preprocess_cwl(&contents, &cwlfile);
 
-    let doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
+    let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
 
     match doc {
-        CWLDocument::CommandLineTool(mut tool) => {
+        CWLDocument::CommandLineTool(_) => {
             run_commandlinetool(
-                &mut tool,
+                &mut doc,
                 inputs,
                 Some(&cwlfile.as_ref().to_path_buf()),
                 outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),

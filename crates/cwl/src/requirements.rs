@@ -1,5 +1,5 @@
 use super::types::{Entry, EnviromentDefs, Listing};
-use crate::clt::CommandLineTool;
+use crate::CWLDocument;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 
@@ -172,10 +172,10 @@ pub struct ToolTimeLimit {
     pub timelimit: u64,
 }
 
-pub fn check_timelimit(tool: &CommandLineTool) -> Option<u64> {
-    tool.requirements
+pub fn check_timelimit(doc: &CWLDocument) -> Option<u64> {
+    doc.requirements
         .iter()
-        .chain(tool.hints.iter())
+        .chain(doc.hints.iter())
         .flatten()
         .map(|f| {
             if let Requirement::ToolTimeLimit(time) = f {

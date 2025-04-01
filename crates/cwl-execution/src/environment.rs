@@ -1,7 +1,6 @@
 use cwl::{
-    clt::CommandLineTool,
     requirements::Requirement,
-    types::{DefaultValue, EnviromentDefs},
+    types::{DefaultValue, EnviromentDefs}, CWLDocument,
 };
 use std::collections::HashMap;
 
@@ -13,7 +12,7 @@ pub struct RuntimeEnvironment {
     pub time_limit: u64,
 }
 
-pub(crate) fn collect_environment(tool: &CommandLineTool) -> HashMap<String, String> {
+pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String> {
     tool.requirements
         .iter()
         .chain(tool.hints.iter())

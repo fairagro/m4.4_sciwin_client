@@ -7,6 +7,7 @@ use requirements::Requirement;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::ops::Deref;
+use std::ops::DerefMut;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 use wf::Workflow;
 
@@ -20,7 +21,7 @@ pub mod requirements;
 pub mod types;
 pub mod wf;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
@@ -36,6 +37,16 @@ impl Deref for CWLDocument {
             CWLDocument::CommandLineTool(clt) => &clt.base,
             CWLDocument::Workflow(wf) => &wf.base,
             CWLDocument::ExpressionTool(et) => &et.base,
+        }
+    }
+}
+
+impl DerefMut for CWLDocument {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self{
+            CWLDocument::CommandLineTool(clt) => &mut clt.base,
+            CWLDocument::Workflow(wf) => &mut wf.base,
+            CWLDocument::ExpressionTool(et) => &mut et.base,
         }
     }
 }

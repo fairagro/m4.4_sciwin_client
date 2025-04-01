@@ -1,6 +1,6 @@
 mod common;
 use common::with_temp_repository;
-use cwl::{clt::CommandLineTool, types::DefaultValue};
+use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use cwl_execution::{
     environment::RuntimeEnvironment,
     runner::{run_command, run_commandlinetool},
@@ -171,7 +171,7 @@ baseCommand:
 - tests/test_data/echo.py
 ";
 
-    let mut tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
+    let mut tool: CWLDocument = serde_yaml::from_str(cwl).expect("Tool parsing failed");
     let result = run_commandlinetool(&mut tool, HashMap::new(), None, None);
     assert!(result.is_ok());
     //delete results.txt
