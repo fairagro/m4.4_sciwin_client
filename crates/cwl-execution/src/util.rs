@@ -21,13 +21,20 @@ pub(crate) fn evaluate_input_as_string(
 ///Either gets the default value for input or the provided one (preferred)
 pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
     if let Some(value) = input_values.get(&input.id) {
-        if !value.has_matching_type(&input.type_) {
+        if (matches!(input.type_, CWLType::Any) || input.type_.is_optional()) && matches!(value, DefaultValue::Any(Value::Null)) {
+            if let Some(default_) = &input.default {
+                return Ok(default_.clone());
+            }
+        }
+
+        if value.has_matching_type(&input.type_) {
+            return Ok(value.clone());
+        } else {
             Err(format!(
                 "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
                 &input.type_, value
             ))?
         }
-        return Ok(value.clone());
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
     }
@@ -274,6 +281,30 @@ mod tests {
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
+        assert_eq!(evaluation, "Nice".to_string());
+    }
+
+    #[test]
+    pub fn test_evaluate_input_any() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::Any)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
+
+        assert_eq!(evaluation, "Nice".to_string());
+    }
+
+    #[test]
+    pub fn test_evaluate_input_any_null() {
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::Any)
+            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
+        let evaluation = evaluate_input_as_string(&input, &HashMap::from([("test".to_string(), DefaultValue::Any(Value::Null))])).unwrap();
+        //if any and null, take default
         assert_eq!(evaluation, "Nice".to_string());
     }
 
