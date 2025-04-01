@@ -3,7 +3,7 @@ use common::with_temp_repository;
 use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
 use cwl_execution::{
     environment::RuntimeEnvironment,
-    runner::{run_command, run_commandlinetool},
+    runner::{run_command, run_tool},
 };
 use serial_test::serial;
 use std::{collections::HashMap, fs};
@@ -172,7 +172,7 @@ baseCommand:
 ";
 
     let mut tool: CWLDocument = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-    let result = run_commandlinetool(&mut tool, HashMap::new(), None, None);
+    let result = run_tool(&mut tool, HashMap::new(), None, None);
     assert!(result.is_ok());
     //delete results.txt
     let _ = fs::remove_file("results.txt");

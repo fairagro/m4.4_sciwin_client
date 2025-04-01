@@ -21,6 +21,10 @@ keywords = [
 ]
 categories = ["science"]
 
+# https://github.com/rscarson/rustyscript/issues/332
+[patch.crates-io]
+deno_media_type = { git = 'https://github.com/denoland/deno_media_type', tag = "0.2.6" }
+
 [dependencies]
 cwl = { path = "crates/cwl" }
 cwl-execution = { path = "crates/cwl-execution" }

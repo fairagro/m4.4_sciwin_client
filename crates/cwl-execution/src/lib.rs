@@ -1,4 +1,5 @@
 pub mod environment;
+pub mod expression;
 pub mod io;
 pub mod runner;
 pub mod staging;
@@ -8,7 +9,7 @@ pub mod validate;
 use cwl::types::{guess_type, CWLType, DefaultValue, Directory, File, PathItem};
 use cwl::CWLDocument;
 use io::join_path_string;
-use runner::{run_commandlinetool, run_workflow};
+use runner::{run_tool, run_workflow};
 use serde_yaml::Value;
 use std::collections::HashMap;
 use std::fs;
@@ -76,11 +77,15 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
     let output_values = execute(cwlfile, inputs, outdir)?;
     let json = serde_json::to_string_pretty(&output_values)?;
     println!("{}", json);
-    
+
     Ok(())
 }
 
-pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>, outdir: Option<impl AsRef<Path>>) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub fn execute(
+    cwlfile: impl AsRef<Path>,
+    inputs: HashMap<String, DefaultValue>,
+    outdir: Option<impl AsRef<Path>>,
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //load cwl
     let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
     let contents = preprocess_cwl(&contents, &cwlfile);
@@ -88,23 +93,18 @@ pub fn execute(cwlfile: impl AsRef<Path>, inputs: HashMap<String, DefaultValue>,
     let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
 
     match doc {
-        CWLDocument::CommandLineTool(_) => {
-            run_commandlinetool(
-                &mut doc,
-                inputs,
-                Some(&cwlfile.as_ref().to_path_buf()),
-                outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
-            )
-        }
-        CWLDocument::Workflow(mut workflow) => {
-            run_workflow(
-                &mut workflow,
-                inputs,
-                Some(&cwlfile.as_ref().to_path_buf()),
-                outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
-            )
-        }
-        CWLDocument::ExpressionTool(_) => todo!(),
+        CWLDocument::CommandLineTool(_) | CWLDocument::ExpressionTool(_) => run_tool(
+            &mut doc,
+            inputs,
+            Some(&cwlfile.as_ref().to_path_buf()),
+            outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
+        ),
+        CWLDocument::Workflow(mut workflow) => run_workflow(
+            &mut workflow,
+            inputs,
+            Some(&cwlfile.as_ref().to_path_buf()),
+            outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
+        ),
     }
 }
 
@@ -154,4 +154,22 @@ pub fn format_command(command: &Command) -> String {
         .collect();
 
     format!("{} {}", program, args.join(" "))
+}
+
+pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
+    let mut slices = Vec::new();
+    let mut last_index = 0;
+
+    for (idx, _) in s.match_indices(delim) {
+        if last_index != idx {
+            slices.push((last_index, idx));
+        }
+        last_index = idx;
+    }
+
+    if last_index < s.len() {
+        slices.push((last_index, s.len()));
+    }
+
+    slices
 }

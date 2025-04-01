@@ -43,5 +43,5 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     let foldername = filename.clone();
     filename.push_str(".cwl");
 
-    get_workflows_folder() + &foldername + "/" + &filename
+    format!("{}{foldername}/{filename}", get_workflows_folder())
 }

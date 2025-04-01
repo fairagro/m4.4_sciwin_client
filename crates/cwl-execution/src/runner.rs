@@ -1,9 +1,11 @@
 use crate::{
     environment::{collect_environment, RuntimeEnvironment},
-    execute, format_command, get_available_ram, get_processor_count,
+    execute,
+    expression::{eval_tool, parse_expressions, prepare_expression_engine, reset_expression_engine},
+    format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
-    util::{copy_output_dir, evaluate_command_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
+    util::{copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
     validate::{rewire_paths, set_placeholder_values},
     CommandError,
 };
@@ -165,7 +167,7 @@ pub fn run_workflow(
     Ok(output_values.into_iter().map(|(k, v)| (k.clone(), v)).collect())
 }
 
-pub fn run_commandlinetool(
+pub fn run_tool(
     tool: &mut CWLDocument,
     input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
@@ -174,7 +176,7 @@ pub fn run_commandlinetool(
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        info!("🚲 Executing CommandLineTool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
+        info!("🚲 Executing Tool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
     }
     //create staging directory
     let dir = tempdir()?;
@@ -224,12 +226,18 @@ pub fn run_commandlinetool(
     //rewire files in tool to staged ones
     rewire_paths(tool, &mut runtime.inputs, &staged_files, &output_directory.to_string_lossy());
 
-    //run the tool command)
+    //run the tool
+    let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
         run_command(clt, &runtime).map_err(|e| CommandError {
             message: format!("Error in Tool execution: {}", e),
             exit_code: clt.get_error_code(),
         })?;
+    } else if let CWLDocument::ExpressionTool(et) = tool {
+        prepare_expression_engine(&runtime)?;
+        let expressions = parse_expressions(&et.expression);
+        result_value = Some(eval_tool::<serde_yaml::Value>(&expressions[0].expression())?);
+        reset_expression_engine()?;
     }
 
     //remove staged files
@@ -243,14 +251,20 @@ pub fn run_commandlinetool(
     //evaluate output files
     let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
         evaluate_command_outputs(clt, output_directory)?
+    } else if let CWLDocument::ExpressionTool(et) = &tool {
+        if let Some(value) = result_value {
+            evaluate_expression_outputs(et, value)?
+        } else {
+            HashMap::new()
+        }
     } else {
-        HashMap::new()
+        unreachable!()
     };
     //come back to original directory
     env::set_current_dir(current)?;
 
     info!(
-        "✔️  CommandLineTool {:?} executed successfully in {:.0?}!",
+        "✔️  Tool {:?} executed successfully in {:.0?}!",
         &cwl_path.unwrap_or(&PathBuf::default()),
         clock.elapsed()
     );

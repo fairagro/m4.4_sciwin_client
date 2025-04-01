@@ -17,6 +17,7 @@ rand = "0.9.0"
 sysinfo = "0.34.1"
 urlencoding = "2.1.3"
 wait-timeout = "0.2.1"
+rustyscript = "0.11.0"
 
 [dev-dependencies]
 serial_test = "3.1.1"

@@ -1,6 +1,7 @@
 use crate::io::{copy_file, get_first_file_with_prefix};
 use cwl::{
     clt::CommandLineTool,
+    et::ExpressionTool,
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     types::{CWLType, DefaultValue, Directory, File},
@@ -38,6 +39,24 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
     }
 
     Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
+}
+
+pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+    let mut outputs = HashMap::new();
+    for output in &tool.outputs {
+        if let Some(result) = value.get(&output.id) {
+            match value {
+                Value::Null if output.type_.is_optional() => {
+                    outputs.insert(output.id.clone(), DefaultValue::Any(serde_yaml::Value::Null));
+                }
+                _ => {
+                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                    outputs.insert(output.id.clone(), DefaultValue::Any(value));
+                }
+            }
+        }
+    }
+    Ok(outputs)
 }
 
 ///Copies back requested outputs and writes to commandline
