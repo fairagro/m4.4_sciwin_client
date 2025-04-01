@@ -6,6 +6,7 @@ use requirements::deserialize_requirements;
 use requirements::Requirement;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+use std::ops::Deref;
 use std::{error::Error, fmt::Debug, fs, path::Path};
 use wf::Workflow;
 
@@ -25,6 +26,18 @@ pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
     Workflow(Workflow),
     ExpressionTool(ExpressionTool),
+}
+
+impl Deref for CWLDocument {
+    type Target = DocumentBase;
+
+    fn deref(&self) -> &Self::Target {
+        match self{
+            CWLDocument::CommandLineTool(clt) => &clt.base,
+            CWLDocument::Workflow(wf) => &wf.base,
+            CWLDocument::ExpressionTool(et) => &et.base,
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for CWLDocument {

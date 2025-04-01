@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut, Range};
 #[serde(rename_all = "camelCase")]
 pub struct ExpressionTool {
     #[serde(flatten)]
-    base: DocumentBase,
+    pub base: DocumentBase,
     #[serde(deserialize_with = "deserialize_outputs")]
     pub outputs: Vec<CommandOutputParameter>,
     pub expression: String,

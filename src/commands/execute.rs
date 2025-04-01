@@ -95,13 +95,7 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(filename)?;
     let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
 
-    let inputs = match cwl {
-        CWLDocument::CommandLineTool(tool) => tool.inputs.clone(),
-        CWLDocument::Workflow(workflow) => workflow.inputs.clone(),
-        CWLDocument::ExpressionTool(expression_tool) => expression_tool.inputs.clone(),
-    };
-
-    let template = inputs
+    let template = &cwl.inputs
         .iter()
         .map(|i| {
             let id = &i.id;

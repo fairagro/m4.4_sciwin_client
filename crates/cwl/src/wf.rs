@@ -19,7 +19,7 @@ use std::{
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
     #[serde(flatten)]
-    base: DocumentBase,
+    pub base: DocumentBase,
     #[serde(deserialize_with = "deserialize_list")]
     pub outputs: Vec<WorkflowOutputParameter>,
     #[serde(deserialize_with = "deserialize_list")]
