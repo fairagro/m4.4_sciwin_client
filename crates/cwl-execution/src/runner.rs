@@ -214,7 +214,7 @@ pub fn run_tool(
     };
 
     //replace inputs and runtime placeholders in tool with the actual values
-    set_placeholder_values(tool, &runtime.inputs, &runtime.runtime);
+    set_placeholder_values(tool, &runtime);
     runtime.environment = collect_environment(tool);
 
     //stage files listed in input default values, input values or initial work dir requirements
