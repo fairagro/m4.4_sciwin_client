@@ -24,7 +24,7 @@
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
 - [🏗️ How to Build and Test](#️-how-to-build-and-test)
-- [🐱‍👤 Installation](#-installation)
+- [🎯 Installation](#-installation)
 - [📚 How to Use](#-how-to-use)
   - [Project initialization](#project-initialization)
   - [Creation of CWL CommandLineTools](#creation-of-cwl-commandlinetools)
@@ -61,7 +61,7 @@ cargo build
 cargo test
 ```
 
-## 🐱‍👤 Installation
+## 🎯 Installation
 Installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
 
 [![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
