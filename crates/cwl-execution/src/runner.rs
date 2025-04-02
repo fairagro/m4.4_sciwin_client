@@ -1,5 +1,5 @@
 use crate::{
-    environment::{collect_environment, RuntimeEnvironment},
+    environment::{collect_environment, collect_inputs, RuntimeEnvironment},
     execute,
     expression::{eval_tool, parse_expressions, prepare_expression_engine, reset_expression_engine},
     format_command, get_available_ram, get_processor_count,
@@ -208,8 +208,8 @@ pub fn run_tool(
             ("cores".to_string(), get_processor_count().to_string()),
             ("ram".to_string(), get_available_ram().to_string()),
         ]),
-        inputs: input_values,
         time_limit: check_timelimit(tool).unwrap_or(0),
+        inputs: collect_inputs(tool, input_values)?,
         ..Default::default()
     };
 

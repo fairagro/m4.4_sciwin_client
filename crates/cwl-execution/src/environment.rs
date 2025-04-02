@@ -2,7 +2,9 @@ use cwl::{
     requirements::Requirement,
     types::{DefaultValue, EnviromentDefs}, CWLDocument,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
+
+use crate::util::evaluate_input;
 
 #[derive(Debug, Default, Clone)]
 pub struct RuntimeEnvironment {
@@ -29,4 +31,12 @@ pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String>
         })
         .flatten()
         .collect()
+}
+
+pub (crate) fn collect_inputs(tool: &CWLDocument, input_values: HashMap<String, DefaultValue>) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+    let mut inputs = HashMap::new();
+    for input in &tool.inputs {
+        inputs.insert(input.id.clone(), evaluate_input(input, &input_values)?);
+    }
+   Ok(inputs)
 }
