@@ -173,9 +173,9 @@ pub struct ToolTimeLimit {
 }
 
 pub fn check_timelimit(doc: &CWLDocument) -> Option<u64> {
-    doc.requirements
+    doc.hints
         .iter()
-        .chain(doc.hints.iter())
+        .chain(doc.requirements.iter())
         .flatten()
         .map(|f| {
             if let Requirement::ToolTimeLimit(time) = f {
