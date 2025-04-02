@@ -1,6 +1,6 @@
 # Unreleased
 ## Bugxixes
-- Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 108/378
+- Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 109/378
 
 ## Other
 - Removed Nightly Builds CI Workflow
