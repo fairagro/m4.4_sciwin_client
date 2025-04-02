@@ -1,17 +1,14 @@
-use crate::{
-    environment::RuntimeEnvironment,
-    io::{get_file_property, make_relative_to},
-};
+use crate::{environment::RuntimeEnvironment, io::get_file_property};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
     requirements::Requirement,
-    types::{DefaultValue, Directory, Entry, EnviromentDefs, File, PathItem},
+    types::{DefaultValue, Entry, EnviromentDefs, PathItem},
     CWLDocument,
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
 pub(crate) fn set_placeholder_values(cwl: &mut CWLDocument, runtime: &RuntimeEnvironment) {
@@ -28,64 +25,6 @@ pub(crate) fn set_placeholder_values(cwl: &mut CWLDocument, runtime: &RuntimeEnv
 
     if let CWLDocument::CommandLineTool(clt) = cwl {
         set_placeholder_values_tool(clt, runtime);
-    }
-}
-
-pub(crate) fn rewire_paths(cwl: &mut CWLDocument, input_values: &mut HashMap<String, DefaultValue>, staged_files: &[String], home_dir: &str) {
-    //rewire in inputs
-    for input in cwl.inputs.iter_mut() {
-        if let Some(default) = &mut input.default {
-            let mut new_default = default.clone();
-            for staged_file in staged_files {
-                new_default = rewire_default_value(new_default, staged_file, home_dir)
-            }
-            *default = new_default;
-        }
-
-        //rewire in values
-        if let Some(existing_value) = input_values.get(&input.id) {
-            let mut new_value = existing_value.clone();
-            for staged_file in staged_files {
-                new_value = rewire_default_value(new_value.clone(), staged_file, home_dir);
-            }
-            input_values.insert(input.id.clone(), new_value);
-        }
-    }
-}
-
-fn rewire_default_value(value: DefaultValue, staged_file: &String, home_dir: &str) -> DefaultValue {
-    match value {
-        DefaultValue::File(file) => {
-            let file_loc = file.get_location();
-            let location = make_relative_to(&file_loc, home_dir).trim_start_matches("../");
-            let test = env::current_dir().unwrap().join(location);
-            if let Some(diff) = diff_paths(test, staged_file) {
-                if diff.to_str() == Some("") {
-                    let new_location = staged_file;
-                    DefaultValue::File(File::from_location(new_location))
-                } else {
-                    DefaultValue::File(file)
-                }
-            } else {
-                DefaultValue::File(file)
-            }
-        }
-        DefaultValue::Directory(directory) => {
-            let dir_loc = directory.get_location();
-            let location = make_relative_to(&dir_loc, home_dir).trim_start_matches("../");
-            let test = env::current_dir().unwrap().join(location);
-            if let Some(diff) = diff_paths(test, staged_file) {
-                if diff.to_str() == Some("") {
-                    let new_location = staged_file;
-                    DefaultValue::Directory(Directory::from_location(new_location))
-                } else {
-                    DefaultValue::Directory(directory)
-                }
-            } else {
-                DefaultValue::Directory(directory)
-            }
-        }
-        DefaultValue::Any(value) => DefaultValue::Any(value),
     }
 }
 

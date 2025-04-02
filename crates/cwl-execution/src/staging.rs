@@ -3,7 +3,7 @@ use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     requirements::Requirement,
-    types::{CWLType, DefaultValue, Entry, PathItem},
+    types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
 };
 use std::{
@@ -18,7 +18,7 @@ use urlencoding::decode;
 
 pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     tool: &CWLDocument,
-    input_values: &HashMap<String, DefaultValue>,
+    input_values: &mut HashMap<String, DefaultValue>,
     tool_path: P,
     path: Q,
     out_dir: R,
@@ -110,7 +110,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
 
 fn stage_input_files(
     inputs: &[CommandInputParameter],
-    input_values: &HashMap<String, DefaultValue>,
+    input_values: &mut HashMap<String, DefaultValue>,
     tool_path: &Path,
     path: &Path,
     out_dir: &Path,
@@ -124,7 +124,7 @@ fn stage_input_files(
         }
 
         //get correct data
-        let data = &input_values[&input.id];
+        let data = &input_values.remove(&input.id).unwrap();
         let data_location = decode(&data.as_value_string()).unwrap().to_string();
         let mut data_path = PathBuf::from(&data_location);
 
@@ -142,13 +142,25 @@ fn stage_input_files(
         let staged_path = path.join(staged_filename_relative);
         let staged_path_str = staged_path.to_string_lossy().into_owned();
 
+        let staged_data = match &data {
+            DefaultValue::File(file) => DefaultValue::File(File {
+                location: Some(staged_path_str.clone()),
+                ..file.clone()
+            }),
+            DefaultValue::Directory(dir) => DefaultValue::Directory(Directory {
+                location: Some(staged_path_str.clone()),
+                ..dir.clone()
+            }),
+            _ => data.clone(),
+        };
+        input_values.insert(input.id.clone(), staged_data);
+
         if input.type_ == CWLType::File {
-            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", data_location, staged_path_str, e))?;
+            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());
             staged_files.extend(stage_secondary_files(data, path)?);
         } else if input.type_ == CWLType::Directory {
-            copy_dir(&data_path, &staged_path)
-                .map_err(|e| format!("Failed to copy directory from {} to {}: {}", data_location, staged_path_str, e))?;
+            copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());
         }
     }
@@ -263,7 +275,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &HashMap::from([("test".to_string(), value)]),
+            &mut HashMap::from([("test".to_string(), value)]),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -288,7 +300,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &HashMap::from([("test".to_string(), value)]),
+            &mut HashMap::from([("test".to_string(), value)]),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -313,7 +325,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &HashMap::from([("test".to_string(), value)]),
+            &mut HashMap::from([("test".to_string(), value)]),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -337,7 +349,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &HashMap::from([("test".to_string(), value)]),
+            &mut HashMap::from([("test".to_string(), value)]),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -365,7 +377,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &HashMap::from([("test".to_string(), value)]),
+            &mut HashMap::from([("test".to_string(), value)]),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),

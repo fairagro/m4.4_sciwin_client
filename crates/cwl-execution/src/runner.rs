@@ -6,7 +6,7 @@ use crate::{
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
     util::{copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
-    validate::{rewire_paths, set_placeholder_values},
+    validate::set_placeholder_values,
     CommandError,
 };
 use cwl::{
@@ -218,13 +218,10 @@ pub fn run_tool(
     runtime.environment = collect_environment(tool);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &runtime.inputs, tool_path, dir.path(), output_directory)?;
+    let staged_files = stage_required_files(tool, &mut runtime.inputs, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
-
-    //rewire files in tool to staged ones
-    rewire_paths(tool, &mut runtime.inputs, &staged_files, &output_directory.to_string_lossy());
 
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
