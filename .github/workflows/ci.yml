@@ -35,14 +35,10 @@ jobs:
       actions: read
     needs: build
     uses: ./.github/workflows/tarpaulin.yml
-  nightly:
-    needs: [build, rust_checks, coverage] # make nightly only if everything is ok!
-    name: 🕶️ Nightly Release
-    uses: ./.github/workflows/nightly.yml
   conformance:
     name: 🦆 CWL Conformance Tests
     permissions:
       contents: read
       actions: read
-    needs: nightly
+    needs: build
     uses: ./.github/workflows/cwl.yml
