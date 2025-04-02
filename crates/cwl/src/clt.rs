@@ -98,6 +98,10 @@ impl CommandLineTool {
         self.requirements = Some(requirements);
         self
     }
+    pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
+        self.hints = Some(requirements);
+        self
+    }
     pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
         self.stdout = stdout;
         self

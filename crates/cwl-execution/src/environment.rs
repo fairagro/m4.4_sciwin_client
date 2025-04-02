@@ -1,6 +1,7 @@
 use cwl::{
     requirements::Requirement,
-    types::{DefaultValue, EnviromentDefs}, CWLDocument,
+    types::{DefaultValue, EnviromentDefs},
+    CWLDocument,
 };
 use std::{collections::HashMap, error::Error};
 
@@ -15,9 +16,9 @@ pub struct RuntimeEnvironment {
 }
 
 pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String> {
-    tool.requirements
+    tool.hints
         .iter()
-        .chain(tool.hints.iter())
+        .chain(tool.requirements.iter())
         .flatten()
         .filter_map(|req| {
             if let Requirement::EnvVarRequirement(env) = req {
@@ -33,10 +34,37 @@ pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String>
         .collect()
 }
 
-pub (crate) fn collect_inputs(tool: &CWLDocument, input_values: HashMap<String, DefaultValue>) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn collect_inputs(
+    tool: &CWLDocument,
+    input_values: HashMap<String, DefaultValue>,
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
         inputs.insert(input.id.clone(), evaluate_input(input, &input_values)?);
     }
-   Ok(inputs)
+    Ok(inputs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cwl::{clt::CommandLineTool, requirements::EnvVarRequirement};
+
+    #[test]
+    fn test_requirements_overwrite_hints() {
+        let hint = EnvVarRequirement {
+            env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "HINT".to_string())])),
+        };
+        let requirement = EnvVarRequirement {
+            env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "REQUIREMENT".to_string())])),
+        };
+
+        let tool = CommandLineTool::default()
+            .with_requirements(vec![Requirement::EnvVarRequirement(requirement)])
+            .with_hints(vec![Requirement::EnvVarRequirement(hint)]);
+
+        let environment = collect_environment(&CWLDocument::CommandLineTool(tool));
+
+        assert_eq!(environment["MY_ENV"], "REQUIREMENT".to_string())
+    }
 }
