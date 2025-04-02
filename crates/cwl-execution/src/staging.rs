@@ -123,6 +123,7 @@ fn stage_input_files(
         if input.type_ != CWLType::File && input.type_ != CWLType::Directory {
             continue;
         }
+
         let incoming_data = evaluate_input(input, input_values)?;
         let mut incoming_file = incoming_data.as_value_string();
         //decode special characters

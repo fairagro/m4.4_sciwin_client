@@ -18,6 +18,7 @@ pub struct CommandInputParameter {
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(default)]
     #[serde(skip_serializing_if = "<&bool>::not")]
     pub load_contents: bool,
 }
