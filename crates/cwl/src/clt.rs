@@ -233,12 +233,9 @@ baseCommand:
                 type_: CWLType::Boolean,
                 input_binding: Some(CommandLineBinding {
                     prefix: Some("-la".to_string()),
-                    position: None,
-                    value_from: None,
-                    shell_quote: None,
+                    ..Default::default()
                 }),
-                default: None,
-                format: None,
+                ..Default::default()
             }])
             .with_outputs(vec![]);
         let result = serde_yaml::to_string(&tool);

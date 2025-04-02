@@ -3,7 +3,11 @@ use cwl::{
     types::{DefaultValue, EnviromentDefs},
     CWLDocument,
 };
-use std::{collections::HashMap, error::Error};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::{self},
+};
 
 use crate::util::evaluate_input;
 
@@ -40,7 +44,13 @@ pub(crate) fn collect_inputs(
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
-        inputs.insert(input.id.clone(), evaluate_input(input, &input_values)?);
+        let mut result_input = evaluate_input(input, &input_values)?;
+        if let DefaultValue::File(f) = &mut result_input {
+            if input.load_contents {
+                f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
+            }
+        }
+        inputs.insert(input.id.clone(), result_input);
     }
     Ok(inputs)
 }

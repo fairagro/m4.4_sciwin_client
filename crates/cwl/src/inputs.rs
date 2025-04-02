@@ -4,6 +4,7 @@ use super::{
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
+use std::ops::Not;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +18,8 @@ pub struct CommandInputParameter {
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(skip_serializing_if = "<&bool>::not")]
+    pub load_contents: bool,
 }
 
 impl CommandInputParameter {
@@ -142,7 +145,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_identifyable(){
+    pub fn test_identifyable() {
         let mut input = CommandInputParameter::default();
         assert_eq!(input.id(), "");
         input.set_id("test".to_string());
