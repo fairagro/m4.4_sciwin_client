@@ -50,7 +50,7 @@ impl FromStr for CWLType {
     }
 }
 
-impl CWLType{
+impl CWLType {
     pub fn is_optional(&self) -> bool {
         matches!(self, CWLType::Optional(_))
     }
@@ -310,12 +310,11 @@ impl File {
             basename: path.file_name().map(|f| f.to_string_lossy().into_owned()),
             dirname: None,
             nameroot: path.file_stem().map(|f| f.to_string_lossy().into_owned()),
-            nameext: path.extension().map(|f| f.to_string_lossy().into_owned()),
+            nameext: path.extension().map(|f| format!(".{}", f.to_string_lossy())),
             checksum: hash,
             size: Some(metadata.len()),
             secondary_files: self.secondary_files.clone(),
             format: resolve_format(self.format.clone()),
-            contents: None,
             ..Default::default()
         }
     }
@@ -530,7 +529,7 @@ mod tests {
 
         assert_eq!(result, expected.to_string());
     }
-    
+
     #[test]
     pub fn test_guess_type() {
         let inputs = &[

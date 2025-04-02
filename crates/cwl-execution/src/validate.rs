@@ -80,6 +80,16 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     if let Some(stdin) = &mut clt.stdin {
         *stdin = set_placeholder_values_in_string(stdin, runtime, &clt.base.inputs);
     }
+
+    //set values in stdout
+    if let Some(stdout) = &mut clt.stdout {
+        *stdout = set_placeholder_values_in_string(stdout, runtime, &clt.base.inputs);
+    }
+
+    //set values in stderr
+    if let Some(stderr) = &mut clt.stderr {
+        *stderr = set_placeholder_values_in_string(stderr, runtime, &clt.base.inputs);
+    }
 }
 
 fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) {

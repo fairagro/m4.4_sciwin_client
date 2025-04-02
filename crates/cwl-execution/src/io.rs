@@ -77,7 +77,7 @@ pub fn get_file_property(filename: impl AsRef<Path>, property_name: &str) -> Str
         "size" => get_file_size(filename).unwrap_or(1).to_string(),
         "basename" => make_string(filename.as_ref().file_name()),
         "nameroot" => make_string(filename.as_ref().file_stem()),
-        "nameext" => make_string(filename.as_ref().extension()),
+        "nameext" => format!(".{}", make_string(filename.as_ref().extension())), //needs leading dot
         "path" => filename.as_ref().to_string_lossy().into_owned(),
         "dirname" => {
             let path = filename.as_ref();
