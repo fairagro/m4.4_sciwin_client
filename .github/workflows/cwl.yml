@@ -10,16 +10,24 @@ jobs:
       contents: read
       actions: read
     steps:
-      - name: Fetch artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Cache Cargo
+        uses: actions/cache@v3
         with:
-          pattern: s4n-**-linux-x64
-          path: .     
+          path: |
+            ~/.cargo
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: build
+        run: cargo build --release
       - name: Clone CWL
         run: git clone https://github.com/common-workflow-language/cwl-v1.2
       - name: Create Wrapper
         run: |
-          mv s4n-**-linux-x64/s4n s4n
+          mv target/release/s4n s4n
           echo '#!/bin/bash
           s4n execute local "$@"' > s4n_wrapper.sh
           chmod +x s4n
