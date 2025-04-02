@@ -1,4 +1,3 @@
-use super::util::evaluate_input;
 use crate::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
 use cwl::{
     inputs::CommandInputParameter,
@@ -12,7 +11,7 @@ use std::{
     env,
     error::Error,
     fs,
-    path::{Path, MAIN_SEPARATOR_STR},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
 };
 use urlencoding::decode;
@@ -124,41 +123,39 @@ fn stage_input_files(
             continue;
         }
 
-        let incoming_data = evaluate_input(input, input_values)?;
-        let mut incoming_file = incoming_data.as_value_string();
-        //decode special characters
-        incoming_file = decode(&incoming_file).unwrap().to_string();
+        //get correct data
+        let data = &input_values[&input.id];
+        let data_location = decode(&data.as_value_string()).unwrap().to_string();
+        let mut data_path = PathBuf::from(&data_location);
 
         //check exists? otherwise search relative to tool
-        let mut incoming_path = Path::new(&incoming_file).to_path_buf();
-
-        if !incoming_path.exists() {
-            incoming_path = tool_path.join(&incoming_file);
+        if !data_path.exists() {
+            data_path = tool_path.join(data_path);
         }
-        incoming_file = incoming_path.to_string_lossy().to_string();
 
-        let outcoming_file = handle_filename(&incoming_data);
-        let outcoming_file_relative = make_relative_to(&outcoming_file, out_dir.to_str().unwrap_or_default());
-        let outcoming_file_stripped = outcoming_file_relative
+        let staged_filename = handle_filename(data);
+        let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
+        let staged_filename_relative = staged_filename_relative
             .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
             .to_string();
 
-        let into_path = path.join(&outcoming_file_stripped);
-        let path_str = &into_path.to_string_lossy();
+        let staged_path = path.join(staged_filename_relative);
+        let staged_path_str = staged_path.to_string_lossy().into_owned();
 
         if input.type_ == CWLType::File {
-            copy_file(&incoming_file, &into_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", incoming_file, path_str, e))?;
-            staged_files.push(path_str.clone().into_owned());
+            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", data_location, staged_path_str, e))?;
+            staged_files.push(staged_path_str.clone());
+            staged_files.extend(stage_secondary_files(data, path)?);
         } else if input.type_ == CWLType::Directory {
-            copy_dir(&incoming_file, &into_path).map_err(|e| format!("Failed to copy directory from {} to {}: {}", incoming_file, path_str, e))?;
-            staged_files.push(path_str.clone().into_owned());
+            copy_dir(&data_path, &staged_path)
+                .map_err(|e| format!("Failed to copy directory from {} to {}: {}", data_location, staged_path_str, e))?;
+            staged_files.push(staged_path_str.clone());
         }
-        staged_files.extend(stage_secondary_files(incoming_data, path)?);
     }
     Ok(staged_files)
 }
 
-fn stage_secondary_files(incoming_data: DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files = vec![];
     if let DefaultValue::File(file) = &incoming_data {
         if let Some(secondary_files) = &file.secondary_files {
@@ -261,13 +258,17 @@ mod tests {
 
         let test_dir = "tests/";
 
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::Directory)
-            .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
+        let value = DefaultValue::Directory(Directory::from_location(&test_dir.to_string()));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::Directory);
 
-        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
-
+        let list = stage_input_files(
+            &[input],
+            &HashMap::from([("test".to_string(), value)]),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
         let expected_path = tmp_dir.path().join(test_dir);
 
         assert_eq!(list.len(), 1);
@@ -282,12 +283,17 @@ mod tests {
 
         let test_dir = "tests/test_data/input.txt";
 
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
+        let value = DefaultValue::File(File::from_location(&test_dir.to_string()));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
 
-        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(
+            &[input],
+            &HashMap::from([("test".to_string(), value)]),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
 
         let expected_path = tmp_dir.path().join(test_dir);
 
@@ -302,12 +308,17 @@ mod tests {
 
         let test_dir = "tests/test_data/input.txt";
 
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&test_dir.to_string())));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
+        let value = DefaultValue::File(File::from_location(&test_dir.to_string()));
 
-        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(
+            &[input],
+            &HashMap::from([("test".to_string(), value)]),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -321,12 +332,17 @@ mod tests {
 
         let test_dir = "tests/test_data";
 
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::Directory)
-            .with_default_value(DefaultValue::Directory(Directory::from_location(&test_dir.to_string())));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::Directory);
+        let value = DefaultValue::Directory(Directory::from_location(&test_dir.to_string()));
 
-        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(
+            &[input],
+            &HashMap::from([("test".to_string(), value)]),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[]).unwrap();
         //file should be gone
@@ -340,16 +356,21 @@ mod tests {
 
         let test_file = "tests/test_data/input.txt";
 
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&test_file.to_string())));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
+        let value = DefaultValue::File(File::from_location(&test_file.to_string()));
 
         let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
             glob: "tests/test_data/input.txt".to_string(),
         });
 
-        let list = stage_input_files(&[input], &HashMap::new(), Path::new("../../"), tmp_dir.path(), &PathBuf::from("")).unwrap();
+        let list = stage_input_files(
+            &[input],
+            &HashMap::from([("test".to_string(), value)]),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
 
         unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
         //file should still be there
@@ -366,8 +387,7 @@ mod tests {
         let mut file = File::from_location(&test_file.to_string());
         file.secondary_files = Some(vec![DefaultValue::File(File::from_location(&secondary_file.to_string()))]);
         let data = DefaultValue::File(file);
-
-        let list = stage_secondary_files(data, tmp_dir.path()).unwrap();
+        let list = stage_secondary_files(&data, tmp_dir.path()).unwrap();
 
         let expected_path = tmp_dir.path().join(secondary_file.strip_prefix("../../").unwrap());
         //secondary file should be there
