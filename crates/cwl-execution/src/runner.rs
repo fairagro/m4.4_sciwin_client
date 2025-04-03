@@ -5,7 +5,10 @@ use crate::{
     format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
-    util::{copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
+    util::{
+        copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata,
+        is_docker_installed,
+    },
     validate::set_placeholder_values,
     CommandError,
 };
@@ -17,7 +20,7 @@ use cwl::{
     wf::Workflow,
     CWLDocument,
 };
-use log::info;
+use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
 use std::{
     collections::HashMap,
@@ -273,7 +276,12 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
     let mut command = build_command(tool, runtime)?;
 
     if let Some(docker) = tool.get_docker_requirement() {
-        command = build_docker_command(&mut command, docker, runtime);
+        if is_docker_installed() {
+            command = build_docker_command(&mut command, docker, runtime);
+        } else {
+            eprintln!("Docker is not installed, can not use containerization on this system!");
+            warn!("Docker is not installed, can not use");
+        }
     }
 
     //run
