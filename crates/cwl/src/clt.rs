@@ -4,7 +4,7 @@ use super::{
     requirements::Requirement,
     types::CWLType,
 };
-use crate::DocumentBase;
+use crate::{requirements::DockerRequirement, DocumentBase};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -136,6 +136,16 @@ impl CommandLineTool {
         } else {
             false
         }
+    }
+
+    pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
+        self.requirements.as_ref()?.iter().find_map(|req| {
+            if let Requirement::DockerRequirement(dr) = req {
+                Some(dr.clone()) // Return the found DockerRequirement
+            } else {
+                None
+            }
+        })
     }
 
     pub fn get_error_code(&self) -> i32 {

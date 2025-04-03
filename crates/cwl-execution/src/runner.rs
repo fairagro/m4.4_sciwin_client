@@ -12,12 +12,13 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::check_timelimit,
+    requirements::{check_timelimit, DockerRequirement},
     types::{CWLType, DefaultValue, PathItem},
     wf::Workflow,
     CWLDocument,
 };
 use log::info;
+use rand::{distr::Alphanumeric, Rng};
 use std::{
     collections::HashMap,
     env,
@@ -271,6 +272,10 @@ pub fn run_tool(
 pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, runtime)?;
 
+    if let Some(docker) = tool.get_docker_requirement() {
+        command = build_docker_command(&mut command, docker, runtime);
+    }
+
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
 
@@ -348,7 +353,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             args.extend(vec[1..].iter().cloned());
         }
     }
-    
+
     let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
 
     //handle arguments field...
@@ -444,6 +449,42 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     command.current_dir(runtime.runtime.get("outdir").unwrap_or(&current_dir));
 
     Ok(command)
+}
+
+fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+    let docker_image = match docker {
+        DockerRequirement::DockerPull(pull) => pull,
+        DockerRequirement::DockerFile { .. } => todo!(),
+    };
+    //TODO: do not hardcode docker
+    let mut docker_command = SystemCommand::new("docker");
+
+    //create workdir vars
+    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir_mount = format!("--mount=type=bind,source={},target={}", runtime.runtime["outdir"], &workdir);
+    let tmpdir_mount = format!("--mount=type=bind,source={},target=/tmp", runtime.runtime["tmpdir"]);
+    let workdir_arg = format!("--workdir={}", &workdir);
+
+    docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
+
+    //add all environment vars
+    docker_command.arg(format!("--env=HOME={}", &workdir));
+    docker_command.arg("--env=TMPDIR=/tmp");
+    for (key, val) in command.get_envs().skip_while(|(key, _)| *key == "HOME" || *key == "TMPDIR") {
+        docker_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
+    }
+
+    docker_command.arg(&docker_image);
+    docker_command.arg(command.get_program());
+
+    //rewrite home dir
+    let args = command
+        .get_args()
+        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], &workdir))
+        .collect::<Vec<_>>();
+    docker_command.args(args);
+
+    docker_command
 }
 
 #[cfg(test)]
