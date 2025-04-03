@@ -487,9 +487,11 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
 
     //create workdir vars
     let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    #[cfg(not(target_os = "windows"))]
     let outdir = &runtime.runtime["outdir"];
     #[cfg(target_os = "windows")]
     let outdir = format!("/{}", &runtime.runtime["outdir"].replace(":", ""));
+    #[cfg(not(target_os = "windows"))]
     let tmpdir = &runtime.runtime["tmpdir"];
     #[cfg(target_os = "windows")]
     let tmpdir = format!("/{}", &runtime.runtime["tmpdir"].replace(":", ""));
