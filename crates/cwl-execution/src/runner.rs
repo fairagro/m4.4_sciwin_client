@@ -487,8 +487,15 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
 
     //create workdir vars
     let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
-    let workdir_mount = format!("--mount=type=bind,source={},target={}", runtime.runtime["outdir"], &workdir);
-    let tmpdir_mount = format!("--mount=type=bind,source={},target=/tmp", runtime.runtime["tmpdir"]);
+    let outdir = &runtime.runtime["outdir"];
+    #[cfg(target_os = "windows")]
+    let outdir = format!("/{}", &runtime.runtime["outdir"]);
+    let tmpdir = &runtime.runtime["tmpdir"];
+    #[cfg(target_os = "windows")]
+    let tmpdir = format!("/{}", &runtime.runtime["tmpdir"]);
+
+    let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
+    let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
     println!("{}", runtime.runtime["outdir"]);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
