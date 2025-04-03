@@ -5,8 +5,24 @@ use cwl_execution::{
     environment::RuntimeEnvironment,
     runner::{run_command, run_tool},
 };
+use s4n::parser::parse_command_line;
 use serial_test::serial;
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, path::Path};
+
+#[test]
+#[serial]
+pub fn test_cwl_execute_command_multiple() {
+    with_temp_repository(|dir| {
+        let command = "python scripts/echo.py --test data/input.txt";
+        let args = shlex::split(command).expect("parsing failed");
+        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
+        assert!(run_command(&cwl, &Default::default()).is_ok());
+
+        let output_path = dir.path().join(Path::new("results.txt"));
+        assert!(output_path.exists());
+    });
+}
+
 
 #[test]
 #[serial]

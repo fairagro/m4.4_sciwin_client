@@ -306,25 +306,26 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cwl_execution::runner::run_command;
+    use rstest::rstest;
     use serde_yaml::Number;
-    //test private cwl api here
-    #[test]
-    pub fn test_get_base_command() {
-        let commands = ["python script.py --arg1 hello", "echo 'Hello World!'", "Rscript lol.R", ""];
-        let expected = [
-            Command::Multiple(vec!["python".to_string(), "script.py".to_string()]),
-            Command::Single("echo".to_string()),
-            Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]),
-            Command::Single(String::new()),
-        ];
 
-        for i in 0..commands.len() {
-            let args = shlex::split(commands[i]).unwrap();
-            let args_slice: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+    fn parse_command(command: &str) -> CommandLineTool {
+        let cmd = shlex::split(command).unwrap();
+        parse_command_line(cmd.iter().map(|s| s.as_str()).collect())
+    }
+    
+    #[rstest]
+    #[case("python script.py --arg1 hello", Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))]
+    #[case("echo 'Hello World!'", Command::Single("echo".to_string()))]
+    #[case("Rscript lol.R", Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]))]
+    #[case("", Command::Single(String::new()))]
+    pub fn test_get_base_command(#[case] command: &str, #[case] expected: Command) {
+        let args = shlex::split(command).unwrap();
+        let args_slice: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
 
-            let result = get_base_command(&args_slice);
-            assert_eq!(result, expected[i]);
-        }
+        let result = get_base_command(&args_slice);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -392,106 +393,80 @@ mod tests {
         let result = get_inputs(&[arg]);
         assert_eq!(result[0], expected);
     }
-    pub fn test_cases() -> Vec<(String, CommandLineTool)> {
-        vec![
-            (
-                "python script.py".to_string(),
-                CommandLineTool::default()
-                    .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-                    .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-                        "script.py",
-                    ))]),
-            ),
-            (
-                "Rscript script.R".to_string(),
-                CommandLineTool::default()
-                    .with_base_command(Command::Multiple(vec!["Rscript".to_string(), "script.R".to_string()]))
-                    .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-                        "script.R",
-                    ))]),
-            ),
-            (
-                "python script.py --option1 value1".to_string(),
-                CommandLineTool::default()
-                    .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-                    .with_inputs(vec![CommandInputParameter::default()
-                        .with_id("option1")
-                        .with_type(CWLType::String)
-                        .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
-                        .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
-                    .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-                        "script.py",
-                    ))]),
-            ),
-            (
-                "python script.py --option1 \"value with spaces\"".to_string(),
-                CommandLineTool::default()
-                    .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-                    .with_inputs(vec![CommandInputParameter::default()
-                        .with_id("option1")
-                        .with_type(CWLType::String)
-                        .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
-                        .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
-                    .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-                        "script.py",
-                    ))]),
-            ),
-            (
-                "python script.py positional1 --option1 value1".to_string(),
-                CommandLineTool::default()
-                    .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-                    .with_inputs(vec![
-                        CommandInputParameter::default()
-                            .with_id("positional1")
-                            .with_default_value(DefaultValue::Any(Value::String("positional1".to_string())))
-                            .with_type(CWLType::String)
-                            .with_binding(CommandLineBinding::default().with_position(0)),
-                        CommandInputParameter::default()
-                            .with_id("option1")
-                            .with_type(CWLType::String)
-                            .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
-                            .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
-                    ])
-                    .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-                        "script.py",
-                    ))]),
-            ),
-        ]
-    }
 
-    #[test]
-    pub fn test_parse_command_line() {
-        for (input, expected) in test_cases() {
-            let args = shlex::split(input.as_str()).expect("Parsing test case failed");
-            let result = parse_command_line(args.iter().map(AsRef::as_ref).collect());
-            assert_eq!(result, expected);
-            println!("{result:?}");
-        }
+    #[rstest]
+    #[case("python script.py", CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
+        )]
+    #[case("Rscript script.R", CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["Rscript".to_string(), "script.R".to_string()]))
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.R"))])
+    )]
+    #[case("python script.py --option1 value1", CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
+            .with_inputs(vec![CommandInputParameter::default()
+                .with_id("option1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
+    )]
+    #[case("python script.py --option1 \"value with spaces\"", CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
+            .with_inputs(vec![CommandInputParameter::default()
+                .with_id("option1")
+                .with_type(CWLType::String)
+                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
+    )]
+    #[case("python script.py positional1 --option1 value1",  CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
+            .with_inputs(vec![
+                CommandInputParameter::default()
+                    .with_id("positional1")
+                    .with_default_value(DefaultValue::Any(Value::String("positional1".to_string())))
+                    .with_type(CWLType::String)
+                    .with_binding(CommandLineBinding::default().with_position(0)),
+                CommandInputParameter::default()
+                    .with_id("option1")
+                    .with_type(CWLType::String)
+                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                    .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))
+            ])
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
+    )]
+    #[case("python tests/test_data/echo.py --test tests/test_data/input.txt", CommandLineTool::default()
+            .with_base_command(Command::Multiple(vec!["python".to_string(), "tests/test_data/echo.py".to_string()]))
+            .with_inputs(vec![
+                CommandInputParameter::default()
+                    .with_id("test")
+                    .with_type(CWLType::File)
+                    .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
+                    .with_default_value(DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())))])
+            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))])
+    )]
+    pub fn test_parse_command_line(#[case] input: &str, #[case] expected: CommandLineTool) {
+        let result = parse_command(input);
+        assert_eq!(result, expected);
     }
 
     #[test]
     pub fn test_parse_redirect() {
-        let command = "cat tests/test_data/input.txt \\> output.txt";
-        let split_params = shlex::split(command).unwrap();
-        let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
-
+        let tool = parse_command("cat tests/test_data/input.txt \\> output.txt");
         assert!(tool.stdout == Some("output.txt".to_string()));
     }
 
     #[test]
     pub fn test_parse_redirect_stderr() {
-        let command = "cat tests/test_data/inputtxt 2\\> err.txt";
-        let split_params = shlex::split(command).unwrap();
-        let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
-
+        let tool = parse_command("cat tests/test_data/inputtxt 2\\> err.txt");
         assert!(tool.stderr == Some("err.txt".to_string()));
     }
 
     #[test]
     pub fn test_parse_pipe_op() {
-        let command = "df \\| grep --line-buffered tmpfs \\> df.log";
-        let split_params = shlex::split(command).unwrap();
-        let tool = parse_command_line(split_params.iter().map(AsRef::as_ref).collect());
+        let tool = parse_command("df \\| grep --line-buffered tmpfs \\> df.log");
 
         assert!(tool.arguments.is_some());
         assert!(tool.has_shell_command_requirement());
@@ -505,5 +480,33 @@ mod tests {
         }
 
         assert!(tool.stdout.is_none()); //as it is in args!
+    }
+
+    #[test]
+    pub fn test_cwl_execute_command_single() {
+        let cwl = parse_command("ls -la .");
+        assert!(run_command(&cwl, &Default::default()).is_ok());
+    }
+
+    #[test]
+    pub fn test_get_outputs() {
+        let files = vec!["my-file.txt".to_string(), "archive.tar.gz".to_string()];
+        let expected = vec![
+            CommandOutputParameter::default()
+                .with_type(CWLType::File)
+                .with_id("my-file")
+                .with_binding(CommandOutputBinding {
+                    glob: "my-file.txt".to_string(),
+                }),
+            CommandOutputParameter::default()
+                .with_type(CWLType::File)
+                .with_id("archive")
+                .with_binding(CommandOutputBinding {
+                    glob: "archive.tar.gz".to_string(),
+                }),
+        ];
+
+        let outputs = get_outputs(files);
+        assert_eq!(outputs, expected);
     }
 }
