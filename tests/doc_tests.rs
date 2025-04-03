@@ -4,8 +4,11 @@ use common::{check_git_user, setup_python};
 use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, types::Entry};
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
-        execute::{execute_local, LocalExecuteArgs, Runner}, init::init_s4n, tool::{create_tool, list_tools, CreateToolArgs}, workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs}
-    };
+    execute::{execute_local, LocalExecuteArgs, Runner},
+    init::init_s4n,
+    tool::{create_tool, list_tools, CreateToolArgs},
+    workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
+};
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{tempdir, TempDir};
@@ -337,7 +340,7 @@ pub fn test_example_project() {
     let test_folder = "tests/test_data/hello_world";
     copy_dir(test_folder, dir.path()).unwrap();
 
-    //delete all cwl files as we want to generate 
+    //delete all cwl files as we want to generate
     fs::remove_dir_all(dir.path().join("workflows/main")).unwrap();
     fs::remove_file(dir.path().join("workflows/plot/plot.cwl")).unwrap();
     fs::remove_file(dir.path().join("workflows/calculation/calculation.cwl")).unwrap();
@@ -365,6 +368,7 @@ pub fn test_example_project() {
             "data/population.csv".to_string(),
         ]
         .to_vec(),
+        container_image: Some("pandas/pandas:pip-all".to_string()),
         ..Default::default()
     })
     .expect("Could not create calculation tool");
