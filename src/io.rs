@@ -2,7 +2,11 @@ use cwl::clt::Command;
 use std::path::Path;
 
 pub fn get_filename_without_extension(relative_path: impl AsRef<Path>) -> String {
-    let filename = relative_path.as_ref().file_name().map(|f| f.to_string_lossy()).unwrap_or(relative_path.as_ref().to_string_lossy());
+    let filename = relative_path
+        .as_ref()
+        .file_name()
+        .map(|f| f.to_string_lossy())
+        .unwrap_or(relative_path.as_ref().to_string_lossy());
     filename.split('.').next().unwrap_or(&filename).to_string()
 }
 
@@ -44,4 +48,57 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     filename.push_str(".cwl");
 
     format!("{}{foldername}/{filename}", get_workflows_folder())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    pub fn os_path(path: &str) -> String {
+        if cfg!(target_os = "windows") {
+            Path::new(path).to_string_lossy().replace('/', "\\")
+        } else {
+            path.to_string()
+        }
+    }
+
+    #[rstest]
+    #[case("results.csv", "results")]
+    #[case("/some/relative/path.txt", "path")]
+    #[case("some/archive.tar.gz", "archive")]
+    pub fn test_get_filename_without_extension(#[case] input: &str, #[case] expected: &str) {
+        assert_eq!(get_filename_without_extension(input), expected.to_string());
+    }
+
+    #[rstest]
+    #[case("tests/testdata/input.txt", "workflows/echo/echo.cwl", "../../tests/testdata/input.txt")]
+    #[case("tests/testdata/input.txt", "workflows/echo/", "../../tests/testdata/input.txt")]
+    #[case("workflows/echo/echo.py", "workflows/echo/echo.cwl", "echo.py")]
+    #[case("workflows/lol/echo.py", "workflows/echo/echo.cwl", "../lol/echo.py")]
+    #[case("/home/user/workflows/echo/echo.py", "/home/user/workflows/echo/echo.cwl", "echo.py")]
+    fn test_resolve_path(#[case] path: &str, #[case] relative_to: &str, #[case] expected: &str) {
+        assert_eq!(resolve_path(path, relative_to), os_path(expected));
+    }
+
+    #[test]
+    pub fn test_get_workflows_folder() {
+        //could be variable in future
+        assert_eq!(get_workflows_folder(), "workflows/");
+    }
+
+    #[rstest]
+    #[case(Command::Multiple(vec!["python".to_string(), "test/data/script.py".to_string()]), "workflows/script/script.cwl")]
+    #[case(Command::Single("echo".to_string()), "workflows/echo/echo.cwl")]
+    fn test_get_qualified_filename(#[case] command: Command, #[case] expected: &str) {
+        assert_eq!(get_qualified_filename(&command, None), expected);
+    }
+
+    #[test]
+    fn test_get_qualified_filename_with_name() {
+        assert_eq!(
+            get_qualified_filename(&Command::Single("echo".to_string()), Some("hello".to_string())),
+            "workflows/hello/hello.cwl"
+        );
+    }
 }

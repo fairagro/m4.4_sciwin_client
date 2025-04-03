@@ -1,5 +1,6 @@
 use git2::{Config, Repository};
 use s4n::repo::{initial_commit, stage_all};
+use core::panic;
 use std::{
     env::{self},
     fs::{copy, create_dir_all},
@@ -7,7 +8,6 @@ use std::{
     process::Command,
 };
 use tempfile::{tempdir, TempDir};
-
 
 #[allow(dead_code)]
 pub fn setup_python(dir_str: &str) -> (String, String) {
@@ -38,12 +38,13 @@ pub fn check_git_user() -> Result<(), git2::Error> {
     }
 
     if config.get_string("user.email").is_err() {
-        config.set_str("user.email", &format!("{}@example.com", whoami::username())).expect("Could not set email");
+        config
+            .set_str("user.email", &format!("{}@example.com", whoami::username()))
+            .expect("Could not set email");
     }
 
     Ok(())
 }
-
 
 /// Sets up a temporary repository with test data
 #[allow(dead_code)]
@@ -93,8 +94,7 @@ fn set_up_repository() -> TempDir {
 /// You *must* specify `#[serial]` for those tests
 #[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
-where
-    F: FnOnce(&TempDir),
+where F: FnOnce(&TempDir) + panic::UnwindSafe,
 {
     let dir = set_up_repository();
     let current_dir = env::current_dir().expect("Could not get current working directory");

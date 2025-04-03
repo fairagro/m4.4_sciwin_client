@@ -3161,6 +3161,7 @@ dependencies = [
  "predicates",
  "prettytable-rs",
  "reqwest",
+ "rstest",
  "rust_xlsxwriter",
  "serde",
  "serde_json",
