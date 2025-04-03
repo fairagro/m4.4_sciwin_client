@@ -13,7 +13,7 @@ use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
     requirements::{check_timelimit, DockerRequirement},
-    types::{CWLType, DefaultValue, PathItem},
+    types::{CWLType, DefaultValue, Entry, PathItem},
     wf::Workflow,
     CWLDocument,
 };
@@ -454,7 +454,25 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
     let docker_image = match docker {
         DockerRequirement::DockerPull(pull) => pull,
-        DockerRequirement::DockerFile { .. } => todo!(),
+        DockerRequirement::DockerFile {
+            docker_file,
+            docker_image_id,
+        } => {
+            let path = match docker_file {
+                Entry::Include(include) => include.include,
+                Entry::Source(src) => {
+                    let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
+                    fs::write(&path, src).unwrap();
+                    path
+                }
+            };
+            //TODO: do not hardcode docker
+            let mut build = SystemCommand::new("docker");
+            build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
+            let output = build.output().unwrap();
+            println!("{}", String::from_utf8_lossy(&output.stderr));
+            docker_image_id
+        }
     };
     //TODO: do not hardcode docker
     let mut docker_command = SystemCommand::new("docker");

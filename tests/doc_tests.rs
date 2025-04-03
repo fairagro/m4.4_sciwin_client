@@ -382,12 +382,13 @@ pub fn test_example_project() {
             "--results".to_string(),
             "results.csv".to_string(),
         ]
-        .to_vec(),
+        .to_vec(),        
+        container_image: Some("workflows/plot/Dockerfile".to_string()),
+        container_tag: Some("matplotlib".to_string()),
         ..Default::default()
     })
     .expect("Could not create plot tool");
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
-
     //list tools
     list_tools(&Default::default()).unwrap();
 
