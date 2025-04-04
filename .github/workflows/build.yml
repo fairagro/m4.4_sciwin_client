@@ -38,7 +38,7 @@ jobs:
           podman machine init
           podman machine start
           alias docker='podman'
-      - name: Setup podman (shitty on windows)
+      - name: Setup podman (because docker is shitty on windows runner)
         if: runner.os == 'windows'
         shell: powershell
         run: |
