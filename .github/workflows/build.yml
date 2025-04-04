@@ -10,7 +10,7 @@ jobs:
         include:
           - os: "windows-2025"
           - os: "ubuntu-latest"
-          - os: "macos-latest"
+          - os: "macos-13"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
