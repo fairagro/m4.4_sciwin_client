@@ -27,7 +27,7 @@ use std::{
     env,
     error::Error,
     fs::{self},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR},
     process::Command as SystemCommand,
     time::{Duration, Instant},
 };
@@ -486,15 +486,9 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new("docker");
 
     //create workdir vars
-    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
-    #[cfg(not(target_os = "windows"))]
+    let workdir = format!("{MAIN_SEPARATOR}{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
     let outdir = &runtime.runtime["outdir"];
-    #[cfg(target_os = "windows")]
-    let outdir = format!("/{}", &runtime.runtime["outdir"].replace(":", ""));
-    #[cfg(not(target_os = "windows"))]
     let tmpdir = &runtime.runtime["tmpdir"];
-    #[cfg(target_os = "windows")]
-    let tmpdir = format!("/{}", &runtime.runtime["tmpdir"].replace(":", ""));
 
     let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
