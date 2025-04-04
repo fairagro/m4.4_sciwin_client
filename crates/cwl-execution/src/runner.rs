@@ -509,7 +509,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     //rewrite home dir
     let args = command
         .get_args()
-        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], &workdir).replace("\\", "/"))
+        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], workdir).replace("\\", "/"))
         .collect::<Vec<_>>();
     docker_command.args(args);
     
