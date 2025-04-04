@@ -475,7 +475,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
                 }
             };
             //TODO: do not hardcode docker
-            let mut build = SystemCommand::new("docker");
+            let mut build = SystemCommand::new("podman");
             build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
             let output = build.output().expect("Could not build container!");
             println!("{}", String::from_utf8_lossy(&output.stderr));
@@ -483,7 +483,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         }
     };
     //TODO: do not hardcode docker
-    let mut docker_command = SystemCommand::new("docker");
+    let mut docker_command = SystemCommand::new("podman");
 
     //create workdir vars
     let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
