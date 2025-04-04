@@ -10,7 +10,7 @@ jobs:
         include:
           - os: "windows-latest"
           - os: "ubuntu-latest"
-          - os: "macos-latest"
+          - os: "macos-15"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
@@ -34,10 +34,9 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
-          brew install podman
-          podman machine init
-          podman machine start
-          alias docker='podman'
+          brew install --cask docker
+          brew install colima
+          colima start
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool
