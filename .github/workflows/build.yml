@@ -34,9 +34,10 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
-          brew install --cask docker
-          brew install colima
-          colima start
+          brew install podman
+          podman machine init
+          podman machine start
+          alias docker='podman'
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool
