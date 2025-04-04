@@ -8,7 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: "windows-latest"
+          - os: "windows-2025"
           - os: "ubuntu-latest"
           - os: "macos-latest"
     runs-on: ${{matrix.os}}
@@ -38,6 +38,14 @@ jobs:
           podman machine init
           podman machine start
           alias docker='podman'
+      - name: Setup podman (shitty on windows)
+        if: runner.os == 'windows'
+        shell: powershell
+        run: |
+          choco install podman-cli
+          podman machine init
+          podman machine start
+          $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool

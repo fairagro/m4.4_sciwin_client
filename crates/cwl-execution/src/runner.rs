@@ -490,7 +490,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
-    let workdir_mount = format!("--mount=type=bind,source={outdir},target=/{workdir}");
+    let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
