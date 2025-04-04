@@ -21,7 +21,7 @@ use cwl::{
     CWLDocument,
 };
 use log::{info, warn};
-//use rand::{distr::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use std::{
     collections::HashMap,
     env,
@@ -486,12 +486,11 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new("docker");
 
     //create workdir vars
-    //let workdir = format!("/mnt/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
-    let workdir = "/data";
+    let workdir = format!("/mnt/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
-    let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
+    let workdir_mount = format!("--mount=type=bind,source={outdir},target=C:\\{workdir}");
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
@@ -509,7 +508,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     //rewrite home dir
     let args = command
         .get_args()
-        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], workdir).replace("\\", "/"))
+        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], &workdir).replace("\\", "/"))
         .collect::<Vec<_>>();
     docker_command.args(args);
     
