@@ -8,9 +8,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: "windows-2025"
+          - os: "windows-latest"
           - os: "ubuntu-latest"
-          - os: "macos-15-large"
+          - os: "macos-latest"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
