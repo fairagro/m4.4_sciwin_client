@@ -34,8 +34,9 @@ jobs:
       - name: Setup docker (missing on MacOS)
         if: runner.os == 'macos'
         run: |
-          brew install --cask docker
-          open /Applications/Docker.app
+          brew install colima
+          brew install docker
+          colima start
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool
