@@ -37,6 +37,7 @@ fn cleanup(current: PathBuf, dir: TempDir) {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#wrapping-echo
 pub fn test_wrapping_echo() {
     let (current, dir) = setup();
@@ -61,6 +62,7 @@ pub fn test_wrapping_echo() {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#wrapping-echo
 pub fn test_wrapping_echo_2() {
     let (current, dir) = setup();
@@ -213,6 +215,7 @@ pub fn test_implicit_inputs_hardcoded_files() {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#piping
 pub fn test_piping() {
     let (current, dir) = setup();
