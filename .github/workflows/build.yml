@@ -36,7 +36,7 @@ jobs:
         run: |
           brew install podman
           podman machine init
-          podman machine start
+          podman machine start --log-level=debug
           alias docker='podman'
       - name: Setup podman (because docker is shitty on windows runner)
         if: runner.os == 'windows'
