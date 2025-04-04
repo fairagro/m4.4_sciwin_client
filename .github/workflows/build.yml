@@ -42,10 +42,10 @@ jobs:
         if: runner.os == 'windows'
         shell: powershell
         run: |
+          $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
           choco install podman-cli
           podman machine init
           podman machine start
-          $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool
