@@ -42,6 +42,7 @@ jobs:
         if: runner.os == 'windows'
         shell: powershell
         run: |
+          Stop-Service docker
           choco install podman-cli
           podman machine init
           $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
