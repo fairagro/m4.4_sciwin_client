@@ -518,7 +518,6 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         .collect::<Vec<_>>();
     docker_command.args(args);
 
-    println!("{:?}", docker_command);
     docker_command
 }
 
