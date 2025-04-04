@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
@@ -37,7 +40,7 @@ jobs:
           brew install podman
           podman machine init
           podman machine start --log-level=debug
-          alias docker='podman'
+          sudo ln -s $(which podman) /usr/local/bin/docker
       - name: Setup podman (because docker is shitty on windows runner)
         if: runner.os == 'windows'
         shell: powershell
