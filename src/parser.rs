@@ -483,6 +483,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(target_os = "windows", ignore)]
     pub fn test_cwl_execute_command_single() {
         let cwl = parse_command("ls -la .");
         assert!(run_command(&cwl, &Default::default()).is_ok());
