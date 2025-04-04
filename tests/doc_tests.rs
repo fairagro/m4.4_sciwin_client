@@ -4,8 +4,11 @@ use common::{check_git_user, setup_python};
 use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, types::Entry};
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
-        execute::{execute_local, LocalExecuteArgs, Runner}, init::init_s4n, tool::{create_tool, list_tools, CreateToolArgs}, workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs}
-    };
+    execute::{execute_local, LocalExecuteArgs, Runner},
+    init::init_s4n,
+    tool::{create_tool, list_tools, CreateToolArgs},
+    workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
+};
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{tempdir, TempDir};
@@ -34,6 +37,7 @@ fn cleanup(current: PathBuf, dir: TempDir) {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#wrapping-echo
 pub fn test_wrapping_echo() {
     let (current, dir) = setup();
@@ -58,6 +62,7 @@ pub fn test_wrapping_echo() {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#wrapping-echo
 pub fn test_wrapping_echo_2() {
     let (current, dir) = setup();
@@ -210,6 +215,7 @@ pub fn test_implicit_inputs_hardcoded_files() {
 
 #[test]
 #[serial]
+#[cfg_attr(target_os = "windows", ignore)]
 ///see https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/#piping
 pub fn test_piping() {
     let (current, dir) = setup();
@@ -337,7 +343,7 @@ pub fn test_example_project() {
     let test_folder = "tests/test_data/hello_world";
     copy_dir(test_folder, dir.path()).unwrap();
 
-    //delete all cwl files as we want to generate 
+    //delete all cwl files as we want to generate
     fs::remove_dir_all(dir.path().join("workflows/main")).unwrap();
     fs::remove_file(dir.path().join("workflows/plot/plot.cwl")).unwrap();
     fs::remove_file(dir.path().join("workflows/calculation/calculation.cwl")).unwrap();
@@ -365,6 +371,7 @@ pub fn test_example_project() {
             "data/population.csv".to_string(),
         ]
         .to_vec(),
+        container_image: Some("pandas/pandas:pip-all".to_string()),
         ..Default::default()
     })
     .expect("Could not create calculation tool");
@@ -378,12 +385,13 @@ pub fn test_example_project() {
             "--results".to_string(),
             "results.csv".to_string(),
         ]
-        .to_vec(),
+        .to_vec(),        
+        container_image: Some("workflows/plot/Dockerfile".to_string()),
+        container_tag: Some("matplotlib".to_string()),
         ..Default::default()
     })
     .expect("Could not create plot tool");
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
-
     //list tools
     list_tools(&Default::default()).unwrap();
 

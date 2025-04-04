@@ -8,7 +8,7 @@ use cwl::{
 };
 use fancy_regex::Regex;
 use serde_yaml::Value;
-use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path};
+use std::{collections::HashMap, env, error::Error, fmt::Debug, fs, path::Path, process::Command};
 
 ///Either gets the default value for input or the provided one (preferred)
 pub(crate) fn evaluate_input_as_string(
@@ -217,6 +217,12 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
             }
         })
         .to_string()
+}
+
+pub fn is_docker_installed() -> bool {
+    let output = Command::new("docker").arg("--version").output();
+
+    matches!(output, Ok(output) if output.status.success())
 }
 
 #[cfg(test)]
