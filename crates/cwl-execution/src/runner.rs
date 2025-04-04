@@ -27,7 +27,7 @@ use std::{
     env,
     error::Error,
     fs::{self},
-    path::{Path, PathBuf, MAIN_SEPARATOR},
+    path::{Path, PathBuf},
     process::Command as SystemCommand,
     time::{Duration, Instant},
 };
@@ -486,14 +486,13 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new("docker");
 
     //create workdir vars
-    let workdir = format!("{MAIN_SEPARATOR}{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
     let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
-    println!("{}", outdir);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
 
     //add all environment vars
@@ -512,7 +511,8 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], &workdir))
         .collect::<Vec<_>>();
     docker_command.args(args);
-
+    
+    println!("{:?}", docker_command);
     docker_command
 }
 
