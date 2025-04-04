@@ -460,6 +460,8 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 }
 
 fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+    let container_engine = env::var("S4N_CONTAINER_ENGINE").unwrap_or("docker".to_string());
+
     let docker_image = match docker {
         DockerRequirement::DockerPull(pull) => pull,
         DockerRequirement::DockerFile {
@@ -474,16 +476,15 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
                     path
                 }
             };
-            //TODO: do not hardcode docker
-            let mut build = SystemCommand::new("podman");
+
+            let mut build = SystemCommand::new(&container_engine);
             build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
             let output = build.output().expect("Could not build container!");
             println!("{}", String::from_utf8_lossy(&output.stderr));
             docker_image_id
         }
     };
-    //TODO: do not hardcode docker
-    let mut docker_command = SystemCommand::new("podman");
+    let mut docker_command = SystemCommand::new(&container_engine);
 
     //create workdir vars
     let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
@@ -508,10 +509,15 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     //rewrite home dir
     let args = command
         .get_args()
-        .map(|arg| arg.to_string_lossy().into_owned().replace(&runtime.runtime["outdir"], &workdir).replace("\\", "/"))
+        .map(|arg| {
+            arg.to_string_lossy()
+                .into_owned()
+                .replace(&runtime.runtime["outdir"], &workdir)
+                .replace("\\", "/")
+        })
         .collect::<Vec<_>>();
     docker_command.args(args);
-    
+
     println!("{:?}", docker_command);
     docker_command
 }
