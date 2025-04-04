@@ -486,7 +486,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new("docker");
 
     //create workdir vars
-    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir = format!("/mnt/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
