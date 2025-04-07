@@ -3,7 +3,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
     CWLDocument,
 };
-use cwl_execution::execute_cwlfile;
+use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use log::info;
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
@@ -37,6 +37,8 @@ pub struct LocalExecuteArgs {
     pub out_dir: Option<String>,
     #[arg(long = "quiet", help = "Runner does not print to stdout")]
     pub is_quiet: bool,
+    #[arg(long = "podman", help = "Use podman instead of docker")]
+    pub podman: bool,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
@@ -66,6 +68,9 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             if let Some(outdir) = &args.out_dir {
                 cmd.arg("--outdir").arg(outdir);
             }
+            if args.podman {
+                cmd.arg("--podman");
+            }
 
             cmd.arg(&args.file).args(&args.args);
             let output = &cmd.output()?;
@@ -80,12 +85,17 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
         Runner::Custom => {
             if !args.is_quiet {
                 info!(
-                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
-⚠️  The internal runner currently is for testing purposes only and does not support containerization, yet!",
+                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed).",
                     &args.file
                 );
             }
 
+            if args.podman {
+                set_container_engine(ContainerEngine::Podman);
+            } else {
+                set_container_engine(ContainerEngine::Docker);
+            }
+            
             execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
         }
     }
@@ -95,7 +105,8 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(filename)?;
     let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
 
-    let template = &cwl.inputs
+    let template = &cwl
+        .inputs
         .iter()
         .map(|i| {
             let id = &i.id;

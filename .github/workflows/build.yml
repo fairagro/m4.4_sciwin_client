@@ -5,15 +5,19 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: "windows-latest"
+          - os: "windows-2025"
           - os: "ubuntu-latest"
           - os: "macos-latest"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
@@ -29,7 +33,16 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-      
+      - name: Setup podman (because docker is shitty on windows runner)
+        if: runner.os == 'windows'
+        shell: powershell
+        run: |
+          Stop-Service docker
+          choco install podman-cli
+          podman machine init
+          $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
+          podman machine start
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool

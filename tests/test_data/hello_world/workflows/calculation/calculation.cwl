@@ -9,6 +9,8 @@ requirements:
   - entryname: workflows/calculation/calculation.py
     entry:
       $include: calculation.py
+- class: DockerRequirement
+  dockerPull: pandas/pandas:pip-all
 
 inputs:
 - id: population

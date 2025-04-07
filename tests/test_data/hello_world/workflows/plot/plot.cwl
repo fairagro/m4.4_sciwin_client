@@ -9,6 +9,10 @@ requirements:
   - entryname: workflows/plot/plot.py
     entry:
       $include: plot.py
+- class: DockerRequirement
+  dockerFile: 
+    $include: Dockerfile
+  dockerImageId: matplotlib
 
 inputs:
 - id: results

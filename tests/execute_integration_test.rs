@@ -1,5 +1,3 @@
-mod common;
-use common::setup_python;
 use cwl_execution::io::copy_dir;
 use s4n::commands::execute::{execute_local, LocalExecuteArgs, Runner};
 use serial_test::serial;
@@ -135,6 +133,8 @@ pub fn test_execute_local_cwltool() {
 
 #[test]
 #[serial]
+//docker not working on MacOS Github Actions
+#[cfg_attr(target_os = "macos", ignore)]
 pub fn test_execute_local_workflow() {
     let folder = "./tests/test_data/hello_world";
 
@@ -144,11 +144,6 @@ pub fn test_execute_local_workflow() {
 
     let current_dir = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
-    let (newpath, restore) = setup_python(dir_str);
-
-    //modify path variable
-    env::set_var("PATH", newpath);
-
     //execute workflow
     let args = LocalExecuteArgs {
         file: PathBuf::from(format!("{dir_str}/workflows/main/main.cwl")),
@@ -164,8 +159,6 @@ pub fn test_execute_local_workflow() {
     let path = Path::new(&results_url);
     assert!(path.exists());
 
-    //reset
-    env::set_var("PATH", restore);
     env::set_current_dir(current_dir).unwrap();
 }
 

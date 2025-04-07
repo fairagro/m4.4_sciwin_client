@@ -118,22 +118,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         cwl = cwl.with_outputs(parser::get_outputs(outputs.to_vec()));
     }
 
-    // Handle container requirements
-    if let Some(container) = &args.container_image {
-        let requirement = if container.contains("Dockerfile") {
-            let image_id = args.container_tag.as_deref().unwrap_or("sciwin-container");
-            Requirement::DockerRequirement(DockerRequirement::from_file(container, image_id))
-        } else {
-            Requirement::DockerRequirement(DockerRequirement::from_pull(container))
-        };
-
-        if let Some(ref mut vec) = cwl.requirements {
-            vec.push(requirement);
-        } else {
-            cwl = cwl.with_requirements(vec![requirement]);
-        }
-    }
-
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
@@ -190,6 +174,22 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         }
     } else {
         warn!("User requested no run, could not determine outputs!");
+    }
+
+    // Handle container requirements
+    if let Some(container) = &args.container_image {
+        let requirement = if container.contains("Dockerfile") {
+            let image_id = args.container_tag.as_deref().unwrap_or("sciwin-container");
+            Requirement::DockerRequirement(DockerRequirement::from_file(container, image_id))
+        } else {
+            Requirement::DockerRequirement(DockerRequirement::from_pull(container))
+        };
+
+        if let Some(ref mut vec) = cwl.requirements {
+            vec.push(requirement);
+        } else {
+            cwl = cwl.with_requirements(vec![requirement]);
+        }
     }
 
     post_process_cwl(&mut cwl);

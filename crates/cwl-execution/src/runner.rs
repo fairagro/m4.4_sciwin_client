@@ -1,23 +1,28 @@
 use crate::{
+    container_engine,
     environment::{collect_environment, collect_inputs, RuntimeEnvironment},
     execute,
     expression::{eval_tool, parse_expressions, prepare_expression_engine, reset_expression_engine},
     format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
-    util::{copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata},
+    util::{
+        copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata,
+        is_docker_installed,
+    },
     validate::set_placeholder_values,
     CommandError,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::check_timelimit,
-    types::{CWLType, DefaultValue, PathItem},
+    requirements::{check_timelimit, DockerRequirement},
+    types::{CWLType, DefaultValue, Entry, PathItem},
     wf::Workflow,
     CWLDocument,
 };
-use log::info;
+use log::{info, warn};
+use rand::{distr::Alphanumeric, Rng};
 use std::{
     collections::HashMap,
     env,
@@ -271,6 +276,15 @@ pub fn run_tool(
 pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, runtime)?;
 
+    if let Some(docker) = tool.get_docker_requirement() {
+        if is_docker_installed() {
+            command = build_docker_command(&mut command, docker, runtime);
+        } else {
+            eprintln!("Docker is not installed, can not use containerization on this system!");
+            warn!("Docker is not installed, can not use");
+        }
+    }
+
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
 
@@ -348,7 +362,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             args.extend(vec[1..].iter().cloned());
         }
     }
-    
+
     let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
 
     //handle arguments field...
@@ -446,8 +460,74 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     Ok(command)
 }
 
+fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+    let container_engine = container_engine().to_string();
+
+    let docker_image = match docker {
+        DockerRequirement::DockerPull(pull) => pull,
+        DockerRequirement::DockerFile {
+            docker_file,
+            docker_image_id,
+        } => {
+            let path = match docker_file {
+                Entry::Include(include) => include.include,
+                Entry::Source(src) => {
+                    let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
+                    fs::write(&path, src).unwrap();
+                    path
+                }
+            };
+
+            let mut build = SystemCommand::new(&container_engine);
+            build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
+            let output = build.output().expect("Could not build container!");
+            println!("{}", String::from_utf8_lossy(&output.stderr));
+            docker_image_id
+        }
+    };
+    let mut docker_command = SystemCommand::new(&container_engine);
+
+    //create workdir vars
+    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let outdir = &runtime.runtime["outdir"];
+    let tmpdir = &runtime.runtime["tmpdir"];
+
+    let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
+    let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
+    let workdir_arg = format!("--workdir={}", &workdir);
+    docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
+
+    //add all environment vars
+    docker_command.arg(format!("--env=HOME={}", &workdir));
+    docker_command.arg("--env=TMPDIR=/tmp");
+    for (key, val) in command.get_envs().skip_while(|(key, _)| *key == "HOME" || *key == "TMPDIR") {
+        docker_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
+    }
+
+    docker_command.arg(&docker_image);
+    docker_command.arg(command.get_program());
+
+    //rewrite home dir
+    let args = command
+        .get_args()
+        .map(|arg| {
+            arg.to_string_lossy()
+                .into_owned()
+                .replace(&runtime.runtime["outdir"], &workdir)
+                .replace("\\", "/")
+        })
+        .collect::<Vec<_>>();
+    docker_command.args(args);
+
+    docker_command
+}
+
 #[cfg(test)]
 mod tests {
+    use cwl::load_tool;
+
+    use crate::set_container_engine;
+
     use super::*;
 
     #[test]
@@ -535,5 +615,44 @@ stdout: output.txt"#;
         let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
 
         assert_eq!(format_command(&cmd), format!("{shell} {c_arg} cd $(inputs.indir.path) && find . | sort"));
+    }
+
+    #[test]
+    fn test_build_command_docker() {
+        set_container_engine(crate::ContainerEngine::Docker);
+        //tool has docker requirement
+        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let runtime = RuntimeEnvironment {
+            runtime: HashMap::from([
+                ("outdir".to_string(), "testdir".to_string()),
+                ("tmpdir".to_string(), "testdir".to_string()),
+            ]),
+            ..Default::default()
+        };
+
+        let mut cmd = build_command(&tool, &runtime).unwrap();
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        print!("{}", format_command(&cmd));
+        assert!(cmd.get_program().to_string_lossy().contains("docker"));
+    }
+
+    #[test]
+    fn test_build_command_podman() {
+        set_container_engine(crate::ContainerEngine::Podman);
+
+        //tool has docker requirement
+        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let runtime = RuntimeEnvironment {
+            runtime: HashMap::from([
+                ("outdir".to_string(), "testdir".to_string()),
+                ("tmpdir".to_string(), "testdir".to_string()),
+            ]),
+            ..Default::default()
+        };
+
+        let mut cmd = build_command(&tool, &runtime).unwrap();
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        print!("{}", format_command(&cmd));
+        assert!(cmd.get_program().to_string_lossy().contains("podman"));
     }
 }
