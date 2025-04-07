@@ -618,6 +618,7 @@ stdout: output.txt"#;
 
     #[test]
     fn test_build_command_docker() {
+        set_container_engine(crate::ContainerEngine::Docker);
         //tool has docker requirement
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
