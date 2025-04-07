@@ -336,6 +336,8 @@ pub fn test_building_custom_containers() {
 #[test]
 #[serial]
 ///see https://fairagro.github.io/m4.4_sciwin_client/getting-started/example/
+//docker not working on MacOS Github Actions
+#[cfg_attr(target_os = "macos", ignore)]
 pub fn test_example_project() {
     //set up environment
     let dir = tempdir().unwrap();
@@ -385,7 +387,7 @@ pub fn test_example_project() {
             "--results".to_string(),
             "results.csv".to_string(),
         ]
-        .to_vec(),        
+        .to_vec(),
         container_image: Some("workflows/plot/Dockerfile".to_string()),
         container_tag: Some("matplotlib".to_string()),
         ..Default::default()

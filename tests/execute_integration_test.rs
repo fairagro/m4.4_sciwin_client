@@ -133,6 +133,8 @@ pub fn test_execute_local_cwltool() {
 
 #[test]
 #[serial]
+//docker not working on MacOS Github Actions
+#[cfg_attr(target_os = "macos", ignore)]
 pub fn test_execute_local_workflow() {
     let folder = "./tests/test_data/hello_world";
 

@@ -10,7 +10,7 @@ jobs:
         include:
           - os: "windows-2025"
           - os: "ubuntu-latest"
-          - os: "macos-13"
+          - os: "macos-latest"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
@@ -33,14 +33,7 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Setup docker (missing on MacOS)
-        if: runner.os == 'macos'
-        run: |
-          brew install podman
-          podman machine init
-          podman machine start --log-level=debug
-          sudo ln -s $(which podman) /usr/local/bin/docker
+            ${{ runner.os }}-pip-      
       - name: Setup podman (because docker is shitty on windows runner)
         if: runner.os == 'windows'
         shell: powershell
