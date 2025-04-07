@@ -1,4 +1,7 @@
 # Unreleased
+## New Features
+- Added Containerization Support (Docker & Podman) for `s4n execute local`
+
 ## Bugxixes
 - Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 109/378
 
