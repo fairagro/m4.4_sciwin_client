@@ -1,4 +1,5 @@
 use crate::{
+    container_engine,
     environment::{collect_environment, collect_inputs, RuntimeEnvironment},
     execute,
     expression::{eval_tool, parse_expressions, prepare_expression_engine, reset_expression_engine},
@@ -10,7 +11,7 @@ use crate::{
         is_docker_installed,
     },
     validate::set_placeholder_values,
-    CommandError, CONTAINER_ENGINE,
+    CommandError,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
@@ -460,7 +461,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 }
 
 fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
-    let container_engine = CONTAINER_ENGINE.lock().unwrap().to_string();
+    let container_engine = container_engine().to_string();
 
     let docker_image = match docker {
         DockerRequirement::DockerPull(pull) => pull,
@@ -622,7 +623,10 @@ stdout: output.txt"#;
         //tool has docker requirement
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
-            runtime: HashMap::from([("outdir".to_string(), "testdir".to_string()), ("tmpdir".to_string(), "testdir".to_string())]),
+            runtime: HashMap::from([
+                ("outdir".to_string(), "testdir".to_string()),
+                ("tmpdir".to_string(), "testdir".to_string()),
+            ]),
             ..Default::default()
         };
 
@@ -639,7 +643,10 @@ stdout: output.txt"#;
         //tool has docker requirement
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
-            runtime: HashMap::from([("outdir".to_string(), "testdir".to_string()), ("tmpdir".to_string(), "testdir".to_string())]),
+            runtime: HashMap::from([
+                ("outdir".to_string(), "testdir".to_string()),
+                ("tmpdir".to_string(), "testdir".to_string()),
+            ]),
             ..Default::default()
         };
 

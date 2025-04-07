@@ -11,17 +11,7 @@ use cwl::CWLDocument;
 use io::join_path_string;
 use runner::{run_tool, run_workflow};
 use serde_yaml::Value;
-use std::{
-    collections::HashMap,
-    error::Error,
-    fmt::Display,
-    fs,
-    num::NonZero,
-    path::Path,
-    process::Command,
-    sync::{LazyLock, Mutex},
-    thread,
-};
+use std::{cell::RefCell, collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
 use sysinfo::System;
 use util::preprocess_cwl;
 
@@ -180,7 +170,7 @@ pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
     slices
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub enum ContainerEngine {
     #[default]
     Docker,
@@ -196,8 +186,12 @@ impl Display for ContainerEngine {
     }
 }
 
-static CONTAINER_ENGINE: LazyLock<Mutex<ContainerEngine>> = LazyLock::new(|| Mutex::new(ContainerEngine::Docker));
+thread_local! {static CONTAINER_ENGINE: RefCell<ContainerEngine> = const { RefCell::new(ContainerEngine::Docker) };}
 
 pub fn set_container_engine(value: ContainerEngine) {
-    *CONTAINER_ENGINE.lock().unwrap() = value;
+    CONTAINER_ENGINE.with(|engine| *engine.borrow_mut() = value);
+}
+
+pub fn container_engine() -> ContainerEngine {
+    CONTAINER_ENGINE.with(|engine| *engine.borrow())
 }
