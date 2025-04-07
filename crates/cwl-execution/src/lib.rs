@@ -41,7 +41,14 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
     };
 
     fn correct_path<T: PathItem>(item: &mut T, path_prefix: &Path) {
-        let location = item.get_location().clone();
+        let mut location = item.get_location().clone();
+        if location.is_empty() {
+            return;
+        }
+        if location.starts_with("file://") {
+            location = location.strip_prefix("file://").unwrap_or(&location).to_string();
+        }
+
         item.set_location(join_path_string(path_prefix, &location));
         if let Some(secondary_files) = item.secondary_files_mut() {
             for sec_file in secondary_files {

@@ -1,4 +1,4 @@
-use crate::io::{copy_dir, copy_file, create_and_write_file, make_relative_to};
+use crate::io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -132,7 +132,22 @@ fn stage_input_files(
         }
 
         //get correct data
-        let data = &input_values.remove(&input.id).unwrap();
+        let mut data = input_values.remove(&input.id).unwrap();
+
+        //handle file literals
+        if let DefaultValue::File(ref mut f) = data {
+            if f.location.is_none() {
+                if let Some(contents) = &f.contents {
+                    let dest = path.join(get_random_filename(".literal", ""));
+                    fs::write(&dest, contents)?;
+                    f.location = Some(dest.to_string_lossy().into_owned());
+                    
+                    input_values.insert(input.id.clone(), data);
+                    continue;
+                }
+            }
+        }
+
         let data_location = decode(&data.as_value_string()).unwrap().to_string();
         let mut data_path = PathBuf::from(&data_location);
 
@@ -141,7 +156,7 @@ fn stage_input_files(
             data_path = tool_path.join(data_path);
         }
 
-        let staged_filename = handle_filename(data);
+        let staged_filename = handle_filename(&data);
         let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
         let staged_filename_relative = staged_filename_relative
             .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
@@ -166,7 +181,7 @@ fn stage_input_files(
         if input.type_ == CWLType::File {
             copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());
-            staged_files.extend(stage_secondary_files(data, path)?);
+            staged_files.extend(stage_secondary_files(&data, path)?);
         } else if input.type_ == CWLType::Directory {
             copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());

@@ -4,7 +4,7 @@
 - Support CWL ExpressionTools
 
 ## Bugxixes
-- Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 117/378
+- Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 120/378
 
 ## Other
 - Removed Nightly Builds CI Workflow

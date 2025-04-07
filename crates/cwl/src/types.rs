@@ -159,10 +159,13 @@ impl<'de> Deserialize<'de> for DefaultValue {
         D: Deserializer<'de>,
     {
         let value: Value = Deserialize::deserialize(deserializer)?;
+        let class = value.get("class").and_then(Value::as_str);
 
-        let location = value.get("location").or_else(|| value.get("path")).and_then(Value::as_str);
-
-        if let Some(location_str) = location {
+        if let Some(class) = class {
+            let location = value
+                .get("location")
+                .or_else(|| value.get("path"))
+                .and_then(|v| v.as_str().map(|s| s.to_string()));
             let secondary_files = value
                 .get("secondaryFiles")
                 .map(|v| serde_yaml::from_value(v.clone()))
@@ -175,23 +178,34 @@ impl<'de> Deserialize<'de> for DefaultValue {
                 .transpose()
                 .map_err(serde::de::Error::custom)?;
 
-            match value.get("class").and_then(Value::as_str) {
-                Some("File") => {
+            match class {
+                "File" => {
                     let format = value
                         .get("format")
                         .map(|v| serde_yaml::from_value(v.clone()))
                         .transpose()
                         .map_err(serde::de::Error::custom)?;
-                    let mut item = File::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
-                    item.format = format;
+                    let contents = value
+                        .get("contents")
+                        .map(|v| serde_yaml::from_value(v.clone()))
+                        .transpose()
+                        .map_err(serde::de::Error::custom)?;
+                    let item = File {
+                        location,
+                        secondary_files,
+                        basename,
+                        format,
+                        contents,
+                        ..Default::default()
+                    };
                     Ok(DefaultValue::File(item))
                 }
-                Some("Directory") => {
-                    let mut item = Directory::from_location(&location_str.to_string());
-                    item.secondary_files = secondary_files;
-                    item.basename = basename;
+                "Directory" => {
+                    let item = Directory {
+                        location,
+                        basename,
+                        ..Default::default()
+                    };
                     Ok(DefaultValue::Directory(item))
                 }
                 _ => Ok(DefaultValue::Any(value)),
