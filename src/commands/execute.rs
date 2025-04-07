@@ -85,8 +85,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
         Runner::Custom => {
             if !args.is_quiet {
                 info!(
-                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
-⚠️  The internal runner currently is for testing purposes only and does not support containerization, yet!",
+                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed).",
                     &args.file
                 );
             }
