@@ -1,9 +1,9 @@
 use crate::{
     container_engine,
-    environment::{collect_environment, collect_inputs, RuntimeEnvironment},
+    environment::{collect_environment, RuntimeEnvironment},
     execute,
     expression::{eval_tool, parse_expressions, prepare_expression_engine, replace_expressions, reset_expression_engine, set_self, unset_self},
-    format_command, get_available_ram, get_processor_count,
+    format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
     util::{
@@ -16,7 +16,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::{check_timelimit, DockerRequirement},
+    requirements::DockerRequirement,
     types::{CWLType, DefaultValue, Entry, PathItem},
     wf::Workflow,
     CWLDocument,
@@ -203,21 +203,13 @@ pub fn run_tool(
     let tmp_dir = tempdir()?;
 
     //build runtime object
-    let mut runtime = RuntimeEnvironment {
-        runtime: HashMap::from([
-            (
-                "tooldir".to_string(),
-                tool_path.parent().unwrap_or(Path::new(".")).to_string_lossy().into_owned(),
-            ),
-            ("outdir".to_string(), dir.path().to_string_lossy().into_owned()),
-            ("tmpdir".to_string(), tmp_dir.path().to_string_lossy().into_owned()),
-            ("cores".to_string(), get_processor_count().to_string()),
-            ("ram".to_string(), get_available_ram().to_string()),
-        ]),
-        time_limit: check_timelimit(tool).unwrap_or(0),
-        inputs: collect_inputs(tool, input_values)?,
-        ..Default::default()
-    };
+    let mut runtime = RuntimeEnvironment::initialize(
+        tool,
+        input_values,
+        dir.path(),
+        tool_path.parent().unwrap_or(Path::new(".")),
+        tmp_dir.path(),
+    )?;
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, &runtime);

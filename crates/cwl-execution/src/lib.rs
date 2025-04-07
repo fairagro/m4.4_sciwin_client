@@ -12,7 +12,7 @@ use io::join_path_string;
 use runner::{run_tool, run_workflow};
 use serde_yaml::Value;
 use std::{cell::RefCell, collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
-use sysinfo::System;
+use sysinfo::{Disks, MemoryRefreshKind, System};
 use util::preprocess_cwl;
 
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
@@ -141,8 +141,13 @@ pub(crate) fn get_processor_count() -> usize {
 
 pub(crate) fn get_available_ram() -> u64 {
     let mut system = System::new_all();
-    system.refresh_all();
+    system.refresh_memory_specifics(MemoryRefreshKind::everything());
     system.free_memory() / 1024
+}
+
+pub(crate) fn get_available_disk_space() -> u64 {
+    let disks = Disks::new_with_refreshed_list();
+    disks[0].available_space() / 1024
 }
 
 pub fn format_command(command: &Command) -> String {

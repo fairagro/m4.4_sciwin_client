@@ -4,6 +4,7 @@ use inputs::deserialize_inputs;
 use inputs::CommandInputParameter;
 use requirements::deserialize_requirements;
 use requirements::Requirement;
+use requirements::ResourceRequirement;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::ops::Deref;
@@ -33,7 +34,7 @@ impl Deref for CWLDocument {
     type Target = DocumentBase;
 
     fn deref(&self) -> &Self::Target {
-        match self{
+        match self {
             CWLDocument::CommandLineTool(clt) => &clt.base,
             CWLDocument::Workflow(wf) => &wf.base,
             CWLDocument::ExpressionTool(et) => &et.base,
@@ -43,7 +44,7 @@ impl Deref for CWLDocument {
 
 impl DerefMut for CWLDocument {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        match self{
+        match self {
             CWLDocument::CommandLineTool(clt) => &mut clt.base,
             CWLDocument::Workflow(wf) => &mut wf.base,
             CWLDocument::ExpressionTool(et) => &mut et.base,
@@ -97,6 +98,18 @@ pub struct DocumentBase {
     #[serde(deserialize_with = "deserialize_requirements")]
     #[serde(default)]
     pub hints: Option<Vec<Requirement>>,
+}
+
+impl DocumentBase {
+    pub fn get_resource_requirement(&self) -> Option<ResourceRequirement> {
+        self.requirements.as_ref()?.iter().find_map(|req| {
+            if let Requirement::ResourceRequirement(rr) = req {
+                Some(rr.clone()) // Return the found ResourceRequirement
+            } else {
+                None
+            }
+        })
+    }
 }
 
 /// Loads a CWL CommandLineTool from disk and parses given YAML

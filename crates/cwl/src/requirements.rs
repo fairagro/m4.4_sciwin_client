@@ -149,16 +149,24 @@ impl DockerRequirement {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrNumber {
+    String(String),
+    Integer(u64),
+    Decimal(f64),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceRequirement {
-    pub cores_min: Option<i32>,
-    pub cores_max: Option<i32>,
-    pub ram_min: Option<i32>,
-    pub ram_max: Option<i32>,
-    pub tmpdir_min: Option<i32>,
-    pub tmpdir_max: Option<i32>,
-    pub outdir_min: Option<i32>,
-    pub outdir_max: Option<i32>,
+    pub cores_min: Option<StringOrNumber>,
+    pub cores_max: Option<StringOrNumber>,
+    pub ram_min: Option<StringOrNumber>,
+    pub ram_max: Option<StringOrNumber>,
+    pub tmpdir_min: Option<StringOrNumber>,
+    pub tmpdir_max: Option<StringOrNumber>,
+    pub outdir_min: Option<StringOrNumber>,
+    pub outdir_max: Option<StringOrNumber>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

@@ -1,5 +1,7 @@
+use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
 use cwl::{
-    requirements::Requirement,
+    inputs::CommandInputParameter,
+    requirements::{check_timelimit, Requirement, StringOrNumber},
     types::{DefaultValue, EnviromentDefs},
     CWLDocument,
 };
@@ -7,9 +9,8 @@ use std::{
     collections::HashMap,
     error::Error,
     fs::{self},
+    path::Path,
 };
-
-use crate::util::evaluate_input;
 
 #[derive(Debug, Default, Clone)]
 pub struct RuntimeEnvironment {
@@ -17,6 +18,68 @@ pub struct RuntimeEnvironment {
     pub inputs: HashMap<String, DefaultValue>,
     pub environment: HashMap<String, String>,
     pub time_limit: u64,
+}
+
+impl RuntimeEnvironment {
+    pub fn initialize(
+        tool: &CWLDocument,
+        input_values: HashMap<String, DefaultValue>,
+        outdir: impl AsRef<Path>,
+        tooldir: impl AsRef<Path>,
+        tmpdir: impl AsRef<Path>,
+    ) -> Result<Self, Box<dyn Error>> {
+        let runtime = HashMap::from([
+            ("tooldir".to_string(), tooldir.as_ref().to_string_lossy().into_owned()),
+            ("outdir".to_string(), outdir.as_ref().to_string_lossy().into_owned()),
+            ("tmpdir".to_string(), tmpdir.as_ref().to_string_lossy().into_owned()),
+            ("outdirSize".to_string(), get_available_disk_space().to_string()),
+            ("tmpdirSize".to_string(), get_available_disk_space().to_string()),
+            ("cores".to_string(), get_processor_count().to_string()),
+            ("ram".to_string(), get_available_ram().to_string()),
+        ]);
+
+        let inputs = collect_inputs(tool, input_values)?;
+
+        let mut environment = RuntimeEnvironment {
+            runtime,
+            time_limit: check_timelimit(tool).unwrap_or(0),
+            inputs,
+            ..Default::default()
+        };
+
+        if let Some(rr) = tool.get_resource_requirement() {
+            if let Some(cores) = rr.cores_min {
+                environment
+                    .runtime
+                    .insert("cores".to_string(), evaluate(cores, &environment, &tool.inputs)?.to_string());
+            }
+            if let Some(ram) = rr.ram_min {
+                environment
+                    .runtime
+                    .insert("ram".to_string(), evaluate(ram, &environment, &tool.inputs)?.to_string());
+            }
+            if let Some(dir_size) = rr.outdir_min {
+                environment
+                    .runtime
+                    .insert("outdirSize".to_string(), evaluate(dir_size, &environment, &tool.inputs)?.to_string());
+            }
+            if let Some(tmp_size) = rr.tmpdir_min {
+                environment
+                    .runtime
+                    .insert("tmpdirSize".to_string(), evaluate(tmp_size, &environment, &tool.inputs)?.to_string());
+            }
+        }
+
+        Ok(environment)
+    }
+}
+
+fn evaluate(val: StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> Result<u64, Box<dyn Error>> {
+    match val {
+        StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(&str, runtime, inputs).parse()?),
+        StringOrNumber::Integer(uint) => Ok(uint),
+        StringOrNumber::Decimal(float) => Ok(float.ceil() as u64),
+    }
 }
 
 pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String> {

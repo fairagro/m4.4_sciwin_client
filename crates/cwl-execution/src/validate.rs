@@ -130,7 +130,7 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
     }
 }
 
-fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> String {
+pub (crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> String {
     let in_re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
     let run_re = Regex::new(r"\$\(runtime.([\w]*)\)").unwrap();
     let result = in_re.replace_all(text, |caps: &fancy_regex::Captures| {
