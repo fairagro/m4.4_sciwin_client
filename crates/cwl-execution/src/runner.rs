@@ -2,7 +2,7 @@ use crate::{
     container_engine,
     environment::{collect_environment, collect_inputs, RuntimeEnvironment},
     execute,
-    expression::{eval_tool, parse_expressions, prepare_expression_engine, reset_expression_engine},
+    expression::{eval_tool, parse_expressions, prepare_expression_engine, replace_expressions, reset_expression_engine, set_self, unset_self},
     format_command, get_available_ram, get_processor_count,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
@@ -23,6 +23,7 @@ use cwl::{
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
+use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
@@ -248,7 +249,7 @@ pub fn run_tool(
         CWLDocument::Workflow(_) => unreachable!(),
     };
     unstage_files(&staged_files, dir.path(), outputs)?;
-    
+
     //evaluate output files
     let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
         evaluate_command_outputs(clt, output_directory)?
@@ -390,7 +391,21 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
         if let Some(ref binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
-            binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
+
+            let value = runtime.inputs.get(&input.id);
+            set_self(&value)?;
+            if let Some(value_from) = &binding.value_from {
+                if let Some(val) = value {
+                    if let DefaultValue::Any(Value::Null) = val {
+                        binding.value_from = Some(String::new())
+                    } else {
+                        binding.value_from = Some(replace_expressions(value_from).unwrap_or(value_from.to_string()));
+                    }
+                }
+            } else {
+                binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
+            }
+            unset_self()?;
             bindings.push((position, i + index, binding))
         }
     }
