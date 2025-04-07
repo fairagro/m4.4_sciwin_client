@@ -627,6 +627,7 @@ stdout: output.txt"#;
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
         let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        print!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("docker"));
     }
 
@@ -643,6 +644,7 @@ stdout: output.txt"#;
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
         let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        print!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("podman"));
     }
 }
