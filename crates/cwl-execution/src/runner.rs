@@ -523,6 +523,10 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
 
 #[cfg(test)]
 mod tests {
+    use cwl::load_tool;
+
+    use crate::set_container_engine;
+
     use super::*;
 
     #[test]
@@ -610,5 +614,35 @@ stdout: output.txt"#;
         let c_arg = shell_cmd.get_args().collect::<Vec<_>>()[0].to_string_lossy();
 
         assert_eq!(format_command(&cmd), format!("{shell} {c_arg} cd $(inputs.indir.path) && find . | sort"));
+    }
+
+    #[test]
+    fn test_build_command_docker() {
+        //tool has docker requirement
+        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let runtime = RuntimeEnvironment {
+            runtime: HashMap::from([("outdir".to_string(), "testdir".to_string()), ("tmpdir".to_string(), "testdir".to_string())]),
+            ..Default::default()
+        };
+
+        let mut cmd = build_command(&tool, &runtime).unwrap();
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        assert!(cmd.get_program().to_string_lossy().contains("docker"));
+    }
+
+    #[test]
+    fn test_build_command_podman() {
+        set_container_engine(crate::ContainerEngine::Podman);
+
+        //tool has docker requirement
+        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let runtime = RuntimeEnvironment {
+            runtime: HashMap::from([("outdir".to_string(), "testdir".to_string()), ("tmpdir".to_string(), "testdir".to_string())]),
+            ..Default::default()
+        };
+
+        let mut cmd = build_command(&tool, &runtime).unwrap();
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        assert!(cmd.get_program().to_string_lossy().contains("podman"));
     }
 }
