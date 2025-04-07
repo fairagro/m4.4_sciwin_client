@@ -11,11 +11,17 @@ use cwl::CWLDocument;
 use io::join_path_string;
 use runner::{run_tool, run_workflow};
 use serde_yaml::Value;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::{error::Error, fmt::Display};
-use std::{num::NonZero, process::Command, thread};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fmt::Display,
+    fs,
+    num::NonZero,
+    path::Path,
+    process::Command,
+    sync::{LazyLock, Mutex},
+    thread,
+};
 use sysinfo::System;
 use util::preprocess_cwl;
 
@@ -172,4 +178,26 @@ pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
     }
 
     slices
+}
+
+#[derive(Default)]
+pub enum ContainerEngine {
+    #[default]
+    Docker,
+    Podman,
+}
+
+impl Display for ContainerEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContainerEngine::Docker => write!(f, "docker"),
+            ContainerEngine::Podman => write!(f, "podman"),
+        }
+    }
+}
+
+static CONTAINER_ENGINE: LazyLock<Mutex<ContainerEngine>> = LazyLock::new(|| Mutex::new(ContainerEngine::Docker));
+
+pub fn set_container_engine(value: ContainerEngine) {
+    *CONTAINER_ENGINE.lock().unwrap() = value;
 }

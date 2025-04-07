@@ -466,10 +466,10 @@ pub fn test_example_project() {
     //execute workflow
     execute_local(&LocalExecuteArgs {
         runner: Runner::Custom,
-        out_dir: None,
         is_quiet: false,
         file: wf_path,
         args: vec!["inputs.yml".to_string()],
+        ..Default::default()
     })
     .expect("Could not execute Workflow");
 

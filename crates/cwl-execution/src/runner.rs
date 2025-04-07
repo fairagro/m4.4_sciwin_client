@@ -10,7 +10,7 @@ use crate::{
         is_docker_installed,
     },
     validate::set_placeholder_values,
-    CommandError,
+    CommandError, CONTAINER_ENGINE,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
@@ -460,7 +460,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 }
 
 fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
-    let container_engine = env::var("S4N_CONTAINER_ENGINE").unwrap_or("docker".to_string());
+    let container_engine = CONTAINER_ENGINE.lock().unwrap().to_string();
 
     let docker_image = match docker {
         DockerRequirement::DockerPull(pull) => pull,
