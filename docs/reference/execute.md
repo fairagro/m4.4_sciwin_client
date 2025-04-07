@@ -33,6 +33,7 @@ The usage of the internal runner, which is the default one, is similar to the us
       -r, --runner <RUNNER>   Choose your cwl runner implementation [default: custom] [possible values: cwltool, custom]
           --outdir <OUT_DIR>  A path to output resulting files to
           --quiet             Runner does not print to stdout
+          --podman            Use podman instead of docker
       -h, --help              Print help
     ```
 
