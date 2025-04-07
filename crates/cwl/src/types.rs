@@ -1,5 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yaml::Value;
+use serde_yaml::{Number, Value};
 use sha1::{Digest, Sha1};
 use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
@@ -103,6 +103,18 @@ pub enum DefaultValue {
     Any(serde_yaml::Value),
 }
 
+fn number_to_string(num: &Number) -> String {
+    if num.is_i64() {
+        num.as_i64().unwrap().to_string()
+    } else if num.is_f64() {
+        num.as_f64().unwrap().to_string()
+    } else if num.is_u64(){
+        num.as_u64().unwrap().to_string()
+    } else {
+        unreachable!()
+    }
+}
+
 impl DefaultValue {
     pub fn as_value_string(&self) -> String {
         match self {
@@ -111,6 +123,7 @@ impl DefaultValue {
             DefaultValue::Any(value) => match value {
                 serde_yaml::Value::Bool(_) => String::new(), // do not remove!
                 serde_yaml::Value::String(s) => s.to_string(),
+                serde_yaml::Value::Number(num) => number_to_string(num),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
         }
@@ -127,7 +140,7 @@ impl DefaultValue {
                 Value::Bool(_) => matches!(cwl_type, CWLType::Boolean),
                 Value::Number(num) => {
                     if num.is_i64() {
-                        matches!(cwl_type, CWLType::Int | CWLType::Long)
+                        matches!(cwl_type, CWLType::Int | CWLType::Long | CWLType::Float | CWLType::Double)
                     } else if num.is_f64() {
                         matches!(cwl_type, CWLType::Float | CWLType::Double)
                     } else {
@@ -520,6 +533,8 @@ mod tests {
         assert!(default_value_bool.has_matching_type(&CWLType::Optional(Box::new(CWLType::Boolean)))); // true matches boolean
         assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Int)))); //42 matches int
         assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Long)))); //42 matches long
+        assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Float)))); //42 matches float
+        assert!(default_value_int.has_matching_type(&CWLType::Optional(Box::new(CWLType::Double)))); //42 matches double
         assert!(default_value_float.has_matching_type(&CWLType::Optional(Box::new(CWLType::Float)))); //42.4 matches float
         assert!(default_value_float.has_matching_type(&CWLType::Optional(Box::new(CWLType::Double)))); //42.5 matches float
         assert!(default_value_string.has_matching_type(&CWLType::Optional(Box::new(CWLType::String)))); // "Hello" is a string#
