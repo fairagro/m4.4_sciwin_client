@@ -227,6 +227,7 @@ pub fn run_tool(
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
+    prepare_expression_engine(&runtime)?;
 
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
@@ -236,10 +237,8 @@ pub fn run_tool(
             exit_code: clt.get_error_code(),
         })?;
     } else if let CWLDocument::ExpressionTool(et) = tool {
-        prepare_expression_engine(&runtime)?;
         let expressions = parse_expressions(&et.expression);
         result_value = Some(eval_tool::<serde_yaml::Value>(&expressions[0].expression())?);
-        reset_expression_engine()?;
     }
 
     //remove staged files
@@ -249,7 +248,7 @@ pub fn run_tool(
         CWLDocument::Workflow(_) => unreachable!(),
     };
     unstage_files(&staged_files, dir.path(), outputs)?;
-
+    
     //evaluate output files
     let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
         evaluate_command_outputs(clt, output_directory)?
@@ -264,6 +263,7 @@ pub fn run_tool(
     };
     //come back to original directory
     env::set_current_dir(current)?;
+    reset_expression_engine()?;
 
     info!(
         "✔️  Tool {:?} executed successfully in {:.0?}!",

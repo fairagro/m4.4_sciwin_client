@@ -108,7 +108,10 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
             CommandOutputParameter::default()
                 .with_type(output_type)
                 .with_id(&filename)
-                .with_binding(CommandOutputBinding { glob: f.to_string() })
+                .with_binding(CommandOutputBinding {
+                    glob: f.to_string(),
+                    ..Default::default()
+                })
         })
         .collect()
 }
@@ -314,7 +317,7 @@ mod tests {
         let cmd = shlex::split(command).unwrap();
         parse_command_line(cmd.iter().map(|s| s.as_str()).collect())
     }
-    
+
     #[rstest]
     #[case("python script.py --arg1 hello", Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))]
     #[case("echo 'Hello World!'", Command::Single("echo".to_string()))]
@@ -498,12 +501,14 @@ mod tests {
                 .with_id("my-file")
                 .with_binding(CommandOutputBinding {
                     glob: "my-file.txt".to_string(),
+                    ..Default::default()
                 }),
             CommandOutputParameter::default()
                 .with_type(CWLType::File)
                 .with_id("archive")
                 .with_binding(CommandOutputBinding {
                     glob: "archive.tar.gz".to_string(),
+                    ..Default::default()
                 }),
         ];
 

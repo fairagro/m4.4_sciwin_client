@@ -1,4 +1,7 @@
-use crate::io::{copy_file, get_first_file_with_prefix};
+use crate::{
+    expression::{evaluate_expression, set_self, unset_self},
+    io::{copy_file, get_first_file_with_prefix},
+};
 use cwl::{
     clt::CommandLineTool,
     et::ExpressionTool,
@@ -140,7 +143,20 @@ fn evaluate_output_impl(
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
                 let contents = fs::read_to_string(&binding.glob)?;
-                outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
+
+                if let Some(expression) = &binding.output_eval {
+                    let mut ctx = File::from_location(&binding.glob);
+                    ctx.format = output.format.clone();
+                    let mut ctx = ctx.snapshot();
+                    ctx.contents = Some(contents);
+                    set_self(&vec![&ctx])?;
+                    let result = evaluate_expression(expression)?;
+                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                    outputs.insert(output.id.clone(), DefaultValue::Any(value));
+                    unset_self()?;
+                } else {
+                    outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
+                }
             }
         }
     }
@@ -325,6 +341,7 @@ mod tests {
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
                 glob: "tests/test_data/file.txt".to_string(),
+                ..Default::default()
             });
 
         fs::create_dir_all(dir.path().join("tests/test_data")).expect("Could not create folders");
