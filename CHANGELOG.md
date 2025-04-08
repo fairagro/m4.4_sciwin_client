@@ -6,7 +6,7 @@
 ## 🐛 Bugfixes
 - Fixed some bugs in CWL Runner ramping up its conformance from 90/378 to 126/378
 
-## 👀 Other
+## 👀 Miscellaneous Tasks
 - Removed Nightly Builds CI Workflow
 
 # v0.2.0
@@ -14,7 +14,6 @@
 - Allowed handling of nullable and array CWLTypes using `File?` or `File[]` notation
 - Added `s4n execute make-template ./path/to.cwl` to create job templates #75
 - Added support for the direct execution of files #79
-- Moved Runner into separate crate (Refactor)
 - Allow Directories as output
 
 ## 🐛 Bugfixes
@@ -26,7 +25,10 @@
 - Fixed Files in subfolders can not be created in s4n tool create #88
 - Fixed Do not check for uncommited changes if --no-run #89
 
-## 👀 Other
+## 🚜 Refactor
+
+- Moved Runner into separate crate (Refactor)
+## 👀 Miscellaneous Tasks
 - Added Tests for all Documentation examples #76
 - Added CWL Conformance Tests to CI Workflow
 - Added more integration tests
