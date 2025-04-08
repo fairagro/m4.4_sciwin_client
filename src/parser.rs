@@ -21,7 +21,7 @@ struct FileEntry {
 }
 
 pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
-    let base_command = get_base_command(&commands);
+    let base_command = get_base_command(commands);
 
     let remainder = match &base_command {
         Command::Single(_) => &commands[1..],

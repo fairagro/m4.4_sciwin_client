@@ -7,10 +7,13 @@ use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use log::info;
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
+use crate::{commands::reana::{create_reana_yaml, convert_reana_to_json, ping_reana, upload_files, start_workflow, download_files, create_workflow, get_workflow_status}};
+use std::{thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ExecuteCommands::Local(args) => execute_local(args),
+        ExecuteCommands::Remote(args) => execute_remote(args),
         ExecuteCommands::MakeTemplate(args) => make_template(&args.cwl),
     }
 }
@@ -19,6 +22,8 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
 pub enum ExecuteCommands {
     #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias = "l")]
     Local(LocalExecuteArgs),
+    #[command(about = "Runs CWL files remotely using reana", visible_alias = "r")]
+    Remote(RemoteExecuteArgs),
     #[command(about = "Creates job file template for execution (e.g. inputs.yaml)")]
     MakeTemplate(MakeTemplateArgs),
 }
@@ -43,6 +48,20 @@ pub struct LocalExecuteArgs {
     pub file: PathBuf,
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
     pub args: Vec<String>,
+}
+
+#[derive(Args, Debug, Default)]
+pub struct RemoteExecuteArgs {
+    #[arg(short = 'r', long = "instance", help="Reana instance")]
+    pub instance: String,
+    #[arg(short = 't', long = "token", help="Your reana token")]
+    pub token: String,
+    #[arg(short = 'c', long = "cookie", help="Your session cookie")]
+    pub cookie_value: String,
+    #[arg(help = "CWL File to execute")]
+    pub file: PathBuf,
+    #[arg(short = 'i', long = "input", help="Input yaml file")]
+    pub input_file: Option<String>,
 }
 
 #[derive(ValueEnum, Debug, Clone, Default)]
@@ -99,6 +118,62 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
         }
     }
+}
+
+pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
+    const POLL_INTERVAL_SECS: u64 = 5;
+    const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
+
+    let specification = create_reana_yaml(args)?;
+    let workflow_json = convert_reana_to_json("reana.yaml")?;
+
+    
+    let ping_status = ping_reana(args)?;
+    if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
+        eprintln!("Unexpected response from Reana server: {:?}", ping_status);
+        return Ok(());
+    }
+
+    let create_response = create_workflow(args, &workflow_json)?;
+    if let Some(workflow_name) = create_response["workflow_name"].as_str() {
+
+        upload_files(args, workflow_name, &specification)?;
+
+        let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
+        start_workflow(args, workflow_name, None, None, Some(false), Some(converted_yaml))?;
+
+        loop {
+            let status_response = get_workflow_status(args, workflow_name)?;
+            let workflow_status = status_response["status"]
+                .as_str()
+                .unwrap_or("unknown");
+
+
+            if TERMINAL_STATUSES.contains(&workflow_status) {
+                match workflow_status {
+                    "finished" => {
+                        println!("✅ Workflow finished successfully.");
+                        download_files(args, workflow_name, &specification)?;
+                    }
+                    "failed" => {
+                        eprintln!("❌ Workflow execution failed.");
+                    }
+                    "deleted" => {
+                        eprintln!("⚠️ Workflow was deleted before completion.");
+                    }
+                    _ => {}
+                }
+                break;
+            }
+
+            thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
+        }
+    } else {
+        eprintln!("Workflow creation failed {:?}", create_response);
+    }
+
+ 
+    Ok(())
 }
 
 pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
