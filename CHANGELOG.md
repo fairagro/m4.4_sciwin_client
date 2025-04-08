@@ -26,8 +26,8 @@
 - Fixed Do not check for uncommited changes if --no-run #89
 
 ## 🚜 Refactor
-
 - Moved Runner into separate crate (Refactor)
+
 ## 👀 Miscellaneous Tasks
 - Added Tests for all Documentation examples #76
 - Added CWL Conformance Tests to CI Workflow
