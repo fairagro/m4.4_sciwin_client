@@ -1150,32 +1150,3 @@ fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>, Bo
     }
     Ok(results)
 }
-
-/*
-fn get_workflow_specification(
-    args: &RemoteExecuteArgs,
-    workflow_id: &str,
-) -> Result<Value, Box<dyn Error>> {
-    let url = format!("{}/api/workflows/{}/specification", &args.instance, workflow_id);
-
-    let mut headers = HeaderMap::new();
-    headers.insert(COOKIE, args.cookie_value.parse()?);
-    headers.insert(AUTHORIZATION, format!("Bearer {}", &args.token).parse()?);
-
-    let client = Client::builder()
-        .default_headers(headers)
-        .danger_accept_invalid_certs(true)
-        .build()?;
-
-    let response = client.get(&url).send()?;
-    println!("response {:?}", response);
-
-    if response.status().is_success() {
-        let json: Value = response.json()?;
-        Ok(json)
-    } else {
-        let err_msg = response.text()?;
-        Err(err_msg.into())
-    }
-}
-*/
