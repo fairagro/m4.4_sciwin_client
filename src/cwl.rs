@@ -23,11 +23,11 @@ pub trait Connectable {
 }
 
 pub trait Saveable {
-    fn save(&mut self, path: &str) -> String;
+    fn prepare_save(&mut self, path: &str) -> String;
 }
 
 impl Saveable for CommandLineTool {
-    fn save(&mut self, path: &str) -> String {
+    fn prepare_save(&mut self, path: &str) -> String {
         //rewire paths to new location
         for input in &mut self.inputs {
             if let Some(DefaultValue::File(value)) = &mut input.default {
@@ -312,7 +312,7 @@ mod tests {
                 Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
             ]);
 
-        clt.save("workflows/tool/tool.cwl");
+        clt.prepare_save("workflows/tool/tool.cwl");
 
         //check if paths are rewritten upon tool saving
 

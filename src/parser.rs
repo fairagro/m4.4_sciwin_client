@@ -20,7 +20,7 @@ struct FileEntry {
     path: String,
 }
 
-pub fn parse_command_line(commands: Vec<&str>) -> CommandLineTool {
+pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let base_command = get_base_command(&commands);
 
     let remainder = match &base_command {
@@ -315,7 +315,7 @@ mod tests {
 
     fn parse_command(command: &str) -> CommandLineTool {
         let cmd = shlex::split(command).unwrap();
-        parse_command_line(cmd.iter().map(|s| s.as_str()).collect())
+        parse_command_line(&cmd.iter().map(|s| s.as_str()).collect::<Vec<_>>())
     }
 
     #[rstest]

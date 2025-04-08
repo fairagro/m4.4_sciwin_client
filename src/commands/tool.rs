@@ -89,10 +89,16 @@ pub struct ListToolArgs {
 }
 
 pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
+    // Parse input string
+    if args.command.is_empty() {
+        return Err("No commandline string given!".into());
+    }
+    let command = args.command.iter().map(String::as_str).collect::<Vec<_>>();
+
     // Check if git status is clean
-    let cwd = env::current_dir().expect("directory to be accessible");
+    let cwd = env::current_dir()?;
     if !args.is_raw {
-        info!("📂 The current working directory is {}", cwd.to_str().unwrap().green().bold());
+        info!("📂 The current working directory is {}", cwd.to_string_lossy().green().bold());
     }
 
     let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
@@ -105,12 +111,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         return Err("Uncommitted changes detected".into());
     }
 
-    // Parse input string
-    if args.command.is_empty() {
-        return Err("No commandline string given!".into());
-    }
-
-    let mut cwl = parser::parse_command_line(args.command.iter().map(|s| s.as_str()).collect());
+    let mut cwl = parser::parse_command_line(&command);
 
     // Handle outputs
     let outputs = args.outputs.as_deref().unwrap_or(&[]);
@@ -121,9 +122,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Only run if not prohibited
     if !args.no_run {
         // Execute command
-        if run_command(&cwl, &Default::default()).is_err() {
-            return Err(format!("Could not execute command: `{}`!", args.command.join(" ")).into());
-        }
+        run_command(&cwl, &Default::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
         //add fixed inputs
         if let Some(fixed_inputs) = &args.inputs {
@@ -142,7 +141,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
         if args.is_clean {
             for file in &files {
-                remove_file(file).unwrap();
+                remove_file(file)?;
             }
         }
 
@@ -194,28 +193,22 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     post_process_cwl(&mut cwl);
 
+    let path = get_qualified_filename(&cwl.base_command, args.name.clone());
+    let mut yaml = cwl.prepare_save(&path);
+    yaml = format_cwl(&yaml)?;
     if !args.is_raw {
-        let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-        let mut yaml = cwl.save(&path);
-        yaml = format_cwl(&yaml)?;
-
-        match create_and_write_file(path.as_str(), yaml.as_str()) {
+        match create_and_write_file(&path, &yaml) {
             Ok(_) => {
                 info!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
-                    stage_file(&repo, path.as_str()).unwrap();
-                    commit(&repo, format!("Execution of `{}`", args.command.join(" ").as_str()).as_str()).unwrap();
+                    stage_file(&repo, &path)?;
+                    commit(&repo, &format!("Execution of `{}`", command.join(" ")))?;
                 }
             }
             Err(e) => return Err(Box::new(e)),
         }
     } else {
-        let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-        let mut yaml_cwl = cwl.save(&path);
-        yaml_cwl = format_cwl(&yaml_cwl)?;
-        highlight_cwl(yaml_cwl.as_str());
-
-        return Ok(());
+        highlight_cwl(&yaml);
     }
     Ok(())
 }
