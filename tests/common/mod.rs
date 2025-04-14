@@ -17,14 +17,19 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
     let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
 
     //set up python venv
-    let _ = Command::new("python").arg("-m").arg("venv").arg(".venv").output();
+    let output = Command::new("python").arg("-m").arg("venv").arg(".venv").output().expect("Could not create venv");
+    eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+
     let old_path = env::var("PATH").unwrap();
     let python_path = format!("{dir_str}/.venv/{venv_scripts}");
     let new_path = format!("{python_path}{path_sep}{old_path}");
 
     //install packages
     let req_path = format!("{dir_str}/requirements.txt");
-    let _ = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output();
+    let output = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output().expect("Could not find pip");
+    eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
     (new_path, old_path)
 }
