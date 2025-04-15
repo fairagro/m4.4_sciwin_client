@@ -10,6 +10,18 @@ message: >-
   metadata from this file.
 type: software
 authors:
+  - orcid: 'https://orcid.org/0000-0001-6242-5846'
+    given-names: Jens
+    family-names: Krumsieck
+    affiliation: Johann Heinrich von Thünen Institute
+  - orcid: 'https://orcid.org/0009-0007-1765-0527'
+    given-names: Antonia
+    family-names: Leidel
+    affiliation: Leibniz Institute of Plant Genetics and Crop Plant Research
+  - orcid: 'https://orcid.org/0000-0002-8948-6793'
+    given-names: Patrick
+    family-names: König
+    affiliation: Leibniz Institute of Plant Genetics and Crop Plant Research
   - orcid: 'https://orcid.org/0000-0003-4800-2833'
     given-names: Harald
     family-names: von Waldow
@@ -24,7 +36,6 @@ abstract: >-
   Workflow Infrastructure (SciWIn) supports scientists to
   create, execute, share, and publish these workflows,
   fostering collaboration and transparency.
-
 
   Reproducibility in computational research is vital for
   efficient collaboration, verifying results and ensuring
