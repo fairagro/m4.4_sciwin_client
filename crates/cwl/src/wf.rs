@@ -14,7 +14,7 @@ use std::{
 /// where step outputs are connected to the inputs of downstream steps to form a
 /// directed acyclic graph, and independent steps may run concurrently.
 ///
-/// Reference: [CWL Workflow Specification](https://www.commonwl.org/v1.2/Workflow.html)
+/// Reference: <https://www.commonwl.org/v1.2/Workflow.html>
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
@@ -60,18 +60,22 @@ impl DerefMut for Workflow {
 }
 
 impl Workflow {
+    /// Checks whether the `Workflow` has a `WorkflowStep` of id `id`
     pub fn has_step(&self, id: &str) -> bool {
         self.steps.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
+    /// Checks whether the `Workflow` has an input of id `id`
     pub fn has_input(&self, id: &str) -> bool {
         self.inputs.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
+    /// Checks whether the `Workflow` has an ouput of id `id`
     pub fn has_output(&self, id: &str) -> bool {
         self.outputs.iter().map(|s| s.id.clone()).any(|x| x == *id)
     }
 
+    /// Checks whether the `Workflow` has a `WorkflowStep` with an input of id `id`
     pub fn has_step_input(&self, id: &str) -> bool {
         self.steps.iter().any(|step| {
             step.in_.clone().into_values().any(|val| {
@@ -84,6 +88,7 @@ impl Workflow {
         })
     }
 
+    /// Checks whether the `Workflow` has a `WorkflowStep` with an ouput of id `id`
     pub fn has_step_output(&self, output_source: &str) -> bool {
         let parts = output_source.split('/').collect::<Vec<_>>();
         if parts.len() != 2 {
@@ -97,10 +102,13 @@ impl Workflow {
         step.unwrap().out.iter().any(|output| output == parts[1])
     }
 
+    
+    /// Returns the `Workflow`'s `WorkflowStep` with id `id`
     pub fn get_step(&self, id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|s| s.id == *id)
     }
 
+    /// Sorts `WorkflowStep`s to get the sequence of execution
     pub fn sort_steps(&self) -> Result<Vec<String>, String> {
         let mut graph: HashMap<String, Vec<String>> = HashMap::new();
         let mut in_degree: HashMap<String, usize> = HashMap::new();
@@ -162,6 +170,7 @@ pub struct WorkflowStep {
     pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
 }
+
 impl Identifiable for WorkflowStep {
     fn id(&self) -> &str {
         &self.id
