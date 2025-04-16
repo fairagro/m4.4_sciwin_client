@@ -22,6 +22,9 @@ let wf = cwl::load_workflow("example-wf.cwl")?;
 ```
 
 ## Installation
+> [!CAUTION]
+> Crate has not been submitted to crates.io, yet!
+
 Run the following Cargo command in your project directory:
 ```
 cargo add cwl
