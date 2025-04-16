@@ -116,6 +116,7 @@ fn number_to_string(num: &Number) -> String {
 }
 
 impl DefaultValue {
+    /// Returns a string of the primary value field in `DefaultValue`.
     pub fn as_value_string(&self) -> String {
         match self {
             DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
@@ -129,6 +130,7 @@ impl DefaultValue {
         }
     }
 
+    /// Checks whether a `CWLType` matches this `DefaultValue` implementation
     pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
         match (self, cwl_type) {
             (_, CWLType::Any) => true,
@@ -157,6 +159,7 @@ impl DefaultValue {
         }
     }
 
+    /// !Legacy!
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),

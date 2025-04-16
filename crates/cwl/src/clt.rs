@@ -1,3 +1,5 @@
+//! Contains the structure of CWL CommandLineTool definitions together with helpful functions for convenience
+
 use super::{
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{deserialize_outputs, CommandOutputParameter},

@@ -7,6 +7,7 @@ pub trait Identifiable {
     fn set_id(&mut self, id: String);
 }
 
+
 pub fn deserialize_list<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     D: Deserializer<'de>,

@@ -5,7 +5,7 @@ description = "CWL Rust library, intended to be used for YAML parsing with serde
 edition = "2021"
 readme = "../README.md"
 repository = "https://github.com/fairagro/m4.4_sciwin_client"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 authors = [
     "Jens Krumsieck",
     "Antonia Leidel",
