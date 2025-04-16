@@ -81,41 +81,6 @@ impl DerefMut for CommandLineTool {
     }
 }
 
-impl CommandLineTool {
-    pub fn with_base_command(mut self, command: Command) -> Self {
-        self.base_command = command;
-        self
-    }
-    pub fn with_inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
-        self.inputs = inputs;
-        self
-    }
-    pub fn with_outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
-        self.outputs = outputs;
-        self
-    }
-    pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
-        self.requirements = Some(requirements);
-        self
-    }
-    pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
-        self.hints = Some(requirements);
-        self
-    }
-    pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
-        self.stdout = stdout;
-        self
-    }
-    pub fn with_stderr(mut self, stderr: Option<String>) -> Self {
-        self.stderr = stderr;
-        self
-    }
-    pub fn with_arguments(mut self, args: Option<Vec<Argument>>) -> Self {
-        self.arguments = args;
-        self
-    }
-}
-
 impl Display for CommandLineTool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_yaml::to_string(self) {
@@ -126,10 +91,60 @@ impl Display for CommandLineTool {
 }
 
 impl CommandLineTool {
+    /// Adds a base command to this `CommandLineTool` and returns the updated tool
+    pub fn with_base_command(mut self, command: Command) -> Self {
+        self.base_command = command;
+        self
+    }
+
+    /// Adds arguments to this `CommandLineTool` and returns the updated tool
+    pub fn with_arguments(mut self, args: Option<Vec<Argument>>) -> Self {
+        self.arguments = args;
+        self
+    }
+
+    /// Adds inputs to this `CommandLineTool` and returns the updated tool
+    pub fn with_inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+
+    /// Adds outputs to this `CommandLineTool` and returns the updated tool
+    pub fn with_outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
+        self.outputs = outputs;
+        self
+    }
+
+    /// Adds requirements to this `CommandLineTool` and returns the updated tool
+    pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
+        self.requirements = Some(requirements);
+        self
+    }
+
+    /// Adds hints to this `CommandLineTool` and returns the updated tool
+    pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
+        self.hints = Some(requirements);
+        self
+    }
+
+    /// Adds stdout to this `CommandLineTool` and returns the updated tool
+    pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
+        self.stdout = stdout;
+        self
+    }
+
+    /// Adds stderr to this `CommandLineTool` and returns the updated tool
+    pub fn with_stderr(mut self, stderr: Option<String>) -> Self {
+        self.stderr = stderr;
+        self
+    }
+
+    /// Returns the List of CommandOutputParameter.id of the `CommandLineTool`
     pub fn get_output_ids(&self) -> Vec<String> {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
 
+    /// Checks whether the `CommandLineTool` has a ShellCommandRequirement in requirements
     pub fn has_shell_command_requirement(&self) -> bool {
         if let Some(requirements) = &self.requirements {
             requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
@@ -138,6 +153,7 @@ impl CommandLineTool {
         }
     }
 
+    /// Checks whether the `CommandLineTool` has a DockerRequirement in requirements and returns an Option to it
     pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
         self.requirements.as_ref()?.iter().find_map(|req| {
             if let Requirement::DockerRequirement(dr) = req {
@@ -148,6 +164,7 @@ impl CommandLineTool {
         })
     }
 
+    /// Gets the permanent fail code of the `CommandLineTool`
     pub fn get_error_code(&self) -> i32 {
         if let Some(code) = &self.permanent_fail_codes {
             code[0]
@@ -156,10 +173,12 @@ impl CommandLineTool {
         }
     }
 
+    /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stdout
     pub fn has_stdout_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stdout))
     }
 
+    /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stderr
     pub fn has_stderr_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stderr))
     }
@@ -230,7 +249,6 @@ baseCommand:
 - calculation.py
 ";
         let clt: Result<CommandLineTool, serde_yaml::Error> = serde_yaml::from_str(cwl);
-        println!("{clt:?}");
         assert!(clt.is_ok());
     }
 
@@ -248,9 +266,7 @@ baseCommand:
                 ..Default::default()
             }])
             .with_outputs(vec![]);
-        let result = serde_yaml::to_string(&tool);
-        println!("{result:?}");
-        assert!(result.is_ok());
+        assert!(serde_yaml::to_string(&tool).is_ok());
     }
 
     #[test]
