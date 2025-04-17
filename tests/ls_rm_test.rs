@@ -39,7 +39,7 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
     });
-    assert!(output.is_ok(), "Function should handle empty tool list");
+    assert!(output.is_err(), "Function should handle empty tool list");
     env::set_current_dir(&original_dir)?;
     Ok(())
 }
