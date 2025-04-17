@@ -216,7 +216,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
     // Print the current working directory
     let cwd = env::current_dir()?;
-    info!("📂 Scanning for tools in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
+    info!("📂 Available Tools in: {}", cwd.to_string_lossy().blue().bold());
 
     // Build the path to the "workflows" folder
     let folder_path = cwd.join("workflows");
