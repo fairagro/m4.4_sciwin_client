@@ -287,32 +287,33 @@ pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn std::error::Error>> {
+pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn Error>> {
+    if args.tool_names.is_empty() {
+        error!("No tool provided!");
+        return Err("No Tool provided!".into());
+    }
+
     let cwd = env::current_dir()?;
     let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");
     for tool in &args.tool_names {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
-        // Check if the path has an extension
+        
         if file_path.extension().is_some() {
             // If it has an extension, remove it
             let file_stem = file_path.file_stem().unwrap_or_default();
             tool_path = workflows_path.join(file_stem);
         }
-        // Check if the directory exists
+        
         if tool_path.exists() && tool_path.is_dir() {
-            // Attempt to remove the directory
             fs::remove_dir_all(&tool_path)?;
-            info!("{} {}", "Removed tool:".green(), tool_path.display().to_string().green());
-            commit(&repo, format!("Deletion of `{}`", tool.as_str()).as_str()).unwrap();
+            info!("{} {}", "🗑️ Removed ".green(), tool_path.to_string_lossy().green());
+            commit(&repo, format!("🗑️ Removed `{}`", tool).as_str()).unwrap();
         } else {
-            error!("Tool '{}' does not exist.", tool_path.display().to_string().red());
+            error!("Tool '{}' does not exist.", tool_path.to_string_lossy().red());
         }
     }
-    //we could also remove all tools if no tool is specified but maybe too dangerous
-    if args.tool_names.is_empty() {
-        info!("Please enter a tool or a list of tools");
-    }
+    
     Ok(())
 }
