@@ -1,4 +1,6 @@
 # Unreleased
+
+# v0.3.0
 ## 🚀 Features
 - Added Containerization Support (Docker & Podman) for `s4n execute local`
 - Support CWL ExpressionTools
