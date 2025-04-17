@@ -5,7 +5,7 @@ use cwl::load_workflow;
 use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
 use s4n::commands::{
-    init::init_s4n,
+    init::initialize_project,
     workflow::{
         connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, list_workflows, remove_workflow, ConnectWorkflowArgs, CreateWorkflowArgs,
         ListWorkflowArgs, RemoveWorkflowArgs,
@@ -44,7 +44,7 @@ pub fn test_remove_workflow() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
 
-    init_s4n(None, false).unwrap();
+    initialize_project(None, false).unwrap();
     create_workflow(&CreateWorkflowArgs {
         name: "test".to_string(),
         force: false,

@@ -5,7 +5,7 @@ use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, typ
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
     execute::{execute_local, LocalExecuteArgs, Runner},
-    init::init_s4n,
+    init::initialize_project,
     tool::{create_tool, list_tools, CreateToolArgs},
     workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
 };
@@ -25,7 +25,7 @@ fn setup() -> (PathBuf, TempDir) {
 
     //init
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     (current, dir)
 }
@@ -360,7 +360,7 @@ pub fn test_example_project() {
     check_git_user().unwrap();
 
     //init project
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     //create calculation tool
     create_tool(&CreateToolArgs {

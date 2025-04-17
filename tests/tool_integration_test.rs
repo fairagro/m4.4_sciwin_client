@@ -10,7 +10,7 @@ use cwl_execution::io::copy_file;
 use git2::Repository;
 use s4n::{
     commands::{
-        init::init_s4n,
+        init::initialize_project,
         tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
     },
     repo::get_modified_files,
@@ -360,7 +360,7 @@ pub fn test_tool_output_is_dir() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
@@ -390,7 +390,7 @@ pub fn test_tool_output_complete_dir() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
@@ -429,7 +429,7 @@ pub fn test_shell_script() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     let name = "script";
     let command = &["./script.sh"];
@@ -470,7 +470,7 @@ pub fn test_tool_uncommitted_no_run() {
     env::set_current_dir(dir.path()).unwrap();
 
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     fs::copy(current.join("tests/test_data/input.txt"), dir.path().join("input.txt")).unwrap(); //repo is not in a clean state now!
     let args = CreateToolArgs {
@@ -495,7 +495,7 @@ pub fn test_tool_output_subfolders() {
     env::set_current_dir(dir.path()).unwrap();
 
     check_git_user().unwrap();
-    init_s4n(None, false).expect("Could not init s4n");
+    initialize_project(None, false).expect("Could not init s4n");
 
     let args = CreateToolArgs {
         command: ["python".to_string(), "subfolders.py".to_string()].to_vec(),
