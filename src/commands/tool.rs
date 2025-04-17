@@ -151,9 +151,9 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 if path.exists() {
                     //in case new dir was created
                     if path.is_dir() {
-                        let paths = std::fs::read_dir(path).unwrap();
+                        let paths = std::fs::read_dir(path)?;
                         for entry in paths {
-                            let entry = entry.unwrap();
+                            let entry = entry?;
                             let file_path = entry.path();
                             if file_path.is_file() {
                                 if let Err(e) = stage_file(&repo, file_path.to_str().unwrap()) {
@@ -162,7 +162,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                             }
                         }
                     } else {
-                        stage_file(&repo, file.as_str()).unwrap();
+                        stage_file(&repo, file.as_str())?;
                     }
                 }
             }
@@ -172,7 +172,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             cwl = cwl.with_outputs(parser::get_outputs(files));
         }
     } else {
-        warn!("User requested no run, could not determine outputs!");
+        warn!("User requested no execution, could not determine outputs!");
     }
 
     // Handle container requirements
@@ -202,7 +202,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 info!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
                     stage_file(&repo, &path)?;
-                    commit(&repo, &format!("Execution of `{}`", command.join(" ")))?;
+                    commit(&repo, &format!("🪄 Creation of `{path}`"))?;
                 }
             }
             Err(e) => return Err(Box::new(e)),
