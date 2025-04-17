@@ -62,11 +62,18 @@ cargo test
 ```
 
 ## 🎯 Installation
-Installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
-
+Detailed installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
 [![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
 
 The easiest way is to use the `shell` or `powershell` scripts with the provided commands.
+To download the latest version you can use
+Linux:
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+```
+
+Windows:
+
 
 ## 📚 How to Use
 Take a look at the **[User documentation](https://fairagro.github.io/m4.4_sciwin_client/)**. An overview on how to use SciWIn Client is available below.
