@@ -12,7 +12,6 @@ pub mod init;
 pub mod sync;
 pub mod tool;
 pub mod workflow;
-pub mod reana;
 
 pub fn check_git_config() -> Result<(), Box<dyn Error>> {
     let mut config = Config::open_default()?;

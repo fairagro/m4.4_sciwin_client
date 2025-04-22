@@ -7,7 +7,8 @@ use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use log::info;
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
-use crate::{commands::reana::{create_reana_yaml, convert_reana_to_json, ping_reana, upload_files, start_workflow, download_files, create_workflow, get_workflow_status}};
+use remote_execution::api::{ping_reana, upload_files, start_workflow, download_files, create_workflow, get_workflow_status};
+use remote_execution::parser::generate_workflow_json_from_cwl;
 use std::{thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
@@ -49,6 +50,7 @@ pub struct LocalExecuteArgs {
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
     pub args: Vec<String>,
 }
+
 
 #[derive(Args, Debug, Default)]
 pub struct RemoteExecuteArgs {
@@ -120,30 +122,34 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     }
 }
 
+
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
+    let reana_instance = &args.instance;
+    let reana_token = &args.token;
+    let cookie_value = &args.cookie_value;
+    let file = &args.file;
+    let input_file = &args.input_file;
 
-    let specification = create_reana_yaml(args)?;
-    let workflow_json = convert_reana_to_json("reana.yaml")?;
+    let workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
 
-    
-    let ping_status = ping_reana(args)?;
+    let ping_status = ping_reana(reana_instance)?;
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
         eprintln!("Unexpected response from Reana server: {:?}", ping_status);
         return Ok(());
     }
 
-    let create_response = create_workflow(args, &workflow_json)?;
+    let create_response = create_workflow(reana_instance, reana_token, cookie_value, &workflow_json)?;
     if let Some(workflow_name) = create_response["workflow_name"].as_str() {
 
-        upload_files(args, workflow_name, &specification)?;
+        upload_files(reana_instance, reana_token, cookie_value, input_file, file, workflow_name, &workflow_json)?;
 
         let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
-        start_workflow(args, workflow_name, None, None, Some(false), Some(converted_yaml))?;
+        start_workflow(reana_instance, reana_token, cookie_value, workflow_name, None, None, false, converted_yaml)?;
 
         loop {
-            let status_response = get_workflow_status(args, workflow_name)?;
+            let status_response = get_workflow_status(reana_instance, reana_token, cookie_value, workflow_name)?;
             let workflow_status = status_response["status"]
                 .as_str()
                 .unwrap_or("unknown");
@@ -153,7 +159,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
                 match workflow_status {
                     "finished" => {
                         println!("✅ Workflow finished successfully.");
-                        download_files(args, workflow_name, &specification)?;
+                        download_files(reana_instance, reana_token, cookie_value, workflow_name, &workflow_json)?;
                     }
                     "failed" => {
                         eprintln!("❌ Workflow execution failed.");
@@ -172,9 +178,9 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
         eprintln!("Workflow creation failed {:?}", create_response);
     }
 
- 
     Ok(())
 }
+
 
 pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(filename)?;
