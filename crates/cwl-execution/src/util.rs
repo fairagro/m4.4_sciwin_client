@@ -79,6 +79,15 @@ pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -
 
 ///Copies back requested outputs and writes to commandline
 pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+    //check for cwl.output.json
+    // If the output directory contains a file named "cwl.output.json", that file must be loaded and used as the output object.
+    let check = Path::new("cwl.output.json");
+    if check.exists() {
+        let contents = fs::read_to_string(check)?;
+        let values: HashMap<String, DefaultValue> = serde_json::from_str(&contents)?;
+        return Ok(values);
+    }
+
     //copy back requested output
     let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for output in &tool.outputs {
