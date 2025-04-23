@@ -405,6 +405,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
             let mut sort_key = vec![SortKey::Int(position as i32), SortKey::Str(input.id.clone())];
+
             let value = runtime.inputs.get(&input.id);
             set_self(&value)?;
             if let Some(value_from) = &binding.value_from {
@@ -434,7 +435,11 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                     }
                 }
             } else {
-                binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
+                let binding_str = evaluate_input_as_string(input, &runtime.inputs)?;
+                if matches!(input.type_, CWLType::Optional(_)) && binding_str == "null" {
+                    continue;
+                }
+                binding.value_from = Some(binding_str.replace("'", ""));
             }
             unset_self()?;
             bindings.push(BoundBinding {
