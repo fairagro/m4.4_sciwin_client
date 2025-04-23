@@ -3164,6 +3164,7 @@ dependencies = [
  "cwl-execution",
  "dialoguer",
  "git2",
+ "glob",
  "log",
  "pathdiff",
  "predicates",
