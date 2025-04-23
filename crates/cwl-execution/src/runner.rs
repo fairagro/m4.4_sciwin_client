@@ -396,6 +396,20 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                         binding.value_from = Some(replace_expressions(value_from).unwrap_or(value_from.to_string()));
                     }
                 }
+            } else if matches!(input.type_, CWLType::Array(_)) {
+                let val = evaluate_input(input, &runtime.inputs)?;
+                if let DefaultValue::Array(vec) = val {
+                    if let Some(sep) = &binding.item_separator {
+                        binding.value_from = Some(vec.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(sep).to_string());
+                    } else {
+                        for item in &vec {
+                            binding.value_from = Some(item.as_value_string());
+                            bindings.push((position, i + index, binding.clone()));
+                        }
+                        unset_self()?;
+                        continue;
+                    }
+                }
             } else {
                 binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
             }

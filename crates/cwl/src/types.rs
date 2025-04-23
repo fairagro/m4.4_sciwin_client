@@ -121,8 +121,8 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
-    Any(serde_yaml::Value),
     Array(Vec<DefaultValue>),
+    Any(serde_yaml::Value),
 }
 
 fn number_to_string(num: &Number) -> String {
@@ -149,7 +149,7 @@ impl DefaultValue {
                 serde_yaml::Value::Number(num) => number_to_string(num),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
-            DefaultValue::Array(item) => format!("[{}]", item.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(",")),
+            DefaultValue::Array(item) => item.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(" ").to_string(),
         }
     }
 
@@ -178,6 +178,7 @@ impl DefaultValue {
                 Value::Null => matches!(cwl_type, CWLType::Null),
                 _ => false,
             },
+            (DefaultValue::Array(_), CWLType::Array(_)) => true,
             _ => false,
         }
     }
@@ -250,6 +251,8 @@ impl<'de> Deserialize<'de> for DefaultValue {
                 }
                 _ => Ok(DefaultValue::Any(value)),
             }
+        } else if let Value::Sequence(map) = value {
+            Ok(DefaultValue::Array(map.into_iter().map(|i| serde_yaml::from_value(i).unwrap()).collect()))
         } else {
             Ok(DefaultValue::Any(value))
         }
