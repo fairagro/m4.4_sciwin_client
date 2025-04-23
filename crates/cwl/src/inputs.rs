@@ -65,7 +65,9 @@ pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shell_quote: Option<bool>,
+    pub shell_quote: Option<bool>,    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_separator: Option<String>,
 }
 
 impl CommandLineBinding {
