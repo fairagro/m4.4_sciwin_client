@@ -14,12 +14,12 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// A Command Line Tool is a non-interactive executable program that reads some input, performs a computation, 
-/// and terminates after producing some output. Command line programs are a flexible unit of code sharing and reuse, 
-/// unfortunately the syntax and input/output semantics among command line programs is extremely heterogeneous. 
-/// A common layer for describing the syntax and semantics of programs can reduce this incidental 
-/// complexity by providing a consistent way to connect programs together. This specification defines the 
-/// Common Workflow Language (CWL) Command Line Tool Description, a vendor-neutral standard for describing the syntax and 
+/// A Command Line Tool is a non-interactive executable program that reads some input, performs a computation,
+/// and terminates after producing some output. Command line programs are a flexible unit of code sharing and reuse,
+/// unfortunately the syntax and input/output semantics among command line programs is extremely heterogeneous.
+/// A common layer for describing the syntax and semantics of programs can reduce this incidental
+/// complexity by providing a consistent way to connect programs together. This specification defines the
+/// Common Workflow Language (CWL) Command Line Tool Description, a vendor-neutral standard for describing the syntax and
 /// input/output semantics of command line programs.
 ///
 /// Reference: <https://www.commonwl.org/v1.2/CommandLineTool.html>
@@ -191,6 +191,7 @@ impl CommandLineTool {
     }
 }
 
+/// Command line bindings which are not directly associated with input parameters.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Argument {
@@ -198,6 +199,7 @@ pub enum Argument {
     Binding(CommandLineBinding),
 }
 
+/// Command line base command which can be a single string or a list of strings.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Command {
