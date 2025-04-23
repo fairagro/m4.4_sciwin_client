@@ -128,9 +128,12 @@ pub struct DocumentBase {
 impl DocumentBase {
     /// Checks whether Document has a ResourceRequirement attached and returns an option to it.
     pub fn get_resource_requirement(&self) -> Option<ResourceRequirement> {
-        self.requirements.as_ref()?.iter().find_map(|req| {
+        let reqs = self.requirements.as_ref().into_iter().flatten();
+        let hints = self.hints.as_ref().into_iter().flatten();
+
+        reqs.chain(hints).find_map(|req| {
             if let Requirement::ResourceRequirement(rr) = req {
-                Some(rr.clone()) // Return the found ResourceRequirement
+                Some(rr.clone())
             } else {
                 None
             }

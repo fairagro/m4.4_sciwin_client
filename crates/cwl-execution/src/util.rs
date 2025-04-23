@@ -167,7 +167,6 @@ fn evaluate_output_impl(
                 }
             }
         }
-
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
