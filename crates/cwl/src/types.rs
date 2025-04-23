@@ -80,8 +80,20 @@ impl<'de> Deserialize<'de> for CWLType {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        if let Value::String(s) = value {
+            return s.parse().map_err(serde::de::Error::custom);
+        }
+        if let Value::Mapping(map) = value {
+            if let Some(Value::String(type_str)) = map.get("type") {
+                if type_str == "array" {
+                    if let Some(Value::String(item_str)) = map.get("items") {
+                        return format!("{item_str}[]").parse().map_err(serde::de::Error::custom);
+                    }
+                }
+            }
+        }
+        Err(serde::de::Error::custom("Expected string or mapping for CWLType"))
     }
 }
 
@@ -108,7 +120,7 @@ fn number_to_string(num: &Number) -> String {
         num.as_i64().unwrap().to_string()
     } else if num.is_f64() {
         num.as_f64().unwrap().to_string()
-    } else if num.is_u64(){
+    } else if num.is_u64() {
         num.as_u64().unwrap().to_string()
     } else {
         unreachable!()
@@ -497,6 +509,18 @@ mod tests {
         let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(inputs[0].type_, CWLType::Array(Box::new(CWLType::String)));
         assert_eq!(inputs[1].type_, CWLType::Array(Box::new(CWLType::Int)));
+    }
+
+    #[test]
+    pub fn test_deserialize_array_type_alt() {
+        let yaml = r"
+- str:
+  type: 
+      type: array
+      items: string
+";
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Array(Box::new(CWLType::String)));
     }
 
     #[test]
