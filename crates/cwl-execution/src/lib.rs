@@ -57,7 +57,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
                         file.set_location(join_path_string(path_prefix, &file.get_location()));
                     }
                     DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.get_location())),
-                    DefaultValue::Any(_) => (),
+                    _ => (),
                 }
             }
         }
@@ -73,7 +73,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
         match value {
             DefaultValue::File(file) => correct_path(file, path_prefix),
             DefaultValue::Directory(directory) => correct_path(directory, path_prefix),
-            DefaultValue::Any(_) => (),
+            _ => (),
         }
     }
 

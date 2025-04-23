@@ -142,6 +142,7 @@ pub fn run_workflow(
                     DefaultValue::Directory(dir)
                 }
                 DefaultValue::Any(str) => DefaultValue::Any(str.clone()),
+                _ => todo!(),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
@@ -160,6 +161,7 @@ pub fn run_workflow(
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
+                _ => todo!(),
             };
             output_values.insert(&output.id, value);
         }
