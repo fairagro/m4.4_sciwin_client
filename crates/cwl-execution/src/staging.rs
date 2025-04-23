@@ -231,7 +231,7 @@ fn handle_filename(value: &DefaultValue) -> String {
     match value {
         DefaultValue::File(item) => join_with_basename(&item.get_location(), &item.basename),
         DefaultValue::Directory(item) => join_with_basename(&item.get_location(), &item.basename),
-        DefaultValue::Any(_) => String::new(),
+       _ => String::new(),
     }
 }
 

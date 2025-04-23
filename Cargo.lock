@@ -732,6 +732,7 @@ version = "0.3.0"
 dependencies = [
  "cwl",
  "fancy-regex 0.14.0",
+ "glob",
  "log",
  "pathdiff",
  "rand 0.9.0",

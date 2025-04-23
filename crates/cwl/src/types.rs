@@ -121,6 +121,7 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
+    Array(Vec<DefaultValue>),
     Any(serde_yaml::Value),
 }
 
@@ -148,6 +149,7 @@ impl DefaultValue {
                 serde_yaml::Value::Number(num) => number_to_string(num),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
+            DefaultValue::Array(item) => item.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(" ").to_string(),
         }
     }
 
@@ -176,6 +178,7 @@ impl DefaultValue {
                 Value::Null => matches!(cwl_type, CWLType::Null),
                 _ => false,
             },
+            (DefaultValue::Array(_), CWLType::Array(_)) => true,
             _ => false,
         }
     }
@@ -186,6 +189,7 @@ impl DefaultValue {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Directory(dir) => DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
+            DefaultValue::Array(arr) => DefaultValue::Array(arr.iter().map(|i| i.to_default_value()).collect()),
         }
     }
 }
@@ -247,6 +251,8 @@ impl<'de> Deserialize<'de> for DefaultValue {
                 }
                 _ => Ok(DefaultValue::Any(value)),
             }
+        } else if let Value::Sequence(map) = value {
+            Ok(DefaultValue::Array(map.into_iter().map(|i| serde_yaml::from_value(i).unwrap()).collect()))
         } else {
             Ok(DefaultValue::Any(value))
         }

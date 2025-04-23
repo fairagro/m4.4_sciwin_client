@@ -214,18 +214,17 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 
     let piped_args = piped.iter().enumerate().map(|(i, &x)| {
         Argument::Binding(CommandLineBinding {
-            prefix: None,
             position: Some((inputs.len() + i).try_into().unwrap_or_default()),
             value_from: Some(x.to_string()),
-            shell_quote: None,
+            ..Default::default()
         })
     });
 
     let mut args = vec![Argument::Binding(CommandLineBinding {
-        prefix: None,
         position: Some(inputs.len().try_into().unwrap_or_default()),
         value_from: Some("|".to_string()),
         shell_quote: Some(false),
+        ..Default::default()
     })];
     args.extend(piped_args);
 
