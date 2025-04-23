@@ -1,6 +1,6 @@
 use crate::{
     expression::{evaluate_expression, set_self, unset_self},
-    io::{copy_file, get_first_file_with_prefix},
+    io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
 use cwl::{
     clt::CommandLineTool,
@@ -14,6 +14,7 @@ use glob::glob;
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
+    env,
     error::Error,
     fmt::Debug,
     fs,
@@ -84,7 +85,34 @@ pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Pat
     let check = Path::new("cwl.output.json");
     if check.exists() {
         let contents = fs::read_to_string(check)?;
-        let values: HashMap<String, DefaultValue> = serde_json::from_str(&contents)?;
+        let mut values: HashMap<String, DefaultValue> = serde_json::from_str(&contents)?;
+        values.retain(|k, _| tool.outputs.iter().any(|o| o.id == *k));
+        for (_, value) in values.iter_mut() {
+            match value {
+                DefaultValue::File(file) => {
+                    if let Some(path) = &file.location {
+                        let path = path.strip_prefix("file://").unwrap_or(path);
+                        let path = PathBuf::from(path);
+                        let path = &pathdiff::diff_paths(&path, env::current_dir()?).unwrap_or(path);
+                        let dest = &initial_dir.join(path);
+                        fs::copy(path, dest)?;
+                        eprintln!("📜 Wrote output file: {:?}", &initial_dir.join(dest));
+                        file.location = Some(dest.to_string_lossy().into_owned());
+                        *file = file.snapshot();
+                    }
+                }
+                DefaultValue::Directory(dir) => {
+                    if let Some(path) = &dir.location {
+                        let path = PathBuf::from(path);
+                        let path = &pathdiff::diff_paths(&path, env::current_dir()?).unwrap_or(path);
+                        let dest = &initial_dir.join(path);
+                        copy_dir(path, dest)?;
+                        eprintln!("📜 Wrote output directory: {:?}", &dest);
+                    }
+                }
+                _ => (),
+            }
+        }
         return Ok(values);
     }
 
