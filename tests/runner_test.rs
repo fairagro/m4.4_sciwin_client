@@ -8,6 +8,7 @@ use cwl_execution::{
 use s4n::parser::parse_command_line;
 use serial_test::serial;
 use std::{collections::HashMap, fs, path::Path};
+use tempfile::tempdir;
 
 #[test]
 #[serial]
@@ -200,7 +201,8 @@ baseCommand:
 #[test]
 #[serial]
 pub fn test_run_commandlinetool_array_glob() {
+    let dir = tempdir().unwrap();
     let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
-    let result = run_tool(&mut tool, HashMap::new(), None, None);
+    let result = run_tool(&mut tool, HashMap::new(), None, Some(dir.path().to_string_lossy().into_owned()));
     assert!(result.is_ok(), "{:?}", result);
 }
