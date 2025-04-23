@@ -1,6 +1,6 @@
 # CWL
-This crate provides support for working with Common Workflow Language (CWL) files.
-It includes modules for handling CommandLineTools, Workflows, ExpressionTools, and their associated metadata.
+This crate provides support for working with [Common Workflow Language](https://www.commonwl.org/v1.2/) (CWL) files.
+It includes modules for handling [CommandLineTools](https://www.commonwl.org/v1.2/CommandLineTool.html), [Workflows](https://www.commonwl.org/v1.2/Workflow.html), [ExpressionTools](https://www.commonwl.org/v1.2/Workflow.html#ExpressionTool), and their associated metadata.
 
 ## Modules
 - `clt`: Handles CWL CommandLineTools.
