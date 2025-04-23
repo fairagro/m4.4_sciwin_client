@@ -83,8 +83,7 @@ impl<'de> Deserialize<'de> for CWLType {
         let value: Value = Deserialize::deserialize(deserializer)?;
         if let Value::String(s) = value {
             return s.parse().map_err(serde::de::Error::custom);
-        }
-        if let Value::Mapping(map) = value {
+        } else if let Value::Mapping(map) = value {
             if let Some(Value::String(type_str)) = map.get("type") {
                 if type_str == "array" {
                     if let Some(Value::String(item_str)) = map.get("items") {
@@ -92,8 +91,18 @@ impl<'de> Deserialize<'de> for CWLType {
                     }
                 }
             }
+        } else if let Value::Sequence(seq) = value {
+            if seq.len() == 2 {
+                if let Value::String(type_str) = &seq[0] {
+                    if type_str == "null" {
+                        if let Value::String(type_str) = &seq[1] {
+                            return format!("{type_str}?").parse().map_err(serde::de::Error::custom);
+                        }
+                    }
+                }
+            }
         }
-        Err(serde::de::Error::custom("Expected string or mapping for CWLType"))
+        Err(serde::de::Error::custom("Expected string, sequence or mapping for CWLType"))
     }
 }
 
@@ -496,6 +505,16 @@ mod tests {
         assert_eq!(inputs[0].type_, CWLType::Optional(Box::new(CWLType::String)));
         assert_eq!(inputs[1].type_, CWLType::Optional(Box::new(CWLType::Int)));
         assert_eq!(inputs[2].type_, CWLType::Boolean);
+    }
+
+    #[test]
+    pub fn test_deserialize_nullable_type_alt() {
+        let yaml = r#"
+- str:
+  type: ["null", string]
+"#;
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Optional(Box::new(CWLType::String)));
     }
 
     #[test]
