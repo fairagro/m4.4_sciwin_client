@@ -1,9 +1,9 @@
 # Unreleased
 ## 🐛 Bugfixes
-- Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 130/378
-- Improved Array support
-- Support cwl.output.json handling
-- Support globs
+- Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 131/378
+- Improved Array support in Runner
+- Support cwl.output.json handling in Runner
+- Support globs in Runner
 
 # v0.3.0
 ## 🚀 Features

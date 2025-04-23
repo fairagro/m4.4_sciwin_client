@@ -161,7 +161,7 @@ pub fn run_workflow(
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
-                _ => todo!(),
+                DefaultValue::Array(inner) => DefaultValue::Array(inner.clone()),
             };
             output_values.insert(&output.id, value);
         }
