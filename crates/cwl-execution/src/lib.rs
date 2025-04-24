@@ -91,8 +91,7 @@ pub fn execute(
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //load cwl
     let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
-    let contents = preprocess_cwl(&contents, &cwlfile);
-
+    let contents = preprocess_cwl(&contents, &cwlfile)?;
     let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
 
     match doc {

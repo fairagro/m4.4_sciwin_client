@@ -9,7 +9,6 @@ use cwl::{
     outputs::CommandOutputParameter,
     types::{CWLType, DefaultValue, Directory, File},
 };
-use fancy_regex::Regex;
 use glob::glob;
 use serde_yaml::Value;
 use std::{
@@ -275,34 +274,39 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
     Ok(dir)
 }
 
-pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> String {
-    let import_regex = Regex::new(r#"(?P<indent>[\p{Z}-]*)\{*"*\$import"*: (?P<file>[\w\.\-_]*)\}*"#).unwrap();
-    import_regex
-        .replace_all(contents, |captures: &fancy_regex::Captures| {
-            let filename = captures.name("file").map_or("", |m| m.as_str());
-            let indent = captures.name("indent").map_or("", |m| m.as_str());
-            let indent_level: String = " ".repeat(indent.len());
-            let path = path
-                .as_ref()
-                .parent()
-                .map(|parent| parent.join(filename))
-                .unwrap_or_else(|| Path::new(filename).to_path_buf());
+pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String, Box<dyn Error>> {
+    let mut yaml: Value = serde_yaml::from_str(contents)?;
+    let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
+    resolve_imports(&mut yaml, path)?;
 
-            match fs::read_to_string(&path) {
-                Ok(contents) => {
-                    let mut lines = contents.lines();
-                    let first_line = lines.next().unwrap_or_default();
-                    let mut result = format!("{}{}", indent, first_line);
-                    for line in lines {
-                        result.push('\n');
-                        result.push_str(&format!("{}{}", indent_level, line));
-                    }
-                    result
+    Ok(serde_yaml::to_string(&yaml)?)
+}
+
+fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Error>> {
+    match value {
+        Value::Mapping(map) => {
+            if map.len() == 1 {
+                if let Some(Value::String(file)) = map.get(Value::String("$import".to_string())) {
+                    let path = base_path.join(file);
+                    let contents = fs::read_to_string(&path)?;
+                    let mut imported_value: Value = serde_yaml::from_str(&contents)?;
+                    resolve_imports(&mut imported_value, path.parent().unwrap_or(base_path))?;
+                    *value = imported_value;
+                    return Ok(());
                 }
-                Err(_) => format!("{{\"error\": \"failed to load {}\"}}", filename),
             }
-        })
-        .to_string()
+            for val in map.values_mut() {
+                resolve_imports(val, base_path)?;
+            }
+        }
+        Value::Sequence(seq) => {
+            for val in seq.iter_mut() {
+                resolve_imports(val, base_path)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 pub fn is_docker_installed() -> bool {
