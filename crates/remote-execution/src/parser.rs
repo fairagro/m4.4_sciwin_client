@@ -4,14 +4,13 @@ use std::{
     error::Error,
     fs,
     env,
-    path::PathBuf,
     io
 };
 use std::path::Path;
 use std::path::MAIN_SEPARATOR;
 use serde::{de::self, Deserialize, Serialize};
 use serde::{ Deserializer};
-use crate::utils::{read_file_content, get_location, sanitize_path, get_all_outputs, build_inputs_cwl, build_inputs_yaml, load_cwl_file2};
+use crate::utils::{read_file_content, get_location, sanitize_path, get_all_outputs, build_inputs_cwl, build_inputs_yaml, load_cwl_yaml};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct WorkflowOutputs {
@@ -205,13 +204,13 @@ enum CWLEntry {
 
 
 pub fn generate_workflow_json_from_cwl(
-    file: &PathBuf, input_file: &Option<String>
+    file: &Path, input_file: &Option<String>
 ) -> Result<serde_json::Value, Box<dyn Error>> {
     let cwl_path = file.to_str().unwrap();
     let inputs_yaml = input_file.as_deref();
     let base_path = std::env::current_dir()?.to_string_lossy().to_string();
     let workflow_spec_json = convert_cwl_to_json(cwl_path)?;
-    let cwl_yaml: Value = load_cwl_file2(&base_path, &file)?;
+    let cwl_yaml: Value = load_cwl_yaml(&base_path, file)?;
     let cwl_version = workflow_spec_json
         .get("cwlVersion")
         .and_then(|v| v.as_str())
@@ -491,4 +490,218 @@ fn convert_command_line_tool_cwl_to_json(cwl_path: &str) -> Result<serde_json::V
     });
 
     Ok(command_line_tool_json)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+fn test_generate_workflow_json_from_cwl_minimal() {
+    use std::path::PathBuf;
+
+    let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+    let result = generate_workflow_json_from_cwl(&cwl_path, &None);
+
+    assert!(result.is_ok(), "Expected generation to succeed");
+    let json = result.unwrap();
+    println!("json {:?}", json);
+
+    // Basic assertions
+    assert_eq!(json["version"], "0.9.3");
+    assert_eq!(json["workflow"]["type"], "cwl");
+    assert_eq!(json["workflow"]["file"], cwl_path.to_str().unwrap());
+
+    // Check that 'inputs' is an object, not an array
+    let inputs = &json["inputs"];
+    assert!(inputs.is_object(), "Inputs should be an object");
+
+    // Check for 'directories' field in inputs
+    assert!(inputs["directories"].is_array(), "directories should be an array");
+    assert_eq!(inputs["directories"].as_array().unwrap().len(), 1);
+    assert_eq!(inputs["directories"][0], "../../tests/test_data/hello_world/workflows");
+
+    // Check for 'files' field in inputs
+    assert!(inputs["files"].is_array(), "files should be an array");
+    let files = inputs["files"].as_array().unwrap();
+
+    // Check if both 'data/population.csv' and 'data/speakers_revised.csv' are in the files array
+    let has_population_csv = files.iter().any(|file| file == "data/population.csv");
+    let has_speakers_csv = files.iter().any(|file| file == "data/speakers_revised.csv");
+
+    assert!(has_population_csv, "'data/population.csv' not found in inputs['files']");
+    assert!(has_speakers_csv, "'data/speakers_revised.csv' not found in inputs['files']");
+
+    // Check for 'parameters' field in inputs
+    let parameters = &inputs["parameters"];
+    assert!(parameters.is_object(), "parameters should be an object");
+
+    // Check specific parameters
+    assert_eq!(parameters["population"]["class"], "File");
+    assert_eq!(parameters["population"]["path"], "data/population.csv");
+    assert_eq!(parameters["speakers"]["class"], "File");
+    assert_eq!(parameters["speakers"]["path"], "data/speakers_revised.csv");
+
+    // Check outputs
+    let outputs = &json["outputs"];
+    assert!(outputs.is_object(), "Outputs should be an object");
+    assert!(outputs["files"].is_array(), "outputs.files should be an array");
+    assert_eq!(outputs["files"].as_array().unwrap().len(), 1);
+    assert_eq!(outputs["files"][0], "results.svg");
+
+    // Check steps existence
+    let steps = &json["workflow"]["specification"]["$graph"][0]["steps"];
+    assert!(steps.is_array(), "Steps should be an array");
+
+    // Ensure there are steps in the graph
+    assert!(!steps.as_array().unwrap().is_empty(), "Steps array should not be empty");
+
+    // Check if 'calculation' step exists
+    let calculation_exists = steps.as_array().unwrap().iter().any(|step| step["id"] == "#main/calculation");
+    assert!(calculation_exists, "'calculation' step is missing");
+
+    // Check if 'plot' step exists
+    let plot_exists = steps.as_array().unwrap().iter().any(|step| step["id"] == "#main/plot");
+    assert!(plot_exists, "'plot' step is missing");
+}
+
+    #[test]
+    fn test_convert_command_line_tool_cwl_to_json_sample() -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs::write;
+        use tempfile::NamedTempFile;
+        use std::io::Write;
+    
+        // Sample CWL content
+        let cwl_data = r#"#!/usr/bin/env cwl-runner
+    cwlVersion: v1.2
+    class: CommandLineTool
+    
+    requirements:
+      - class: InitialWorkDirRequirement
+        listing:
+          - entryname: calculation.py
+            entry:
+              $include: calculation.py
+      - class: DockerRequirement
+        dockerPull: pandas/pandas:pip-all
+    
+    inputs:
+      - id: population
+        type: File
+        default:
+          class: File
+          location: ../../data/population.csv
+        inputBinding:
+          prefix: '--population'
+      - id: speakers
+        type: File
+        default:
+          class: File
+          location: ../../data/speakers_revised.csv
+        inputBinding:
+          prefix: '--speakers'
+    
+    outputs:
+      - id: results
+        type: File
+        outputBinding:
+          glob: results.csv
+    
+    baseCommand:
+      - python
+      - calculation.py
+    "#;
+    
+        let calc_code = r#"print("Calculating stuff...")"#;
+        let temp_script = NamedTempFile::new()?;
+        write(temp_script.path(), calc_code)?;
+    
+        let mut temp_cwl = NamedTempFile::new()?;
+        write!(temp_cwl, "{}", cwl_data.replace("calculation.py", temp_script.path().file_name().unwrap().to_str().unwrap()))?;
+    
+        let json = convert_command_line_tool_cwl_to_json(temp_cwl.path().to_str().unwrap())?;
+
+        assert_eq!(json["class"], "CommandLineTool");
+        assert_eq!(json["baseCommand"][0], "python");
+        assert_eq!(json["baseCommand"][1], temp_script.path().file_name().unwrap().to_str().unwrap());
+    
+        // Inputs
+        let inputs = json["inputs"].as_array().expect("inputs should be an array");
+        assert_eq!(inputs.len(), 2);
+        let population = inputs.iter().find(|i| i["id"].as_str().unwrap().contains("population")).unwrap();
+        assert_eq!(population["type"], "File");
+        assert_eq!(population["inputBinding"]["prefix"], "--population");
+        assert!(population["default"]["location"].as_str().unwrap().contains("population.csv"));
+    
+        let speakers = inputs.iter().find(|i| i["id"].as_str().unwrap().contains("speakers")).unwrap();
+        assert_eq!(speakers["type"], "File");
+        assert_eq!(speakers["inputBinding"]["prefix"], "--speakers");
+        assert!(speakers["default"]["location"].as_str().unwrap().contains("speakers_revised.csv"));
+    
+        // Outputs
+        let outputs = json["outputs"].as_array().expect("outputs should be an array");
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(outputs[0]["outputBinding"]["glob"], "results.csv");
+    
+        // Requirements
+        let requirements = json["requirements"].as_array().expect("requirements should be an array");
+        let docker = requirements.iter().find(|r| r["class"] == "DockerRequirement").expect("Missing DockerRequirement");
+        assert_eq!(docker["dockerPull"], "pandas/pandas:pip-all");
+    
+        let iwd = requirements.iter().find(|r| r["class"] == "InitialWorkDirRequirement").expect("Missing InitialWorkDirRequirement");
+        let listing = iwd["listing"].as_array().expect("listing should be an array");
+        assert_eq!(listing.len(), 1);
+        assert_eq!(listing[0]["entryname"], temp_script.path().file_name().unwrap().to_str().unwrap());
+        assert_eq!(listing[0]["entry"], calc_code);
+    
+        Ok(())
+    }
+
+    #[test]
+    fn test_generate_workflow_json_from_cwl_with_inputs_yaml() {
+        use std::path::PathBuf;
+
+        let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let result = generate_workflow_json_from_cwl(&cwl_path, &Some("../../tests/test_data/hello_world/workflows/main/inputs.yml".to_string()));
+        
+        assert!(result.is_ok(), "Expected generation to succeed");
+        let json = result.unwrap();
+    
+        assert_eq!(json["version"], "0.9.3");
+        assert_eq!(json["workflow"]["type"], "cwl");
+        assert_eq!(json["workflow"]["file"], cwl_path.to_str().unwrap());
+    
+        let inputs = &json["inputs"];
+        assert!(inputs.is_object(), "Inputs should be an object");
+    
+        let parameters = &inputs["parameters"];
+        assert!(parameters.is_object(), "parameters should be an object");
+        assert_eq!(parameters["population"]["class"], "File");
+        assert_eq!(parameters["population"]["location"], "data/population.csv");
+        assert_eq!(parameters["speakers"]["class"], "File");
+        assert_eq!(parameters["speakers"]["location"], "data/speakers_revised.csv");
+    
+        let outputs = &json["outputs"];
+        assert!(outputs.is_object(), "Outputs should be an object");
+        assert!(outputs["files"].is_array(), "outputs.files should be an array");
+        assert_eq!(outputs["files"].as_array().unwrap().len(), 1);
+        assert_eq!(outputs["files"][0], "results.svg");
+    
+        let cwl_files = &json["workflow"]["specification"]["$graph"];
+        assert!(cwl_files.is_array(), "Steps should be an array");
+        assert_eq!(cwl_files.as_array().unwrap().len(), 3);
+    
+        let steps = &json["workflow"]["specification"]["$graph"][0]["steps"];
+        assert!(steps.is_array(), "Steps should be an array");
+
+        assert!(!steps.as_array().unwrap().is_empty(), "Steps array should not be empty");
+
+        let calculation_exists = steps.as_array().unwrap().iter().any(|step| step["id"] == "#main/calculation");
+        assert!(calculation_exists, "'calculation' step is missing");
+
+        let plot_exists = steps.as_array().unwrap().iter().any(|step| step["id"] == "#main/plot");
+        assert!(plot_exists, "'plot' step is missing");
+    }
+
 }

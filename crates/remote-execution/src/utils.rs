@@ -118,7 +118,8 @@ pub fn collect_files_recursive(dir: &Path, files: &mut HashSet<String>) -> Resul
     Ok(())
 }
 
-pub fn load_cwl_file2(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
+
+pub fn load_cwl_yaml(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
     let full_path = if cwl_file_path.is_absolute() {
         cwl_file_path.to_path_buf()
     } else {
@@ -129,6 +130,7 @@ pub fn load_cwl_file2(base_path: &str, cwl_file_path: &Path) -> Result<Value, Bo
     let yaml: Value = serde_yaml::from_str(&contents)?;
     Ok(yaml)
 }
+
 
 pub fn load_yaml_file(path: &Path) -> Result<Value, Box<dyn Error>> {
     let contents = fs::read_to_string(path)?;
@@ -164,7 +166,6 @@ pub fn load_cwl_file(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box
     let cwl: Value = serde_yaml::from_str(&file_content)?;
     Ok(cwl)
 }
-
 
 pub fn read_file_content(file_path: &str) -> Result<String, io::Error> {
     let mut file = std::fs::File::open(file_path)?;
@@ -575,7 +576,7 @@ pub fn resolve_input_file_path(
         for (_key, value) in mapping {
             if let Value::Mapping(file_entry) = value {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(path_str)) = file_entry.get(&Value::String(field.to_string())) {
+                    if let Some(Value::String(path_str)) = file_entry.get(Value::String(field.to_string())) {
                         if file_matches(requested_file, path_str) {
                             return Some(path_str.to_string());
                         }
@@ -591,7 +592,7 @@ pub fn resolve_input_file_path(
             for input in inputs {
                 if let Some(Value::Mapping(default_map)) = input.get("default") {
                     for field in &["location", "path"] {
-                        if let Some(Value::String(loc)) = default_map.get(&Value::String(field.to_string())) {
+                        if let Some(Value::String(loc)) = default_map.get(Value::String(field.to_string())) {
                             if file_matches(requested_file, loc) {
                                 return Some(loc.to_string());
                             }
@@ -603,4 +604,623 @@ pub fn resolve_input_file_path(
     }
 
     None
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::{tempdir};
+    use std::fs::{self, File};
+    use std::path::PathBuf;
+    use serde_json::Value;
+
+    #[test]
+    fn test_get_location() {
+        let result = get_location("tests/test_data/hello_world/workflows/main/main.cwl", Path::new("../plot/plot.cwl"));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "tests/test_data/hello_world/workflows/plot/plot.cwl");
+    }
+
+    #[test]
+    fn test_load_cwl_file_resolves_relative_path() {
+        use std::fs::{create_dir_all, File};
+        use std::io::Write;
+        use tempfile::tempdir;
+    
+        let temp_dir = tempdir().unwrap();
+        let base_path = temp_dir.path().join("base");
+        let sub_dir = base_path.join("sub");
+    
+        create_dir_all(&sub_dir).unwrap();
+    
+        let cwl_file_path = sub_dir.join("tool.cwl");
+    
+        let cwl_content = r#"
+        class: CommandLineTool
+        baseCommand: echo
+        inputs: []
+        outputs: []
+        "#;
+    
+        let mut file = File::create(&cwl_file_path).unwrap();
+        write!(file, "{}", cwl_content).unwrap();
+    
+        let result = load_cwl_file(cwl_file_path.to_str().unwrap(), Path::new("../sub/tool.cwl"));
+    
+        assert!(result.is_ok(), "load_cwl_file failed with error: {:?}", result.err());
+    
+        let value = result.unwrap();
+        assert_eq!(value["class"], serde_yaml::Value::String("CommandLineTool".to_string()));
+    }
+
+    #[test]
+fn test_find_input_location_valid_input() {
+    let temp_dir = tempdir().unwrap();
+    let dir_path = temp_dir.path();
+
+    let sub_cwl_content = r#"
+class: CommandLineTool
+inputs:
+  - id: population
+    type: File
+    default:
+      class: File
+      location: data/population.csv
+outputs: []
+baseCommand: echo
+"#;
+    let sub_cwl_path = dir_path.join("tool.cwl");
+    fs::write(&sub_cwl_path, sub_cwl_content).unwrap();
+
+    let main_cwl_content = r#"
+class: Workflow
+inputs: []
+outputs: []
+steps:
+  - id: step1
+    run: tool.cwl
+    in:
+      population: population
+    out: []
+"#;
+    let main_cwl_path = dir_path.join("main.cwl");
+    fs::write(&main_cwl_path, main_cwl_content).unwrap();
+
+    let main_path_str = main_cwl_path.to_str().unwrap();
+
+    let result = find_input_location(main_path_str, "population").unwrap();
+
+    assert_eq!(result, Some("data/population.csv".to_string()));
+}
+
+ 
+    #[test]
+    fn test_build_inputs_yaml_real_example() {
+        use std::collections::HashSet;
+        use serde_yaml::Value;
+
+        let input_yaml_path = "../../tests/test_data/hello_world/workflows/main/inputs.yml";
+        assert!(std::path::Path::new(input_yaml_path).exists(), "Test input file does not exist");
+
+        let cwl_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+        assert!(std::path::Path::new(input_yaml_path).exists(), "Test input file does not exist");
+
+        let result = build_inputs_yaml(cwl_path, input_yaml_path);
+        assert!(result.is_ok(), "build_inputs_yaml failed: {:?}", result);
+        let mapping = result.unwrap();
+
+        let files = mapping.get(&Value::String("files".to_string())).expect("Missing 'files'");
+        if let Value::Sequence(file_list) = files {
+            let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).collect();
+            assert!(file_set.contains(&"data/population.csv"), "Missing population.csv");
+            assert!(file_set.contains(&"data/speakers_revised.csv"), "Missing speakers_revised.csv");
+        } else {
+            panic!("Expected 'files' to be a sequence");
+        }
+
+        let dirs = mapping.get(&Value::String("directories".to_string())).expect("Missing 'directories'");
+        if let Value::Sequence(dir_list) = dirs {
+            let dir_set: HashSet<_> = dir_list.iter().filter_map(|v| v.as_str()).collect();
+            assert!(dir_set.contains(&"../../tests/test_data/hello_world/workflows"), "Missing correct directory");
+        } else {
+            panic!("Expected 'directories' to be a sequence");
+        }
+    }
+
+    
+    #[test]
+    fn test_sanitize_simple_path() {
+        let path = "folder/file.txt";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "folder/file.txt", "The sanitized path should be the same as the input.");
+    }
+
+    #[test]
+    fn test_sanitize_path_with_parent_dir() {
+        let path = "folder/../file.txt";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "file.txt", "The parent directory should be removed from the path.");
+    }
+
+    #[test]
+    fn test_sanitize_windows_path() {
+        let path = "C:\\folder\\file.txt";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "C:/folder/file.txt", "Backslashes should be replaced with forward slashes.");
+    }
+
+    #[test]
+    fn test_sanitize_path_with_multiple_parent_dirs() {
+        let path = "folder/../other_folder/../file.txt";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "file.txt", "Multiple parent directories should be removed.");
+    }
+
+    #[test]
+    fn test_sanitize_empty_path() {
+        let path = "";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "", "An empty path should return an empty string.");
+    }
+
+    #[test]
+    fn test_sanitize_already_sanitized_path() {
+        let path = "folder/file.txt";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "folder/file.txt", "An already sanitized path should remain unchanged.");
+    }
+
+    #[test]
+    fn test_sanitize_path_with_leading_trailing_spaces() {
+        let path = "   folder/file.txt   ";
+        let sanitized = sanitize_path(path);
+        assert_eq!(sanitized, "folder/file.txt", "Leading and trailing spaces should be removed.");
+    }
+
+    #[test]
+    fn find_common_directory_empty_input() {
+        let paths = BTreeSet::new();
+        let result = find_common_directory(&paths);
+        assert!(result.is_err(), "Expected error for empty input");
+    }
+
+    #[test]
+    fn find_common_directory_single_path() {
+        let mut paths = BTreeSet::new();
+        paths.insert(PathBuf::from("/home/user/docs"));
+
+        let result = find_common_directory(&paths).unwrap();
+        assert_eq!(result, PathBuf::from("/home/user/docs"));
+    }
+
+    #[test]
+    fn find_common_directory_common_root() {
+        let mut paths = BTreeSet::new();
+        paths.insert(PathBuf::from("/home/user/docs/file1.txt"));
+        paths.insert(PathBuf::from("/home/user/docs/file2.txt"));
+
+        let result = find_common_directory(&paths).unwrap();
+        assert_eq!(result, PathBuf::from("/home/user/docs"));
+    }
+
+    #[test]
+    fn find_common_directory_common_root_only() {
+        let mut paths = BTreeSet::new();
+        paths.insert(PathBuf::from("/home/user1/docs"));
+        paths.insert(PathBuf::from("/home/user2/images"));
+
+        let result = find_common_directory(&paths).unwrap();
+        assert_eq!(result, PathBuf::from("/home"));
+    }
+
+    #[test]
+    fn find_common_directory_different_roots() {
+        let mut paths = BTreeSet::new();
+        paths.insert(PathBuf::from("/var/log"));
+        paths.insert(PathBuf::from("/etc/config"));
+
+        let result = find_common_directory(&paths).unwrap();
+        assert_eq!(result, PathBuf::from("/"));
+    }
+
+    #[test]
+    fn find_common_directory_relative_paths() {
+        let mut paths = BTreeSet::new();
+        paths.insert(PathBuf::from("a/b/c"));
+        paths.insert(PathBuf::from("a/b/d"));
+
+        let result = find_common_directory(&paths).unwrap();
+        assert_eq!(result, PathBuf::from("a/b"));
+    }
+
+    #[test]
+    fn remove_files_contained_in_directories_data_example() {
+        let directories: HashSet<String> = HashSet::from([
+            String::from("data"),
+        ]);
+
+        let mut files: HashSet<String> = HashSet::from([
+            String::from("data/population.csv"),
+            String::from("data/speakers.csv"),
+            String::from("workflows/main.cwl"),
+        ]);
+
+        remove_files_contained_in_directories(&mut files, &directories);
+
+        let expected: HashSet<String> = HashSet::from([
+            String::from("workflows/main.cwl"),
+        ]);
+
+        assert_eq!(files, expected);
+    }
+
+    #[test]
+    fn file_matches_exact_filename() {
+        let requested = "data/population.csv";
+        let candidate = "/home/user/data/population.csv";
+        assert!(file_matches(requested, candidate));
+    }
+
+    #[test]
+    fn file_matches_different_path_same_filename() {
+        let requested = "population.csv";
+        let candidate = "backup/2020/population.csv";
+        assert!(file_matches(requested, candidate));
+    }
+
+    #[test]
+    fn file_matches_mismatch_filename() {
+        let requested = "population.csv";
+        let candidate = "data/speakers.csv";
+        assert!(!file_matches(requested, candidate));
+    }
+
+    #[test]
+    fn file_matches_empty_requested() {
+        let requested = "";
+        let candidate = "data/population.csv";
+        assert!(!file_matches(requested, candidate));
+    }
+
+    #[test]
+    fn file_matches_no_filename_in_requested() {
+        let requested = "data/";
+        let candidate = "data/population.csv";
+        assert!(!file_matches(requested, candidate));
+    }
+
+    #[test]
+    fn file_matches_candidate_is_filename_only() {
+        let requested = "data/population.csv";
+        let candidate = "population.csv";
+        assert!(file_matches(requested, candidate));
+    }
+    
+    #[test]
+fn test_collect_files_recursive_basic_structure() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let dir_path = temp_dir.path();
+
+    let file1 = dir_path.join("file1.txt");
+    fs::File::create(&file1).expect("Failed to create file1");
+
+    let subdir = dir_path.join("subdir");
+    fs::create_dir(&subdir).expect("Failed to create subdir");
+
+    let file2 = subdir.join("file2.txt");
+    fs::File::create(&file2).expect("Failed to create file2");
+
+    let mut collected_files = HashSet::new();
+    let result = collect_files_recursive(dir_path, &mut collected_files);
+
+    assert!(result.is_ok());
+    assert_eq!(collected_files.len(), 2);
+    assert!(collected_files.iter().any(|f| f.ends_with("file1.txt")));
+    assert!(collected_files.iter().any(|f| f.ends_with("file2.txt")));
+}
+
+#[test]
+fn test_collect_files_recursive_empty_dir() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let mut files = HashSet::new();
+    let result = collect_files_recursive(temp_dir.path(), &mut files);
+
+    assert!(result.is_ok());
+    assert!(files.is_empty());
+}
+
+#[test]
+fn test_collect_files_recursive_nested_dirs() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let nested = temp_dir.path().join("a/b/c");
+    fs::create_dir_all(&nested).expect("Failed to create nested dirs");
+
+    let nested_file = nested.join("nested.txt");
+    fs::File::create(&nested_file).expect("Failed to create nested file");
+
+    let mut files = HashSet::new();
+    let result = collect_files_recursive(temp_dir.path(), &mut files);
+
+    assert!(result.is_ok());
+    assert_eq!(files.len(), 1);
+    assert!(files.iter().any(|f| f.ends_with("nested.txt")));
+}
+
+pub fn load_cwl_yaml(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
+    let full_path = if cwl_file_path.is_absolute() {
+        cwl_file_path.to_path_buf()
+    } else {
+        Path::new(base_path).join(cwl_file_path)
+    };
+
+    let contents = fs::read_to_string(full_path)?;
+    let yaml: Value = serde_yaml::from_str(&contents)?;
+    Ok(yaml)
+}
+
+
+#[test]
+fn test_load_cwl_yaml_valid() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("workflow.cwl");
+
+    let yaml_content = r#"
+    cwlVersion: v1.0
+    class: CommandLineTool
+    baseCommand: echo
+    inputs:
+    input_file:
+        type: File
+        inputBinding:
+        position: 1
+    outputs:
+    output_file:
+        type: File
+        outputBinding:
+        glob: "*.txt"
+    "#;
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", yaml_content).expect("Failed to write CWL content");
+
+    let base_path = temp_dir.path().to_str().unwrap();
+    let result = load_cwl_yaml(base_path, &file_path);
+
+    assert!(result.is_ok());
+    let value = result.unwrap();
+
+    assert_eq!(value["cwlVersion"], Value::from("v1.0"));
+    assert_eq!(value["class"], Value::from("CommandLineTool"));
+    assert_eq!(value["baseCommand"], Value::from("echo"));
+}
+
+#[test]
+fn test_load_cwl_yaml_nonexistent() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let fake_path = Path::new("nonexistent.cwl");
+
+    let base_path = temp_dir.path().to_str().unwrap();
+    let result = load_cwl_yaml(base_path, fake_path);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_load_cwl_yaml_invalid_yaml() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("invalid.cwl");
+
+    let invalid_content = "cwlVersion: v1.0\nclass: CommandLineTool\nbaseCommand echo\n";
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", invalid_content).expect("Failed to write invalid CWL content");
+
+    let base_path = temp_dir.path().to_str().unwrap();
+    let result = load_cwl_yaml(base_path, &file_path);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_load_cwl_yaml_relative_path() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let subdir = temp_dir.path().join("subdir");
+    std::fs::create_dir(&subdir).expect("Failed to create subdir");
+
+    let file_path = subdir.join("workflow.cwl");
+
+    let yaml_content = r#"
+    cwlVersion: v1.0
+    class: CommandLineTool
+    baseCommand: echo
+    "#;
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", yaml_content).expect("Failed to write CWL content");
+
+    let base_path = temp_dir.path().to_str().unwrap();
+    let result = load_cwl_yaml(base_path, &file_path);
+
+    assert!(result.is_ok());
+    let value = result.unwrap();
+
+    assert_eq!(value["cwlVersion"], Value::from("v1.0"));
+    assert_eq!(value["class"], Value::from("CommandLineTool"));
+}
+
+#[test]
+fn test_load_yaml_file_valid() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("test.yaml");
+
+    let yaml_content = r#"
+name: Test
+version: 1.0
+"#;
+
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", yaml_content).expect("Failed to write YAML content");
+
+    let result = load_yaml_file(&file_path);
+
+    assert!(result.is_ok());
+    let value = result.unwrap();
+
+    assert_eq!(value["name"], serde_yaml::Value::from("Test"));
+    assert_eq!(value["version"], serde_yaml::Value::from(1.0));
+}
+
+#[test]
+fn test_load_yaml_file_nonexistent() {
+    let non_existent_path = Path::new("nonexistent.yaml");
+    let result = load_yaml_file(non_existent_path);
+    
+    assert!(result.is_err());
+}
+
+
+#[test]
+fn test_load_cwl_file_nonexistent() {
+    let base_path = "/some/base/path";
+    let fake_cwl_path = Path::new("nonexistent.cwl");
+
+    let result = load_cwl_file(base_path, fake_cwl_path);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_load_cwl_file_invalid() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("invalid.cwl");
+
+    let invalid_content = "cwlVersion: v1.0\nclass: CommandLineTool\nbaseCommand echo\n";
+    let mut file = std::fs::File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", invalid_content).expect("Failed to write invalid CWL content");
+
+    let base_path = temp_dir.path().to_str().unwrap();
+    let result = load_cwl_file(base_path, &file_path);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_read_file_content_valid() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("file.txt");
+
+    let file_content = "This is a test file content.";
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", file_content).expect("Failed to write file content");
+
+    let result = read_file_content(file_path.to_str().unwrap());
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), file_content);
+}
+
+#[test]
+fn test_read_file_content_nonexistent() {
+    let result = read_file_content("nonexistent.txt");
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_read_file_content_invalid() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let file_path = temp_dir.path().join("invalid.txt");
+
+    let invalid_content = "This file might not be readable.";
+    let mut file = File::create(&file_path).expect("Failed to create file");
+    write!(file, "{}", invalid_content).expect("Failed to write content");
+
+    let result = read_file_content(file_path.to_str().unwrap());
+
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), invalid_content);
+}
+
+#[test]
+fn test_build_inputs_cwl_real_example() {
+    use std::collections::HashSet;
+    use serde_yaml::Value;
+
+    let cwl_input_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+    assert!(std::path::Path::new(cwl_input_path).exists(), "Test CWL file does not exist");
+
+    let result = build_inputs_cwl(cwl_input_path, None);
+    assert!(result.is_ok(), "build_inputs_cwl failed: {:?}", result);
+    let mapping = result.unwrap();
+
+    let files = mapping.get(&Value::String("files".to_string())).expect("Missing 'files'");
+    if let Value::Sequence(file_list) = files {
+        let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).collect();
+        assert!(file_set.contains(&"data/population.csv"), "Missing population.csv");
+        assert!(file_set.contains(&"data/speakers_revised.csv"), "Missing speakers_revised.csv");
+    } else {
+        panic!("Expected 'files' to be a sequence");
+    }
+
+    let dirs = mapping.get(&Value::String("directories".to_string())).expect("Missing 'directories'");
+    if let Value::Sequence(dir_list) = dirs {
+        let dir_set: HashSet<_> = dir_list.iter().filter_map(|v| v.as_str()).collect();
+        assert!(dir_set.contains(&"../../tests/test_data/hello_world/workflows"), "Missing correct directory");
+    } else {
+        panic!("Expected 'directories' to be a sequence");
+    }
+
+}
+
+#[test]
+fn test_build_inputs_cwl() {
+    use std::collections::HashSet;
+    use serde_yaml::Value;
+    use std::path::Path;
+
+    let cwl_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+    assert!(Path::new(cwl_path).exists(), "Test CWL file does not exist");
+
+    let input = "../../tests/test_data/hello_world/workflows/main/inputs.yml".to_string();
+    let inputs_yaml = Some(&input);
+
+    let result = build_inputs_cwl(cwl_path, inputs_yaml.clone());
+    assert!(result.is_ok(), "build_inputs_cwl failed: {:?}", result);
+
+    let mapping = result.unwrap();
+
+    let files = mapping.get(&Value::String("files".to_string())).expect("Missing 'files' section");
+    if let Value::Sequence(file_list) = files {
+        let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).collect();
+        assert!(file_set.contains("data/population.csv"), "Missing expected file: population.csv");
+        assert!(file_set.contains("data/speakers_revised.csv"), "Missing expected file: speakers_revised.csv");
+    } else {
+        panic!("Expected 'files' to be a sequence");
+    }
+
+    let dirs = mapping.get(&Value::String("directories".to_string())).expect("Missing 'directories' section");
+    if let Value::Sequence(dir_list) = dirs {
+        let dir_set: HashSet<_> = dir_list.iter().filter_map(|v| v.as_str()).collect();
+        assert!(dir_set.iter().any(|d| d.contains("workflows")), "Expected directory containing 'workflows' not found");
+    } else {
+        panic!("Expected 'directories' to be a sequence");
+    }
+
+    let params = mapping.get(&Value::String("parameters".to_string())).expect("Missing 'parameters' section");
+    if let Value::Mapping(param_map) = params {
+        assert!(param_map.contains_key(&Value::String("inputs.yaml".to_string())), "Missing 'inputs.yaml' in parameters");
+        } else {
+        panic!("Expected 'parameters' to be a mapping");
+    }
+}
+
+#[test]
+fn test_get_all_outputs_with_existing_file() {
+    let workflow_file_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+    let result = get_all_outputs(workflow_file_path);
+    assert!(result.is_ok());
+    let outputs = result.unwrap();
+    assert_eq!(outputs.len(), 1);
+    assert_eq!(outputs[0], ("outputs".to_string(), "results.svg".to_string()));
+}
+
 }
