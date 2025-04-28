@@ -6,6 +6,7 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{guess_type, CWLType, DefaultValue, Directory, File},
 };
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
@@ -13,6 +14,8 @@ use std::{fs, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+
+static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FileEntry {
@@ -160,8 +163,15 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
     let default_value = parse_default_value(current, &cwl_type);
 
+    //check id for bad words
+    let mut id = slugify!(&current, separator = "_");
+    if BAD_WORDS.iter().any(|&word| current.to_lowercase().contains(word)) {
+        let rnd: String = rand::rng().sample_iter(&Alphanumeric).take(2).map(char::from).collect();
+        id = format!("secret_{rnd}");
+    }
+
     CommandInputParameter::default()
-        .with_id(slugify!(&current, separator = "_").as_str())
+        .with_id(&id)
         .with_type(guess_type(current))
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
@@ -513,5 +523,12 @@ mod tests {
 
         let outputs = get_outputs(files);
         assert_eq!(outputs, expected);
+    }
+
+    #[test]
+    pub fn test_badwords() {
+        let tool = parse_command("pg_dump postgres://postgres:password@localhost:5432/test \\> dump.sql");
+        println!("{:?}", tool.inputs[0].id);
+        assert!(BAD_WORDS.iter().any(|&word| tool.inputs.iter().any(|i| !i.id.contains(word))));
     }
 }
