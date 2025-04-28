@@ -63,6 +63,8 @@ pub struct CreateToolArgs {
     pub no_run: bool,
     #[arg(long = "clean", help = "Deletes created outputs after usage")]
     pub is_clean: bool,
+    #[arg(long = "no-defaults", help = "Removes default values from inputs")]
+    pub no_defaults: bool,
     #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
     #[arg(
@@ -191,6 +193,15 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    if args.no_defaults {
+        for input in cwl.inputs.iter_mut() {
+            if input.default.is_some() {
+                input.default = None;
+                info!("Removed default value from input: {}", input.id);
+            }
+        }
+    }
+
     post_process_cwl(&mut cwl);
 
     let path = get_qualified_filename(&cwl.base_command, args.name.clone());
@@ -299,13 +310,13 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn Error>> {
     for tool in &args.tool_names {
         let mut tool_path = workflows_path.join(tool);
         let file_path = PathBuf::from(tool);
-        
+
         if file_path.extension().is_some() {
             // If it has an extension, remove it
             let file_stem = file_path.file_stem().unwrap_or_default();
             tool_path = workflows_path.join(file_stem);
         }
-        
+
         if tool_path.exists() && tool_path.is_dir() {
             fs::remove_dir_all(&tool_path)?;
             info!("{} {}", "🗑️ Removed ".green(), tool_path.to_string_lossy().green());
@@ -314,6 +325,6 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn Error>> {
             error!("Tool '{}' does not exist.", tool_path.to_string_lossy().red());
         }
     }
-    
+
     Ok(())
 }
