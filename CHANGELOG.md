@@ -1,9 +1,14 @@
 # Unreleased
+## 🚀 Features
+- Added `--no-defaults` flag to tool create which can be handy when using passwords as inputs
+
 ## 🐛 Bugfixes
-- Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 131/378
-- Improved Array support in Runner
-- Support cwl.output.json handling in Runner
-- Support globs in Runner
+- 🏃CWL Runner
+    - Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 131/378
+    - Improved Array support in Runner
+    - Support cwl.output.json handling in Runner
+    - Support globs in Runner
+- Rewrite input ids if "bad words" are found (e.g. sql connection strings)
 
 # v0.3.0
 ## 🚀 Features
