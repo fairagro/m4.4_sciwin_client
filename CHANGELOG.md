@@ -3,6 +3,7 @@
 - Added `--no-defaults` flag to tool create which can be handy when using passwords as inputs
 
 ## 🐛 Bugfixes
+- fixed critical error in tool create where `outputEval` was set, even when null
 - 🏃CWL Runner
     - Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 131/378
     - Improved Array support in Runner

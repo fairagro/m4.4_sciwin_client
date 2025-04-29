@@ -82,6 +82,7 @@ where
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
     pub glob: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_eval: Option<String>,
 }
 
