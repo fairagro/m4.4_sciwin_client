@@ -464,6 +464,6 @@ mod tests {
     #[test]
     #[serial]
     fn test_stage_remote_files() {
-        execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>).unwrap();
+        assert!(execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>).is_ok());
     }
 }
