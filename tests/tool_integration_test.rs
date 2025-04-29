@@ -509,6 +509,7 @@ pub fn test_tool_output_subfolders() {
 
 #[test]
 #[serial]
+#[cfg(target_os = "linux")]
 pub fn tool_create_remote_file() {
     with_temp_repository(|dir| {
         let tool_create_args = CreateToolArgs {
