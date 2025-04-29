@@ -1,4 +1,7 @@
-use crate::{environment::RuntimeEnvironment, io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to}};
+use crate::{
+    environment::RuntimeEnvironment,
+    io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to},
+};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -10,6 +13,7 @@ use std::{
     env,
     error::Error,
     fs,
+    io::{self},
     path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
 };
@@ -140,12 +144,37 @@ fn stage_input_files(
                     let dest = path.join(get_random_filename(".literal", ""));
                     fs::write(&dest, contents)?;
                     f.location = Some(dest.to_string_lossy().into_owned());
-                    
+
                     runtime.inputs.insert(input.id.clone(), data);
                     continue;
                 }
+            } else if let Some(location) = &f.location {
+                if location.starts_with("https://") || location.starts_with("http://") {
+                    //download file
+                    let client = reqwest::blocking::Client::new();
+                    let mut res = client.get(location).send()?;
+                    if res.status() != reqwest::StatusCode::OK {
+                        return Err(format!("Failed to download file from {}: {}", location, res.status()).into());
+                    }
+
+                    //get file name from url
+                    if let Some(segment) = res
+                        .url()
+                        .path_segments()
+                        .and_then(|mut segments| segments.next_back())
+                        .map(|filename| Path::new(&runtime.runtime["tmpdir"]).join(filename))
+                    {
+                        let path = Path::new(&runtime.runtime["tmpdir"]).join(segment);
+                        let mut out = fs::File::create(&path)?;
+                        io::copy(&mut res, &mut out)?;
+
+                        //set updated path:
+                        f.location = Some(path.to_string_lossy().into_owned());
+                    } else {
+                        return Err("Could not extract filename from URL.".into());
+                    }
+                }
             }
-            
         }
 
         let data_location = decode(&data.as_value_string()).unwrap().to_string();
@@ -231,13 +260,14 @@ fn handle_filename(value: &DefaultValue) -> String {
     match value {
         DefaultValue::File(item) => join_with_basename(&item.get_location(), &item.basename),
         DefaultValue::Directory(item) => join_with_basename(&item.get_location(), &item.basename),
-       _ => String::new(),
+        _ => String::new(),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::execute;
     use cwl::{
         outputs::CommandOutputBinding,
         requirements::InitialWorkDirRequirement,
@@ -429,5 +459,11 @@ mod tests {
         //secondary file should be there
         assert_eq!(list, vec![expected_path.to_string_lossy()]);
         assert!(expected_path.exists());
+    }
+
+    #[test]
+    #[serial]
+    fn test_stage_remote_files() {
+        execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>).unwrap();
     }
 }
