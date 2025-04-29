@@ -466,6 +466,8 @@ mod tests {
     //docker not working on MacOS Github Actions
     #[cfg_attr(target_os = "macos", ignore)]
     fn test_stage_remote_files() {
-        assert!(execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>).is_ok());
+        let result = execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>);
+        println!("{result:?}");
+        assert!(result.is_ok());
     }
 }
