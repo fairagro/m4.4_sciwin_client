@@ -9,6 +9,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
 };
+use pathdiff::diff_paths;
 use std::{
     env,
     error::Error,
@@ -185,11 +186,11 @@ fn stage_input_files(
             data_path = tool_path.join(data_path);
         }
 
-        let staged_filename = handle_filename(&data);
-        let mut staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
-        if Path::new(&staged_filename).is_absolute() {
-            staged_filename_relative = make_relative_to(&staged_filename, &runtime.runtime["tmpdir"]);
+        let mut staged_filename = handle_filename(&data);
+        if let Some(diff) = diff_paths(&staged_filename, &runtime.runtime["tmpdir"]) {
+            staged_filename = diff.to_string_lossy().into_owned();
         }
+        let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
 
         let staged_filename_relative = staged_filename_relative
             .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
