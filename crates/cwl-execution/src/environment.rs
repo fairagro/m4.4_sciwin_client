@@ -21,6 +21,11 @@ pub struct RuntimeEnvironment {
 }
 
 impl RuntimeEnvironment {
+    pub fn with_inputs(mut self, inputs: HashMap<String, DefaultValue>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+
     pub fn initialize(
         tool: &CWLDocument,
         input_values: HashMap<String, DefaultValue>,

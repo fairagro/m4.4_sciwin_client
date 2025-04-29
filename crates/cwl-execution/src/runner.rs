@@ -218,7 +218,7 @@ pub fn run_tool(
     runtime.environment = collect_environment(tool);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &mut runtime.inputs, tool_path, dir.path(), output_directory)?;
+    let staged_files = stage_required_files(tool, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
