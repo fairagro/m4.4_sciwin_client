@@ -187,7 +187,7 @@ fn stage_input_files(
         }
 
         let mut staged_filename = handle_filename(&data);
-        if let Some(diff) = diff_paths(&staged_filename, &runtime.runtime["tmpdir"]) {
+        if let Some(diff) = diff_paths(&staged_filename, runtime.runtime.get("tmpdir").unwrap_or(&"".to_string())) {
             staged_filename = diff.to_string_lossy().into_owned();
         }
         let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
