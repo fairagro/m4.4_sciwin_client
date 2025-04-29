@@ -506,3 +506,28 @@ pub fn test_tool_output_subfolders() {
 
     env::set_current_dir(current).unwrap();
 }
+
+#[test]
+#[serial]
+pub fn tool_create_remote_file() {
+    with_temp_repository(|dir| {
+        let tool_create_args = CreateToolArgs {
+            command: vec![
+                "wget".to_string(),
+                "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md".to_string(),
+            ],
+            ..Default::default()
+        };
+        let cmd = ToolCommands::Create(tool_create_args);
+        assert!(handle_tool_commands(&cmd).is_ok());
+
+        //check file
+        assert!(dir.path().join(Path::new("README.md")).exists());
+
+        //check input
+        let tool_path = Path::new("workflows/wget/wget.cwl");
+        let tool = load_tool(tool_path).unwrap();
+        assert_eq!(tool.inputs.len(), 1);
+        assert_eq!(tool.inputs[0].type_, CWLType::File);
+    });
+}

@@ -270,6 +270,10 @@ pub fn guess_type(value: &str) -> CWLType {
             return CWLType::Directory;
         }
     }
+    if value.starts_with("http://") || value.starts_with("https://") {
+        return CWLType::File;
+    }
+
     //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
     let yaml_value: Value = serde_yaml::from_str(value).unwrap();
     match yaml_value {
@@ -621,6 +625,7 @@ mod tests {
             ("--option", CWLType::String),
             ("2", CWLType::Int),
             ("1.5", CWLType::Float),
+            ("https://some_url", CWLType::File), //urls are files!
         ];
 
         for input in inputs {
