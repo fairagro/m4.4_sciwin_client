@@ -1,3 +1,7 @@
+# Unreleased
+## 🚀 Features
+- Support automatic downloading if files are given with `http://` or `https://` protocol
+
 # v0.4.0
 ## 🚀 Features
 - Added `--no-defaults` flag to tool create which can be handy when using passwords as inputs
