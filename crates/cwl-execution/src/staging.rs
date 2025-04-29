@@ -186,7 +186,11 @@ fn stage_input_files(
         }
 
         let staged_filename = handle_filename(&data);
-        let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
+        let mut staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
+        if Path::new(&staged_filename).is_absolute() {
+            staged_filename_relative = make_relative_to(&staged_filename, &runtime.runtime["tmpdir"]);
+        }
+
         let staged_filename_relative = staged_filename_relative
             .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
             .to_string();
@@ -267,7 +271,6 @@ fn handle_filename(value: &DefaultValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::execute;
     use cwl::{
         outputs::CommandOutputBinding,
         requirements::InitialWorkDirRequirement,
@@ -463,11 +466,29 @@ mod tests {
 
     #[test]
     #[serial]
-    //docker not working on MacOS Github Actions
-    #[cfg_attr(target_os = "macos", ignore)]
     fn test_stage_remote_files() {
-        let result = execute("../../tests/test_data/remote.cwl", Default::default(), None::<PathBuf>);
-        println!("{result:?}");
-        assert!(result.is_ok());
+        //create tmp_dir
+        let temp = tempdir().unwrap();
+        let working = tempdir().unwrap();
+
+        let file = "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md";
+        let value = DefaultValue::File(File::from_location(&file.to_string()));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
+
+        let list = stage_input_files(
+            &[input],
+            &mut RuntimeEnvironment::default()
+                .with_inputs(HashMap::from([("test".to_string(), value)]))
+                .with_runtime(HashMap::from([("tmpdir".to_string(), temp.path().to_string_lossy().into_owned())])),
+            Path::new("../../"),
+            working.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
+
+        let expected_path = working.path().join("README.md");
+
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
     }
 }

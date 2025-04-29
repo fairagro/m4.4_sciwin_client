@@ -26,6 +26,19 @@ impl RuntimeEnvironment {
         self
     }
 
+    pub fn with_environment(mut self, environment: HashMap<String, String>) -> Self {
+        self.environment = environment;
+        self
+    }
+    pub fn with_runtime(mut self, runtime: HashMap<String, String>) -> Self {
+        self.runtime = runtime;
+        self
+    }
+    pub fn with_time_limit(mut self, time_limit: u64) -> Self {
+        self.time_limit = time_limit;
+        self
+    }
+
     pub fn initialize(
         tool: &CWLDocument,
         input_values: HashMap<String, DefaultValue>,
