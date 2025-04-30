@@ -7,6 +7,7 @@ use cwl::{
     types::{CWLType, Entry},
 };
 use cwl_execution::io::copy_file;
+use fstest::fstest;
 use git2::Repository;
 use s4n::{
     commands::{
@@ -380,18 +381,8 @@ pub fn test_tool_output_is_dir() {
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
-pub fn test_tool_output_complete_dir() {
-    let dir = tempdir().unwrap();
-
-    copy_file("tests/test_data/create_dir.py", dir.path().join("create_dir.py").to_str().unwrap()).unwrap();
-
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-    check_git_user().unwrap();
-    initialize_project(None, false).expect("Could not init s4n");
-
+#[fstest(repo = true, files = ["tests/test_data/create_dir.py"])]
+pub fn test_tool_output_complete_dir(_dir: &Path) {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
@@ -412,24 +403,17 @@ pub fn test_tool_output_complete_dir() {
     }
 
     println!("{:#?}", tool.outputs);
-
-    env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
+#[fstest(repo= true, files=["tests/test_data/script.sh"])]
 #[cfg(target_os = "linux")]
-pub fn test_shell_script() {
-    let dir = tempdir().unwrap();
+pub fn test_shell_script(dir: &Path) {
+    use s4n::repo::stage_all;
 
-    let script = dir.path().join("script.sh");
-    copy_file("tests/test_data/script.sh", script.to_str().unwrap()).unwrap();
+    let script = dir.join("script.sh");
     std::fs::set_permissions(script, <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
-
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-    check_git_user().unwrap();
-    initialize_project(None, false).expect("Could not init s4n");
+    let repo = Repository::open(dir).unwrap();
+    stage_all(&repo).unwrap();
 
     let name = "script";
     let command = &["./script.sh"];
@@ -456,23 +440,13 @@ pub fn test_shell_script() {
     } else {
         panic!("No requirements found")
     }
-
-    env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
+#[fstest(repo = true)]
 /// see Issue [#89](https://github.com/fairagro/m4.4_sciwin_client/issues/89)
-pub fn test_tool_uncommitted_no_run() {
-    let dir = tempdir().unwrap();
-
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    check_git_user().unwrap();
-    initialize_project(None, false).expect("Could not init s4n");
-
-    fs::copy(current.join("tests/test_data/input.txt"), dir.path().join("input.txt")).unwrap(); //repo is not in a clean state now!
+pub fn test_tool_uncommitted_no_run(dir: &Path) {
+    let root = env!("CARGO_MANIFEST_DIR");
+    fs::copy(format!("{root}/tests/test_data/input.txt"), dir.join("input.txt")).unwrap(); //repo is not in a clean state now!
     let args = CreateToolArgs {
         command: ["echo".to_string(), "Hello World".to_string()].to_vec(),
         no_run: true,
@@ -480,55 +454,38 @@ pub fn test_tool_uncommitted_no_run() {
     };
     //should be ok to not commit changes, as tool does not run
     assert!(create_tool(&args).is_ok());
-
-    env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
+#[fstest(repo = true, files = ["tests/test_data/subfolders.py"])]
 /// see Issue [#88](https://github.com/fairagro/m4.4_sciwin_client/issues/88)
-pub fn test_tool_output_subfolders() {
-    let dir = tempdir().unwrap();
-
-    fs::copy("tests/test_data/subfolders.py", dir.path().join("subfolders.py")).unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    check_git_user().unwrap();
-    initialize_project(None, false).expect("Could not init s4n");
-
+pub fn test_tool_output_subfolders(_dir: &Path) {
     let args = CreateToolArgs {
         command: ["python".to_string(), "subfolders.py".to_string()].to_vec(),
         ..Default::default()
     };
     //should be ok to not commit changes, as tool does not run
     assert!(create_tool(&args).is_ok());
-
-    env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
+#[fstest(repo = true)]
 #[cfg(target_os = "linux")]
-pub fn tool_create_remote_file() {
-    with_temp_repository(|dir| {
-        let tool_create_args = CreateToolArgs {
-            command: vec![
-                "wget".to_string(),
-                "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md".to_string(),
-            ],
-            ..Default::default()
-        };
-        let cmd = ToolCommands::Create(tool_create_args);
-        assert!(handle_tool_commands(&cmd).is_ok());
+pub fn tool_create_remote_file(dir: &Path) {
+    let tool_create_args = CreateToolArgs {
+        command: vec![
+            "wget".to_string(),
+            "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md".to_string(),
+        ],
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
 
-        //check file
-        assert!(dir.path().join(Path::new("README.md")).exists());
+    //check file
+    assert!(dir.join(Path::new("README.md")).exists());
 
-        //check input
-        let tool_path = Path::new("workflows/wget/wget.cwl");
-        let tool = load_tool(tool_path).unwrap();
-        assert_eq!(tool.inputs.len(), 1);
-        assert_eq!(tool.inputs[0].type_, CWLType::File);
-    });
+    //check input
+    let tool_path = Path::new("workflows/wget/wget.cwl");
+    let tool = load_tool(tool_path).unwrap();
+    assert_eq!(tool.inputs.len(), 1);
+    assert_eq!(tool.inputs[0].type_, CWLType::File);
 }
