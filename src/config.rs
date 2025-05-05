@@ -169,10 +169,10 @@ keywords = ["workflow"]
     fn test_deserialize_config_authors() {
         let workflow_toml = r#"
 [workflow]
-name = "my-workflow
+name = "my-workflow"
 [workflow.authors]
 name = "Dude"
-orcid = "0000-0001-6242-5846
+orcid = "0000-0001-6242-5846"
 [workflow.authors]
 name = "Dudette"
 email = "mail@example.dude"
