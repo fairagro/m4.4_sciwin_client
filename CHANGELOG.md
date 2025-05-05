@@ -2,6 +2,7 @@
 ## 🚀 Features
 - Support automatic downloading if files are given with `http://` or `https://` protocol
 - Detect URLs as files if given with `http://` or `https://` protocol
+- Support Detection of Arrays as inputs in `tool create`
 
 # v0.4.0
 ## 🚀 Features

@@ -251,23 +251,24 @@ fn detect_array_inputs(tool: &mut CommandLineTool) {
     let mut seen = HashSet::new();
     let mut inputs = Vec::new();
 
-    for mut input in std::mem::take(&mut tool.inputs) {
+    for input in std::mem::take(&mut tool.inputs) {
         let key = (input.id.clone(), input.type_.clone());
         if seen.insert(key.clone()) {
-            input.type_ = CWLType::Array(Box::new(input.type_));
-            if let Some(default) = input.default {
-                input.default = Some(DefaultValue::Array(vec![default]))
-            }
             inputs.push(input);
-        } else {
-            for new_input in inputs.iter_mut() {
-                if input.id == key.0 {
-                    if let Some(DefaultValue::Array(vec)) = &mut new_input.default {
-                        if let Some(default) = input.default {
-                            vec.push(default);
-                        }
-                        break;
-                    }
+        } else if let Some(existing) = inputs.iter_mut().find(|i| i.id == key.0) {
+            // Convert to array type if not already
+            if !matches!(existing.type_, CWLType::Array(_)) {
+                existing.type_ = CWLType::Array(Box::new(input.type_.clone()));
+
+                if let Some(default) = &existing.default {
+                    existing.default = Some(DefaultValue::Array(vec![default.clone()]));
+                }
+            }
+
+            // Append additional default value if present
+            if let Some(DefaultValue::Array(defaults)) = &mut existing.default {
+                if let Some(default) = input.default {
+                    defaults.push(default);
                 }
             }
         }
@@ -599,5 +600,8 @@ mod tests {
                 DefaultValue::Any(Value::String("third".to_string()))
             ]))
         );
+
+        let other = &tool.inputs[1];
+        assert_eq!(other.type_, CWLType::Int);
     }
 }
