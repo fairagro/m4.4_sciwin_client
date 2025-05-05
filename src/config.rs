@@ -1,5 +1,5 @@
 use semver::Version;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use smart_default::SmartDefault;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -16,7 +16,11 @@ pub struct WorkflowConfig {
     pub version: Version,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_authors")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_authors",
+        serialize_with = "serialize_authors"
+    )]
     pub authors: Option<Vec<Author>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<String>>,
@@ -62,6 +66,26 @@ where
     }))
 }
 
+fn serialize_authors<S>(authors: &Option<Vec<Author>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match authors {
+        Some(list) => {
+            let mut seq = serializer.serialize_seq(Some(list.len()))?;
+            for author in list {
+                if author.email.is_none() && author.orcid.is_none() {
+                    seq.serialize_element(&author.name)?;
+                } else {
+                    seq.serialize_element(author)?;
+                }
+            }
+            seq.end()
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
 fn default_version() -> Version {
     Version::new(0, 1, 0)
 }
@@ -93,14 +117,14 @@ mod tests {
     #[test]
     fn test_deserialize_config() {
         let workflow_toml = r#"
-        [workflow]
-        name = "my-workflow"
-        description = "a workflow that does ... things!"
-        version = "0.1.0"
-        authors = ["Derp Derpson", "Dudette Derpson"]
-        license = "MIT"
-        keywords = ["workflow"]        
-        "#;
+[workflow]
+name = "my-workflow"
+description = "a workflow that does ... things!"
+version = "0.1.0"
+authors = ["Derp Derpson", "Dudette Derpson"]
+license = "MIT"
+keywords = ["workflow"]        
+"#;
 
         let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
         assert_eq!(parsed.workflow.name, "my-workflow");
@@ -121,5 +145,56 @@ mod tests {
         );
         assert_eq!(parsed.workflow.license, Some("MIT".to_string()));
         assert_eq!(parsed.workflow.keywords, Some(vec!["workflow".to_string()]));
+    }
+
+    #[test]
+    fn test_deserialize_reserialize() {
+        let workflow_toml = r#"[workflow]
+name = "my-workflow"
+description = "a workflow that does ... things!"
+version = "0.1.0"
+license = "MIT"
+authors = [
+    "Derp Derpson",
+    "Dudette Derpson",
+]
+keywords = ["workflow"]
+"#;
+        let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
+        let toml = toml::to_string_pretty(&parsed).unwrap();
+        assert_eq!(workflow_toml, toml);
+    }
+
+    #[test]
+    fn test_deserialize_config_authors() {
+        let workflow_toml = r#"
+[workflow]
+name = "my-workflow
+[workflow.authors]
+name = "Dude"
+orcid = "0000-0001-6242-5846
+[workflow.authors]
+name = "Dudette"
+email = "mail@example.dude
+"#;
+
+        let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
+        assert_eq!(parsed.workflow.name, "my-workflow");
+        assert_eq!(parsed.workflow.version, Version::parse("0.1.0").unwrap());
+        assert_eq!(
+            parsed.workflow.authors,
+            Some(vec![
+                Author {
+                    name: "Dude".to_string(),
+                    orcid: Some("0000-0001-6242-5846".to_string()),
+                    ..Default::default()
+                },
+                Author {
+                    name: "Dudette".to_string(),
+                    email: Some("mail@example.dude".to_string()),
+                    ..Default::default()
+                }
+            ])
+        );
     }
 }
