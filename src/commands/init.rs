@@ -62,16 +62,13 @@ pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), 
 fn write_config(folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     // create workflow toml
     let mut cfg = Config::default();
-    cfg.workflow.name = if let Some(folder) = folder {
+    let dir = if let Some(folder) = folder {
         PathBuf::from(folder)
     } else {
         env::current_dir().unwrap_or_default()
-    }
-    .file_stem()
-    .unwrap_or_default()
-    .to_string_lossy()
-    .into_owned();
-    fs::write("workflow.toml", toml::to_string_pretty(&cfg)?)?;
+    };
+    cfg.workflow.name = dir.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+    fs::write(dir.join("workflow.toml"), toml::to_string_pretty(&cfg)?)?;
 
     Ok(())
 }
@@ -260,7 +257,7 @@ mod tests {
     use super::*;
     use serial_test::serial;
     use tempfile::tempdir;
-    
+
     #[test]
     #[serial]
     fn test_init_git_repo() {
