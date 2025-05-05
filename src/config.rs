@@ -175,7 +175,7 @@ name = "Dude"
 orcid = "0000-0001-6242-5846
 [workflow.authors]
 name = "Dudette"
-email = "mail@example.dude
+email = "mail@example.dude"
 "#;
 
         let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
