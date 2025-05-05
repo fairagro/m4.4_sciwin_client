@@ -170,10 +170,13 @@ keywords = ["workflow"]
         let workflow_toml = r#"
 [workflow]
 name = "my-workflow"
-[workflow.authors]
+version = "0.1.0"
+
+[[workflow.authors]]
 name = "Dude"
 orcid = "0000-0001-6242-5846"
-[workflow.authors]
+
+[[workflow.authors]]
 name = "Dudette"
 email = "mail@example.dude"
 "#;
