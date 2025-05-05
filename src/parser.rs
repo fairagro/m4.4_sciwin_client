@@ -10,7 +10,7 @@ use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{fs, path::Path};
+use std::{collections::HashSet, fs, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
@@ -242,6 +242,40 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 }
 
 pub fn post_process_cwl(tool: &mut CommandLineTool) {
+    post_process_inputs(tool);
+    post_process_variables(tool);
+}
+
+fn post_process_inputs(tool: &mut CommandLineTool) {
+    let mut seen = HashSet::new();
+    let mut inputs = Vec::new();
+
+    for mut input in std::mem::take(&mut tool.inputs) {
+        let key = (input.id.clone(), input.type_.clone());
+        if seen.insert(key.clone()) {
+            input.type_ = CWLType::Array(Box::new(input.type_));
+            if let Some(default) = input.default {
+                input.default = Some(DefaultValue::Array(vec![default]))
+            }
+            inputs.push(input);
+        } else {
+            for new_input in inputs.iter_mut() {
+                if input.id == key.0 {
+                    if let Some(DefaultValue::Array(vec)) = &mut new_input.default {
+                        if let Some(default) = input.default {
+                            vec.push(default);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    tool.inputs = inputs;
+}
+
+/// Handles translation to CWL Variables like $(inputs.myInput.path) or $(runtime.outdir)
+fn post_process_variables(tool: &mut CommandLineTool) {
     fn process_input(input: &CommandInputParameter) -> String {
         if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
             format!("$(inputs.{}.path)", input.id)
@@ -530,5 +564,39 @@ mod tests {
         let tool = parse_command("pg_dump postgres://postgres:password@localhost:5432/test \\> dump.sql");
         println!("{:?}", tool.inputs[0].id);
         assert!(BAD_WORDS.iter().any(|&word| tool.inputs.iter().any(|i| !i.id.contains(word))));
+    }
+
+    #[test]
+    pub fn test_post_process_inputs() {
+        let mut tool = CommandLineTool::default().with_inputs(vec![
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("first".to_string()))),
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("second".to_string()))),
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("third".to_string()))),
+            CommandInputParameter::default().with_id("int").with_type(CWLType::Int),
+        ]);
+
+        assert_eq!(tool.inputs.len(), 4);
+        post_process_inputs(&mut tool);
+        assert_eq!(tool.inputs.len(), 2);
+
+        let of_interest = tool.inputs.first().unwrap();
+        assert_eq!(of_interest.type_, CWLType::Array(Box::new(CWLType::String)));
+        assert_eq!(
+            of_interest.default,
+            Some(DefaultValue::Array(vec![
+                DefaultValue::Any(Value::String("first".to_string())),
+                DefaultValue::Any(Value::String("second".to_string())),
+                DefaultValue::Any(Value::String("third".to_string()))
+            ]))
+        );
     }
 }

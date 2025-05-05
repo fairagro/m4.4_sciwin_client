@@ -3,7 +3,7 @@ use serde_yaml::{Number, Value};
 use sha1::{Digest, Sha1};
 use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, PartialEq, Clone, Eq, Hash)]
 pub enum CWLType {
     #[default]
     Null,
