@@ -289,6 +289,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_is_not_git_repo() {
         //create directory that is not a git repo
         let no_repo = tempdir().unwrap();
