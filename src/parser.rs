@@ -242,11 +242,12 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 }
 
 pub fn post_process_cwl(tool: &mut CommandLineTool) {
-    post_process_inputs(tool);
+    detect_array_inputs(tool);
     post_process_variables(tool);
 }
 
-fn post_process_inputs(tool: &mut CommandLineTool) {
+/// Transforms duplicate key and type entries into an array type input
+fn detect_array_inputs(tool: &mut CommandLineTool) {
     let mut seen = HashSet::new();
     let mut inputs = Vec::new();
 
@@ -585,7 +586,7 @@ mod tests {
         ]);
 
         assert_eq!(tool.inputs.len(), 4);
-        post_process_inputs(&mut tool);
+        detect_array_inputs(&mut tool);
         assert_eq!(tool.inputs.len(), 2);
 
         let of_interest = tool.inputs.first().unwrap();
