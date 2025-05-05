@@ -10,7 +10,15 @@ use clap_complete::{generate, Generator, Shell};
 use std::{error::Error, io};
 
 #[derive(Parser, Debug)]
-#[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
+#[command(name="s4n", about=r#"
+ _____        _  _    _  _____         _____  _  _               _   
+/  ___|      (_)| |  | ||_   _|       /  __ \| |(_)             | |  
+\ `--.   ___  _ | |  | |  | |  _ __   | /  \/| | _   ___  _ __  | |_ 
+ `--. \ / __|| || |/\| |  | | | '_ \  | |    | || | / _ \| '_ \ | __|
+/\__/ /| (__ | |\  /\  / _| |_| | | | | \__/\| || ||  __/| | | || |_ 
+\____/  \___||_| \/  \/  \___/|_| |_|  \____/|_||_| \___||_| |_| \__|
+Client tool for Scientific Workflow Infrastructure (SciWIn)"#
+, long_about=None, version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
