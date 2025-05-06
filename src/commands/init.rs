@@ -224,7 +224,7 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
     // Write column names
     for (i, &col) in columns.iter().enumerate() {
-        worksheet.write_string(i as u32, 0, col)?;
+        worksheet.write_string(u32::try_from(i)?, 0, col)?;
     }
 
     // Save the workbook to the specified file path

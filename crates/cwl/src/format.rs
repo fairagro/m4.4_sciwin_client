@@ -15,7 +15,7 @@ pub fn format_cwl(raw_cwl: &str) -> Result<String, Box<dyn Error>> {
     let mut formatted_cwl = serde_yaml::to_string(&formatted_node)?;
     formatted_cwl = add_space_between_main_sections(&formatted_cwl);
 
-    Ok(format!("{}{}", comment, formatted_cwl))
+    Ok(format!("{comment}{formatted_cwl}"))
 }
 
 fn format_node(cwl: &Value) -> Value {
@@ -51,7 +51,7 @@ fn reorder_node(cwl: &Mapping, node_type: &str) -> Mapping {
     let mut extra_keys = vec![];
 
     for key in key_order {
-        let kv = Value::String(key.to_string());
+        let kv = Value::String((*key).to_string());
         if let Some(value) = cwl.get(&kv) {
             ordered_map.insert(kv, value.clone());
         }
@@ -71,7 +71,7 @@ fn reorder_node(cwl: &Mapping, node_type: &str) -> Mapping {
     ordered_map
 }
 
-/// Gets static order of yaml keys according to https://github.com/rabix/cwl-format/blob/master/cwlformat/keyorder.yml
+/// Gets static order of yaml keys according to <https://github.com/rabix/cwl-format/blob/master/cwlformat/keyorder.yml>
 fn get_key_order() -> HashMap<&'static str, Vec<&'static str>> {
     let mut key_order_dict = HashMap::new();
 

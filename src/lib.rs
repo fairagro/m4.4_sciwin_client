@@ -14,9 +14,9 @@ pub fn print_list(list: &Vec<String>) {
     }
 }
 
-pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: T) -> (Vec<T>, Vec<T>) {
+pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
     let slice = vec.as_ref();
-    if let Some(index) = slice.iter().position(|x| *x == split_at) {
+    if let Some(index) = slice.iter().position(|x| x == split_at) {
         let lhs = slice[..index].to_vec();
         let rhs = slice[index + 1..].to_vec();
         (lhs, rhs)

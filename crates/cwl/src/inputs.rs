@@ -65,7 +65,7 @@ pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shell_quote: Option<bool>,    
+    pub shell_quote: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_separator: Option<String>,
 }
@@ -100,16 +100,13 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let param = match value {
-                    Value::String(type_str) => {
-                        let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
-                        CommandInputParameter::default().with_id(id).with_type(type_)
-                    }
-                    _ => {
-                        let mut param: CommandInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
-                        param.id = id.to_string();
-                        param
-                    }
+                let param = if let Value::String(type_str) = value {
+                    let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                    CommandInputParameter::default().with_id(id).with_type(type_)
+                } else {
+                    let mut param: CommandInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
+                    param.id = id.to_string();
+                    param
                 };
 
                 Ok(param)

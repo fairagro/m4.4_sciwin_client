@@ -1,4 +1,4 @@
-//! Contains the structure of CWL CommandLineTool definitions together with helpful functions for convenience
+//! Contains the structure of CWL `CommandLineTool` definitions together with helpful functions for convenience
 
 use super::{
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -52,24 +52,24 @@ impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
             base: DocumentBase {
-                id: None,
-                label: None,
-                doc: None,
+                id: Option::default(),
+                label: Option::default(),
+                doc: Option::default(),
                 class: String::from("CommandLineTool"),
                 cwl_version: String::from("v1.2"),
-                inputs: Default::default(),
-                requirements: Default::default(),
-                hints: Default::default(),
+                inputs: Vec::default(),
+                requirements: Option::default(),
+                hints: Option::default(),
             },
             base_command: Default::default(),
-            stdin: Default::default(),
-            stdout: Default::default(),
-            stderr: Default::default(),
-            outputs: Default::default(),
-            arguments: Default::default(),
-            success_codes: None,
-            permanent_fail_codes: None,
-            temporary_fail_codes: None,
+            stdin: Option::default(),
+            stdout: Option::default(),
+            stderr: Option::default(),
+            outputs: Vec::default(),
+            arguments: Option::default(),
+            success_codes: Option::default(),
+            permanent_fail_codes: Option::default(),
+            temporary_fail_codes: Option::default(),
         }
     }
 }
@@ -91,7 +91,7 @@ impl DerefMut for CommandLineTool {
 impl Display for CommandLineTool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_yaml::to_string(self) {
-            Ok(yaml) => write!(f, "{}", yaml),
+            Ok(yaml) => write!(f, "{yaml}"),
             Err(_) => Err(fmt::Error),
         }
     }
@@ -151,7 +151,7 @@ impl CommandLineTool {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
 
-    /// Checks whether the `CommandLineTool` has a ShellCommandRequirement in requirements
+    /// Checks whether the `CommandLineTool` has a `ShellCommandRequirement` in requirements
     pub fn has_shell_command_requirement(&self) -> bool {
         if let Some(requirements) = &self.requirements {
             requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
@@ -160,7 +160,7 @@ impl CommandLineTool {
         }
     }
 
-    /// Checks whether the `CommandLineTool` has a DockerRequirement in requirements and returns an Option to it
+    /// Checks whether the `CommandLineTool` has a `DockerRequirement` in requirements and returns an Option to it
     pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
         self.requirements.as_ref()?.iter().find_map(|req| {
             if let Requirement::DockerRequirement(dr) = req {

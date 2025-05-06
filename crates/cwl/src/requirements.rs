@@ -50,16 +50,13 @@ where
             .map(|(key, value)| {
                 let class = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
                 let mut modified_value = value;
-                let new_map = match modified_value {
-                    Value::Mapping(ref mut inner_map) => {
-                        inner_map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
-                        inner_map.clone()
-                    }
-                    _ => {
-                        let mut map = Mapping::new();
-                        map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
-                        map
-                    }
+                let new_map = if let Value::Mapping(ref mut inner_map) = modified_value {
+                    inner_map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                    inner_map.clone()
+                } else {
+                    let mut map = Mapping::new();
+                    map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
+                    map
                 };
                 let param: Requirement = serde_yaml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
                 Ok(param)
@@ -75,8 +72,7 @@ fn get_entry_name(input: &str) -> String {
     let i = input
         .trim_start_matches(|c: char| !c.is_alphabetic())
         .to_string()
-        .replace(".", "_")
-        .replace("/", "_");
+        .replace(['.', '/'], "_");
     format!("$(inputs.{})", i.to_lowercase()).to_string()
 }
 
@@ -95,7 +91,7 @@ impl InitialWorkDirRequirement {
             }],
         }
     }
-    pub fn from_files(filenames: &Vec<&str>) -> Self {
+    pub fn from_files(filenames: &[&str]) -> Self {
         InitialWorkDirRequirement {
             listing: filenames
                 .iter()
@@ -115,7 +111,7 @@ impl InitialWorkDirRequirement {
         }
     }
 
-    pub fn add_files(&mut self, filenames: &Vec<&str>) {
+    pub fn add_files(&mut self, filenames: &[&str]) {
         self.listing.extend(filenames.iter().map(|&f| Listing {
             entryname: f.to_string(),
             entry: Entry::Source(get_entry_name(f)),
@@ -192,7 +188,7 @@ pub fn check_timelimit(doc: &CWLDocument) -> Option<u64> {
                 None
             }
         })
-        .find(|r| r.is_some())
+        .find(Option::is_some)
         .flatten()
 }
 
@@ -215,7 +211,7 @@ mod tests {
 
     #[test]
     pub fn test_initial_workdir_requirement_multiple() {
-        let req = InitialWorkDirRequirement::from_files(&vec!["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"]);
+        let req = InitialWorkDirRequirement::from_files(&["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"]);
         assert_eq!(req.listing.len(), 2);
     }
 }

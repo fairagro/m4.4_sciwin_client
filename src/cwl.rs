@@ -9,8 +9,13 @@ use cwl::{
     wf::{Workflow, WorkflowStep},
 };
 use log::{info, warn};
-use syntect::{easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::{as_24_bit_terminal_escaped, LinesWithEndings}};
 use std::{collections::HashMap, error::Error};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::ThemeSet,
+    parsing::SyntaxSet,
+    util::{as_24_bit_terminal_escaped, LinesWithEndings},
+};
 
 pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
@@ -46,12 +51,12 @@ impl Saveable for CommandLineTool {
                         docker_image_id: _,
                     } = docker
                     {
-                        include.include = resolve_path(&include.include, path)
+                        include.include = resolve_path(&include.include, path);
                     }
                 } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
                     for listing in &mut iwdr.listing {
                         if let Entry::Include(include) = &mut listing.entry {
-                            include.include = resolve_path(&include.include, path)
+                            include.include = resolve_path(&include.include, path);
                         }
                     }
                 }
@@ -76,7 +81,7 @@ impl Connectable for Workflow {
         }
     }
 
-    /// Adds a connection between an input and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow input will be added.
+    /// Adds a connection between an input and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow input will be added.
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
@@ -104,7 +109,7 @@ impl Connectable for Workflow {
         Ok(())
     }
 
-    /// Adds a connection between an output and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow output will be added.
+    /// Adds a connection between an output and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow output will be added.
     fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
@@ -125,12 +130,14 @@ impl Connectable for Workflow {
         Ok(())
     }
 
-    /// Adds a connection between two a CommandLineToos. The tools will be registered as step if registered not already.
+    /// Adds a connection between two `CommandLineTools`. The tools will be registered as step if registered not already.
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         //handle from
         let from_parts = from.split('/').collect::<Vec<_>>();
         //check if step already exists and create if not
-        if !self.has_step(from_parts[0]) {
+        if self.has_step(from_parts[0]) {
+            info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
+        } else {
             let from_filename = resolve_filename(from_parts[0]);
             let from_tool: CommandLineTool = load_tool(&from_filename)?;
             let from_outputs = from_tool.get_output_ids();
@@ -144,8 +151,6 @@ impl Connectable for Workflow {
 
             //create step
             self.add_new_step_if_not_exists(from_parts[0], &from_tool);
-        } else {
-            info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
         }
 
         //handle to
@@ -164,7 +169,7 @@ impl Connectable for Workflow {
         Ok(())
     }
 
-    /// Removes a connection between two CommandLineTools by removing input from tool_y that is also output of tool_x.
+    /// Removes a connection between two `CommandLineTools` by removing input from `tool_y` that is also output of `tool_x`.
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
         let to_parts = to.split('/').collect::<Vec<_>>();
@@ -178,7 +183,7 @@ impl Connectable for Workflow {
             return Err(format!("Step {} not found!", to_parts[0]).into());
         }
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]);
-        // If the step is found, try to remove the connection by removing input from tool_y that uses output of tool_x
+        // If the step is found, try to remove the connection by removing input from `tool_y` that uses output of `tool_x`
         //Input is empty, change that?
         if let Some(step) = step {
             if step.in_.remove(to_parts[1]).is_some() {
@@ -192,7 +197,7 @@ impl Connectable for Workflow {
         }
     }
 
-    /// Removes an input from inputs and removes it from CommandLineTool input.
+    /// Removes an input from inputs and removes it from `CommandLineTool` input.
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
         if to_parts.len() != 2 {
@@ -259,7 +264,7 @@ pub fn highlight_cwl(yaml: &str) {
     for line in LinesWithEndings::from(yaml) {
         let ranges = h.highlight_line(line, &ps).unwrap();
         let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
-        print!("{escaped}")
+        print!("{escaped}");
     }
 }
 

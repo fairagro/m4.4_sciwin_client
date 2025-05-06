@@ -34,7 +34,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
-        let (cmd, piped) = split_vec_at(remainder, "|");
+        let (cmd, piped) = split_vec_at(remainder, &"|");
 
         let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
         let stderr_pos = cmd.iter().position(|i| *i == "2>").unwrap_or(cmd.len());
@@ -67,24 +67,24 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
         if let Some(requirements) = &mut tool.requirements {
             requirements.push(Requirement::ShellCommandRequirement);
         } else {
-            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
+            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement]);
         }
     }
     tool
 }
 
-pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
+pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) {
     if let Some(req) = &mut tool.requirements {
         for item in req.iter_mut() {
             if let Requirement::InitialWorkDirRequirement(req) = item {
-                req.add_files(&inputs);
+                req.add_files(inputs);
                 break;
             }
         }
     } else {
         tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-            &inputs,
-        ))])
+            inputs,
+        ))]);
     }
 
     let params = inputs
@@ -98,7 +98,7 @@ pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
     tool.inputs.extend(params);
 }
 
-pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
+pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
     files
         .iter()
         .map(|f| {
@@ -121,8 +121,8 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
 
 pub fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
-        return Command::Single(String::from(""));
-    };
+        return Command::Single(String::new());
+    }
 
     let mut base_command = vec![command[0].to_string()];
 
@@ -146,7 +146,7 @@ pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
                 input = get_option(arg, args[i + 1]);
-                i += 1
+                i += 1;
             } else {
                 input = get_flag(arg);
             }
@@ -290,7 +290,7 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     let inputs = tool.inputs.clone();
     for input in &inputs {
         if let Some(default) = &input.default {
-            for output in tool.outputs.iter_mut() {
+            for output in &mut tool.outputs {
                 if let Some(binding) = &mut output.output_binding {
                     if binding.glob == default.as_value_string() {
                         binding.glob = process_input(input);
@@ -333,7 +333,7 @@ fn post_process_variables(tool: &mut CommandLineTool) {
         }
     }
 
-    for output in tool.outputs.iter_mut() {
+    for output in &mut tool.outputs {
         if let Some(binding) = &mut output.output_binding {
             if binding.glob == "." {
                 output.id = "output_directory".to_string();
@@ -557,7 +557,7 @@ mod tests {
                 }),
         ];
 
-        let outputs = get_outputs(files);
+        let outputs = get_outputs(&files);
         assert_eq!(outputs, expected);
     }
 

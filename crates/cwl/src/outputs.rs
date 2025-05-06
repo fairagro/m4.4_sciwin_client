@@ -35,7 +35,7 @@ impl Identifiable for CommandOutputParameter {
     }
 
     fn set_id(&mut self, id: String) {
-        self.id = id
+        self.id = id;
     }
 }
 
@@ -57,16 +57,13 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let param = match value {
-                    Value::String(type_str) => {
-                        let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
-                        CommandOutputParameter::default().with_id(id).with_type(type_)
-                    }
-                    _ => {
-                        let mut param: CommandOutputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
-                        param.id = id.to_string();
-                        param
-                    }
+                let param = if let Value::String(type_str) = value {
+                    let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                    CommandOutputParameter::default().with_id(id).with_type(type_)
+                } else {
+                    let mut param: CommandOutputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
+                    param.id = id.to_string();
+                    param
                 };
 
                 Ok(param)
@@ -108,7 +105,7 @@ impl Identifiable for WorkflowOutputParameter {
     }
 
     fn set_id(&mut self, id: String) {
-        self.id = id
+        self.id = id;
     }
 }
 

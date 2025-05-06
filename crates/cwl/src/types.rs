@@ -44,7 +44,7 @@ impl FromStr for CWLType {
                 "Any" => Ok(CWLType::Any),
                 "stdout" => Ok(CWLType::Stdout),
                 "stderr" => Ok(CWLType::Stderr),
-                _ => Err(format!("Invalid CWLType: {}", s)),
+                _ => Err(format!("Invalid CWLType: {s}")),
             }
         }
     }

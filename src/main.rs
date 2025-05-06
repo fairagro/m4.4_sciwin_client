@@ -17,7 +17,7 @@ use s4n::{
 use std::{error::Error, process::exit};
 
 fn main() {
-    log::set_logger(&LOGGER).map(|_| log::set_max_level(LevelFilter::Info)).unwrap();
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info)).unwrap();
 
     if let Err(e) = run() {
         error!("{e}");
