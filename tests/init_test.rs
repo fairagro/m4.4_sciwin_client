@@ -1,7 +1,7 @@
 mod common;
 use calamine::{open_workbook, Reader, Xlsx};
 use common::check_git_user;
-use s4n::commands::init::{create_arc_folder_structure, git_cleanup, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, init_s4n, is_git_repo};
+use s4n::commands::init::{create_arc_folder_structure, git_cleanup, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, initialize_project, is_git_repo};
 use serial_test::serial;
 use std::{env, path::{PathBuf, Path}};
 use tempfile::{tempdir, Builder, NamedTempFile};
@@ -23,7 +23,7 @@ fn test_init_s4n_without_folder() {
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
     let arc = false;
-    let result = init_s4n(folder_name, arc);
+    let result = initialize_project(folder_name, arc);
 
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
@@ -81,7 +81,7 @@ fn test_init_s4n_without_folder_with_arc() {
     let folder_name: Option<String> = None;
     let arc = true;
 
-    let result = init_s4n(folder_name, arc);
+    let result = initialize_project(folder_name, arc);
 
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
@@ -218,7 +218,7 @@ fn test_init_s4n_with_arc() {
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
     //call method with temp dir
-    let result = init_s4n(base_folder, arc);
+    let result = initialize_project(base_folder, arc);
 
     assert!(result.is_ok(), "Expected successful initialization");
 
@@ -240,7 +240,7 @@ fn test_init_s4n_minimal() {
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
     //call method with temp dir
-    let result = init_s4n(base_folder, arc);
+    let result = initialize_project(base_folder, arc);
     println!("{result:#?}");
     assert!(result.is_ok(), "Expected successful initialization");
 

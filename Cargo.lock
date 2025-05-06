@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "cwl"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "rstest",
  "serde",
@@ -728,13 +728,15 @@ dependencies = [
 
 [[package]]
 name = "cwl-execution"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cwl",
  "fancy-regex 0.14.0",
+ "glob",
  "log",
  "pathdiff",
  "rand 0.9.0",
+ "reqwest",
  "rustyscript",
  "serde",
  "serde_json",
@@ -1355,6 +1357,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "fstest"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f21e7e288ddb16fa9a74bf66fb7f098cfba200775a7fffb914c59e54628ef6c"
+dependencies = [
+ "fstest_macro",
+ "git2",
+ "serial_test",
+ "tempfile",
+]
+
+[[package]]
+name = "fstest_macro"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9557e404b62ee166f6db1063e2014bfb71db22af870b749a1a4ecb060383706"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1548,9 +1573,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5017294ff4bb30944501348f6f8e42e6ad28f42c8bbef7a74029aff064a4e3c2"
+checksum = "75249d144030531f8dee69fe9cea04d3edf809a017ae445e2abdff6629e86633"
 dependencies = [
  "atomic-waker",
  "bytes",
@@ -2367,9 +2392,9 @@ checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
 
 [[package]]
 name = "openssl-src"
-version = "300.4.2+3.4.1"
+version = "300.5.0+3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168ce4e058f975fe43e89d9ccf78ca668601887ae736090aacc23ae353c298e2"
+checksum = "e8ce546f549326b0e6052b649198487d91320875da901e7bd11a06d1ee3f9c2f"
 dependencies = [
  "cc",
 ]
@@ -2706,9 +2731,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a31971752e70b8b2686d7e46ec17fb38dad4051d94024c88df49b667caea9c84"
+checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
@@ -2897,6 +2922,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "h2",
@@ -3073,9 +3099,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.25"
+version = "0.23.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "822ee9188ac4ec04a2f0531e55d035fb2de73f18b41a63c70c2712503b6fb13c"
+checksum = "df51b5869f3a441595eac5e8ff14d486ff285f7b8c0df8770e49c3b56351f0f0"
 dependencies = [
  "once_cell",
  "rustls-pki-types",
@@ -3153,7 +3179,7 @@ checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
 
 [[package]]
 name = "s4n"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "assert_cmd",
  "calamine",
@@ -3163,11 +3189,13 @@ dependencies = [
  "cwl",
  "cwl-execution",
  "dialoguer",
+ "fstest",
  "git2",
  "log",
  "pathdiff",
  "predicates",
  "prettytable-rs",
+ "rand 0.9.0",
  "reqwest",
  "rstest",
  "rust_xlsxwriter",

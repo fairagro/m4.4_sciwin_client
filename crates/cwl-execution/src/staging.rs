@@ -1,4 +1,7 @@
-use crate::io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to};
+use crate::{
+    environment::RuntimeEnvironment,
+    io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to},
+};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -6,11 +9,12 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
 };
+use pathdiff::diff_paths;
 use std::{
-    collections::HashMap,
     env,
     error::Error,
     fs,
+    io::{self},
     path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
 };
@@ -18,7 +22,7 @@ use urlencoding::decode;
 
 pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     tool: &CWLDocument,
-    input_values: &mut HashMap<String, DefaultValue>,
+    runtime: &mut RuntimeEnvironment,
     tool_path: P,
     path: Q,
     out_dir: R,
@@ -30,7 +34,7 @@ pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path
     //stage inputs
     staged_files.extend(stage_input_files(
         &tool.inputs,
-        input_values,
+        runtime,
         tool_path.as_ref(),
         path.as_ref(),
         out_dir.as_ref(),
@@ -118,7 +122,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
 
 fn stage_input_files(
     inputs: &[CommandInputParameter],
-    input_values: &mut HashMap<String, DefaultValue>,
+    runtime: &mut RuntimeEnvironment,
     tool_path: &Path,
     path: &Path,
     out_dir: &Path,
@@ -132,7 +136,7 @@ fn stage_input_files(
         }
 
         //get correct data
-        let mut data = input_values.remove(&input.id).unwrap();
+        let mut data = runtime.inputs.remove(&input.id).unwrap();
 
         //handle file literals
         if let DefaultValue::File(ref mut f) = data {
@@ -141,9 +145,35 @@ fn stage_input_files(
                     let dest = path.join(get_random_filename(".literal", ""));
                     fs::write(&dest, contents)?;
                     f.location = Some(dest.to_string_lossy().into_owned());
-                    
-                    input_values.insert(input.id.clone(), data);
+
+                    runtime.inputs.insert(input.id.clone(), data);
                     continue;
+                }
+            } else if let Some(location) = &f.location {
+                if location.starts_with("https://") || location.starts_with("http://") {
+                    //download file
+                    let client = reqwest::blocking::Client::new();
+                    let mut res = client.get(location).send()?;
+                    if res.status() != reqwest::StatusCode::OK {
+                        return Err(format!("Failed to download file from {}: {}", location, res.status()).into());
+                    }
+
+                    //get file name from url
+                    if let Some(segment) = res
+                        .url()
+                        .path_segments()
+                        .and_then(|mut segments| segments.next_back())
+                        .map(|filename| Path::new(&runtime.runtime["tmpdir"]).join(filename))
+                    {
+                        let path = Path::new(&runtime.runtime["tmpdir"]).join(segment);
+                        let mut out = fs::File::create(&path)?;
+                        io::copy(&mut res, &mut out)?;
+
+                        //set updated path:
+                        f.location = Some(path.to_string_lossy().into_owned());
+                    } else {
+                        return Err("Could not extract filename from URL.".into());
+                    }
                 }
             }
         }
@@ -156,8 +186,14 @@ fn stage_input_files(
             data_path = tool_path.join(data_path);
         }
 
-        let staged_filename = handle_filename(&data);
+        let mut staged_filename = handle_filename(&data);
+        if let Some(tmpdir) = runtime.runtime.get("tmpdir") {
+            if let Some(diff) = diff_paths(&staged_filename, tmpdir) {
+                staged_filename = diff.to_string_lossy().into_owned();
+            }
+        }
         let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
+
         let staged_filename_relative = staged_filename_relative
             .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
             .to_string();
@@ -176,7 +212,7 @@ fn stage_input_files(
             }),
             _ => data.clone(),
         };
-        input_values.insert(input.id.clone(), staged_data);
+        runtime.inputs.insert(input.id.clone(), staged_data);
 
         if input.type_ == CWLType::File {
             copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
@@ -231,7 +267,7 @@ fn handle_filename(value: &DefaultValue) -> String {
     match value {
         DefaultValue::File(item) => join_with_basename(&item.get_location(), &item.basename),
         DefaultValue::Directory(item) => join_with_basename(&item.get_location(), &item.basename),
-        DefaultValue::Any(_) => String::new(),
+        _ => String::new(),
     }
 }
 
@@ -244,7 +280,7 @@ mod tests {
         types::{Directory, File},
     };
     use serial_test::serial;
-    use std::{path::PathBuf, vec};
+    use std::{collections::HashMap, path::PathBuf, vec};
     use tempfile::tempdir;
 
     #[test]
@@ -298,7 +334,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &mut HashMap::from([("test".to_string(), value)]),
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -323,7 +359,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &mut HashMap::from([("test".to_string(), value)]),
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -348,7 +384,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &mut HashMap::from([("test".to_string(), value)]),
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -372,7 +408,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &mut HashMap::from([("test".to_string(), value)]),
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -401,7 +437,7 @@ mod tests {
 
         let list = stage_input_files(
             &[input],
-            &mut HashMap::from([("test".to_string(), value)]),
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
             Path::new("../../"),
             tmp_dir.path(),
             &PathBuf::from(""),
@@ -429,5 +465,33 @@ mod tests {
         //secondary file should be there
         assert_eq!(list, vec![expected_path.to_string_lossy()]);
         assert!(expected_path.exists());
+    }
+
+    #[test]
+    #[serial]
+    fn test_stage_remote_files() {
+        //create tmp_dir
+        let temp = tempdir().unwrap();
+        let working = tempdir().unwrap();
+
+        let file = "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md";
+        let value = DefaultValue::File(File::from_location(&file.to_string()));
+        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
+
+        let list = stage_input_files(
+            &[input],
+            &mut RuntimeEnvironment::default()
+                .with_inputs(HashMap::from([("test".to_string(), value)]))
+                .with_runtime(HashMap::from([("tmpdir".to_string(), temp.path().to_string_lossy().into_owned())])),
+            Path::new("../../"),
+            working.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
+
+        let expected_path = working.path().join("README.md");
+
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
     }
 }

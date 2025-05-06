@@ -7,6 +7,58 @@ pub trait Identifiable {
     fn set_id(&mut self, id: String);
 }
 
+/// Deserializes a list of `Identifiable` items from a YAML value.
+/// The input can be either a sequence (list) or a mapping (dictionary).
+/// If it's a mapping, the keys are used as IDs for the items.
+/// # Examples
+/// ```
+/// use serde_yaml::Value;
+/// use serde::{Deserialize, Serialize};
+/// use std::fmt::Debug;
+/// use std::collections::HashMap;
+/// use cwl::deserialize::Identifiable;
+/// use cwl::deserialize::deserialize_list;
+///
+/// #[derive(Debug, Deserialize)]
+/// struct ItemBag {
+///     #[serde(deserialize_with = "deserialize_list")]
+///     items: Vec<MyItem>,
+/// }
+///
+/// #[derive(Debug, Deserialize)]
+/// struct MyItem {
+///     #[serde(default)]
+///     id: String,
+///     name: String,
+/// }
+///
+/// impl Identifiable for MyItem {
+///     fn id(&self) -> &str {      
+///        &self.id
+///   }
+///   fn set_id(&mut self, id: String) {
+///       self.id = id;
+///  }
+/// }
+/// let yaml_seq = r#"
+/// items:
+/// - id: item1
+///   name: Item 1
+/// - id: item2
+///   name: Item 2
+/// "#;
+///     
+/// let yaml_map = r#"
+/// items:
+///   item1:
+///     name: item1
+///   item2:
+///     name: item2
+/// "#;
+///
+/// let seq: ItemBag = serde_yaml::from_str(yaml_seq).unwrap();
+/// let map: ItemBag = serde_yaml::from_str(yaml_map).unwrap();
+/// ```
 pub fn deserialize_list<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     D: Deserializer<'de>,

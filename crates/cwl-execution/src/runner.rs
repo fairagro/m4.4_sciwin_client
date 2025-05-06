@@ -142,6 +142,7 @@ pub fn run_workflow(
                     DefaultValue::Directory(dir)
                 }
                 DefaultValue::Any(str) => DefaultValue::Any(str.clone()),
+                _ => todo!(),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
@@ -160,6 +161,7 @@ pub fn run_workflow(
                     .map_err(|e| format!("Could not provide output directory: {}", e))?,
                 ),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
+                DefaultValue::Array(inner) => DefaultValue::Array(inner.clone()),
             };
             output_values.insert(&output.id, value);
         }
@@ -216,7 +218,7 @@ pub fn run_tool(
     runtime.environment = collect_environment(tool);
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &mut runtime.inputs, tool_path, dir.path(), output_directory)?;
+    let staged_files = stage_required_files(tool, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
@@ -333,6 +335,18 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
     }
 }
 
+#[derive(Debug, Clone)]
+struct BoundBinding {
+    sort_key: Vec<SortKey>,
+    command: CommandLineBinding,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum SortKey {
+    Int(i32),
+    Str(String),
+}
+
 fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<SystemCommand, Box<dyn Error>> {
     let mut args: Vec<String> = vec![];
 
@@ -356,33 +370,41 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
         }
     }
 
-    let mut bindings: Vec<(isize, usize, CommandLineBinding)> = vec![];
+    let mut bindings: Vec<BoundBinding> = vec![];
 
     //handle arguments field...
     if let Some(arguments) = &tool.arguments {
         for (i, arg) in arguments.iter().enumerate() {
+            let mut sort_key = vec![];
             match arg {
                 Argument::String(str) => {
                     let binding = CommandLineBinding {
                         value_from: Some(str.clone()),
                         ..Default::default()
                     };
-                    bindings.push((0, i, binding));
+                    sort_key.push(SortKey::Int(0));
+                    sort_key.push(SortKey::Int(i as i32));
+                    bindings.push(BoundBinding { sort_key, command: binding });
                 }
                 Argument::Binding(binding) => {
-                    let position = binding.position.unwrap_or_default();
-                    bindings.push((position, i, binding.clone()));
+                    let position = binding.position.unwrap_or_default() as i32;
+                    sort_key.push(SortKey::Int(position));
+                    sort_key.push(SortKey::Int(i as i32));
+                    bindings.push(BoundBinding {
+                        sort_key,
+                        command: binding.clone(),
+                    });
                 }
             }
         }
     }
-    let index = bindings.len() + 1;
 
     //handle inputs
-    for (i, input) in tool.inputs.iter().enumerate() {
+    for input in tool.inputs.iter() {
         if let Some(ref binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
+            let mut sort_key = vec![SortKey::Int(position as i32), SortKey::Str(input.id.clone())];
 
             let value = runtime.inputs.get(&input.id);
             set_self(&value)?;
@@ -394,26 +416,44 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                         binding.value_from = Some(replace_expressions(value_from).unwrap_or(value_from.to_string()));
                     }
                 }
+            } else if matches!(input.type_, CWLType::Array(_)) {
+                let val = evaluate_input(input, &runtime.inputs)?;
+                if let DefaultValue::Array(vec) = val {
+                    if let Some(sep) = &binding.item_separator {
+                        binding.value_from = Some(vec.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(sep).to_string());
+                    } else {
+                        for (i, item) in vec.iter().enumerate() {
+                            binding.value_from = Some(item.as_value_string());
+                            sort_key.push(SortKey::Int(i as i32));
+                            bindings.push(BoundBinding {
+                                sort_key: sort_key.clone(),
+                                command: binding.clone(),
+                            });
+                        }
+                        unset_self()?;
+                        continue;
+                    }
+                }
             } else {
-                binding.value_from = Some(evaluate_input_as_string(input, &runtime.inputs)?.replace("'", ""));
+                let binding_str = evaluate_input_as_string(input, &runtime.inputs)?;
+                if matches!(input.type_, CWLType::Optional(_)) && binding_str == "null" {
+                    continue;
+                }
+                binding.value_from = Some(binding_str.replace("'", ""));
             }
             unset_self()?;
-            bindings.push((position, i + index, binding))
+            bindings.push(BoundBinding {
+                sort_key,
+                command: binding.clone(),
+            })
         }
     }
 
     //do sorting
-    bindings.sort_by(|a, b| {
-        let cmp = a.0.cmp(&b.0);
-        if cmp == std::cmp::Ordering::Equal {
-            a.1.cmp(&b.1)
-        } else {
-            cmp
-        }
-    });
+    bindings.sort_by(|a, b| a.sort_key.cmp(&b.sort_key));
 
     //add bindings
-    let inputs: Vec<CommandLineBinding> = bindings.iter().map(|(_, _, binding)| binding.clone()).collect();
+    let inputs: Vec<CommandLineBinding> = bindings.iter().map(|b| b.command.clone()).collect();
     for input in &inputs {
         if let Some(prefix) = &input.prefix {
             args.push(prefix.to_string());

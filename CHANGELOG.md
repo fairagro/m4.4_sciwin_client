@@ -1,5 +1,24 @@
 # Unreleased
 ## 🚀 Features
+- Support automatic downloading if files are given with `http://` or `https://` protocol
+- Detect URLs as files if given with `http://` or `https://` protocol
+- Support Detection of Arrays as inputs in `tool create`
+
+# v0.4.0
+## 🚀 Features
+- Added `--no-defaults` flag to tool create which can be handy when using passwords as inputs
+
+## 🐛 Bugfixes
+- fixed critical error in tool create where `outputEval` was set, even when null
+- 🏃CWL Runner
+    - Fixed some bugs in CWL Runner ramping up its conformance from 126/378 to 131/378
+    - Improved Array support in Runner
+    - Support cwl.output.json handling in Runner
+    - Support globs in Runner
+- Rewrite input ids if "bad words" are found (e.g. sql connection strings)
+
+# v0.3.0
+## 🚀 Features
 - Added Containerization Support (Docker & Podman) for `s4n execute local`
 - Support CWL ExpressionTools
 

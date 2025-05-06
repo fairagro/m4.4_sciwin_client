@@ -17,7 +17,7 @@ use util::preprocess_cwl;
 
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
     //gather inputs
-    let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
+    let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {
         let yaml = fs::read_to_string(&raw_inputs[0])?;
         serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?
     } else {
@@ -57,14 +57,14 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
                         file.set_location(join_path_string(path_prefix, &file.get_location()));
                     }
                     DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.get_location())),
-                    DefaultValue::Any(_) => (),
+                    _ => (),
                 }
             }
         }
     }
 
     //make paths relative to calling object
-    let path_prefix = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
+    let path_prefix = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {
         Path::new(&raw_inputs[0]).parent().unwrap() //path of job file
     } else {
         Path::new(".")
@@ -73,13 +73,13 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
         match value {
             DefaultValue::File(file) => correct_path(file, path_prefix),
             DefaultValue::Directory(directory) => correct_path(directory, path_prefix),
-            DefaultValue::Any(_) => (),
+            _ => (),
         }
     }
 
     let output_values = execute(cwlfile, inputs, outdir)?;
     let json = serde_json::to_string_pretty(&output_values)?;
-    println!("{}", json);
+    println!("{json}");
 
     Ok(())
 }
@@ -91,8 +91,7 @@ pub fn execute(
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //load cwl
     let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
-    let contents = preprocess_cwl(&contents, &cwlfile);
-
+    let contents = preprocess_cwl(&contents, &cwlfile)?;
     let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
 
     match doc {

@@ -1,3 +1,5 @@
+//! Contains the structure of CWL `CommandLineTool` definitions together with helpful functions for convenience
+
 use super::{
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{deserialize_outputs, CommandOutputParameter},
@@ -12,10 +14,15 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Represents a CWL CommandLineTool, a process characterized by the execution of a standalone,
-/// non-interactive program which is invoked on some input, produces output, and then terminates.
+/// A Command Line Tool is a non-interactive executable program that reads some input, performs a computation,
+/// and terminates after producing some output. Command line programs are a flexible unit of code sharing and reuse,
+/// unfortunately the syntax and input/output semantics among command line programs is extremely heterogeneous.
+/// A common layer for describing the syntax and semantics of programs can reduce this incidental
+/// complexity by providing a consistent way to connect programs together. This specification defines the
+/// Common Workflow Language (CWL) Command Line Tool Description, a vendor-neutral standard for describing the syntax and
+/// input/output semantics of command line programs.
 ///
-/// Reference: [CWL CommandLineTool Specification](https://www.commonwl.org/v1.2/CommandLineTool.html)
+/// Reference: <https://www.commonwl.org/v1.2/CommandLineTool.html>
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandLineTool {
@@ -45,24 +52,24 @@ impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
             base: DocumentBase {
-                id: None,
-                label: None,
-                doc: None,
+                id: Option::default(),
+                label: Option::default(),
+                doc: Option::default(),
                 class: String::from("CommandLineTool"),
                 cwl_version: String::from("v1.2"),
-                inputs: Default::default(),
-                requirements: Default::default(),
-                hints: Default::default(),
+                inputs: Vec::default(),
+                requirements: Option::default(),
+                hints: Option::default(),
             },
             base_command: Default::default(),
-            stdin: Default::default(),
-            stdout: Default::default(),
-            stderr: Default::default(),
-            outputs: Default::default(),
-            arguments: Default::default(),
-            success_codes: None,
-            permanent_fail_codes: None,
-            temporary_fail_codes: None,
+            stdin: Option::default(),
+            stdout: Option::default(),
+            stderr: Option::default(),
+            outputs: Vec::default(),
+            arguments: Option::default(),
+            success_codes: Option::default(),
+            permanent_fail_codes: Option::default(),
+            temporary_fail_codes: Option::default(),
         }
     }
 }
@@ -81,55 +88,70 @@ impl DerefMut for CommandLineTool {
     }
 }
 
-impl CommandLineTool {
-    pub fn with_base_command(mut self, command: Command) -> Self {
-        self.base_command = command;
-        self
-    }
-    pub fn with_inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
-        self.inputs = inputs;
-        self
-    }
-    pub fn with_outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
-        self.outputs = outputs;
-        self
-    }
-    pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
-        self.requirements = Some(requirements);
-        self
-    }
-    pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
-        self.hints = Some(requirements);
-        self
-    }
-    pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
-        self.stdout = stdout;
-        self
-    }
-    pub fn with_stderr(mut self, stderr: Option<String>) -> Self {
-        self.stderr = stderr;
-        self
-    }
-    pub fn with_arguments(mut self, args: Option<Vec<Argument>>) -> Self {
-        self.arguments = args;
-        self
-    }
-}
-
 impl Display for CommandLineTool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_yaml::to_string(self) {
-            Ok(yaml) => write!(f, "{}", yaml),
+            Ok(yaml) => write!(f, "{yaml}"),
             Err(_) => Err(fmt::Error),
         }
     }
 }
 
 impl CommandLineTool {
+    /// Adds a base command to this `CommandLineTool` and returns the updated tool
+    pub fn with_base_command(mut self, command: Command) -> Self {
+        self.base_command = command;
+        self
+    }
+
+    /// Adds arguments to this `CommandLineTool` and returns the updated tool
+    pub fn with_arguments(mut self, args: Option<Vec<Argument>>) -> Self {
+        self.arguments = args;
+        self
+    }
+
+    /// Adds inputs to this `CommandLineTool` and returns the updated tool
+    pub fn with_inputs(mut self, inputs: Vec<CommandInputParameter>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+
+    /// Adds outputs to this `CommandLineTool` and returns the updated tool
+    pub fn with_outputs(mut self, outputs: Vec<CommandOutputParameter>) -> Self {
+        self.outputs = outputs;
+        self
+    }
+
+    /// Adds requirements to this `CommandLineTool` and returns the updated tool
+    pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
+        self.requirements = Some(requirements);
+        self
+    }
+
+    /// Adds hints to this `CommandLineTool` and returns the updated tool
+    pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
+        self.hints = Some(requirements);
+        self
+    }
+
+    /// Adds stdout to this `CommandLineTool` and returns the updated tool
+    pub fn with_stdout(mut self, stdout: Option<String>) -> Self {
+        self.stdout = stdout;
+        self
+    }
+
+    /// Adds stderr to this `CommandLineTool` and returns the updated tool
+    pub fn with_stderr(mut self, stderr: Option<String>) -> Self {
+        self.stderr = stderr;
+        self
+    }
+
+    /// Returns the List of CommandOutputParameter.id of the `CommandLineTool`
     pub fn get_output_ids(&self) -> Vec<String> {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
 
+    /// Checks whether the `CommandLineTool` has a `ShellCommandRequirement` in requirements
     pub fn has_shell_command_requirement(&self) -> bool {
         if let Some(requirements) = &self.requirements {
             requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
@@ -138,6 +160,7 @@ impl CommandLineTool {
         }
     }
 
+    /// Checks whether the `CommandLineTool` has a `DockerRequirement` in requirements and returns an Option to it
     pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
         self.requirements.as_ref()?.iter().find_map(|req| {
             if let Requirement::DockerRequirement(dr) = req {
@@ -148,6 +171,7 @@ impl CommandLineTool {
         })
     }
 
+    /// Gets the permanent fail code of the `CommandLineTool`
     pub fn get_error_code(&self) -> i32 {
         if let Some(code) = &self.permanent_fail_codes {
             code[0]
@@ -156,15 +180,18 @@ impl CommandLineTool {
         }
     }
 
+    /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stdout
     pub fn has_stdout_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stdout))
     }
 
+    /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stderr
     pub fn has_stderr_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stderr))
     }
 }
 
+/// Command line bindings which are not directly associated with input parameters.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Argument {
@@ -172,6 +199,7 @@ pub enum Argument {
     Binding(CommandLineBinding),
 }
 
+/// Command line base command which can be a single string or a list of strings.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Command {
@@ -230,7 +258,6 @@ baseCommand:
 - calculation.py
 ";
         let clt: Result<CommandLineTool, serde_yaml::Error> = serde_yaml::from_str(cwl);
-        println!("{clt:?}");
         assert!(clt.is_ok());
     }
 
@@ -248,9 +275,7 @@ baseCommand:
                 ..Default::default()
             }])
             .with_outputs(vec![]);
-        let result = serde_yaml::to_string(&tool);
-        println!("{result:?}");
-        assert!(result.is_ok());
+        assert!(serde_yaml::to_string(&tool).is_ok());
     }
 
     #[test]

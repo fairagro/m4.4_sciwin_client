@@ -18,20 +18,20 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
-    if let Err(e) = init_s4n(args.project.clone(), args.arc) {
-        error!("s4n init failed: {}", e);
+    if let Err(e) = initialize_project(args.project.clone(), args.arc) {
+        error!("Project Initialization failed: {e}");
         git_cleanup(args.project.clone());
-        return Err(e); 
+        return Err(e);
     }
     Ok(())
 }
 
-pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    let repo = if !is_git_repo(folder) {
-        init_git_repo(folder)?
-    } else {
+    let repo = if is_git_repo(folder) {
         Repository::open(folder.unwrap_or("."))?
+    } else {
+        init_git_repo(folder)?
     };
     if arc {
         create_arc_folder_structure(folder)?;
@@ -40,15 +40,15 @@ pub fn init_s4n(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn st
     }
 
     let files = get_modified_files(&repo);
-    if !files.is_empty() {
+    if files.is_empty() {
+        error!("Nothing to commit");
+    } else {
         stage_all(&repo)?;
         if repo.head().is_ok() {
-            commit(&repo, "Created Project using `s4n init`")?;
+            commit(&repo, "🚀 Initialized Project")?;
         } else {
             initial_commit(&repo)?;
         }
-    } else {
-        error!("Nothing to commit");
     }
 
     Ok(())
@@ -71,9 +71,9 @@ pub fn git_cleanup(folder_name: Option<String>) {
     // init project in folder name failed, delete it
     if let Some(folder) = folder_name {
         if std::fs::remove_dir_all(&folder).is_ok() {
-            info!("Cleaned up failed init in folder: {}", folder);
+            info!("Cleaned up failed init in folder: {folder}");
         } else {
-            warn!("Failed to clean up folder: {}", folder);
+            warn!("Failed to clean up folder: {folder}");
         }
     }
     // init project in current folder failed, only delete .git folder
@@ -90,15 +90,15 @@ pub fn git_cleanup(folder_name: Option<String>) {
 pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
-        None => env::current_dir().expect("Failed to get current directory"),
+        None => env::current_dir()?,
     };
 
     fs::create_dir_all(&base_dir)?;
-    let repo = Repository::init(&base_dir).expect("Failed to execute git init command");
+    let repo = Repository::init(&base_dir)?;
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
-        File::create(gitignore_path).expect("Failed to create .gitignore file");
+        File::create(gitignore_path)?;
     }
 
     Ok(repo)
@@ -107,10 +107,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
 pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
-        None => {
-            // Get the current working directory
-            env::current_dir().expect("Failed to get current directory")
-        }
+        None => env::current_dir()?,
     };
 
     // Create the base directory
@@ -126,7 +123,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
     File::create(workflows_dir.join(".gitkeep"))?;
 
     if !silent {
-        info!("📂 s4n project initialisation successfully:");
+        info!("📂 Project Initialization successful:");
         info!("{} (Base)", base_dir.display());
         info!("  ├── workflows");
     }
@@ -137,10 +134,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) 
 pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
-        None => {
-            // Get the current working directory
-            env::current_dir().expect("Failed to get current directory")
-        }
+        None => env::current_dir()?,
     };
 
     // Create the base directory
@@ -161,7 +155,7 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
     //create workflows folder
     create_minimal_folder_structure(base_folder, true)?;
 
-    info!("📂 s4n project initialisation successfully:");
+    info!("📂 Project Initialization successful:");
     info!("{} (Base)", base_dir.display());
     info!("  ├── assays");
     info!("  ├── studies");
@@ -230,7 +224,7 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
     // Write column names
     for (i, &col) in columns.iter().enumerate() {
-        worksheet.write_string(i as u32, 0, col)?;
+        worksheet.write_string(u32::try_from(i)?, 0, col)?;
     }
 
     // Save the workbook to the specified file path
@@ -238,4 +232,3 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
     Ok(())
 }
-

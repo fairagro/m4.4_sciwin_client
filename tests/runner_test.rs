@@ -1,6 +1,6 @@
 mod common;
 use common::with_temp_repository;
-use cwl::{clt::CommandLineTool, types::DefaultValue, CWLDocument};
+use cwl::{clt::CommandLineTool, load_tool, types::DefaultValue, CWLDocument};
 use cwl_execution::{
     environment::RuntimeEnvironment,
     runner::{run_command, run_tool},
@@ -8,6 +8,7 @@ use cwl_execution::{
 use s4n::parser::parse_command_line;
 use serial_test::serial;
 use std::{collections::HashMap, fs, path::Path};
+use tempfile::tempdir;
 
 #[test]
 #[serial]
@@ -15,14 +16,13 @@ pub fn test_cwl_execute_command_multiple() {
     with_temp_repository(|dir| {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
-        let cwl = parse_command_line(args.iter().map(AsRef::as_ref).collect());
+        let cwl = parse_command_line(&args.iter().map(AsRef::as_ref).collect::<Vec<_>>());
         assert!(run_command(&cwl, &Default::default()).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
         assert!(output_path.exists());
     });
 }
-
 
 #[test]
 #[serial]
@@ -196,4 +196,13 @@ baseCommand:
         Ok(_) => println!("success!"),
         Err(e) => eprintln!("{e:?}"),
     }
+}
+
+#[test]
+#[serial]
+pub fn test_run_commandlinetool_array_glob() {
+    let dir = tempdir().unwrap();
+    let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
+    let result = run_tool(&mut tool, HashMap::new(), None, Some(dir.path().to_string_lossy().into_owned()));
+    assert!(result.is_ok(), "{result:?}");
 }

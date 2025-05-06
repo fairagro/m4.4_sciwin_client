@@ -22,6 +22,30 @@ pub mod requirements;
 pub mod types;
 pub mod wf;
 
+/// Represents a CWL (Common Workflow Language) document, which can be one of the following types:
+/// - `CommandLineTool`: A CWL CommandLineTool document.
+/// - `Workflow`: A CWL Workflow document.
+/// - `ExpressionTool`: A CWL ExpressionTool document.
+///
+/// This enum supports automated type detection during deserialization, allowing it to handle any CWL document type seamlessly.
+///
+/// # Examples
+///
+/// ```
+/// use cwl::CWLDocument;
+/// use serde_yaml;
+///
+/// let yaml = r#"---
+/// class: CommandLineTool
+/// cwlVersion: v1.0
+/// inputs: []
+/// outputs: []
+/// baseCommand: echo
+/// "#;
+///
+/// let document: CWLDocument = serde_yaml::from_str(yaml).unwrap();
+/// assert!(matches!(document, CWLDocument::CommandLineTool(_)));
+/// ```
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CWLDocument {
@@ -77,6 +101,7 @@ impl<'de> Deserialize<'de> for CWLDocument {
     }
 }
 
+/// Base struct used by all CWL Documents (CommandLineTool, ExpressionTool and Workflow) defining common fields.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentBase {
@@ -101,10 +126,14 @@ pub struct DocumentBase {
 }
 
 impl DocumentBase {
+    /// Checks whether Document has a ResourceRequirement attached and returns an option to it.
     pub fn get_resource_requirement(&self) -> Option<ResourceRequirement> {
-        self.requirements.as_ref()?.iter().find_map(|req| {
+        let reqs = self.requirements.as_ref().into_iter().flatten();
+        let hints = self.hints.as_ref().into_iter().flatten();
+
+        reqs.chain(hints).find_map(|req| {
             if let Requirement::ResourceRequirement(rr) = req {
-                Some(rr.clone()) // Return the found ResourceRequirement
+                Some(rr.clone())
             } else {
                 None
             }
@@ -112,7 +141,24 @@ impl DocumentBase {
     }
 }
 
-/// Loads a CWL CommandLineTool from disk and parses given YAML
+/// Loads a CWL CommandLineTool from a YAML file on disk.
+///
+/// This function reads the specified file, parses its contents as YAML, and attempts to deserialize it into a `CommandLineTool` object.
+///
+/// # Arguments
+/// * `filename` - A path to the YAML file containing the CommandLineTool definition.
+///
+/// # Returns
+/// * `Ok(CommandLineTool)` if the file is successfully read and parsed.
+/// * `Err` if the file does not exist or cannot be parsed.
+///
+/// # Examples
+/// ```
+/// use cwl::load_tool;
+///
+/// let tool = load_tool("../../tests/test_data/default.cwl");
+/// assert!(tool.is_ok());
+/// ```
 pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
@@ -124,7 +170,24 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
     Ok(tool)
 }
 
-/// Loads a CWL ExpresionTool from disk and parses given YAML
+/// Loads a CWL ExpressionTool from a YAML file on disk.
+///
+/// This function reads the specified file, parses its contents as YAML, and attempts to deserialize it into an `ExpressionTool` object.
+///
+/// # Arguments
+/// * `filename` - A path to the YAML file containing the ExpressionTool definition.
+///
+/// # Returns
+/// * `Ok(ExpressionTool)` if the file is successfully read and parsed.
+/// * `Err` if the file does not exist or cannot be parsed.
+///
+/// # Examples
+/// ```
+/// use cwl::load_expression_tool;
+///
+/// let expr_tool = load_expression_tool("../../tests/test_data/test_expr.cwl");
+/// assert!(expr_tool.is_ok());
+/// ```
 pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<ExpressionTool, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
@@ -136,7 +199,24 @@ pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<Expre
     Ok(tool)
 }
 
-/// Loads a CWL Workflow from disk and parses given YAML
+/// Loads a CWL Workflow from a YAML file on disk.
+///
+/// This function reads the specified file, parses its contents as YAML, and attempts to deserialize it into a `Workflow` object.
+///
+/// # Arguments
+/// * `filename` - A path to the YAML file containing the Workflow definition.
+///
+/// # Returns
+/// * `Ok(Workflow)` if the file is successfully read and parsed.
+/// * `Err` if the file does not exist or cannot be parsed.
+///
+/// # Examples
+/// ```
+/// use cwl::load_workflow;
+///
+/// let workflow = load_workflow("../../tests/test_data/wf_inout.cwl");
+/// assert!(workflow.is_ok());
+/// ```
 pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {

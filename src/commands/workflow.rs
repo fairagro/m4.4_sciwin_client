@@ -87,7 +87,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     }
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
-    info!("📄 Created new Workflow file: {}", filename);
+    info!("📄 Created new Workflow file: {filename}");
 
     Ok(())
 }
@@ -122,7 +122,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    info!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {filename}!");
 
     Ok(())
 }
@@ -148,7 +148,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    info!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {filename}!");
 
     Ok(())
 }

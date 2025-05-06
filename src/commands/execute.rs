@@ -116,7 +116,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             } else {
                 set_container_engine(ContainerEngine::Docker);
             }
-            
+
             execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
         }
     }
@@ -215,10 +215,8 @@ fn default_values(cwltype: &CWLType) -> DefaultValue {
 fn defaults(cwltype: &CWLType) -> Value {
     match cwltype {
         CWLType::Boolean => Value::Bool(true),
-        CWLType::Int => Value::Number(Number::from(42)),
-        CWLType::Long => Value::Number(Number::from(42)),
-        CWLType::Float => Value::Number(Number::from(69.42)),
-        CWLType::Double => Value::Number(Number::from(69.42)),
+        CWLType::Int | CWLType::Long => Value::Number(Number::from(42)),
+        CWLType::Float | CWLType::Double => Value::Number(Number::from(69.42)),
         CWLType::String => Value::String("Hello World".into()),
         CWLType::Any => Value::String("Any Value".into()),
         _ => Value::Null,

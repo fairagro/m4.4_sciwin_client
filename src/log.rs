@@ -11,13 +11,13 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
-        eprintln!("{}{}", format_level(&record.level()), record.args());
+        eprintln!("{}{}", format_level(record.level()), record.args());
     }
 
     fn flush(&self) {}
 }
 
-fn format_level(level: &log::Level) -> String {
+fn format_level(level: log::Level) -> String {
     match level {
         log::Level::Error => "❌ Error: ".bold().red().to_string(),
         log::Level::Warn => "⚠️  Warning: ".bold().yellow().to_string(),

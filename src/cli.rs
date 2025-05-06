@@ -1,17 +1,28 @@
-use std::{error::Error, io};
-
 use crate::commands::{
+    annotate::AnnotateCommands,
     execute::ExecuteCommands,
     init::InitArgs,
     tool::{CreateToolArgs, ToolCommands},
     workflow::WorkflowCommands,
-    annotate::AnnotateCommands
 };
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
+use std::{error::Error, io};
 
 #[derive(Parser, Debug)]
-#[command(name="s4n", about="Client tool for Scientific Workflow Infrastructure (SciWIn)", long_about=None, version)]
+#[command(name="s4n", about=format!(r#"
+ _____        _  _    _  _____         _____  _  _               _   
+/  ___|      (_)| |  | ||_   _|       /  __ \| |(_)             | |   
+\ `--.   ___  _ | |  | |  | |  _ __   | /  \/| | _   ___  _ __  | |_  
+ `--. \ / __|| || |/\| |  | | | '_ \  | |    | || | / _ \| '_ \ | __|
+/\__/ /| (__ | |\  /\  / _| |_| | | | | \__/\| || ||  __/| | | || |_  
+\____/  \___||_| \/  \/  \___/|_| |_|  \____/|_||_| \___||_| |_| \__|
+
+Client tool for Scientific Workflow Infrastructure (SciWIn)
+Documentation: https://fairagro.github.io/m4.4_sciwin_client/
+
+Version: {}"#, env!("CARGO_PKG_VERSION"))
+, long_about=None, version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -29,9 +40,9 @@ pub enum Commands {
     #[command(hide = true)]
     Run(CreateToolArgs),
     #[command(about = "Provides commands to create and work with CWL Workflows")]
-    Workflow{
+    Workflow {
         #[command(subcommand)]
-        command: WorkflowCommands
+        command: WorkflowCommands,
     },
     #[command(about = "Annotate CWL files")]
     Annotate {
@@ -49,13 +60,13 @@ pub enum Commands {
     },
     Sync,
     #[command(about = "Generate shell completions")]
-    Completions{
+    Completions {
         #[arg()]
         shell: Shell,
-    }
+    },
 }
 
-pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> Result<(), Box<dyn Error>>{
+pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> Result<(), Box<dyn Error>> {
     generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
     Ok(())
 }

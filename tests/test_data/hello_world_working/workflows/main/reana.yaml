@@ -1,0 +1,12 @@
+inputs:
+  directories:
+  - ../../workflows
+  parameters:
+    input: inputs.yml
+outputs:
+  files:
+  - results.svg
+workflow:
+  type: cwl
+  file: main.cwl
+version: 0.9.3

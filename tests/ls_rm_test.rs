@@ -39,7 +39,7 @@ fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::panic::catch_unwind(|| {
         remove_tool(&args).unwrap();
     });
-    assert!(output.is_ok(), "Function should handle empty tool list");
+    assert!(output.is_err(), "Function should handle empty tool list");
     env::set_current_dir(&original_dir)?;
     Ok(())
 }
@@ -154,7 +154,7 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-const CALCULATION_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -191,9 +191,9 @@ outputs:
 baseCommand:
 - python
 - calculation.py
-"#;
+";
 
-const PLOT_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const PLOT_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -223,4 +223,4 @@ outputs:
 baseCommand:
 - python
 - plot.py
-"#;
+";

@@ -1,0 +1,6 @@
+population:
+  class: File
+  location: hello_world/data/population.csv
+speakers:
+  class: File
+  location: hello_world/data/speakers_revised.csv

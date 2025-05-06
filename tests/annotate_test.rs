@@ -8,7 +8,7 @@ use std::env;
 use std::fs;
 use tempfile::tempdir;
 
-const CWL_CONTENT: &str = r#"
+const CWL_CONTENT: &str = r"
     class: CommandLineTool
     baseCommand: echo
     hints:
@@ -16,7 +16,7 @@ const CWL_CONTENT: &str = r#"
         dockerPull: node:slim
     inputs: []
     outputs: []
-    "#;
+    ";
 
 const CWL_CONTENT_ANNOTATED: &str = r#"
     class: CommandLineTool
@@ -77,13 +77,12 @@ fn test_annotate_container() {
 
     let result = annotate_container(temp_file_name, "docker://my-container:latest");
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("docker://my-container:latest"),
-        "Expected container annotation to be added, but got: {}",
-        updated_content
+        "Expected container annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -107,13 +106,12 @@ async fn test_annotate_new_container() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("docker://my-container:latest"),
-        "Expected container annotation to be added, but got: {}",
-        updated_content
+        "Expected container annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -137,13 +135,12 @@ async fn test_annotate_same_container() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("node:slim"),
-        "Expected container annotation to be added, but got: {}",
-        updated_content
+        "Expected container annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -168,13 +165,12 @@ async fn test_annotate_schema() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("schema_definition"),
-        "Expected schema annotation to be added, but got: {}",
-        updated_content
+        "Expected schema annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -200,13 +196,12 @@ async fn test_annotate_namespace() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("namespace_uri") && updated_content.contains("ns"),
-        "Expected namespace annotation to be added, but got: {}",
-        updated_content
+        "Expected namespace annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -231,13 +226,12 @@ async fn test_annotate_name() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("MyWorkflow"),
-        "Expected name annotation to be added, but got: {}",
-        updated_content
+        "Expected name annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -262,13 +256,12 @@ async fn test_annotate_description() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("MyWorkflow description"),
-        "Expected description annotation to be added, but got: {}",
-        updated_content
+        "Expected description annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -293,13 +286,12 @@ async fn test_annotate_license() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("MIT"),
-        "Expected license annotation to be added, but got: {}",
-        updated_content
+        "Expected license annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -328,7 +320,7 @@ async fn test_annotate_performer() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -336,8 +328,7 @@ async fn test_annotate_performer() {
             && updated_content.contains("arc:last name: Doe")
             && updated_content.contains("arc:email: doe@mail.com")
             && updated_content.contains("arc:affiliation: institute1"),
-        "Expected performer annotation to be added, but got: {}",
-        updated_content
+        "Expected performer annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -364,7 +355,7 @@ async fn test_annotate_author() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -373,8 +364,7 @@ async fn test_annotate_author() {
             && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
             && updated_content.contains("s:email: mailto:doe@mail.com")
             && updated_content.contains("s:name: J Doe"),
-        "Expected performer annotation to be added, but got: {}",
-        updated_content
+        "Expected performer annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -401,7 +391,7 @@ async fn test_annotate_author_exists() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -413,8 +403,7 @@ async fn test_annotate_author_exists() {
             && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
             && updated_content.contains("s:email: mailto:doe@mail.com")
             && updated_content.contains("s:name: J Doe"),
-        "Expected performer annotation to be added, but got: {}",
-        updated_content
+        "Expected performer annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -441,7 +430,7 @@ async fn test_annotate_same_author() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -449,8 +438,7 @@ async fn test_annotate_same_author() {
             && updated_content.contains("s:identifier: https://orcid.org/0000-0002-6130-1021")
             && updated_content.contains("s:email: mailto:dyuen@oicr.on.ca")
             && updated_content.contains("s:name: Denis Yuen"),
-        "Expected performer annotation to be added, but got: {}",
-        updated_content
+        "Expected performer annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -477,7 +465,7 @@ async fn test_annotate_contributor() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -486,8 +474,7 @@ async fn test_annotate_contributor() {
             && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
             && updated_content.contains("s:email: mailto:doe@mail.com")
             && updated_content.contains("s:name: J Doe"),
-        "Expected contributor annotation to be added, but got: {}",
-        updated_content
+        "Expected contributor annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -514,7 +501,7 @@ async fn test_annotate_contributor_exists() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
@@ -523,8 +510,7 @@ async fn test_annotate_contributor_exists() {
             && updated_content.contains("s:identifier: http://orcid.org/0000-0000-0000-0000")
             && updated_content.contains("s:email: mailto:doe@mail.com")
             && updated_content.contains("s:name: J Doe"),
-        "Expected contributor annotation to be added, but got: {}",
-        updated_content
+        "Expected contributor annotation to be added, but got: {updated_content}"
     );
 
     env::set_current_dir(current).unwrap();
@@ -551,7 +537,7 @@ async fn test_annotate_same_contributor() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     env::set_current_dir(current).unwrap();
 }
@@ -578,10 +564,10 @@ async fn test_annotate_process_step_with_input_output() {
 
     let result = handle_annotate_commands(&args).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(cwl_file_name).expect("Failed to read updated CWL file");
-    println!("updated_content {:?}", updated_content);
+    println!("updated_content {updated_content:?}");
     assert!(updated_content.contains("arc:has process sequence"), "Process sequence not added");
     assert!(updated_content.contains("arc:name: sequence1"), "Name not added");
     assert!(updated_content.contains("arc:has input"), "has input not added");
@@ -612,18 +598,16 @@ async fn test_annotate_custom() {
 
     let result = handle_annotate_commands(&command).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("test_field"),
-        "Expected test_field annotation to be added, but got: {}",
-        updated_content
+        "Expected test_field annotation to be added, but got: {updated_content}"
     );
     assert!(
         updated_content.contains("test_value"),
-        "Expected test_value annotation to be added, but got: {}",
-        updated_content
+        "Expected test_value annotation to be added, but got: {updated_content}"
     );
     env::set_current_dir(current).unwrap();
 }
@@ -650,10 +634,10 @@ async fn test_annotate_process() {
 
     let result = annotate_process_step(&args).await;
 
-    assert!(result.is_ok(), "Expected Ok(()), got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
     let updated_content = fs::read_to_string(cwl_file_name).expect("Failed to read updated CWL file");
-    println!("updated_content {:?}", updated_content);
+    println!("updated_content {updated_content:?}");
     assert!(updated_content.contains("arc:has process sequence"), "Process sequence not added");
     assert!(updated_content.contains("arc:name: sequence1"), "Name not added");
     assert!(updated_content.contains("arc:has input"), "has input not added");
@@ -676,8 +660,8 @@ fn test_get_filename() {
     env::set_current_dir(dir.path()).unwrap();
 
     let base_name = "example";
-    let cwl_name = format!("{}.cwl", base_name);
-    let workflows_dir = dir.path().join(format!("workflows/{}", base_name));
+    let cwl_name = format!("{base_name}.cwl");
+    let workflows_dir = dir.path().join(format!("workflows/{base_name}"));
     fs::create_dir_all(&workflows_dir).unwrap();
     let file_in_current_dir = dir.path().join(cwl_name.clone());
     let file_in_workflows_dir = workflows_dir.join(cwl_name);
@@ -689,7 +673,7 @@ fn test_get_filename() {
     let file_in_current_dir_canonical = fs::canonicalize(&file_in_current_dir).unwrap();
     let result = get_filename(base_name);
 
-    assert!(result.is_ok(), "Expected Ok(file path), got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(file path), got Err: {result:?}");
     assert_eq!(
         fs::canonicalize(result.unwrap()).unwrap(),
         file_in_current_dir_canonical,
@@ -703,7 +687,7 @@ fn test_get_filename() {
     let file_in_workflows_dir_canonical = fs::canonicalize(&file_in_workflows_dir).unwrap();
     let result = get_filename(base_name);
 
-    assert!(result.is_ok(), "Expected Ok(file path), got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(file path), got Err: {result:?}");
     assert_eq!(
         fs::canonicalize(result.unwrap()).unwrap(),
         file_in_workflows_dir_canonical,
@@ -714,7 +698,7 @@ fn test_get_filename() {
 
     // Test case where file is not found
     let result = get_filename(base_name);
-    assert!(result.is_err(), "Expected Err(file not found), got Ok: {:?}", result);
+    assert!(result.is_err(), "Expected Err(file not found), got Ok: {result:?}");
     assert!(
         result.unwrap_err().to_string().contains("CWL file 'example.cwl' not found"),
         "Expected error message about missing file, but got different error"
@@ -776,7 +760,7 @@ fn test_annotate_author_add_to_existing_list() {
 
     let result = annotate_person(&args, "author");
 
-    assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+    assert!(result.is_ok(), "Expected Ok, got {result:?}");
 
     let updated_yaml: Value = serde_yaml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
@@ -843,9 +827,9 @@ async fn test_annotate_performer_invalid_root() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
 
-    let cwl_content = r#"
+    let cwl_content = r"
     - not_a_mapping
-    "#;
+    ";
 
     let cwl_filename = "test_invalid_root.cwl";
 
@@ -883,21 +867,21 @@ async fn test_contains_docker_requirement() {
 
     fs::write(&file_with_docker, CWL_CONTENT).unwrap();
     let result = contains_docker_requirement(file_with_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(true), but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(true), but got Err: {result:?}");
     assert!(result.unwrap(), "Expected DockerRequirement to be found");
-    let content_without_docker = r#"
+    let content_without_docker = r"
 class: CommandLineTool
 inputs: []
 outputs: []
-    "#;
+    ";
     fs::write(&file_without_docker, content_without_docker).unwrap();
     let result = contains_docker_requirement(file_without_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false), but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(false), but got Err: {result:?}");
     assert!(!result.unwrap(), "Expected false for file not containing 'DockerRequirement'");
 
     fs::write(&empty_file, "").unwrap();
     let result = contains_docker_requirement(empty_file.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {result:?}");
     assert!(!result.unwrap(), "Expected DockerRequirement to be absent in empty file");
 
     env::set_current_dir(current).unwrap();
@@ -922,13 +906,12 @@ s:license: "MIT"
     fs::write(temp_file_name, existing_field_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
         updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to remain unchanged, but got: {}",
-        updated_content
+        "Expected 's:license' field to remain unchanged, but got: {updated_content}"
     );
 
     let different_value_content = r#"
@@ -938,39 +921,37 @@ s:license: "GPL"
     fs::write(temp_file_name, different_value_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
         updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to be updated to 'MIT', but got: {}",
-        updated_content
+        "Expected 's:license' field to be updated to 'MIT', but got: {updated_content}"
     );
 
-    let no_field_content = r#"
+    let no_field_content = r"
 class: CommandLineTool
-    "#;
+    ";
     fs::write(temp_file_name, no_field_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
 
     let updated_content = fs::read_to_string(temp_file_name).unwrap();
     assert!(
         updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to be added, but got: {}",
-        updated_content
+        "Expected 's:license' field to be added, but got: {updated_content}"
     );
 
     // Case 4: Invalid YAML file
-    let invalid_yaml_content = r#"
+    let invalid_yaml_content = r"
 class: CommandLineTool
     invalid_yaml: {::}
-    "#;
+    ";
     fs::write(temp_file_name, invalid_yaml_content).unwrap();
 
     let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_err(), "Expected Err for invalid YAML, but got Ok(()): {:?}", result);
+    assert!(result.is_err(), "Expected Err for invalid YAML, but got Ok(()): {result:?}");
 
     env::set_current_dir(current).unwrap();
 }
@@ -983,12 +964,12 @@ fn test_annotate_default() {
     env::set_current_dir(dir.path()).unwrap();
 
     let tool_name = "test_tool";
-    let temp_file_name = format!("{}.cwl", tool_name);
+    let temp_file_name = format!("{tool_name}.cwl");
 
     fs::write(&temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
 
     let result = annotate_default(tool_name);
-    assert!(result.is_ok(), "Expected Ok(()), got: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(()), got: {result:?}");
 
     // Read the updated file and check if annotations were added
     let updated_content = fs::read_to_string(&temp_file_name).expect("Failed to read updated CWL file");
@@ -998,15 +979,13 @@ fn test_annotate_default() {
             && updated_content.contains("$schemas:")
             && updated_content.contains(SCHEMAORG_SCHEMA)
             && updated_content.contains(SCHEMAORG_NAMESPACE),
-        "Expected annotations for schemaorg to be added, but got: {}",
-        updated_content
+        "Expected annotations for schemaorg to be added, but got: {updated_content}"
     );
     assert!(
         updated_content.contains("arc:")
             && updated_content.contains(ARC_SCHEMA)
             && updated_content.contains(ARC_NAMESPACE),
-        "Expected annotations for arc to be added, but got: {}",
-        updated_content
+        "Expected annotations for arc to be added, but got: {updated_content}"
     );
 
 
@@ -1026,7 +1005,7 @@ fn test_parse_cwl_valid_absolute_path() {
     fs::write(cwl_path, CWL_CONTENT).unwrap();
 
     let result = parse_cwl(file_name);
-    assert!(result.is_ok(), "Expected Ok(Value), got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(Value), got Err: {result:?}");
 
     let yaml = result.unwrap();
     assert_eq!(yaml["class"], "CommandLineTool");
@@ -1047,7 +1026,7 @@ fn test_parse_cwl_valid_relative_path() {
     fs::write(file_name, CWL_CONTENT).unwrap();
 
     let result = parse_cwl(file_name);
-    assert!(result.is_ok(), "Expected Ok(Value), got Err: {:?}", result);
+    assert!(result.is_ok(), "Expected Ok(Value), got Err: {result:?}");
 
     let yaml = result.unwrap();
     assert_eq!(yaml["class"], "CommandLineTool");
@@ -1068,7 +1047,7 @@ fn test_parse_cwl_file_not_found() {
     let file_name = "non_existent_tool.cwl";
 
     let result = parse_cwl(file_name);
-    assert!(result.is_err(), "Expected Err for non-existent file, got: {:?}", result);
+    assert!(result.is_err(), "Expected Err for non-existent file, got: {result:?}");
 
     std::env::set_current_dir(current).unwrap();
 }
@@ -1091,7 +1070,7 @@ fn test_parse_cwl_invalid_yaml() {
     fs::write(file_name, yaml_content).unwrap();
 
     let result = parse_cwl(file_name);
-    assert!(result.is_err(), "Expected Err for invalid YAML, got: {:?}", result);
+    assert!(result.is_err(), "Expected Err for invalid YAML, got: {result:?}");
 
     std::env::set_current_dir(current).unwrap();
 }

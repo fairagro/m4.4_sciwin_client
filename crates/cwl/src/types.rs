@@ -3,7 +3,7 @@ use serde_yaml::{Number, Value};
 use sha1::{Digest, Sha1};
 use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, PartialEq, Clone, Eq, Hash)]
 pub enum CWLType {
     #[default]
     Null,
@@ -44,7 +44,7 @@ impl FromStr for CWLType {
                 "Any" => Ok(CWLType::Any),
                 "stdout" => Ok(CWLType::Stdout),
                 "stderr" => Ok(CWLType::Stderr),
-                _ => Err(format!("Invalid CWLType: {}", s)),
+                _ => Err(format!("Invalid CWLType: {s}")),
             }
         }
     }
@@ -80,8 +80,29 @@ impl<'de> Deserialize<'de> for CWLType {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        if let Value::String(s) = value {
+            return s.parse().map_err(serde::de::Error::custom);
+        } else if let Value::Mapping(map) = value {
+            if let Some(Value::String(type_str)) = map.get("type") {
+                if type_str == "array" {
+                    if let Some(Value::String(item_str)) = map.get("items") {
+                        return format!("{item_str}[]").parse().map_err(serde::de::Error::custom);
+                    }
+                }
+            }
+        } else if let Value::Sequence(seq) = value {
+            if seq.len() == 2 {
+                if let Value::String(type_str) = &seq[0] {
+                    if type_str == "null" {
+                        if let Value::String(type_str) = &seq[1] {
+                            return format!("{type_str}?").parse().map_err(serde::de::Error::custom);
+                        }
+                    }
+                }
+            }
+        }
+        Err(serde::de::Error::custom("Expected string, sequence or mapping for CWLType"))
     }
 }
 
@@ -100,6 +121,7 @@ impl Serialize for CWLType {
 pub enum DefaultValue {
     File(File),
     Directory(Directory),
+    Array(Vec<DefaultValue>),
     Any(serde_yaml::Value),
 }
 
@@ -108,7 +130,7 @@ fn number_to_string(num: &Number) -> String {
         num.as_i64().unwrap().to_string()
     } else if num.is_f64() {
         num.as_f64().unwrap().to_string()
-    } else if num.is_u64(){
+    } else if num.is_u64() {
         num.as_u64().unwrap().to_string()
     } else {
         unreachable!()
@@ -116,6 +138,7 @@ fn number_to_string(num: &Number) -> String {
 }
 
 impl DefaultValue {
+    /// Returns a string of the primary value field in `DefaultValue`.
     pub fn as_value_string(&self) -> String {
         match self {
             DefaultValue::File(item) => item.location.as_ref().unwrap_or(&String::new()).clone(),
@@ -126,9 +149,11 @@ impl DefaultValue {
                 serde_yaml::Value::Number(num) => number_to_string(num),
                 _ => serde_yaml::to_string(value).unwrap().trim_end().to_string(),
             },
+            DefaultValue::Array(item) => item.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(" ").to_string(),
         }
     }
 
+    /// Checks whether a `CWLType` matches this `DefaultValue` implementation
     pub fn has_matching_type(&self, cwl_type: &CWLType) -> bool {
         match (self, cwl_type) {
             (_, CWLType::Any) => true,
@@ -153,15 +178,18 @@ impl DefaultValue {
                 Value::Null => matches!(cwl_type, CWLType::Null),
                 _ => false,
             },
+            (DefaultValue::Array(_), CWLType::Array(_)) => true,
             _ => false,
         }
     }
 
+    /// !Legacy!
     pub fn to_default_value(&self) -> DefaultValue {
         match self {
             DefaultValue::File(file) => DefaultValue::File(File::from_location(file.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Directory(dir) => DefaultValue::Directory(Directory::from_location(dir.path.as_ref().unwrap_or(&String::new()))),
             DefaultValue::Any(val) => DefaultValue::Any(val.clone()),
+            DefaultValue::Array(arr) => DefaultValue::Array(arr.iter().map(|i| i.to_default_value()).collect()),
         }
     }
 }
@@ -223,6 +251,8 @@ impl<'de> Deserialize<'de> for DefaultValue {
                 }
                 _ => Ok(DefaultValue::Any(value)),
             }
+        } else if let Value::Sequence(map) = value {
+            Ok(DefaultValue::Array(map.into_iter().map(|i| serde_yaml::from_value(i).unwrap()).collect()))
         } else {
             Ok(DefaultValue::Any(value))
         }
@@ -240,6 +270,10 @@ pub fn guess_type(value: &str) -> CWLType {
             return CWLType::Directory;
         }
     }
+    if value.starts_with("http://") || value.starts_with("https://") {
+        return CWLType::File;
+    }
+
     //we do not have to check for files that do not exist yet, as CWLTool would run into a failure
     let yaml_value: Value = serde_yaml::from_str(value).unwrap();
     match yaml_value {
@@ -484,6 +518,16 @@ mod tests {
     }
 
     #[test]
+    pub fn test_deserialize_nullable_type_alt() {
+        let yaml = r#"
+- str:
+  type: ["null", string]
+"#;
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Optional(Box::new(CWLType::String)));
+    }
+
+    #[test]
     pub fn test_deserialize_array_type() {
         let yaml = r"
 - str:
@@ -494,6 +538,18 @@ mod tests {
         let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(inputs[0].type_, CWLType::Array(Box::new(CWLType::String)));
         assert_eq!(inputs[1].type_, CWLType::Array(Box::new(CWLType::Int)));
+    }
+
+    #[test]
+    pub fn test_deserialize_array_type_alt() {
+        let yaml = r"
+- str:
+  type: 
+      type: array
+      items: string
+";
+        let inputs: Vec<CommandInputParameter> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(inputs[0].type_, CWLType::Array(Box::new(CWLType::String)));
     }
 
     #[test]
@@ -569,6 +625,7 @@ mod tests {
             ("--option", CWLType::String),
             ("2", CWLType::Int),
             ("1.5", CWLType::Float),
+            ("https://some_url", CWLType::File), //urls are files!
         ];
 
         for input in inputs {

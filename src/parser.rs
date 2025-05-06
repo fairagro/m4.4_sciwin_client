@@ -6,13 +6,16 @@ use cwl::{
     requirements::{InitialWorkDirRequirement, Requirement},
     types::{guess_type, CWLType, DefaultValue, Directory, File},
 };
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use slugify::slugify;
-use std::{fs, path::Path};
+use std::{collections::HashSet, fs, path::Path};
 
 //TODO complete list
 static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+
+static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FileEntry {
@@ -31,7 +34,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
-        let (cmd, piped) = split_vec_at(remainder, "|");
+        let (cmd, piped) = split_vec_at(remainder, &"|");
 
         let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
         let stderr_pos = cmd.iter().position(|i| *i == "2>").unwrap_or(cmd.len());
@@ -64,24 +67,24 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
         if let Some(requirements) = &mut tool.requirements {
             requirements.push(Requirement::ShellCommandRequirement);
         } else {
-            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
+            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement]);
         }
     }
     tool
 }
 
-pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
+pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) {
     if let Some(req) = &mut tool.requirements {
         for item in req.iter_mut() {
             if let Requirement::InitialWorkDirRequirement(req) = item {
-                req.add_files(&inputs);
+                req.add_files(inputs);
                 break;
             }
         }
     } else {
         tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-            &inputs,
-        ))])
+            inputs,
+        ))]);
     }
 
     let params = inputs
@@ -95,7 +98,7 @@ pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
     tool.inputs.extend(params);
 }
 
-pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
+pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
     files
         .iter()
         .map(|f| {
@@ -118,8 +121,8 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
 
 pub fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
-        return Command::Single(String::from(""));
-    };
+        return Command::Single(String::new());
+    }
 
     let mut base_command = vec![command[0].to_string()];
 
@@ -143,7 +146,7 @@ pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
                 input = get_option(arg, args[i + 1]);
-                i += 1
+                i += 1;
             } else {
                 input = get_flag(arg);
             }
@@ -160,8 +163,15 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
     let cwl_type = guess_type(current);
     let default_value = parse_default_value(current, &cwl_type);
 
+    //check id for bad words
+    let mut id = slugify!(&current, separator = "_");
+    if BAD_WORDS.iter().any(|&word| current.to_lowercase().contains(word)) {
+        let rnd: String = rand::rng().sample_iter(&Alphanumeric).take(2).map(char::from).collect();
+        id = format!("secret_{rnd}");
+    }
+
     CommandInputParameter::default()
-        .with_id(slugify!(&current, separator = "_").as_str())
+        .with_id(&id)
         .with_type(guess_type(current))
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
@@ -214,18 +224,17 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 
     let piped_args = piped.iter().enumerate().map(|(i, &x)| {
         Argument::Binding(CommandLineBinding {
-            prefix: None,
             position: Some((inputs.len() + i).try_into().unwrap_or_default()),
             value_from: Some(x.to_string()),
-            shell_quote: None,
+            ..Default::default()
         })
     });
 
     let mut args = vec![Argument::Binding(CommandLineBinding {
-        prefix: None,
         position: Some(inputs.len().try_into().unwrap_or_default()),
         value_from: Some("|".to_string()),
         shell_quote: Some(false),
+        ..Default::default()
     })];
     args.extend(piped_args);
 
@@ -233,6 +242,42 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 }
 
 pub fn post_process_cwl(tool: &mut CommandLineTool) {
+    detect_array_inputs(tool);
+    post_process_variables(tool);
+}
+
+/// Transforms duplicate key and type entries into an array type input
+fn detect_array_inputs(tool: &mut CommandLineTool) {
+    let mut seen = HashSet::new();
+    let mut inputs = Vec::new();
+
+    for input in std::mem::take(&mut tool.inputs) {
+        let key = (input.id.clone(), input.type_.clone());
+        if seen.insert(key.clone()) {
+            inputs.push(input);
+        } else if let Some(existing) = inputs.iter_mut().find(|i| i.id == key.0) {
+            // Convert to array type if not already
+            if !matches!(existing.type_, CWLType::Array(_)) {
+                existing.type_ = CWLType::Array(Box::new(input.type_.clone()));
+
+                if let Some(default) = &existing.default {
+                    existing.default = Some(DefaultValue::Array(vec![default.clone()]));
+                }
+            }
+
+            // Append additional default value if present
+            if let Some(DefaultValue::Array(defaults)) = &mut existing.default {
+                if let Some(default) = input.default {
+                    defaults.push(default);
+                }
+            }
+        }
+    }
+    tool.inputs = inputs;
+}
+
+/// Handles translation to CWL Variables like $(inputs.myInput.path) or $(runtime.outdir)
+fn post_process_variables(tool: &mut CommandLineTool) {
     fn process_input(input: &CommandInputParameter) -> String {
         if input.type_ == CWLType::File || input.type_ == CWLType::Directory {
             format!("$(inputs.{}.path)", input.id)
@@ -245,7 +290,7 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
     let inputs = tool.inputs.clone();
     for input in &inputs {
         if let Some(default) = &input.default {
-            for output in tool.outputs.iter_mut() {
+            for output in &mut tool.outputs {
                 if let Some(binding) = &mut output.output_binding {
                     if binding.glob == default.as_value_string() {
                         binding.glob = process_input(input);
@@ -288,7 +333,7 @@ pub fn post_process_cwl(tool: &mut CommandLineTool) {
         }
     }
 
-    for output in tool.outputs.iter_mut() {
+    for output in &mut tool.outputs {
         if let Some(binding) = &mut output.output_binding {
             if binding.glob == "." {
                 output.id = "output_directory".to_string();
@@ -512,7 +557,51 @@ mod tests {
                 }),
         ];
 
-        let outputs = get_outputs(files);
+        let outputs = get_outputs(&files);
         assert_eq!(outputs, expected);
+    }
+
+    #[test]
+    pub fn test_badwords() {
+        let tool = parse_command("pg_dump postgres://postgres:password@localhost:5432/test \\> dump.sql");
+        println!("{:?}", tool.inputs[0].id);
+        assert!(BAD_WORDS.iter().any(|&word| tool.inputs.iter().any(|i| !i.id.contains(word))));
+    }
+
+    #[test]
+    pub fn test_post_process_inputs() {
+        let mut tool = CommandLineTool::default().with_inputs(vec![
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("first".to_string()))),
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("second".to_string()))),
+            CommandInputParameter::default()
+                .with_id("arr")
+                .with_type(CWLType::String)
+                .with_default_value(DefaultValue::Any(Value::String("third".to_string()))),
+            CommandInputParameter::default().with_id("int").with_type(CWLType::Int),
+        ]);
+
+        assert_eq!(tool.inputs.len(), 4);
+        detect_array_inputs(&mut tool);
+        assert_eq!(tool.inputs.len(), 2);
+
+        let of_interest = tool.inputs.first().unwrap();
+        assert_eq!(of_interest.type_, CWLType::Array(Box::new(CWLType::String)));
+        assert_eq!(
+            of_interest.default,
+            Some(DefaultValue::Array(vec![
+                DefaultValue::Any(Value::String("first".to_string())),
+                DefaultValue::Any(Value::String("second".to_string())),
+                DefaultValue::Any(Value::String("third".to_string()))
+            ]))
+        );
+
+        let other = &tool.inputs[1];
+        assert_eq!(other.type_, CWLType::Int);
     }
 }
