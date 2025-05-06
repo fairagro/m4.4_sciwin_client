@@ -1,31 +1,37 @@
-use serde_yaml:: Value;
+use crate::utils::{
+    collect_files_recursive, get_location, load_cwl_yaml, load_yaml_file, resolve_input_file_path,
+    sanitize_path,
+};
+use reqwest::blocking::Client;
+use reqwest::blocking::ClientBuilder;
+use reqwest::header::{HeaderMap, AUTHORIZATION, CONTENT_TYPE, COOKIE};
+use serde_json::json;
+use serde_yaml::Value;
+use std::collections::HashSet;
+use std::path::Path;
 use std::{
     collections::HashMap,
     error::Error,
     fs,
+    io::{Read, Write},
     path::PathBuf,
-    io::{Read, Write}
 };
-use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, AUTHORIZATION, CONTENT_TYPE, COOKIE};
-use serde_json::json;
-use std::path::Path;
-use std::collections::HashSet;
-use reqwest::blocking::ClientBuilder;
-use crate::utils::{collect_files_recursive, sanitize_path, get_location, load_cwl_yaml, load_yaml_file, resolve_input_file_path};
 
-
-pub fn create_workflow(reana_server: &str, reana_token: &str, cookie_value: &str, workflow: &serde_json::Value) -> Result<Value, Box<dyn Error>> {
+pub fn create_workflow(
+    reana_server: &str,
+    reana_token: &str,
+    cookie_value: &str,
+    workflow: &serde_json::Value,
+) -> Result<Value, Box<dyn Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(COOKIE, cookie_value.parse()?);
-   
+
     headers.insert(AUTHORIZATION, format!("Bearer {}", reana_token).parse()?);
     headers.insert(CONTENT_TYPE, "application/json".parse()?);
     let client = Client::builder()
-    .default_headers(headers.clone())
-    //.danger_accept_invalid_certs(true)
-    .build()?;
-
+        .default_headers(headers.clone())
+        //.danger_accept_invalid_certs(true)
+        .build()?;
 
     // Send the request to create the workflow
     let response = client
@@ -36,10 +42,9 @@ pub fn create_workflow(reana_server: &str, reana_token: &str, cookie_value: &str
         .error_for_status()?;
 
     let json_response: Value = response.json()?;
-    
+
     Ok(json_response)
 }
-
 
 pub fn ping_reana(reana_server: &str) -> Result<Value, Box<dyn Error>> {
     let ping_url = format!("{}/api/ping", reana_server);
@@ -57,11 +62,17 @@ pub fn ping_reana(reana_server: &str) -> Result<Value, Box<dyn Error>> {
     Ok(json_response)
 }
 
-pub fn start_workflow(reana_server: &str, reana_token: &str, cookie_value: &str,
-    workflow_name: &str, operational_options: Option<HashMap<String, Value>>,
-    input_parameters: Option<HashMap<String, Value>>, restart: bool, reana_specification: Value) -> Result<Value, Box<dyn Error>> {
+pub fn start_workflow(
+    reana_server: &str,
+    reana_token: &str,
+    cookie_value: &str,
+    workflow_name: &str,
+    input_parameters: Option<HashMap<String, Value>>,
+    restart: bool,
+    reana_specification: Value,
+) -> Result<Value, Box<dyn Error>> {
     let mut headers = HeaderMap::new();
-    
+
     // Set Authorization and Cookie headers
     headers.insert(COOKIE, cookie_value.parse()?);
     headers.insert(AUTHORIZATION, format!("Bearer {}", reana_token).parse()?);
@@ -69,12 +80,12 @@ pub fn start_workflow(reana_server: &str, reana_token: &str, cookie_value: &str,
 
     // Invalid certs part is needed for our locahost test instance
     let client = ClientBuilder::new()
-        //.danger_accept_invalid_certs(true)  
+        //.danger_accept_invalid_certs(true)
         .build()?;
 
     // Construct the request body with optional parameters
     let body = json!({
-        "operational_options": operational_options.unwrap_or_default(),
+        "operational_options": serde_json::Value::Null,
         "input_parameters": input_parameters.unwrap_or_default(),
         "restart": restart,
         "reana_specification": reana_specification
@@ -83,18 +94,18 @@ pub fn start_workflow(reana_server: &str, reana_token: &str, cookie_value: &str,
     let url = format!("{}/api/workflows/{}/start", &reana_server, workflow_name);
 
     // Send the POST request
-    let response = client
-        .post(&url)
-        .headers(headers)
-        .json(&body)
-        .send()?;
+    let response = client.post(&url).headers(headers).json(&body).send()?;
 
     let json_response: Value = response.json()?;
     Ok(json_response)
 }
 
-
-pub fn get_workflow_status(reana_server: &str, reana_token: &str, cookie_value: &str, workflow_id: &str) -> Result<Value, Box<dyn Error>> {
+pub fn get_workflow_status(
+    reana_server: &str,
+    reana_token: &str,
+    cookie_value: &str,
+    workflow_id: &str,
+) -> Result<Value, Box<dyn Error>> {
     let url = format!("{}/api/workflows/{}/status", &reana_server, workflow_id);
 
     let mut headers = HeaderMap::new();
@@ -108,13 +119,19 @@ pub fn get_workflow_status(reana_server: &str, reana_token: &str, cookie_value: 
 
     let response = client.get(&url).send()?;
     let json_response: Value = response.json()?;
-    
+
     Ok(json_response)
 }
 
-
-pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, input_yaml: &Option<String>, file: &PathBuf,
-    workflow_name: &str, workflow_json: &serde_json::Value) -> Result<(), Box<dyn Error>> {
+pub fn upload_files(
+    reana_server: &str,
+    reana_token: &str,
+    cookie_value: &str,
+    input_yaml: &Option<String>,
+    file: &PathBuf,
+    workflow_name: &str,
+    workflow_json: &serde_json::Value,
+) -> Result<(), Box<dyn Error>> {
     let mut files: HashSet<String> = HashSet::new();
     let i: Option<Value> = if let Some(ref input_file_path) = &input_yaml {
         Some(load_yaml_file(Path::new(input_file_path))?)
@@ -158,13 +175,12 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     let resolved = resolve_input_file_path(
                         path.to_string_lossy().as_ref(),
-                        i.as_ref(),     
+                        i.as_ref(),
                         Some(&cwl_yaml),
-                    );           
+                    );
                     if let Some(resolved_path) = resolved {
                         let cwd = std::env::current_dir()?;
 
@@ -173,14 +189,11 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
                         } else {
                             cwd.join(file)
                         };
-                
+
                         let path_str = base_path.to_string_lossy().to_string();
-                
-                        let l = get_location(
-                            &path_str,
-                            Path::new(&resolved_path),
-                        )?;
-                        let path = std::path::PathBuf::from(l);              
+
+                        let l = get_location(&path_str, Path::new(&resolved_path))?;
+                        let path = std::path::PathBuf::from(l);
                         if path.exists() && path.is_dir() {
                             for entry in fs::read_dir(path)? {
                                 let entry = entry?;
@@ -188,7 +201,8 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
                                 if file_path.is_dir() {
                                     collect_files_recursive(&file_path, &mut files)?;
                                 } else if file_path.is_file() {
-                                    let relative = file_path.strip_prefix(&cwd).unwrap_or(&file_path);
+                                    let relative =
+                                        file_path.strip_prefix(&cwd).unwrap_or(&file_path);
                                     if let Some(file_str) = relative.to_str() {
                                         files.insert(file_str.to_string());
                                     }
@@ -220,7 +234,7 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
         if !file_path.exists() {
             let resolved = resolve_input_file_path(
                 file_path.to_string_lossy().as_ref(),
-                i.as_ref(),        
+                i.as_ref(),
                 Some(&cwl_yaml),
             );
             if let Some(resolved_path) = resolved {
@@ -230,13 +244,10 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
                 } else {
                     cwd.join(file)
                 };
-        
+
                 let path_str = base_path.to_string_lossy().to_string();
-        
-                let l =  get_location(
-                    &path_str,
-                    Path::new(&resolved_path),
-                )?;
+
+                let l = get_location(&path_str, Path::new(&resolved_path))?;
                 file_path = std::path::PathBuf::from(l);
             }
         }
@@ -244,11 +255,14 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
         let mut file = std::fs::File::open(&file_path)?;
         let mut file_content = Vec::new();
         file.read_to_end(&mut file_content)?;
-        let name = pathdiff::diff_paths(&file_name, std::env::current_dir()?).unwrap_or_else(|| Path::new(&file_name).to_path_buf());           
+        let name = pathdiff::diff_paths(&file_name, std::env::current_dir()?)
+            .unwrap_or_else(|| Path::new(&file_name).to_path_buf());
 
         let upload_url = format!(
             "{}/api/workflows/{}/workspace?file_name={}",
-            &reana_server, workflow_name, sanitize_path(&name.to_string_lossy())
+            &reana_server,
+            workflow_name,
+            sanitize_path(&name.to_string_lossy())
         );
 
         let response = client
@@ -263,9 +277,13 @@ pub fn upload_files(reana_server: &str, reana_token: &str, cookie_value: &str, i
     Ok(())
 }
 
-
-
-pub fn download_files(reana_server: &str, reana_token: &str, cookie_value: &str, workflow_name: &str, workflow_json: &serde_json::Value) -> Result<(), Box<dyn Error>> {
+pub fn download_files(
+    reana_server: &str,
+    reana_token: &str,
+    cookie_value: &str,
+    workflow_name: &str,
+    workflow_json: &serde_json::Value,
+) -> Result<(), Box<dyn Error>> {
     let files = workflow_json
         .get("outputs")
         .and_then(|outputs| outputs.get("files"))
@@ -310,7 +328,11 @@ pub fn download_files(reana_server: &str, reana_token: &str, cookie_value: &str,
 
             println!("Downloaded: {}", file_path);
         } else {
-            println!("❌ Failed to download {}. Response: {:?}", file_name, response.text()?);
+            println!(
+                "❌ Failed to download {}. Response: {:?}",
+                file_name,
+                response.text()?
+            );
         }
     }
 
@@ -320,12 +342,12 @@ pub fn download_files(reana_server: &str, reana_token: &str, cookie_value: &str,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::{NamedTempFile, tempdir};
-    use std::fs::{create_dir_all, write};
-    use mockito::{Server, self, Matcher};
-    use httpmock::MockServer;
     use httpmock::Method::POST;
+    use httpmock::MockServer;
+    use mockito::{self, Matcher, Server};
     use serde_json::json;
+    use std::fs::{create_dir_all, write};
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn test_ping_reana_success() {
@@ -342,21 +364,20 @@ mod tests {
 
     #[test]
     fn test_start_workflow_failure() {
-
-        use serde_json::json;
         use reqwest::blocking::Client;
+        use serde_json::json;
         use serde_yaml;
-  
+
         let mut server = Server::new();
-    
-        let workflow_id = "nonexistent-workflow"; 
-    
+
+        let workflow_id = "nonexistent-workflow";
+
         let expected_json = json!({
             "operational_options": {},
             "input_parameters": {},
             "restart": false,
             "reana_specification": {
-                "version": "0.9.3",
+                "version": "0.9.4",
                 "workflow": {
                     "type": "serial",
                     "specification": {
@@ -367,11 +388,14 @@ mod tests {
                 "outputs": {}
             }
         });
-    
+
         let expected_yaml: serde_yaml::Value = serde_yaml::to_value(&expected_json).unwrap();
-    
+
         let _mock = server
-            .mock("POST", format!("/api/workflows/{}/start", workflow_id).as_str())
+            .mock(
+                "POST",
+                format!("/api/workflows/{}/start", workflow_id).as_str(),
+            )
             .match_header("authorization", "Bearer test_token")
             .match_header("cookie", "session=abcd1234")
             .match_header("content-type", "application/json")
@@ -380,17 +404,21 @@ mod tests {
             .with_header("content-type", "application/json")
             .with_body(r#"{"message": "Workflow not found."}"#)
             .create();
-    
+
         let client = Client::new();
         let res = client
-            .post(&format!("{}/api/workflows/{}/start", &server.url(), workflow_id))
+            .post(&format!(
+                "{}/api/workflows/{}/start",
+                &server.url(),
+                workflow_id
+            ))
             .header("authorization", "Bearer test_token")
             .header("cookie", "session=abcd1234")
             .header("content-type", "application/json")
             .json(&expected_json)
             .send()
             .expect("request failed");
-    
+
         assert_eq!(res.status(), 404);
         let json: serde_json::Value = res.json().unwrap();
         assert_eq!(json["message"], "Workflow not found.");
@@ -401,174 +429,181 @@ mod tests {
             "session=abcd1234",
             workflow_id,
             None,
-            None,
             false,
             expected_yaml,
         );
-    
+
         assert!(result.is_err(), "Expected error, but got Ok.");
     }
 
     #[test]
-fn test_start_workflow_success() {
-    use serde_json::json;
-    use reqwest::blocking::Client;
+    fn test_start_workflow_success() {
+        use reqwest::blocking::Client;
+        use serde_json::json;
 
-    let mut server = Server::new();
+        let mut server = Server::new();
 
-    let workflow_id = "test-workflow";
+        let workflow_id = "test-workflow";
 
-    let expected_json = json!({
-        "operational_options": {},
-        "input_parameters": {},
-        "restart": false,
-        "reana_specification": {
-            "version": "0.9.3",
-            "workflow": {
-                "type": "serial",
-                "specification": {
-                    "steps": []
-                }
-            },
-            "inputs": {},
-            "outputs": {}
-        }
-    });
-    let _mock = server
-        .mock("POST", format!("/api/workflows/{}/start", workflow_id).as_str())
-        .match_header("authorization", "Bearer test_token")
-        .match_header("cookie", "session=abcd1234")
-        .match_header("content-type", "application/json")
-        .match_body(Matcher::Json(expected_json.clone()))
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"message": "Workflow started successfully", "status": "started"}"#)
-        .create();
+        let expected_json = json!({
+            "operational_options": {},
+            "input_parameters": {},
+            "restart": false,
+            "reana_specification": {
+                "version": "0.9.4",
+                "workflow": {
+                    "type": "serial",
+                    "specification": {
+                        "steps": []
+                    }
+                },
+                "inputs": {},
+                "outputs": {}
+            }
+        });
+        let _mock = server
+            .mock(
+                "POST",
+                format!("/api/workflows/{}/start", workflow_id).as_str(),
+            )
+            .match_header("authorization", "Bearer test_token")
+            .match_header("cookie", "session=abcd1234")
+            .match_header("content-type", "application/json")
+            .match_body(Matcher::Json(expected_json.clone()))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"message": "Workflow started successfully", "status": "started"}"#)
+            .create();
 
-    let client = Client::new();
-    let res = client
-        .post(&format!("{}/api/workflows/{}/start", &server.url(), workflow_id))
-        .header("authorization", "Bearer test_token")
-        .header("cookie", "session=abcd1234")
-        .header("content-type", "application/json")
-        .json(&expected_json)
-        .send()
-        .expect("request failed");
-
-    assert_eq!(res.status(), 200);
-    let json: serde_json::Value = res.json().unwrap();
-    assert_eq!(json["message"], "Workflow started successfully");
-    assert_eq!(json["status"], "started");
-}
-    
-#[test]
-fn test_create_workflow_success() {
-    let server = MockServer::start();
-    let workflow_payload = json!({
-        "name": "test-workflow",
-        "type": "serial",
-        "specification": {
-            "steps": []
-        }
-    });
-
-    let mock = server.mock(|when, then| {
-        when.method(POST)
-            .path("/api/workflows")
-            .header("authorization", "Bearer dummy_token")
-            .header("cookie", "session=abc123")
+        let client = Client::new();
+        let res = client
+            .post(&format!(
+                "{}/api/workflows/{}/start",
+                &server.url(),
+                workflow_id
+            ))
+            .header("authorization", "Bearer test_token")
+            .header("cookie", "session=abcd1234")
             .header("content-type", "application/json")
-            .json_body(workflow_payload.clone());
-        then.status(201)
-            .json_body(json!({
+            .json(&expected_json)
+            .send()
+            .expect("request failed");
+
+        assert_eq!(res.status(), 200);
+        let json: serde_json::Value = res.json().unwrap();
+        assert_eq!(json["message"], "Workflow started successfully");
+        assert_eq!(json["status"], "started");
+    }
+
+    #[test]
+    fn test_create_workflow_success() {
+        let server = MockServer::start();
+        let workflow_payload = json!({
+            "name": "test-workflow",
+            "type": "serial",
+            "specification": {
+                "steps": []
+            }
+        });
+
+        let mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/workflows")
+                .header("authorization", "Bearer dummy_token")
+                .header("cookie", "session=abc123")
+                .header("content-type", "application/json")
+                .json_body(workflow_payload.clone());
+            then.status(201).json_body(json!({
                 "message": "Workflow created",
                 "workflow_id": "1234"
             }));
-    });
+        });
 
-    let result = create_workflow(
-        &server.base_url(),
-        "dummy_token",
-        "session=abc123",
-        &workflow_payload,
-    );
+        let result = create_workflow(
+            &server.base_url(),
+            "dummy_token",
+            "session=abc123",
+            &workflow_payload,
+        );
 
-    assert!(result.is_ok());
-    let json_response = result.unwrap();
-    assert_eq!(json_response["message"], "Workflow created");
-    assert_eq!(json_response["workflow_id"], "1234");
+        assert!(result.is_ok());
+        let json_response = result.unwrap();
+        assert_eq!(json_response["message"], "Workflow created");
+        assert_eq!(json_response["workflow_id"], "1234");
 
-    mock.assert();
-}
-
-#[test]
-fn test_create_workflow_failure_invalid_token() {
-    let server = MockServer::start();
-
-    let workflow_payload = json!({
-        "name": "fail-case",
-        "type": "serial",
-        "specification": {
-            "steps": []
-        }
-    });
-
-    let _mock = server.mock(|when, then| {
-        when.method(POST).path("/api/workflows");
-        then.status(401).json_body(json!({ "message": "Unauthorized" }));
-    });
-
-    let result = create_workflow(
-        &server.base_url(),
-        "invalid_token",
-        "session=bad",
-        &workflow_payload,
-    );
-
-    assert!(result.is_err());
-}
+        mock.assert();
+    }
 
     #[test]
-fn test_get_workflow_status_success() {
+    fn test_create_workflow_failure_invalid_token() {
+        let server = MockServer::start();
 
-    let mut server = Server::new();
+        let workflow_payload = json!({
+            "name": "fail-case",
+            "type": "serial",
+            "specification": {
+                "steps": []
+            }
+        });
 
-    let _mock = server
-        .mock("GET", "/api/workflows/123/status")
-        .match_header("authorization", "Bearer test_token")
-        .match_header("cookie", "session=abcd1234")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"status": "completed"}"#)
-        .create();
+        let _mock = server.mock(|when, then| {
+            when.method(POST).path("/api/workflows");
+            then.status(401)
+                .json_body(json!({ "message": "Unauthorized" }));
+        });
 
-    let workflow_id = "123";
-    let result = get_workflow_status(&server.url(), "test_token", "session=abcd1234", workflow_id);
+        let result = create_workflow(
+            &server.base_url(),
+            "invalid_token",
+            "session=bad",
+            &workflow_payload,
+        );
 
-    assert!(result.is_ok());
-    let json = result.unwrap();
-    assert_eq!(json["status"], "completed");
-}
+        assert!(result.is_err());
+    }
 
-#[test]
-fn test_get_workflow_status_failure() {
-    let mut server = Server::new();
-    let _mock = server
-        .mock("GET", "/api/workflows/999/status")
-        .match_header("authorization", "Bearer test_token")
-        .match_header("cookie", "session=abcd1234")
-        .with_status(404)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "workflow not found"}"#)
-        .create();
+    #[test]
+    fn test_get_workflow_status_success() {
+        let mut server = Server::new();
 
-    let workflow_id = "999";
-    let result = get_workflow_status(&server.url(), "test_token", "session=abcd1234", workflow_id);
+        let _mock = server
+            .mock("GET", "/api/workflows/123/status")
+            .match_header("authorization", "Bearer test_token")
+            .match_header("cookie", "session=abcd1234")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"status": "completed"}"#)
+            .create();
 
-    assert!(result.is_ok());
-    let json = result.unwrap();
-    assert_eq!(json["error"], "workflow not found");
-}
+        let workflow_id = "123";
+        let result =
+            get_workflow_status(&server.url(), "test_token", "session=abcd1234", workflow_id);
+
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert_eq!(json["status"], "completed");
+    }
+
+    #[test]
+    fn test_get_workflow_status_failure() {
+        let mut server = Server::new();
+        let _mock = server
+            .mock("GET", "/api/workflows/999/status")
+            .match_header("authorization", "Bearer test_token")
+            .match_header("cookie", "session=abcd1234")
+            .with_status(404)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"error": "workflow not found"}"#)
+            .create();
+
+        let workflow_id = "999";
+        let result =
+            get_workflow_status(&server.url(), "test_token", "session=abcd1234", workflow_id);
+
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert_eq!(json["error"], "workflow not found");
+    }
 
     #[test]
     fn test_upload_files_with_httpmock() {
@@ -580,7 +615,9 @@ fn test_get_workflow_status_failure() {
 
         let base_dir = tempdir().unwrap();
         let data_dir = base_dir.path().join("data");
-        let wf_dir = base_dir.path().join("tests/test_data/hello_world/workflows");
+        let wf_dir = base_dir
+            .path()
+            .join("tests/test_data/hello_world/workflows");
 
         create_dir_all(&data_dir).unwrap();
         create_dir_all(&wf_dir).unwrap();
@@ -631,29 +668,29 @@ fn test_get_workflow_status_failure() {
             &None,
             &dummy_cwl.path().to_path_buf(),
             workflow_name,
-            &workflow_json
+            &workflow_json,
         );
 
         assert!(result.is_ok(), "upload_files failed: {:?}", result.err());
         _mock_upload.assert_hits(3);
     }
-   
+
     #[test]
     fn test_download_files_no_files() {
         use httpmock::MockServer;
         use serde_json::json;
-    
+
         let server = MockServer::start();
         let reana_token = "test-token";
         let cookie_value = "cookie=test-cookie";
         let workflow_name = "my_workflow";
-    
+
         let workflow_json = json!({
             "outputs": {
                 "files": []
             }
         });
-        
+
         let result = download_files(
             &server.base_url(),
             reana_token,
@@ -661,100 +698,101 @@ fn test_get_workflow_status_failure() {
             workflow_name,
             &workflow_json,
         );
-    
+
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
     }
 
-
     #[test]
-fn test_download_files_success() {
-    use std::env;
-    use std::fs;
-    use tempfile::tempdir;
-    use httpmock::MockServer;
-    use serde_json::json;
+    fn test_download_files_success() {
+        use httpmock::MockServer;
+        use serde_json::json;
+        use std::env;
+        use std::fs;
+        use tempfile::tempdir;
 
-    let server = MockServer::start();
-    let reana_token = "test-token";
-    let cookie_value = "cookie=test-cookie";
-    let workflow_name = "my_workflow";
-    let test_filename = "results.svg";
-    let test_content = "<svg>mock-content</svg>";
+        let server = MockServer::start();
+        let reana_token = "test-token";
+        let cookie_value = "cookie=test-cookie";
+        let workflow_name = "my_workflow";
+        let test_filename = "results.svg";
+        let test_content = "<svg>mock-content</svg>";
 
-    let _mock = server.mock(|when, then| {
-        when.method("GET")
-            .path(format!("/api/workflows/{}/workspace/outputs/{}", workflow_name, test_filename));
-        then.status(200)
-            .header("content-type", "image/svg+xml")
-            .body(test_content);
-    });
+        let _mock = server.mock(|when, then| {
+            when.method("GET").path(format!(
+                "/api/workflows/{}/workspace/outputs/{}",
+                workflow_name, test_filename
+            ));
+            then.status(200)
+                .header("content-type", "image/svg+xml")
+                .body(test_content);
+        });
 
-    let workflow_json = json!({
-        "outputs": {
-            "files": [ test_filename ]
-        }
-    });
+        let workflow_json = json!({
+            "outputs": {
+                "files": [ test_filename ]
+            }
+        });
 
-    let original_dir = env::current_dir().expect("Failed to get current dir");
+        let original_dir = env::current_dir().expect("Failed to get current dir");
 
-    let temp_dir = tempdir().expect("Failed to create temp dir");
-    env::set_current_dir(&temp_dir).expect("Failed to set current dir");
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        env::set_current_dir(&temp_dir).expect("Failed to set current dir");
 
-    let result = download_files(
-        &server.base_url(),
-        reana_token,
-        cookie_value,
-        workflow_name,
-        &workflow_json,
-    );
+        let result = download_files(
+            &server.base_url(),
+            reana_token,
+            cookie_value,
+            workflow_name,
+            &workflow_json,
+        );
 
-    env::set_current_dir(&original_dir).expect("Failed to restore original dir");
+        env::set_current_dir(&original_dir).expect("Failed to restore original dir");
 
-    assert!(result.is_ok(), "download_files failed: {:?}", result.err());
+        assert!(result.is_ok(), "download_files failed: {:?}", result.err());
 
-    let downloaded_path = temp_dir.path().join(test_filename);
-    let contents = fs::read_to_string(&downloaded_path).expect("Failed to read downloaded file");
+        let downloaded_path = temp_dir.path().join(test_filename);
+        let contents =
+            fs::read_to_string(&downloaded_path).expect("Failed to read downloaded file");
 
-    assert_eq!(contents, test_content);
-    _mock.assert_hits(1);
-}
-#[test]
-fn test_download_files_failure() {
-    use httpmock::MockServer;
-    use serde_json::json;
+        assert_eq!(contents, test_content);
+        _mock.assert_hits(1);
+    }
+    #[test]
+    fn test_download_files_failure() {
+        use httpmock::MockServer;
+        use serde_json::json;
 
-    let server = MockServer::start();
-    let reana_token = "test-token";
-    let cookie_value = "cookie=test-cookie";
-    let workflow_name = "my_workflow";
-    let test_filename = "results.svg";
+        let server = MockServer::start();
+        let reana_token = "test-token";
+        let cookie_value = "cookie=test-cookie";
+        let workflow_name = "my_workflow";
+        let test_filename = "results.svg";
 
-    let _mock = server.mock(|when, then| {
-        when.method("GET")
-            .path(format!("/api/workflows/{}/workspace/outputs/{}", workflow_name, test_filename));
-        then.status(404)
-            .header("content-type", "application/json")
-            .body(r#"{"error": "File not found"}"#);
-    });
+        let _mock = server.mock(|when, then| {
+            when.method("GET").path(format!(
+                "/api/workflows/{}/workspace/outputs/{}",
+                workflow_name, test_filename
+            ));
+            then.status(404)
+                .header("content-type", "application/json")
+                .body(r#"{"error": "File not found"}"#);
+        });
 
-    let workflow_json = json!({
-        "outputs": {
-            "files": [ test_filename ]
-        }
-    });
+        let workflow_json = json!({
+            "outputs": {
+                "files": [ test_filename ]
+            }
+        });
 
-    let result = download_files(
-        &server.base_url(),
-        reana_token,
-        cookie_value,
-        workflow_name,
-        &workflow_json,
-    );
+        let result = download_files(
+            &server.base_url(),
+            reana_token,
+            cookie_value,
+            workflow_name,
+            &workflow_json,
+        );
 
-    assert!(result.is_ok(), "download_files failed: {:?}", result.err());
-    _mock.assert_hits(1);
-}
-
-
-
+        assert!(result.is_ok(), "download_files failed: {:?}", result.err());
+        _mock.assert_hits(1);
+    }
 }

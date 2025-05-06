@@ -146,7 +146,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
         upload_files(reana_instance, reana_token, cookie_value, input_file, file, workflow_name, &workflow_json)?;
 
         let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
-        start_workflow(reana_instance, reana_token, cookie_value, workflow_name, None, None, false, converted_yaml)?;
+        start_workflow(reana_instance, reana_token, cookie_value, workflow_name, None, false, converted_yaml)?;
 
         loop {
             let status_response = get_workflow_status(reana_instance, reana_token, cookie_value, workflow_name)?;
