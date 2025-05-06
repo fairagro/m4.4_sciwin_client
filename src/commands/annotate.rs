@@ -104,7 +104,7 @@ pub enum AnnotateCommands {
         cwl_name: String,
         #[arg(short = 'n', long = "namespace", help = "Namespace to annotate")]
         namespace: String,
-        #[arg(short='s', long = "short", help = "Namespace abbreviation to annotate")]
+        #[arg(short = 's', long = "short", help = "Namespace abbreviation to annotate")]
         short: Option<String>,
     },
     #[command(about = "Annotates author of a tool or workflow (schema.org)")]
@@ -313,9 +313,10 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
     let mut yaml = parse_cwl(&args.cwl_name)?;
 
     // Ensure the root of the YAML is a mapping
-    let mapping = match yaml {
-        Value::Mapping(ref mut mapping) => mapping,
-        _ => return Err("The CWL file does not have a valid YAML mapping at its root.".into()),
+    let mapping = if let Value::Mapping(ref mut mapping) = yaml {
+        mapping
+    } else {
+        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     };
 
     // Prepare performer information
@@ -514,10 +515,7 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     } else if workflows_path.is_file() {
         workflows_path
     } else {
-        return Err(format!(
-            "CWL file '{filename}' not found in current directory or workflows/{base_name}/{filename}"
-        )
-        .into());
+        return Err(format!("CWL file '{filename}' not found in current directory or workflows/{base_name}/{filename}").into());
     };
 
     Ok(file_path.canonicalize()?.to_string_lossy().to_string())
@@ -661,11 +659,7 @@ pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, te
     // Create a vector of options for the menu
     let mut menu_options: Vec<String> = elements
         .iter()
-        .map(|(label, ontology, id)| {
-            format!(
-                "{label: <max_label_width$} | {ontology: <max_ontology_width$} | {id: <max_id_width$}"
-            )
-        })
+        .map(|(label, ontology, id)| format!("{label: <max_label_width$} | {ontology: <max_ontology_width$} | {id: <max_id_width$}"))
         .collect();
     menu_options.push(format!("Do not use ontology, annotate '{term}'")); // Add skip option
 

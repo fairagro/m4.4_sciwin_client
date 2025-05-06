@@ -220,15 +220,15 @@ fn evaluate_output_impl(
 
 fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
     let path = &initial_dir.join(entry);
-    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", entry, path, e))?;
-    eprintln!("📜 Wrote output file: {:?}", path);
+    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {entry:?} to {path:?}: {e}"))?;
+    eprintln!("📜 Wrote output file: {path:?}");
     Ok(DefaultValue::File(get_file_metadata(path, output.format.clone())))
 }
 
 fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue, Box<dyn Error>> {
     let path = &initial_dir.join(entry);
     fs::create_dir_all(path)?;
-    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {}", e))?;
+    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {e}"))?;
     Ok(DefaultValue::Directory(out_dir))
 }
 
@@ -267,7 +267,7 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
             if let Some(listing) = &mut dir.listing {
                 listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
             } else {
-                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))])
+                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))]);
             }
         }
     }

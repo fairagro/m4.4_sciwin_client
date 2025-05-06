@@ -61,7 +61,7 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     }
 
     //set values in output glob
-    for output in clt.outputs.iter_mut() {
+    for output in &mut clt.outputs {
         if let Some(binding) = &mut output.output_binding {
             let glob = set_placeholder_values_in_string(&binding.glob, runtime, &clt.base.inputs);
             binding.glob = glob;
@@ -69,7 +69,7 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     }
 
     //set values in output format
-    for output in clt.outputs.iter_mut() {
+    for output in &mut clt.outputs {
         if let Some(format) = &mut output.format {
             let format = set_placeholder_values_in_string(format, runtime, &clt.base.inputs);
             output.format = Some(format);
@@ -98,7 +98,7 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
             env_req.env_def = match &mut env_req.env_def {
                 EnviromentDefs::Vec(vec) => {
                     for env_def in vec.iter_mut() {
-                        env_def.env_value = set_placeholder_values_in_string(&env_def.env_value, runtime, inputs)
+                        env_def.env_value = set_placeholder_values_in_string(&env_def.env_value, runtime, inputs);
                     }
                     EnviromentDefs::Vec(vec.clone())
                 }
@@ -112,7 +112,7 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
         }
 
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
-            for listing in wd_req.listing.iter_mut() {
+            for listing in &mut wd_req.listing {
                 listing.entryname = set_placeholder_values_in_string(&listing.entryname, runtime, inputs);
                 listing.entry = match &mut listing.entry {
                     Entry::Source(src) => {
@@ -130,14 +130,14 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
     }
 }
 
-pub (crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> String {
+pub(crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> String {
     let in_re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
     let run_re = Regex::new(r"\$\(runtime.([\w]*)\)").unwrap();
     let result = in_re.replace_all(text, |caps: &fancy_regex::Captures| {
         let placeholder = &caps[1];
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
             let mut input_value =
-                get_input_value(base, &runtime.inputs, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {}", placeholder));
+                get_input_value(base, &runtime.inputs, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {placeholder}"));
             if suffix == "dirname" {
                 if let Some(diff) = diff_paths(&input_value, &runtime.runtime["tooldir"]) {
                     if let Some(diff_str) = diff.to_str() {
@@ -147,7 +147,7 @@ pub (crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnv
             }
             input_value
         } else {
-            get_input_value(placeholder, &runtime.inputs, inputs, "").unwrap_or_else(|| panic!("Input not provided for {}", placeholder))
+            get_input_value(placeholder, &runtime.inputs, inputs, "").unwrap_or_else(|| panic!("Input not provided for {placeholder}"))
         }
     });
     run_re

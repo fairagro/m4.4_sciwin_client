@@ -17,7 +17,7 @@ use util::preprocess_cwl;
 
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
     //gather inputs
-    let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
+    let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {
         let yaml = fs::read_to_string(&raw_inputs[0])?;
         serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?
     } else {
@@ -64,7 +64,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
     }
 
     //make paths relative to calling object
-    let path_prefix = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
+    let path_prefix = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {
         Path::new(&raw_inputs[0]).parent().unwrap() //path of job file
     } else {
         Path::new(".")
@@ -79,7 +79,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
 
     let output_values = execute(cwlfile, inputs, outdir)?;
     let json = serde_json::to_string_pretty(&output_values)?;
-    println!("{}", json);
+    println!("{json}");
 
     Ok(())
 }
