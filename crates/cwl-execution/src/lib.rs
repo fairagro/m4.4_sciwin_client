@@ -6,6 +6,7 @@ pub mod staging;
 pub mod util;
 pub mod validate;
 
+use anyhow::Context;
 use cwl::types::{guess_type, CWLType, DefaultValue, Directory, File, PathItem};
 use cwl::CWLDocument;
 use io::join_path_string;
@@ -15,11 +16,11 @@ use std::{cell::RefCell, collections::HashMap, error::Error, fmt::Display, fs, n
 use sysinfo::{Disks, MemoryRefreshKind, System};
 use util::preprocess_cwl;
 
-pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
+pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> anyhow::Result<()> {
     //gather inputs
     let mut inputs = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with("-") {
         let yaml = fs::read_to_string(&raw_inputs[0])?;
-        serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?
+        serde_yaml::from_str(&yaml).context("Could not read job file")?
     } else {
         raw_inputs
             .chunks_exact(2)
@@ -88,11 +89,11 @@ pub fn execute(
     cwlfile: impl AsRef<Path>,
     inputs: HashMap<String, DefaultValue>,
     outdir: Option<impl AsRef<Path>>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> anyhow::Result<HashMap<String, DefaultValue>> {
     //load cwl
-    let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
+    let contents = fs::read_to_string(&cwlfile).with_context(|| format!("Could not read CWL File {:?}", cwlfile.as_ref()))?;
     let contents = preprocess_cwl(&contents, &cwlfile)?;
-    let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
+    let mut doc: CWLDocument = serde_yaml::from_str(&contents).with_context(|| format!("Could not parse CWL File {:?}", cwlfile.as_ref()))?;
 
     match doc {
         CWLDocument::CommandLineTool(_) | CWLDocument::ExpressionTool(_) => run_tool(

@@ -2,6 +2,7 @@ use crate::{
     expression::{evaluate_expression, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
+use anyhow::{bail, Context};
 use cwl::{
     clt::CommandLineTool,
     et::ExpressionTool,
@@ -14,7 +15,6 @@ use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
-    error::Error,
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
@@ -22,15 +22,12 @@ use std::{
 };
 
 ///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input_as_string(
-    input: &CommandInputParameter,
-    input_values: &HashMap<String, DefaultValue>,
-) -> Result<String, Box<dyn Error>> {
+pub(crate) fn evaluate_input_as_string(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> anyhow::Result<String> {
     Ok(evaluate_input(input, input_values)?.as_value_string())
 }
 
 ///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
+pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> anyhow::Result<DefaultValue> {
     if let Some(value) = input_values.get(&input.id) {
         if (matches!(input.type_, CWLType::Any) || input.type_.is_optional()) && matches!(value, DefaultValue::Any(Value::Null)) {
             if let Some(default_) = &input.default {
@@ -41,25 +38,20 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
         if value.has_matching_type(&input.type_) {
             return Ok(value.clone());
         } else {
-            Err(format!(
-                "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
-                &input.type_, value
-            ))?
+            bail!("CWLType '{:?}' is not matching input type. Input was: \n{:#?}", &input.type_, value);
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
     }
 
     if let CWLType::Optional(_) = input.type_ {
-        return Ok(DefaultValue::Any(Value::Null));
+        Ok(DefaultValue::Any(Value::Null))
     } else {
-        Err(format!("You did not include a value for {}", input.id).as_str())?;
+        bail!("You did not include a value for {}", input.id);
     }
-
-    Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
 }
 
-pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -> anyhow::Result<HashMap<String, DefaultValue>> {
     let mut outputs = HashMap::new();
     for output in &tool.outputs {
         if let Some(result) = value.get(&output.id) {
@@ -78,7 +70,7 @@ pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -
 }
 
 ///Copies back requested outputs and writes to commandline
-pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> anyhow::Result<HashMap<String, DefaultValue>> {
     //check for cwl.output.json
     // If the output directory contains a file named "cwl.output.json", that file must be loaded and used as the output object.
     let check = Path::new("cwl.output.json");
@@ -136,7 +128,7 @@ fn evaluate_output_impl(
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
     outputs: &mut HashMap<String, DefaultValue>,
-) -> Result<(), Box<dyn Error>> {
+) -> anyhow::Result<()> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
@@ -145,7 +137,7 @@ fn evaluate_output_impl(
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
                 } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                    bail!("Could not evaluate glob: {}", binding.glob);
                 }
             } else {
                 let filename = match output.type_ {
@@ -162,7 +154,7 @@ fn evaluate_output_impl(
                     }
                 };
                 let path = &initial_dir.join(filename);
-                fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                fs::copy(filename, path).with_context(|| format!("Failed to copy file from {:?} to {:?}", &filename, path))?;
                 eprintln!("📜 Wrote output file: {:?}", path);
                 outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             }
@@ -170,7 +162,7 @@ fn evaluate_output_impl(
         CWLType::Array(inner) if matches!(&**inner, CWLType::File) || matches!(&**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
                 let result = glob(&binding.glob)?;
-                let values: Result<Vec<_>, Box<dyn Error>> = result
+                let values: anyhow::Result<Vec<_>> = result
                     .map(|entry| {
                         let entry = entry?;
                         match **inner {
@@ -190,7 +182,7 @@ fn evaluate_output_impl(
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
                 } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                    bail!("Could not evaluate glob: {}", binding.glob);
                 }
             }
         }
@@ -218,17 +210,17 @@ fn evaluate_output_impl(
     Ok(())
 }
 
-fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
+fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> anyhow::Result<DefaultValue> {
     let path = &initial_dir.join(entry);
-    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", entry, path, e))?;
+    fs::copy(entry, path).with_context(|| format!("Failed to copy file from {:?} to {:?}", entry, path))?;
     eprintln!("📜 Wrote output file: {:?}", path);
     Ok(DefaultValue::File(get_file_metadata(path, output.format.clone())))
 }
 
-fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue, Box<dyn Error>> {
+fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> anyhow::Result<DefaultValue> {
     let path = &initial_dir.join(entry);
     fs::create_dir_all(path)?;
-    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {}", e))?;
+    let out_dir = copy_output_dir(entry, path).with_context(|| format!("Failed to copy: {:?} to {:?}", entry, path))?;
     Ok(DefaultValue::Directory(out_dir))
 }
 
@@ -274,7 +266,7 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
     Ok(dir)
 }
 
-pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String, Box<dyn Error>> {
+pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> anyhow::Result<String> {
     let mut yaml: Value = serde_yaml::from_str(contents)?;
     let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
     resolve_imports(&mut yaml, path)?;
@@ -282,7 +274,7 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String,
     Ok(serde_yaml::to_string(&yaml)?)
 }
 
-fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Error>> {
+fn resolve_imports(value: &mut Value, base_path: &Path) -> anyhow::Result<()> {
     match value {
         Value::Mapping(map) => {
             if map.len() == 1 {

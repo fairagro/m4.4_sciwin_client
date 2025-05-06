@@ -2,6 +2,7 @@ use crate::{
     environment::RuntimeEnvironment,
     io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to},
 };
+use anyhow::{bail, Context};
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
@@ -11,9 +12,7 @@ use cwl::{
 };
 use pathdiff::diff_paths;
 use std::{
-    env,
-    error::Error,
-    fs,
+    env, fs,
     io::{self},
     path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     vec,
@@ -26,7 +25,7 @@ pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path
     tool_path: P,
     path: Q,
     out_dir: R,
-) -> Result<Vec<String>, Box<dyn Error>> {
+) -> anyhow::Result<Vec<String>> {
     let mut staged_files: Vec<String> = vec![];
     //stage requirements
     staged_files.extend(stage_requirements(&tool.requirements, tool_path.as_ref(), path.as_ref())?);
@@ -46,7 +45,7 @@ pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path
     Ok(staged_files)
 }
 
-pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>> {
+pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> anyhow::Result<()> {
     for file in staged_files {
         let mut should_remove = true;
 
@@ -63,16 +62,16 @@ pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[
         if should_remove {
             let path = Path::new(file);
             if path.is_dir() {
-                fs::remove_dir_all(file).map_err(|e| format!("Could not remove staged dir {}: {}", file, e))?;
+                fs::remove_dir_all(file).with_context(|| format!("Could not remove staged directory {}", file))?;
             } else {
-                fs::remove_file(file).map_err(|e| format!("Could not remove staged file {}: {}", file, e))?;
+                fs::remove_file(file).with_context(|| format!("Could not remove staged file {}", file))?;
             }
         }
     }
     Ok(())
 }
 
-fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path, path: &Path) -> anyhow::Result<Vec<String>> {
     let mut staged_files = vec![];
 
     if let Some(requirements) = &requirements {
@@ -84,9 +83,9 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                     match &listing.entry {
                         Entry::Source(src) => {
                             if fs::exists(src).unwrap_or(false) {
-                                copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", src, path_str, e))?;
+                                copy_file(src, &into_path).with_context(|| format!("Failed to copy file from {} to {}", src, path_str))?;
                             } else {
-                                create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
+                                create_and_write_file(&into_path, src).with_context(|| format!("Failed to create file {:?}", into_path))?;
                             }
                         }
                         Entry::Include(include) => {
@@ -100,7 +99,7 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                                 }
                             }
                             copy_file(include_path.to_str().unwrap(), &into_path)
-                                .map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", include_path, into_path, e))?;
+                                .with_context(|| format!("Failed to copy file from {:?} to {:?}", include_path, into_path))?;
                         }
                     }
                     staged_files.push(path_str.clone().into_owned());
@@ -126,7 +125,7 @@ fn stage_input_files(
     tool_path: &Path,
     path: &Path,
     out_dir: &Path,
-) -> Result<Vec<String>, Box<dyn Error>> {
+) -> anyhow::Result<Vec<String>> {
     let mut staged_files = vec![];
 
     for input in inputs {
@@ -155,7 +154,7 @@ fn stage_input_files(
                     let client = reqwest::blocking::Client::new();
                     let mut res = client.get(location).send()?;
                     if res.status() != reqwest::StatusCode::OK {
-                        return Err(format!("Failed to download file from {}: {}", location, res.status()).into());
+                        bail!("Failed to download file from {}: {}", location, res.status());
                     }
 
                     //get file name from url
@@ -172,7 +171,7 @@ fn stage_input_files(
                         //set updated path:
                         f.location = Some(path.to_string_lossy().into_owned());
                     } else {
-                        return Err("Could not extract filename from URL.".into());
+                        bail!("Could not extract filename from URL.");
                     }
                 }
             }
@@ -215,18 +214,18 @@ fn stage_input_files(
         runtime.inputs.insert(input.id.clone(), staged_data);
 
         if input.type_ == CWLType::File {
-            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
+            copy_file(&data_path, &staged_path).with_context(|| format!("Failed to copy file from {:?} to {:?}", data_path, staged_path))?;
             staged_files.push(staged_path_str.clone());
             staged_files.extend(stage_secondary_files(&data, path)?);
         } else if input.type_ == CWLType::Directory {
-            copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {:?} to {:?}: {}", data_path, staged_path, e))?;
+            copy_dir(&data_path, &staged_path).with_context(|| format!("Failed to copy directory from {:?} to {:?}", data_path, staged_path))?;
             staged_files.push(staged_path_str.clone());
         }
     }
     Ok(staged_files)
 }
 
-fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> anyhow::Result<Vec<String>> {
     let mut staged_files = vec![];
     if let DefaultValue::File(file) = &incoming_data {
         if let Some(secondary_files) = &file.secondary_files {
@@ -239,12 +238,12 @@ fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Ve
                 match value {
                     DefaultValue::File(_) => {
                         copy_file(&incoming_file, &into_path)
-                            .map_err(|e| format!("Failed to copy file from {} to {:?}: {}", incoming_file, into_path, e))?;
+                            .with_context(|| format!("Failed to copy file from {} to {:?}", incoming_file, into_path))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     DefaultValue::Directory(_) => {
                         copy_dir(&incoming_file, &into_path)
-                            .map_err(|e| format!("Failed to copy directory from {} to {:?}: {}", incoming_file, into_path, e))?;
+                            .with_context(|| format!("Failed to copy directory from {} to {:?}", incoming_file, into_path))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     _ => {}

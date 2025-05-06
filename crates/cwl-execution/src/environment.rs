@@ -7,7 +7,6 @@ use cwl::{
 };
 use std::{
     collections::HashMap,
-    error::Error,
     fs::{self},
     path::Path,
 };
@@ -45,7 +44,7 @@ impl RuntimeEnvironment {
         outdir: impl AsRef<Path>,
         tooldir: impl AsRef<Path>,
         tmpdir: impl AsRef<Path>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> anyhow::Result<Self> {
         let runtime = HashMap::from([
             ("tooldir".to_string(), tooldir.as_ref().to_string_lossy().into_owned()),
             ("outdir".to_string(), outdir.as_ref().to_string_lossy().into_owned()),
@@ -92,7 +91,7 @@ impl RuntimeEnvironment {
     }
 }
 
-fn evaluate(val: StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> Result<u64, Box<dyn Error>> {
+fn evaluate(val: StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> anyhow::Result<u64> {
     match val {
         StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(&str, runtime, inputs).parse()?),
         StringOrNumber::Integer(uint) => Ok(uint),
@@ -119,10 +118,7 @@ pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String>
         .collect()
 }
 
-pub(crate) fn collect_inputs(
-    tool: &CWLDocument,
-    input_values: HashMap<String, DefaultValue>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn collect_inputs(tool: &CWLDocument, input_values: HashMap<String, DefaultValue>) -> anyhow::Result<HashMap<String, DefaultValue>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
         let mut result_input = evaluate_input(input, &input_values)?;

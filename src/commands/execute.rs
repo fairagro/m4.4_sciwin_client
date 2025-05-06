@@ -95,8 +95,8 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
             } else {
                 set_container_engine(ContainerEngine::Docker);
             }
-            
-            execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
+
+            Ok(execute_cwlfile(&args.file, &args.args, args.out_dir.clone())?)
         }
     }
 }

@@ -13,6 +13,7 @@ use crate::{
     validate::set_placeholder_values,
     CommandError,
 };
+use anyhow::{bail, Context};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
@@ -27,7 +28,6 @@ use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
-    error::Error,
     fs::{self},
     path::{Path, PathBuf},
     process::Command as SystemCommand,
@@ -41,10 +41,10 @@ pub fn run_workflow(
     input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> anyhow::Result<HashMap<String, DefaultValue>> {
     let clock = Instant::now();
 
-    let sorted_step_ids = workflow.sort_steps()?;
+    let sorted_step_ids = workflow.sort_steps().map_err(|e| anyhow::Error::from_boxed(e.into()))?;
 
     let dir = tempdir()?;
     let tmp_path = dir.path().to_string_lossy().into_owned();
@@ -112,7 +112,7 @@ pub fn run_workflow(
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
         } else {
-            return Err(format!("Could not find step {}", step_id).into());
+            bail!("Could not find step {}", step_id);
         }
     }
 
@@ -150,7 +150,7 @@ pub fn run_workflow(
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
-                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    fs::copy(workflow_folder.join(file.get_location()), &dest).with_context(|| format!("Could not copy file to {}", dest))?;
                     DefaultValue::File(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
                 DefaultValue::Directory(directory) => DefaultValue::Directory(
@@ -158,7 +158,7 @@ pub fn run_workflow(
                         workflow_folder.join(directory.get_location()),
                         format!("{}/{}", &output_directory, &directory.get_location()),
                     )
-                    .map_err(|e| format!("Could not provide output directory: {}", e))?,
+                    .context("Could not provide output directory")?,
                 ),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
                 DefaultValue::Array(inner) => DefaultValue::Array(inner.clone()),
@@ -180,7 +180,7 @@ pub fn run_tool(
     input_values: HashMap<String, DefaultValue>,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> anyhow::Result<HashMap<String, DefaultValue>> {
     //measure performance
     let clock = Instant::now();
     if !print_output() {
@@ -268,7 +268,7 @@ pub fn run_tool(
     Ok(outputs)
 }
 
-pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> anyhow::Result<()> {
     let mut command = build_command(tool, runtime)?;
 
     if let Some(docker) = tool.get_docker_requirement() {
@@ -287,7 +287,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
         let mut child = command.spawn()?;
         if child.wait_timeout(Duration::from_secs(runtime.time_limit))?.is_none() {
             child.kill()?;
-            return Err("Time elapsed".into());
+            bail!("Time elapsed");
         }
         child.wait_with_output()?
     } else {
@@ -331,7 +331,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
 
     match output.status.success() {
         true => Ok(()),
-        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
+        false => bail!("command returned with code {:?}", output.status.code().unwrap_or(1)),
     }
 }
 
@@ -347,7 +347,7 @@ enum SortKey {
     Str(String),
 }
 
-fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<SystemCommand, Box<dyn Error>> {
+fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> anyhow::Result<SystemCommand> {
     let mut args: Vec<String> = vec![];
 
     //get executable
