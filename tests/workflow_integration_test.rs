@@ -107,7 +107,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     ];
     for c in &connect_args {
         let result = connect_workflow_nodes(c);
-        assert!(result.is_ok())
+        assert!(result.is_ok());
     }
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();

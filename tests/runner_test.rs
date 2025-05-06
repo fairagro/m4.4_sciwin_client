@@ -204,5 +204,5 @@ pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
     let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
     let result = run_tool(&mut tool, HashMap::new(), None, Some(dir.path().to_string_lossy().into_owned()));
-    assert!(result.is_ok(), "{:?}", result);
+    assert!(result.is_ok(), "{result:?}");
 }

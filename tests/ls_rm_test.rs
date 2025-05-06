@@ -154,7 +154,7 @@ fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-const CALCULATION_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -191,9 +191,9 @@ outputs:
 baseCommand:
 - python
 - calculation.py
-"#;
+";
 
-const PLOT_FILE: &str = r#"#!/usr/bin/env cwl-runner
+const PLOT_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
 class: CommandLineTool
@@ -223,4 +223,4 @@ outputs:
 baseCommand:
 - python
 - plot.py
-"#;
+";

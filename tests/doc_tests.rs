@@ -1,4 +1,4 @@
-///This file contains all examples described here: https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/
+///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 mod common;
 use common::{check_git_user, setup_python};
 use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, types::Entry};
@@ -32,7 +32,7 @@ fn setup() -> (PathBuf, TempDir) {
 
 fn cleanup(current: PathBuf, dir: TempDir) {
     env::set_current_dir(current).unwrap();
-    dir.close().unwrap()
+    dir.close().unwrap();
 }
 
 #[test]

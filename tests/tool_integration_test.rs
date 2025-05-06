@@ -282,7 +282,7 @@ pub fn test_tool_output_is_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -301,7 +301,7 @@ pub fn test_tool_output_complete_dir() {
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
         outputs: Some(vec![".".into()]), //
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -311,7 +311,7 @@ pub fn test_tool_output_complete_dir() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1); //only root folder
     if let Some(binding) = &tool.outputs[0].output_binding {
-        assert_eq!(binding.glob, "$(runtime.outdir)".to_string())
+        assert_eq!(binding.glob, "$(runtime.outdir)".to_string());
     } else {
         panic!("No Binding")
     }
@@ -331,7 +331,7 @@ pub fn test_shell_script() {
     let name = "script";
     let command = &["./script.sh"];
     let args = CreateToolArgs {
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
