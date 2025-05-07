@@ -813,7 +813,7 @@ mod tests {
             let file_set: HashSet<_> = file_list
             .iter()
             .filter_map(|v| v.as_str())
-            .map(|s| normalize_path(s))
+            .map(normalize_path)
             .collect();
             assert!(
                 file_set.contains("data/population.csv"),
@@ -1270,7 +1270,7 @@ mod tests {
             let file_set: HashSet<_> = file_list
             .iter()
             .filter_map(|v| v.as_str())
-            .map(|s| normalize_path(s))
+            .map(normalize_path)
             .collect();
             assert!(
                 file_set.contains("data/population.csv"),
@@ -1322,7 +1322,7 @@ mod tests {
             let file_set: HashSet<_> = file_list
             .iter()
             .filter_map(|v| v.as_str())
-            .map(|s| normalize_path(s))
+            .map(normalize_path)
             .collect();
             assert!(
                 file_set.contains("data/population.csv"),
