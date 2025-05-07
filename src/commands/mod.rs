@@ -12,6 +12,7 @@ pub mod init;
 pub mod sync;
 pub mod tool;
 pub mod workflow;
+pub mod manifest;
 
 pub fn check_git_config() -> Result<(), Box<dyn Error>> {
     let mut config = Config::open_default()?;
