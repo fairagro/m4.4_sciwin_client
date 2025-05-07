@@ -88,6 +88,9 @@ mod tests {
         assert!(add(&args).is_ok());
         println!("{}", fs::read_to_string("workflow.toml").unwrap());
 
+        //workflow folder exists
+        assert!(Path::new(".s4n").join("hello_s4n").join("master").join("workflows").exists());
+
         env::set_current_dir(current).unwrap();
     }
 }
