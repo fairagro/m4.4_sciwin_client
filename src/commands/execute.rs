@@ -136,7 +136,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
 
     let ping_status = ping_reana(reana_instance)?;
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
-        eprintln!("Unexpected response from Reana server: {:?}", ping_status);
+        eprintln!("Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
     }
 
@@ -175,7 +175,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
             thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
         }
     } else {
-        eprintln!("Workflow creation failed {:?}", create_response);
+        eprintln!("Workflow creation failed {create_response:?}");
     }
 
     Ok(())
