@@ -1,11 +1,10 @@
+use crate::config::{Config, Dependency};
 use clap::Args;
 use cwl_execution::io::copy_dir;
 use git2::{build::RepoBuilder, FetchOptions};
 use reqwest::Url;
 use std::{error::Error, fs, path::Path};
 use tempfile::tempdir;
-
-use crate::config::{Config, Dependency};
 
 #[derive(Args, Debug, Default)]
 pub struct ManifestArgs {
@@ -35,7 +34,7 @@ pub fn add(args: &ManifestArgs) -> Result<(), Box<dyn Error>> {
             },
         );
         manifest.dependencies = Some(deps);
-        fs::write("workflow.toml", toml::to_string(&manifest)?)?;
+        fs::write("workflow.toml", manifest.to_toml()?)?;
     }
     Ok(())
 }
@@ -85,8 +84,7 @@ mod tests {
         let current = env::current_dir().unwrap();
         env::set_current_dir(dir.path()).unwrap();
         initialize_project(None, false).unwrap();
-        
-        add(&args).unwrap();
+
         assert!(add(&args).is_ok());
         println!("{}", fs::read_to_string("workflow.toml").unwrap());
 

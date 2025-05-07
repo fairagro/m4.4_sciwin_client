@@ -1,13 +1,28 @@
-use std::collections::HashMap;
-
 use semver::Version;
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use smart_default::SmartDefault;
+use std::collections::BTreeMap;
+use toml_edit::{Item, Value};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Config {
     pub workflow: WorkflowConfig,
-    pub dependencies: Option<HashMap<String, Dependency>>,
+    pub dependencies: Option<BTreeMap<String, Dependency>>,
+}
+
+impl Config {
+    pub fn to_toml(&self) -> Result<String, toml_edit::TomlError> {
+        let mut doc = toml_edit::ser::to_document(self)?;
+        for (_, value) in doc.iter_mut() {
+            if let Value::InlineTable(table) = value.as_value().unwrap() {
+                let mut table = table.clone().into_table();
+                table.set_dotted(false);
+                *value = Item::Table(table);
+            }
+        }
+
+        Ok(doc.to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
