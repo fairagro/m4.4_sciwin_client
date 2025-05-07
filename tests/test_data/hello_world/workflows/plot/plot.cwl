@@ -10,7 +10,9 @@ requirements:
     entry:
       $include: plot.py
 - class: DockerRequirement
-  dockerPull: user12398/pytest:v1.0.0
+  dockerFile: 
+    $include: Dockerfile
+  dockerImageId: matplotlib
 
 inputs:
 - id: results

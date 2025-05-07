@@ -6,7 +6,7 @@ class: CommandLineTool
 requirements:
 - class: InitialWorkDirRequirement
   listing:
-  - entryname: calculation.py
+  - entryname: workflows/calculation/calculation.py
     entry:
       $include: calculation.py
 - class: DockerRequirement
@@ -17,14 +17,14 @@ inputs:
   type: File
   default:
     class: File
-    location: ../../data/population.csv
+    location: '../../data/population.csv'
   inputBinding:
     prefix: '--population'
 - id: speakers
   type: File
   default:
     class: File
-    location: ../../data/speakers_revised.csv
+    location: '../../data/speakers_revised.csv'
   inputBinding:
     prefix: '--speakers'
 
@@ -36,4 +36,4 @@ outputs:
 
 baseCommand:
 - python
-- calculation.py
+- workflows/calculation/calculation.py
