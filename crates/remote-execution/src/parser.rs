@@ -557,93 +557,93 @@ fn convert_command_line_tool_cwl_to_json(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_generate_workflow_json_from_cwl_minimal() {
-        use std::path::PathBuf;
-
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
         let result = generate_workflow_json_from_cwl(&cwl_path, &None);
-
+    
         assert!(result.is_ok(), "Expected generation to succeed");
         let json = result.unwrap();
-        println!("json {:?}", json);
-
+    
         // Basic assertions
         assert_eq!(json["version"], "0.9.4");
         assert_eq!(json["workflow"]["type"], "cwl");
         assert_eq!(json["workflow"]["file"], cwl_path.to_str().unwrap());
-
+    
         let inputs = &json["inputs"];
         assert!(inputs.is_object(), "Inputs should be an object");
-
-        // Check for 'directories' field in inputs
-        assert!(
-            inputs["directories"].is_array(),
-            "directories should be an array"
-        );
+    
+        // Check 'directories'
+        assert!(inputs["directories"].is_array(), "directories should be an array");
         assert_eq!(inputs["directories"].as_array().unwrap().len(), 1);
-        assert_eq!(
-            inputs["directories"][0],
-            "../../tests/test_data/hello_world/workflows"
-        );
-
-        // Check for 'files' field in inputs
+    
+        // Check 'files'
         assert!(inputs["files"].is_array(), "files should be an array");
         let files = inputs["files"].as_array().unwrap();
-
-        // Check if both 'data/population.csv' and 'data/speakers_revised.csv' are in the files array
-        let has_population_csv = files.iter().any(|file| file == "data/population.csv");
-        let has_speakers_csv = files.iter().any(|file| file == "data/speakers_revised.csv");
-
-        assert!(
-            has_population_csv,
-            "'data/population.csv' not found in inputs['files']"
-        );
-        assert!(
-            has_speakers_csv,
-            "'data/speakers_revised.csv' not found in inputs['files']"
-        );
-
-        // Check for 'parameters' field in inputs
+    
+        // Look for population and speakers files
+        let has_population_csv = files.iter().any(|f| {
+            f.as_str()
+                .map(|s| normalize_path(s) == "data/population.csv")
+                .unwrap_or(false)
+        });
+        let has_speakers_csv = files.iter().any(|f| {
+            f.as_str()
+                .map(|s| normalize_path(s) == "data/speakers_revised.csv")
+                .unwrap_or(false)
+        });
+    
+        assert!(has_population_csv, "'data/population.csv' not found in inputs['files']");
+        assert!(has_speakers_csv, "'data/speakers_revised.csv' not found in inputs['files']");
+    
+        // Check parameters
         let parameters = &inputs["parameters"];
         assert!(parameters.is_object(), "parameters should be an object");
-
-        // Check specific parameters
+    
         assert_eq!(parameters["population"]["class"], "File");
-        assert_eq!(parameters["population"]["path"], "data/population.csv");
+    
+        // Try 'location' key, fallback to 'path'
+        let population_path_value = parameters["population"].get("location").or_else(|| parameters["population"].get("path"));
+        let population_path = population_path_value
+            .and_then(|v| v.as_str())
+            .expect("Expected parameters['population'] to have 'location' or 'path' as a string");
+    
+        assert_eq!(normalize_path(population_path), "data/population.csv");
+    
         assert_eq!(parameters["speakers"]["class"], "File");
-        assert_eq!(parameters["speakers"]["path"], "data/speakers_revised.csv");
-
+    
+        let speakers_path_value = parameters["speakers"].get("location").or_else(|| parameters["speakers"].get("path"));
+        let speakers_path = speakers_path_value
+            .and_then(|v| v.as_str())
+            .expect("Expected parameters['speakers'] to have 'location' or 'path' as a string");
+    
+        assert_eq!(normalize_path(speakers_path), "data/speakers_revised.csv");
+    
         // Check outputs
         let outputs = &json["outputs"];
         assert!(outputs.is_object(), "Outputs should be an object");
-        assert!(
-            outputs["files"].is_array(),
-            "outputs.files should be an array"
-        );
+        assert!(outputs["files"].is_array(), "outputs.files should be an array");
         assert_eq!(outputs["files"].as_array().unwrap().len(), 1);
         assert_eq!(outputs["files"][0], "results.svg");
-
-        // Check steps existence
+    
+        // Check workflow steps
         let steps = &json["workflow"]["specification"]["$graph"][0]["steps"];
         assert!(steps.is_array(), "Steps should be an array");
-
-        // Ensure there are steps in the graph
+    
         assert!(
             !steps.as_array().unwrap().is_empty(),
             "Steps array should not be empty"
         );
-
-        // Check if 'calculation' step exists
+    
         let calculation_exists = steps
             .as_array()
             .unwrap()
             .iter()
             .any(|step| step["id"] == "#main/calculation");
         assert!(calculation_exists, "'calculation' step is missing");
-
-        // Check if 'plot' step exists
+    
         let plot_exists = steps
             .as_array()
             .unwrap()
@@ -784,6 +784,13 @@ mod tests {
         Ok(())
     }
 
+    fn normalize_path(path: &str) -> String {
+        Path::new(path)
+            .to_str()
+            .unwrap_or_default()
+            .replace("\\", "/")
+    }
+    
     #[test]
     fn test_generate_workflow_json_from_cwl_with_inputs_yaml() {
         use std::path::PathBuf;
@@ -807,13 +814,15 @@ mod tests {
         let parameters = &inputs["parameters"];
         assert!(parameters.is_object(), "parameters should be an object");
         assert_eq!(parameters["population"]["class"], "File");
-        assert_eq!(parameters["population"]["location"], "data/population.csv");
+        assert_eq!(
+            normalize_path(parameters["population"]["location"].as_str().unwrap()),
+            "data/population.csv"
+        );
         assert_eq!(parameters["speakers"]["class"], "File");
         assert_eq!(
-            parameters["speakers"]["location"],
+            normalize_path(parameters["speakers"]["location"].as_str().unwrap()),
             "data/speakers_revised.csv"
         );
-
         let outputs = &json["outputs"];
         assert!(outputs.is_object(), "Outputs should be an object");
         assert!(

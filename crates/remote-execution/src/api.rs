@@ -414,10 +414,10 @@ mod tests {
 
         let client = Client::new();
         let res = client
-            .post(&format!(
-                "{}/api/workflows/{}/start",
-                &server.url(),
-                workflow_id
+            .post(format!(
+            "{}/api/workflows/{}/start",
+            &server.url(),
+            workflow_id
             ))
             .header("authorization", "Bearer test_token")
             .header("cookie", "session=abcd1234")
@@ -484,7 +484,7 @@ mod tests {
 
         let client = Client::new();
         let res = client
-            .post(&format!(
+            .post(format!(
                 "{}/api/workflows/{}/start",
                 &server.url(),
                 workflow_id
