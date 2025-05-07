@@ -26,6 +26,7 @@ pub struct WorkflowConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
     #[serde(
+        default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_authors",
         serialize_with = "serialize_authors"
@@ -102,6 +103,16 @@ fn default_version() -> Version {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_deserialize_default_config() {
+        let toml = r#"[workflow]
+name = "hello_s4n"
+version = "0.1.0"
+"#;
+        let _: Config = toml::from_str(toml).unwrap();
+    }
+
     #[test]
     fn test_serialize_config() {
         let config = Config {
