@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use semver::Version;
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use smart_default::SmartDefault;
@@ -5,6 +7,13 @@ use smart_default::SmartDefault;
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Config {
     pub workflow: WorkflowConfig,
+    pub dependencies: Option<HashMap<String, Dependency>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+pub struct Dependency {
+    pub git: Option<String>,
+    pub version: Option<Version>,
 }
 
 #[derive(Serialize, Deserialize, Debug, SmartDefault, PartialEq)]
@@ -106,6 +115,7 @@ mod tests {
                 }]),
                 ..Default::default()
             },
+            ..Default::default()
         };
 
         let str = toml::to_string(&config).unwrap();

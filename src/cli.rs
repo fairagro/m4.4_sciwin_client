@@ -1,9 +1,5 @@
 use crate::commands::{
-    annotate::AnnotateCommands,
-    execute::ExecuteCommands,
-    init::InitArgs,
-    tool::{CreateToolArgs, ToolCommands},
-    workflow::WorkflowCommands,
+    annotate::AnnotateCommands, execute::ExecuteCommands, init::InitArgs, manifest::ManifestArgs, tool::{CreateToolArgs, ToolCommands}, workflow::WorkflowCommands
 };
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
@@ -48,12 +44,13 @@ pub enum Commands {
         #[arg(value_name = "TOOL_NAME", required = false)]
         tool_name: Option<String>,
     },
-
     #[command(about = "Execution of CWL Files locally or on remote servers", visible_alias = "ex")]
     Execute {
         #[command(subcommand)]
-        command: ExecuteCommands,
+         command: ExecuteCommands,
     },
+    #[command(about = "Adds SciWIn Workflow from external source")]
+    Add(ManifestArgs),
     Sync,
     #[command(about = "Generate shell completions")]
     Completions {
