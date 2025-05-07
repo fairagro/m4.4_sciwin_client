@@ -26,16 +26,16 @@ pub fn create_workflow(
     let mut headers = HeaderMap::new();
     headers.insert(COOKIE, cookie_value.parse()?);
 
-    headers.insert(AUTHORIZATION, format!("Bearer {}", reana_token).parse()?);
+    headers.insert(AUTHORIZATION, format!("Bearer {reana_token}").parse()?);
     headers.insert(CONTENT_TYPE, "application/json".parse()?);
     let client = Client::builder()
         .default_headers(headers.clone())
-        //.danger_accept_invalid_certs(true)
+        .danger_accept_invalid_certs(true)
         .build()?;
 
     // Send the request to create the workflow
     let response = client
-        .post(format!("{}/api/workflows", reana_server))
+        .post(format!("{reana_server}/api/workflows"))
         .headers(headers)
         .json(&workflow)
         .send()?
@@ -47,14 +47,14 @@ pub fn create_workflow(
 }
 
 pub fn ping_reana(reana_server: &str) -> Result<Value, Box<dyn Error>> {
-    let ping_url = format!("{}/api/ping", reana_server);
+    let ping_url = format!("{reana_server}/api/ping");
 
     let headers = HeaderMap::new();
 
     // Invalid certs part is needed for our locahost test instance
     let client = Client::builder()
         .default_headers(headers)
-        //.danger_accept_invalid_certs(true)
+        .danger_accept_invalid_certs(true)
         .build()?;
 
     let response = client.get(&ping_url).send()?;
@@ -75,17 +75,17 @@ pub fn start_workflow(
 
     // Set Authorization and Cookie headers
     headers.insert(COOKIE, cookie_value.parse()?);
-    headers.insert(AUTHORIZATION, format!("Bearer {}", reana_token).parse()?);
+    headers.insert(AUTHORIZATION, format!("Bearer {reana_token}").parse()?);
     headers.insert("Content-Type", "application/json".parse()?);
 
     // Invalid certs part is needed for our locahost test instance
     let client = ClientBuilder::new()
-        //.danger_accept_invalid_certs(true)
+        .danger_accept_invalid_certs(true)
         .build()?;
 
     // Construct the request body with optional parameters
     let body = json!({
-        "operational_options": serde_json::Value::Null,
+        "operational_options": {},
         "input_parameters": input_parameters.unwrap_or_default(),
         "restart": restart,
         "reana_specification": reana_specification
@@ -99,6 +99,7 @@ pub fn start_workflow(
     let json_response: Value = response.json()?;
     Ok(json_response)
 }
+
 
 pub fn get_workflow_status(
     reana_server: &str,
@@ -114,7 +115,7 @@ pub fn get_workflow_status(
 
     let client = Client::builder()
         .default_headers(headers)
-        //.danger_accept_invalid_certs(true)
+        .danger_accept_invalid_certs(true)
         .build()?;
 
     let response = client.get(&url).send()?;
@@ -223,10 +224,11 @@ pub fn upload_files(
     let mut headers = HeaderMap::new();
     headers.insert(COOKIE, cookie_value.parse()?);
     headers.insert(CONTENT_TYPE, "application/octet-stream".parse()?);
-    headers.insert(AUTHORIZATION, format!("Bearer {}", reana_token).parse()?);
+    headers.insert(AUTHORIZATION, format!("Bearer {reana_token}").parse()?);
 
     let client = ClientBuilder::new()
         .default_headers(headers.clone())
+        .danger_accept_invalid_certs(true)
         .build()?;
 
     for file_name in files {
@@ -300,11 +302,16 @@ pub fn download_files(
         return Ok(());
     }
 
-    let client = Client::new();
+   
 
     let mut headers = HeaderMap::new();
     headers.insert(COOKIE, cookie_value.parse()?);
     headers.insert(AUTHORIZATION, format!("Bearer {}", &reana_token).parse()?);
+
+    let client = ClientBuilder::new()
+    .default_headers(headers.clone())
+    .danger_accept_invalid_certs(true)
+    .build()?;
 
     for file_name in files {
         let url = format!(
@@ -326,7 +333,7 @@ pub fn download_files(
             let content = response.bytes()?;
             file.write_all(&content)?;
 
-            println!("Downloaded: {}", file_path);
+            println!("Downloaded: {file_path}");
         } else {
             println!(
                 "❌ Failed to download {}. Response: {:?}",

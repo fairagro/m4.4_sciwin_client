@@ -525,7 +525,7 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
         let parts: Vec<&str> = output_source.split('/').collect();
         if parts.len() != 2 {
             return Err(
-                format!("Invalid outputSource format for output: {}", output_source).into(),
+                format!("Invalid outputSource format for output: {output_source}").into(),
             );
         }
         let step_id = parts[0];
@@ -544,8 +544,7 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
             }
         }
         let run_file_path = run_file_path.ok_or(format!(
-            "Step with id {} not found or missing 'run'",
-            step_id
+            "Step with id {step_id} not found or missing 'run'"
         ))?;
         let main_workflow_path = std::path::Path::new(main_workflow_path);
         let main_workflow_dir = main_workflow_path
@@ -557,13 +556,11 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
         let tool_outputs = tool_yaml
             .get("outputs")
             .ok_or(format!(
-                "No 'outputs' section in tool file {}",
-                run_file_path
+                "No 'outputs' section in tool file {run_file_path}"
             ))?
             .as_sequence()
             .ok_or(format!(
-                "'outputs' section in tool file {} is not a sequence",
-                run_file_path
+                "'outputs' section in tool file {run_file_path} is not a sequence"
             ))?;
         let mut glob_value = None;
         for tool_output in tool_outputs {
@@ -579,8 +576,7 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
             }
         }
         let glob_value = glob_value.ok_or(format!(
-            "Output {} not found in tool file {} or missing glob",
-            output_id, run_file_path
+            "Output {output_id} not found in tool file {run_file_path} or missing glob"
         ))?;
 
         results.push((output_id.to_string(), glob_value));
@@ -786,7 +782,7 @@ mod tests {
         use serde_yaml::Value;
         use std::collections::HashSet;
 
-        let input_yaml_path = "../../tests/test_data/hello_world/workflows/main/inputs.yml";
+        let input_yaml_path = "../../tests/test_data/hello_world/inputs.yml";
         assert!(
             std::path::Path::new(input_yaml_path).exists(),
             "Test input file does not exist"

@@ -276,7 +276,7 @@ fn convert_cwl_to_json(cwl_path: &str) -> Result<serde_json::Value, Box<dyn Erro
     let workflow: CWLWorkflow = match serde_yaml::from_str(&cwl_content) {
         Ok(parsed) => parsed,
         Err(e) => {
-            println!("❌ Failed to parse CWL YAML: {}", e);
+            println!("❌ Failed to parse CWL YAML: {e}");
             return Err(Box::new(e));
         }
     };
@@ -394,7 +394,7 @@ fn convert_command_line_tool_cwl_to_json(
     let command_line_tool: CWLCommandLineTool = match serde_yaml::from_str(&cwl_content) {
         Ok(parsed) => parsed,
         Err(e) => {
-            println!("❌ Failed to parse CWL YAML: {}", e);
+            println!("❌ Failed to parse CWL YAML: {e}");
             return Err(Box::new(e));
         }
     };
@@ -473,14 +473,11 @@ fn convert_command_line_tool_cwl_to_json(
                                                         .entryname
                                                         .split(['/', '\\'])
                                                         .filter(|part| !part.is_empty())
-                                                        .last()
-                                                        .unwrap_or(&entry.entryname)
-                                                        .to_string();
-
-                                                    if original_entryname != new_entryname {
+                                                        .next_back();   
+                                                    if original_entryname != new_entryname.unwrap_or("") {
                                                         replaced_entrynames.insert(
                                                             original_entryname.clone(),
-                                                            new_entryname.clone(),
+                                                            new_entryname,
                                                         );
                                                     }
                                                     let file_location = get_location(
@@ -488,10 +485,7 @@ fn convert_command_line_tool_cwl_to_json(
                                                         entry_path,
                                                     )
                                                     .map_err(|e| {
-                                                        io::Error::new(
-                                                            io::ErrorKind::Other,
-                                                            e.to_string(),
-                                                        )
+                                                        io::Error::other(e.to_string())
                                                     })?;
                                                     read_file_content(&file_location).map(
                                                         |file_contents| {
@@ -517,7 +511,7 @@ fn convert_command_line_tool_cwl_to_json(
                                             "listing": list
                                         }),
                                         Err(e) => {
-                                            eprintln!("Error reading file contents: {}", e);
+                                            eprintln!("Error reading file contents: {e}");
                                             serde_json::json!({
                                                 "class": "InitialWorkDirRequirement"
                                             })
@@ -542,12 +536,13 @@ fn convert_command_line_tool_cwl_to_json(
     let command_line_tool_json = serde_json::json!( {
         "class": "CommandLineTool",
         "id":  format!("#{}/{}", tool_base, tool_name),
-        //"baseCommand": command_line_tool.base_command,
         "baseCommand": command_line_tool
             .base_command
             .iter()
             .map(|cmd| {
-                replaced_entrynames.get(cmd).cloned().unwrap_or_else(|| cmd.clone())
+                replaced_entrynames.get(cmd)
+                .map(|opt| opt.unwrap_or(cmd).to_string())
+                .unwrap_or_else(|| cmd.clone())
             })
             .collect::<Vec<String>>(),
         "inputs": formatted_inputs,
@@ -569,7 +564,6 @@ mod tests {
 
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
         let result = generate_workflow_json_from_cwl(&cwl_path, &None);
-        println!("result {:?}", result);
 
         assert!(result.is_ok(), "Expected generation to succeed");
         let json = result.unwrap();
@@ -797,7 +791,7 @@ mod tests {
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
         let result = generate_workflow_json_from_cwl(
             &cwl_path,
-            &Some("../../tests/test_data/hello_world/workflows/main/inputs.yml".to_string()),
+            &Some("../../tests/test_data/hello_world/inputs.yml".to_string()),
         );
 
         assert!(result.is_ok(), "Expected generation to succeed");
