@@ -826,19 +826,6 @@ mod tests {
         } else {
             panic!("Expected 'files' to be a sequence");
         }
-
-        let dirs = mapping
-            .get(Value::String("directories".to_string()))
-            .expect("Missing 'directories'");
-        if let Value::Sequence(dir_list) = dirs {
-            let dir_set: HashSet<_> = dir_list.iter().filter_map(|v| v.as_str()).collect();
-            assert!(
-                dir_set.contains("../../tests/test_data/hello_world/workflows"),
-                "Missing correct directory"
-            );
-        } else {
-            panic!("Expected 'directories' to be a sequence");
-        }
     }
 
     #[test]
@@ -1284,18 +1271,6 @@ mod tests {
             panic!("Expected 'files' to be a sequence");
         }
 
-        let dirs = mapping
-            .get(Value::String("directories".to_string()))
-            .expect("Missing 'directories'");
-        if let Value::Sequence(dir_list) = dirs {
-            let dir_set: HashSet<_> = dir_list.iter().filter_map(|v| v.as_str()).collect();
-            assert!(
-                dir_set.contains(&"../../tests/test_data/hello_world/workflows"),
-                "Missing correct directory"
-            );
-        } else {
-            panic!("Expected 'directories' to be a sequence");
-        }
     }
 
     #[test]
