@@ -58,8 +58,6 @@ pub struct RemoteExecuteArgs {
     pub instance: String,
     #[arg(short = 't', long = "token", help="Your reana token")]
     pub token: String,
-    #[arg(short = 'c', long = "cookie", help="Your session cookie")]
-    pub cookie_value: String,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
     #[arg(short = 'i', long = "input", help="Input yaml file")]
@@ -128,7 +126,6 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
     let reana_instance = &args.instance;
     let reana_token = &args.token;
-    let cookie_value = &args.cookie_value;
     let file = &args.file;
     let input_file = &args.input_file;
 
@@ -139,27 +136,21 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
         eprintln!("Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
     }
-
-    let create_response = create_workflow(reana_instance, reana_token, cookie_value, &workflow_json)?;
+    let create_response = create_workflow(reana_instance, reana_token, &workflow_json)?;
     if let Some(workflow_name) = create_response["workflow_name"].as_str() {
-
-        upload_files(reana_instance, reana_token, cookie_value, input_file, file, workflow_name, &workflow_json)?;
-
+        upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)?;
         let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
-        start_workflow(reana_instance, reana_token, cookie_value, workflow_name, None, false, converted_yaml)?;
-
+        start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)?;
         loop {
-            let status_response = get_workflow_status(reana_instance, reana_token, cookie_value, workflow_name)?;
+            let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)?;
             let workflow_status = status_response["status"]
                 .as_str()
                 .unwrap_or("unknown");
-
-
             if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {
                     "finished" => {
                         println!("✅ Workflow finished successfully.");
-                        download_files(reana_instance, reana_token, cookie_value, workflow_name, &workflow_json)?;
+                        download_files(reana_instance, reana_token, workflow_name, &workflow_json)?;
                     }
                     "failed" => {
                         eprintln!("❌ Workflow execution failed.");

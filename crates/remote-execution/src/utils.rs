@@ -725,7 +725,7 @@ mod tests {
         "#;
 
         let mut file = File::create(&cwl_file_path).unwrap();
-        write!(file, "{}", cwl_content).unwrap();
+        write!(file, "{cwl_content}").unwrap();
 
         let result = load_cwl_file(
             cwl_file_path.to_str().unwrap(),
@@ -803,7 +803,7 @@ mod tests {
         );
 
         let result = build_inputs_yaml(cwl_path, input_yaml_path);
-        assert!(result.is_ok(), "build_inputs_yaml failed: {:?}", result);
+        assert!(result.is_ok(), "build_inputs_yaml failed: {result:?}");
         let mapping = result.unwrap();
 
         let files = mapping
@@ -1078,7 +1078,7 @@ mod tests {
             glob: "*.txt"
         "#;
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", yaml_content).expect("Failed to write CWL content");
+        write!(file, "{yaml_content}").expect("Failed to write CWL content");
 
         let base_path = temp_dir.path().to_str().unwrap();
         let result = load_cwl_yaml(base_path, &file_path);
@@ -1109,7 +1109,7 @@ mod tests {
 
         let invalid_content = "cwlVersion: v1.0\nclass: CommandLineTool\nbaseCommand echo\n";
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", invalid_content).expect("Failed to write invalid CWL content");
+        write!(file, "{invalid_content}").expect("Failed to write invalid CWL content");
 
         let base_path = temp_dir.path().to_str().unwrap();
         let result = load_cwl_yaml(base_path, &file_path);
@@ -1131,7 +1131,7 @@ mod tests {
         baseCommand: echo
         "#;
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", yaml_content).expect("Failed to write CWL content");
+        write!(file, "{yaml_content}").expect("Failed to write CWL content");
 
         let base_path = temp_dir.path().to_str().unwrap();
         let result = load_cwl_yaml(base_path, &file_path);
@@ -1154,7 +1154,7 @@ mod tests {
         "#;
 
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", yaml_content).expect("Failed to write YAML content");
+        write!(file, "{yaml_content}").expect("Failed to write YAML content");
 
         let result = load_yaml_file(&file_path);
 
@@ -1190,7 +1190,7 @@ mod tests {
 
         let invalid_content = "cwlVersion: v1.0\nclass: CommandLineTool\nbaseCommand echo\n";
         let mut file = std::fs::File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", invalid_content).expect("Failed to write invalid CWL content");
+        write!(file, "{invalid_content}").expect("Failed to write invalid CWL content");
 
         let base_path = temp_dir.path().to_str().unwrap();
         let result = load_cwl_file(base_path, &file_path);
@@ -1205,7 +1205,7 @@ mod tests {
 
         let file_content = "This is a test file content.";
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", file_content).expect("Failed to write file content");
+        write!(file, "{file_content}").expect("Failed to write file content");
 
         let result = read_file_content(file_path.to_str().unwrap());
 
@@ -1216,7 +1216,6 @@ mod tests {
     #[test]
     fn test_read_file_content_nonexistent() {
         let result = read_file_content("nonexistent.txt");
-
         assert!(result.is_err());
     }
 
@@ -1227,7 +1226,7 @@ mod tests {
 
         let invalid_content = "This file might not be readable.";
         let mut file = File::create(&file_path).expect("Failed to create file");
-        write!(file, "{}", invalid_content).expect("Failed to write content");
+        write!(file, "{invalid_content}").expect("Failed to write content");
 
         let result = read_file_content(file_path.to_str().unwrap());
 
@@ -1247,7 +1246,7 @@ mod tests {
         );
 
         let result = build_inputs_cwl(cwl_input_path, None);
-        assert!(result.is_ok(), "build_inputs_cwl failed: {:?}", result);
+        assert!(result.is_ok(), "build_inputs_cwl failed: {result:?}");
         let mapping = result.unwrap();
 
         let files = mapping
@@ -1286,7 +1285,7 @@ mod tests {
         let inputs_yaml = Some(&input);
 
         let result = build_inputs_cwl(cwl_path, inputs_yaml);
-        assert!(result.is_ok(), "build_inputs_cwl failed: {:?}", result);
+        assert!(result.is_ok(), "build_inputs_cwl failed: {result:?}");
 
         let mapping = result.unwrap();
 
