@@ -4,7 +4,7 @@ use cwl::{
     inputs::{CommandInputParameter, WorkflowStepInput},
     load_tool,
     outputs::WorkflowOutputParameter,
-    requirements::{DockerRequirement, Requirement},
+    requirements::Requirement,
     types::{DefaultValue, Entry, PathItem},
     wf::{Workflow, WorkflowStep},
 };
@@ -46,11 +46,7 @@ impl Saveable for CommandLineTool {
         if let Some(requirements) = &mut self.requirements {
             for requirement in requirements {
                 if let Requirement::DockerRequirement(docker) = requirement {
-                    if let DockerRequirement::DockerFile {
-                        docker_file: Entry::Include(include),
-                        docker_image_id: _,
-                    } = docker
-                    {
+                    if let Some(Entry::Include(include)) = &mut docker.docker_file {
                         include.include = resolve_path(&include.include, path);
                     }
                 } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
@@ -274,7 +270,7 @@ mod tests {
     use cwl::{
         clt::Command,
         inputs::CommandLineBinding,
-        requirements::InitialWorkDirRequirement,
+        requirements::{DockerRequirement, InitialWorkDirRequirement},
         types::{CWLType, File, Listing},
     };
     use serde_yaml::Value;
@@ -339,9 +335,10 @@ mod tests {
         );
         assert_eq!(
             *req_1,
-            Requirement::DockerRequirement(DockerRequirement::DockerFile {
-                docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
-                docker_image_id: "test".to_string()
+            Requirement::DockerRequirement(DockerRequirement {
+                docker_file: Some(Entry::from_file(&os_path("../../test/data/Dockerfile"))),
+                docker_image_id: Some("test".to_string()),
+                ..Default::default()
             })
         );
     }

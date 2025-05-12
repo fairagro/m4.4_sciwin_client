@@ -3,7 +3,7 @@ use common::os_path;
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
-    requirements::{DockerRequirement, Requirement},
+    requirements::Requirement,
     types::{CWLType, Entry},
 };
 use fstest::fstest;
@@ -178,10 +178,14 @@ pub fn tool_create_test_container_image() {
     let requirements = cwl.requirements.clone().expect("No requirements found!");
     assert_eq!(requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(DockerRequirement::DockerPull(image)) = &requirements[1] {
-        assert_eq!(image, "python");
+    if let Requirement::DockerRequirement(docker_req) = &requirements[1] {
+        if let Some(image) = &docker_req.docker_pull {
+            assert_eq!(image, "python");
+        } else {
+            panic!("DockerRequirement does not contain a dockerPull");
+        }
     } else {
-        panic!("Requirement is not a Docker pull");
+        panic!("Requirement is not a DockerRequirement");
     }
 
     //no uncommitted left?
@@ -208,15 +212,15 @@ pub fn tool_create_test_dockerfile() {
     let requirements = cwl.requirements.clone().expect("No requirements found!");
     assert_eq!(requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(DockerRequirement::DockerFile {
-        docker_file,
-        docker_image_id,
-    }) = &requirements[1]
-    {
-        assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
-        assert_eq!(*docker_image_id, "sciwin-client".to_string());
+    if let Requirement::DockerRequirement(docker_req) = &requirements[1] {
+        if let (Some(docker_file), Some(docker_image_id)) = (&docker_req.docker_file, &docker_req.docker_image_id) {
+            assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); // as file is in root and CWL in workflows/echo
+            assert_eq!(docker_image_id, "sciwin-client");
+        } else {
+            panic!("DockerRequirement does not contain dockerFile and dockerImageId");
+        }
     } else {
-        panic!("Requirement is not a Dockerfile");
+        panic!("Requirement is not a DockerRequirement");
     }
 
     //no uncommitted left?

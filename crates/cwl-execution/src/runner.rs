@@ -510,32 +510,34 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
     let container_engine = container_engine().to_string();
 
-    let docker_image = match docker {
-        DockerRequirement::DockerPull(pull) => pull,
-        DockerRequirement::DockerFile {
-            docker_file,
-            docker_image_id,
-        } => {
-            let path = match docker_file {
-                Entry::Include(include) => include.include,
-                Entry::Source(src) => {
-                    let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
-                    fs::write(&path, src).unwrap();
-                    path
-                }
-            };
+    let docker_image = if let Some(pull) = &docker.docker_pull {
+        pull
+    } else if let (Some(docker_file), Some(docker_image_id)) = (&docker.docker_file, &docker.docker_image_id) {
+        let path = match docker_file {
+            Entry::Include(include) => include.include.clone(),
+            Entry::Source(src) => {
+                let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
+                fs::write(&path, src).unwrap();
+                path
+            }
+        };
 
-            let mut build = SystemCommand::new(&container_engine);
-            build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
-            let output = build.output().expect("Could not build container!");
-            println!("{}", String::from_utf8_lossy(&output.stderr));
-            docker_image_id
-        }
+        let mut build = SystemCommand::new(&container_engine);
+        build.args(["build", "-f", &path, "-t", docker_image_id, "."]);
+        let output = build.output().expect("Could not build container!");
+        println!("{}", String::from_utf8_lossy(&output.stderr));
+        docker_image_id
+    } else {
+        unreachable!()
     };
     let mut docker_command = SystemCommand::new(&container_engine);
 
     //create workdir vars
-    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir = if let Some(docker_output_directory) = docker.docker_output_directory {
+        docker_output_directory
+    } else {
+        format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
+    };
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
@@ -551,7 +553,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         docker_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
     }
 
-    docker_command.arg(&docker_image);
+    docker_command.arg(docker_image);
     docker_command.arg(command.get_program());
 
     //rewrite home dir

@@ -119,28 +119,28 @@ impl InitialWorkDirRequirement {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
-pub enum DockerRequirement {
-    DockerPull(String),
-    #[serde(untagged)]
-    DockerFile {
-        #[serde(rename = "dockerFile")]
-        docker_file: Entry,
-        #[serde(rename = "dockerImageId")]
-        docker_image_id: String,
-    },
+pub struct DockerRequirement {
+    pub docker_pull: Option<String>,
+    pub docker_file: Option<Entry>,
+    pub docker_image_id: Option<String>,
+    pub docker_output_directory: Option<String>,
 }
 
 impl DockerRequirement {
     pub fn from_file(filename: &str, tag: &str) -> Self {
-        DockerRequirement::DockerFile {
-            docker_file: Entry::from_file(filename),
-            docker_image_id: tag.to_string(),
+        DockerRequirement {
+            docker_file: Some(Entry::from_file(filename)),
+            docker_image_id: Some(tag.to_string()),
+            ..Default::default()
         }
     }
     pub fn from_pull(image_id: &str) -> Self {
-        DockerRequirement::DockerPull(image_id.to_string())
+        DockerRequirement {
+            docker_pull: Some(image_id.to_string()),
+            ..Default::default()
+        }
     }
 }
 

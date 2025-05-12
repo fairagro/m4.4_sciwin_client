@@ -5,7 +5,7 @@ use crate::{
 use cwl::{
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
-    requirements::{DockerRequirement, Requirement},
+    requirements::Requirement,
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
 };
@@ -105,14 +105,12 @@ fn stage_requirements(requirements: &Option<Vec<Requirement>>, tool_path: &Path,
                     }
                     staged_files.push(path_str.clone().into_owned());
                 }
-            } else if let Requirement::DockerRequirement(DockerRequirement::DockerFile {
-                docker_file: Entry::Include(file),
-                docker_image_id: _,
-            }) = requirement
-            {
-                let destination_file = path.join("Dockerfile");
-                copy_file(tool_path.join(&file.include), &destination_file)?;
-                staged_files.push(destination_file.to_string_lossy().into_owned());
+            } else if let Requirement::DockerRequirement(dr) = requirement {
+                if let Some(Entry::Include(file)) = &dr.docker_file {
+                    let destination_file = path.join("Dockerfile");
+                    copy_file(tool_path.join(&file.include), &destination_file)?;
+                    staged_files.push(destination_file.to_string_lossy().into_owned());
+                }
             }
         }
     }
