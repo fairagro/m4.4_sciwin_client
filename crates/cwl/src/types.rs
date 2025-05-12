@@ -465,7 +465,7 @@ pub enum EnviromentDefs {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Listing {
+pub struct Dirent {
     pub entryname: String,
     pub entry: Entry,
 }

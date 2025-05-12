@@ -1,4 +1,4 @@
-use super::types::{Entry, EnviromentDefs, Listing};
+use super::types::{Entry, EnviromentDefs, Dirent};
 use crate::CWLDocument;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
@@ -79,13 +79,13 @@ fn get_entry_name(input: &str) -> String {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
-    pub listing: Vec<Listing>,
+    pub listing: Vec<Dirent>,
 }
 
 impl InitialWorkDirRequirement {
     pub fn from_file(filename: &str) -> Self {
         InitialWorkDirRequirement {
-            listing: vec![Listing {
+            listing: vec![Dirent {
                 entryname: filename.to_string(),
                 entry: Entry::from_file(filename),
             }],
@@ -95,7 +95,7 @@ impl InitialWorkDirRequirement {
         InitialWorkDirRequirement {
             listing: filenames
                 .iter()
-                .map(|&filename| Listing {
+                .map(|&filename| Dirent {
                     entryname: filename.to_string(),
                     entry: Entry::Source(get_entry_name(filename)),
                 })
@@ -104,7 +104,7 @@ impl InitialWorkDirRequirement {
     }
     pub fn from_contents(entryname: &str, contents: &str) -> Self {
         InitialWorkDirRequirement {
-            listing: vec![Listing {
+            listing: vec![Dirent {
                 entryname: entryname.to_string(),
                 entry: Entry::Source(contents.to_string()),
             }],
@@ -112,7 +112,7 @@ impl InitialWorkDirRequirement {
     }
 
     pub fn add_files(&mut self, filenames: &[&str]) {
-        self.listing.extend(filenames.iter().map(|&f| Listing {
+        self.listing.extend(filenames.iter().map(|&f| Dirent {
             entryname: f.to_string(),
             entry: Entry::Source(get_entry_name(f)),
         }));

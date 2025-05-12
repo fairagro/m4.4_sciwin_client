@@ -271,7 +271,7 @@ mod tests {
         clt::Command,
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
-        types::{CWLType, File, Listing},
+        types::{CWLType, File, Dirent},
     };
     use serde_yaml::Value;
     use std::path::Path;
@@ -327,7 +327,7 @@ mod tests {
         assert_eq!(
             *req_0,
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
-                listing: vec![Listing {
+                listing: vec![Dirent {
                     entry: Entry::from_file(&os_path("../../test/script.py")),
                     entryname: "test/script.py".to_string()
                 }]
