@@ -170,6 +170,8 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
             } else {
                 Some(get_file_property(file.get_location(), suffix))
             }
+        } else if let DefaultValue::Array(inner) = value {
+            Some(format!("[{}]", inner.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(",")))
         } else {
             Some(value.as_value_string())
         }
