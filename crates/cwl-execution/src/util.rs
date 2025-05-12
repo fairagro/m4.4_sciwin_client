@@ -266,18 +266,10 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
         let dest_path = dest.as_ref().join(entry.file_name());
         if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::Directory(sub_dir));
-            } else {
-                dir.listing = Some(vec![DefaultValue::Directory(sub_dir)])
-            }
+            dir.listing.push(DefaultValue::Directory(sub_dir));
         } else {
             copy_file(src_path, &dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
-            } else {
-                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))]);
-            }
+            dir.listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
         }
     }
     Ok(dir)
@@ -485,12 +477,9 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing = result.listing.map(|mut listing| {
-            listing.sort_by_key(|item| match item {
-                DefaultValue::File(file) => file.basename.clone(),
-                _ => Some(String::new()),
-            });
-            listing
+        result.listing.sort_by_key(|item| match item {
+            DefaultValue::File(file) => file.basename.clone(),
+            _ => Some(String::new()),
         });
 
         let file = current.join("file.txt").to_string_lossy().into_owned();
@@ -499,7 +488,7 @@ mod tests {
         let expected = Directory {
             location: Some(format!("file://{cwd}")),
             basename: Some("test_dir".to_string()),
-            listing: Some(vec![
+            listing: vec![
                 DefaultValue::File(File {
                     class: "File".into(),
                     location: Some(format!("file://{file}")),
@@ -522,7 +511,7 @@ mod tests {
                     path: Some(input),
                     ..Default::default()
                 }),
-            ]),
+            ],
             path: Some(cwd.to_string()),
             ..Default::default()
         };
