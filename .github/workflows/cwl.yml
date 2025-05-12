@@ -21,6 +21,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - run: |
+          git config --global user.name "Derp Derpson"
+          git config --global user.email "derp.derpson@derpipedia.org"
       - name: build
         run: cargo build --release
       - name: Clone CWL
