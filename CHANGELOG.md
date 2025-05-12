@@ -5,7 +5,9 @@
 - Support Detection of Arrays as inputs in `tool create`
 
 ## 🐛 Bugfixes
-- correctly support DockerRequirement.DockerOutputDirectory
+- correctly support `DockerRequirement.DockerOutputDirectory`
+- made `CommandOutputBinding.glob` Optional
+- ramping up runner conformance from 131/378 to 134/378
 
 # v0.4.0
 ## 🚀 Features

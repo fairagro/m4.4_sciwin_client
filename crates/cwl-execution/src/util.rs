@@ -140,12 +140,14 @@ fn evaluate_output_impl(
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             } else {
                 let filename = match output.type_ {
@@ -169,48 +171,55 @@ fn evaluate_output_impl(
         }
         CWLType::Array(inner) if matches!(&**inner, CWLType::File) || matches!(&**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
-                let result = glob(&binding.glob)?;
-                let values: Result<Vec<_>, Box<dyn Error>> = result
-                    .map(|entry| {
-                        let entry = entry?;
-                        match **inner {
-                            CWLType::File => handle_file_output(&entry, initial_dir, output),
-                            CWLType::Directory => handle_dir_output(&entry, initial_dir),
-                            _ => unreachable!(),
-                        }
-                    })
-                    .collect();
-                outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                if let Some(glob_) = &binding.glob {
+                    let result = glob(glob_)?;
+                    let values: Result<Vec<_>, Box<dyn Error>> = result
+                        .map(|entry| {
+                            let entry = entry?;
+                            match **inner {
+                                CWLType::File => handle_file_output(&entry, initial_dir, output),
+                                CWLType::Directory => handle_dir_output(&entry, initial_dir),
+                                _ => unreachable!(),
+                            }
+                        })
+                        .collect();
+                    outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                }
             }
         }
         CWLType::Directory => {
             if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             }
         }
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
-                let contents = fs::read_to_string(&binding.glob)?;
+                if let Some(glob_) = &binding.glob {
+                    let contents = fs::read_to_string(glob_)?;
 
-                if let Some(expression) = &binding.output_eval {
-                    let mut ctx = File::from_location(&binding.glob);
-                    ctx.format = output.format.clone();
-                    let mut ctx = ctx.snapshot();
-                    ctx.contents = Some(contents);
-                    set_self(&vec![&ctx])?;
-                    let result = evaluate_expression(expression)?;
-                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
-                    outputs.insert(output.id.clone(), DefaultValue::Any(value));
-                    unset_self()?;
-                } else {
-                    outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
+                    let value = if let Some(expression) = &binding.output_eval {
+                        let mut ctx = File::from_location(glob_);
+                        ctx.format = output.format.clone();
+                        let mut ctx = ctx.snapshot();
+                        ctx.contents = Some(contents);
+                        set_self(&vec![&ctx])?;
+                        let result = evaluate_expression(expression)?;
+                        let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                        unset_self()?;
+                        DefaultValue::Any(value)
+                    } else {
+                        DefaultValue::Any(Value::String(contents))
+                    };
+                    outputs.insert(output.id.clone(), value);
                 }
             }
         }
@@ -257,18 +266,10 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
         let dest_path = dest.as_ref().join(entry.file_name());
         if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::Directory(sub_dir));
-            } else {
-                dir.listing = Some(vec![DefaultValue::Directory(sub_dir)])
-            }
+            dir.listing.push(DefaultValue::Directory(sub_dir));
         } else {
             copy_file(src_path, &dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
-            } else {
-                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))]);
-            }
+            dir.listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
         }
     }
     Ok(dir)
@@ -416,7 +417,7 @@ mod tests {
             .with_id("out")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: "tests/test_data/file.txt".to_string(),
+                glob: Some("tests/test_data/file.txt".to_string()),
                 ..Default::default()
             });
 
@@ -476,12 +477,9 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing = result.listing.map(|mut listing| {
-            listing.sort_by_key(|item| match item {
-                DefaultValue::File(file) => file.basename.clone(),
-                _ => Some(String::new()),
-            });
-            listing
+        result.listing.sort_by_key(|item| match item {
+            DefaultValue::File(file) => file.basename.clone(),
+            _ => Some(String::new()),
         });
 
         let file = current.join("file.txt").to_string_lossy().into_owned();
@@ -490,7 +488,7 @@ mod tests {
         let expected = Directory {
             location: Some(format!("file://{cwd}")),
             basename: Some("test_dir".to_string()),
-            listing: Some(vec![
+            listing: vec![
                 DefaultValue::File(File {
                     class: "File".into(),
                     location: Some(format!("file://{file}")),
@@ -513,7 +511,7 @@ mod tests {
                     path: Some(input),
                     ..Default::default()
                 }),
-            ]),
+            ],
             path: Some(cwd.to_string()),
             ..Default::default()
         };

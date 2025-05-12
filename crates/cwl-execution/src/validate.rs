@@ -63,8 +63,9 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     //set values in output glob
     for output in &mut clt.outputs {
         if let Some(binding) = &mut output.output_binding {
-            let glob = set_placeholder_values_in_string(&binding.glob, runtime, &clt.base.inputs);
-            binding.glob = glob;
+            if let Some(glob) = binding.glob.as_mut() {
+                *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
+            }
         }
     }
 
@@ -169,6 +170,8 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
             } else {
                 Some(get_file_property(file.get_location(), suffix))
             }
+        } else if let DefaultValue::Array(inner) = value {
+            Some(format!("[{}]", inner.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(",")))
         } else {
             Some(value.as_value_string())
         }

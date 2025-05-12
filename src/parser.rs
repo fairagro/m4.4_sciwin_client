@@ -112,7 +112,7 @@ pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
                 .with_type(output_type)
                 .with_id(&filename)
                 .with_binding(CommandOutputBinding {
-                    glob: f.to_string(),
+                    glob: Some(f.to_string()),
                     ..Default::default()
                 })
         })
@@ -292,8 +292,8 @@ fn post_process_variables(tool: &mut CommandLineTool) {
         if let Some(default) = &input.default {
             for output in &mut tool.outputs {
                 if let Some(binding) = &mut output.output_binding {
-                    if binding.glob == default.as_value_string() {
-                        binding.glob = process_input(input);
+                    if binding.glob == Some(default.as_value_string()) {
+                        binding.glob = Some(process_input(input));
                         processed_once = true;
                     }
                 }
@@ -335,9 +335,9 @@ fn post_process_variables(tool: &mut CommandLineTool) {
 
     for output in &mut tool.outputs {
         if let Some(binding) = &mut output.output_binding {
-            if binding.glob == "." {
+            if matches!(binding.glob.as_deref(), Some(".")) {
                 output.id = "output_directory".to_string();
-                binding.glob = "$(runtime.outdir)".into();
+                binding.glob = Some("$(runtime.outdir)".to_string());
             }
         }
     }
@@ -545,14 +545,14 @@ mod tests {
                 .with_type(CWLType::File)
                 .with_id("my-file")
                 .with_binding(CommandOutputBinding {
-                    glob: "my-file.txt".to_string(),
+                    glob: Some("my-file.txt".to_string()),
                     ..Default::default()
                 }),
             CommandOutputParameter::default()
                 .with_type(CWLType::File)
                 .with_id("archive")
                 .with_binding(CommandOutputBinding {
-                    glob: "archive.tar.gz".to_string(),
+                    glob: Some("archive.tar.gz".to_string()),
                     ..Default::default()
                 }),
         ];
