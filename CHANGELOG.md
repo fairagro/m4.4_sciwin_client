@@ -4,6 +4,9 @@
 - Detect URLs as files if given with `http://` or `https://` protocol
 - Support Detection of Arrays as inputs in `tool create`
 
+## 🐛 Bugfixes
+- correctly support DockerRequirement.DockerOutputDirectory
+
 # v0.4.0
 ## 🚀 Features
 - Added `--no-defaults` flag to tool create which can be handy when using passwords as inputs
