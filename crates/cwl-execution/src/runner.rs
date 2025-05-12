@@ -533,7 +533,11 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new(&container_engine);
 
     //create workdir vars
-    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir = if let Some(docker_output_directory) = docker.docker_output_directory {
+        docker_output_directory
+    } else {
+        format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
+    };
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
