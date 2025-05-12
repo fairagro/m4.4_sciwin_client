@@ -139,13 +139,15 @@ fn evaluate_output_impl(
 ) -> Result<(), Box<dyn Error>> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
-            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
-                let mut result = glob(glob_)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", glob_))?;
+            if let Some(binding) = &output.output_binding {
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             } else {
                 let filename = match output.type_ {
@@ -168,29 +170,33 @@ fn evaluate_output_impl(
             }
         }
         CWLType::Array(inner) if matches!(&**inner, CWLType::File) || matches!(&**inner, CWLType::Directory) => {
-            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
-                let result = glob(glob_)?;
-                let values: Result<Vec<_>, Box<dyn Error>> = result
-                    .map(|entry| {
-                        let entry = entry?;
-                        match **inner {
-                            CWLType::File => handle_file_output(&entry, initial_dir, output),
-                            CWLType::Directory => handle_dir_output(&entry, initial_dir),
-                            _ => unreachable!(),
-                        }
-                    })
-                    .collect();
-                outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+            if let Some(binding) = &output.output_binding {
+                if let Some(glob_) = &binding.glob {
+                    let result = glob(glob_)?;
+                    let values: Result<Vec<_>, Box<dyn Error>> = result
+                        .map(|entry| {
+                            let entry = entry?;
+                            match **inner {
+                                CWLType::File => handle_file_output(&entry, initial_dir, output),
+                                CWLType::Directory => handle_dir_output(&entry, initial_dir),
+                                _ => unreachable!(),
+                            }
+                        })
+                        .collect();
+                    outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                }
             }
         }
         CWLType::Directory => {
-            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
-                let mut result = glob(glob_)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", glob_))?;
+            if let Some(binding) = &output.output_binding {
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             }
         }
