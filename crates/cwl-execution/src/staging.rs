@@ -52,10 +52,12 @@ pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[
 
         for output in outputs {
             if let Some(binding) = &output.output_binding {
-                let binding_path = tmp_dir.join(&binding.glob);
-                if binding_path.to_str().unwrap().matches(file).next().is_some() {
-                    should_remove = false;
-                    break;
+                if let Some(glob) = &binding.glob {
+                    let binding_path = tmp_dir.join(glob);
+                    if binding_path.to_str().unwrap().matches(file).next().is_some() {
+                        should_remove = false;
+                        break;
+                    }
                 }
             }
         }
@@ -429,7 +431,7 @@ mod tests {
         let value = DefaultValue::File(File::from_location(&test_file.to_string()));
 
         let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
-            glob: "tests/test_data/input.txt".to_string(),
+            glob: Some("tests/test_data/input.txt".to_string()),
             ..Default::default()
         });
 

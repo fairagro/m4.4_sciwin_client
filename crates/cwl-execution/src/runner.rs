@@ -301,11 +301,11 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
             create_and_write_file_forced(stdout, out)?;
         } else if tool.has_stdout_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
-            let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
-            } else {
-                &get_random_filename(&format!("{}_stdout", output.id), "out")
-            };
+            let filename = output
+                .output_binding
+                .as_ref()
+                .and_then(|binding| binding.glob.clone())
+                .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
         } else {
             eprintln!("{}", out);
@@ -318,11 +318,11 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
             create_and_write_file_forced(stderr, out)?;
         } else if tool.has_stderr_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
-            let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
-            } else {
-                &get_random_filename(&format!("{}_stderr", output.id), "out")
-            };
+            let filename = output
+                .output_binding
+                .as_ref()
+                .and_then(|binding| binding.glob.clone())
+                .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
         } else {
             eprintln!("❌ {}", out);

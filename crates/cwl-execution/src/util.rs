@@ -139,13 +139,13 @@ fn evaluate_output_impl(
 ) -> Result<(), Box<dyn Error>> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
-            if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
+            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
+                let mut result = glob(glob_)?;
                 if let Some(entry) = result.next() {
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
                 } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                    Err(format!("Could not evaluate glob: {}", glob_))?;
                 }
             } else {
                 let filename = match output.type_ {
@@ -168,8 +168,8 @@ fn evaluate_output_impl(
             }
         }
         CWLType::Array(inner) if matches!(&**inner, CWLType::File) || matches!(&**inner, CWLType::Directory) => {
-            if let Some(binding) = &output.output_binding {
-                let result = glob(&binding.glob)?;
+            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
+                let result = glob(glob_)?;
                 let values: Result<Vec<_>, Box<dyn Error>> = result
                     .map(|entry| {
                         let entry = entry?;
@@ -184,33 +184,36 @@ fn evaluate_output_impl(
             }
         }
         CWLType::Directory => {
-            if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
+            if let Some(glob_) = output.output_binding.as_ref().and_then(|binding| binding.glob.as_ref()) {
+                let mut result = glob(glob_)?;
                 if let Some(entry) = result.next() {
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
                 } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                    Err(format!("Could not evaluate glob: {}", glob_))?;
                 }
             }
         }
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
-                let contents = fs::read_to_string(&binding.glob)?;
+                if let Some(glob_) = &binding.glob {
+                    let contents = fs::read_to_string(glob_)?;
 
-                if let Some(expression) = &binding.output_eval {
-                    let mut ctx = File::from_location(&binding.glob);
-                    ctx.format = output.format.clone();
-                    let mut ctx = ctx.snapshot();
-                    ctx.contents = Some(contents);
-                    set_self(&vec![&ctx])?;
-                    let result = evaluate_expression(expression)?;
-                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
-                    outputs.insert(output.id.clone(), DefaultValue::Any(value));
-                    unset_self()?;
-                } else {
-                    outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
+                    let value = if let Some(expression) = &binding.output_eval {
+                        let mut ctx = File::from_location(glob_);
+                        ctx.format = output.format.clone();
+                        let mut ctx = ctx.snapshot();
+                        ctx.contents = Some(contents);
+                        set_self(&vec![&ctx])?;
+                        let result = evaluate_expression(expression)?;
+                        let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                        unset_self()?;
+                        DefaultValue::Any(value)
+                    } else {
+                        DefaultValue::Any(Value::String(contents))
+                    };
+                    outputs.insert(output.id.clone(), value);
                 }
             }
         }
@@ -416,7 +419,7 @@ mod tests {
             .with_id("out")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: "tests/test_data/file.txt".to_string(),
+                glob: Some("tests/test_data/file.txt".to_string()),
                 ..Default::default()
             });
 

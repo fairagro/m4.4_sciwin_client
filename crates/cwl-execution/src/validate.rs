@@ -63,8 +63,9 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     //set values in output glob
     for output in &mut clt.outputs {
         if let Some(binding) = &mut output.output_binding {
-            let glob = set_placeholder_values_in_string(&binding.glob, runtime, &clt.base.inputs);
-            binding.glob = glob;
+            if let Some(glob) = binding.glob.as_mut() {
+                *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
+            }
         }
     }
 
