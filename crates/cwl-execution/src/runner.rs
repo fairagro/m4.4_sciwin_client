@@ -507,7 +507,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     Ok(command)
 }
 
-fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
     let container_engine = container_engine().to_string();
 
     let docker_image = if let Some(pull) = &docker.docker_pull {
@@ -533,10 +533,10 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
     let mut docker_command = SystemCommand::new(&container_engine);
 
     //create workdir vars
-    let workdir = if let Some(docker_output_directory) = docker.docker_output_directory {
+    let workdir = if let Some(docker_output_directory) = &docker.docker_output_directory {
         docker_output_directory
     } else {
-        format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
+        &format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
     };
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
@@ -562,7 +562,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         .map(|arg| {
             arg.to_string_lossy()
                 .into_owned()
-                .replace(&runtime.runtime["outdir"], &workdir)
+                .replace(&runtime.runtime["outdir"], workdir)
                 .replace("\\", "/")
         })
         .collect::<Vec<_>>();

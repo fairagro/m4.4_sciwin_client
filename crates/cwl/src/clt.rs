@@ -6,7 +6,10 @@ use super::{
     requirements::Requirement,
     types::CWLType,
 };
-use crate::{requirements::DockerRequirement, DocumentBase};
+use crate::{
+    requirements::{DockerRequirement, FromRequirement},
+    DocumentBase,
+};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -161,14 +164,9 @@ impl CommandLineTool {
     }
 
     /// Checks whether the `CommandLineTool` has a `DockerRequirement` in requirements and returns an Option to it
-    pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
-        self.requirements.as_ref()?.iter().find_map(|req| {
-            if let Requirement::DockerRequirement(dr) = req {
-                Some(dr.clone()) // Return the found DockerRequirement
-            } else {
-                None
-            }
-        })
+    /// do not change calls to the generic get_requirement
+    pub fn get_docker_requirement(&self) -> Option<&DockerRequirement> {
+        self.requirements.as_ref()?.iter().find_map(|req| Requirement::get(req))
     }
 
     /// Gets the permanent fail code of the `CommandLineTool`

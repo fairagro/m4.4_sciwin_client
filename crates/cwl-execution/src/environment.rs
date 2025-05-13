@@ -1,7 +1,7 @@
 use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
 use cwl::{
     inputs::CommandInputParameter,
-    requirements::{check_timelimit, Requirement, StringOrNumber},
+    requirements::{check_timelimit, Requirement, ResourceRequirement, StringOrNumber},
     types::{DefaultValue, EnviromentDefs},
     CWLDocument,
 };
@@ -65,23 +65,23 @@ impl RuntimeEnvironment {
             ..Default::default()
         };
 
-        if let Some(rr) = tool.get_resource_requirement() {
-            if let Some(cores) = rr.cores_min {
+        if let Some(rr) = tool.get_requirement::<ResourceRequirement>() {
+            if let Some(cores) = &rr.cores_min {
                 environment
                     .runtime
                     .insert("cores".to_string(), evaluate(cores, &environment, &tool.inputs)?.to_string());
             }
-            if let Some(ram) = rr.ram_min {
+            if let Some(ram) = &rr.ram_min {
                 environment
                     .runtime
                     .insert("ram".to_string(), evaluate(ram, &environment, &tool.inputs)?.to_string());
             }
-            if let Some(dir_size) = rr.outdir_min {
+            if let Some(dir_size) = &rr.outdir_min {
                 environment
                     .runtime
                     .insert("outdirSize".to_string(), evaluate(dir_size, &environment, &tool.inputs)?.to_string());
             }
-            if let Some(tmp_size) = rr.tmpdir_min {
+            if let Some(tmp_size) = &rr.tmpdir_min {
                 environment
                     .runtime
                     .insert("tmpdirSize".to_string(), evaluate(tmp_size, &environment, &tool.inputs)?.to_string());
@@ -92,10 +92,10 @@ impl RuntimeEnvironment {
     }
 }
 
-fn evaluate(val: StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> Result<u64, Box<dyn Error>> {
+fn evaluate(val: &StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> Result<u64, Box<dyn Error>> {
     match val {
-        StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(&str, runtime, inputs).parse()?),
-        StringOrNumber::Integer(uint) => Ok(uint),
+        StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(str, runtime, inputs).parse()?),
+        StringOrNumber::Integer(uint) => Ok(*uint),
         StringOrNumber::Decimal(float) => Ok(float.ceil() as u64),
     }
 }

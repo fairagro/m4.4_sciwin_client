@@ -1,4 +1,4 @@
-use super::types::{Entry, EnviromentDefs, Dirent};
+use super::types::{Dirent, Entry, EnviromentDefs};
 use crate::CWLDocument;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
@@ -25,6 +25,31 @@ pub enum Requirement {
     InplaceUpdateRequirement,
     WorkReuse,
 }
+
+pub trait FromRequirement<T> {
+    fn get(req: &Requirement) -> Option<&T>;
+}
+
+macro_rules! impl_from_requirement {
+    ($i:ident, $t:ty) => {
+        impl FromRequirement<$t> for Requirement {
+            fn get(req: &Requirement) -> Option<&$t> {
+                if let Requirement::$i(ref v) = req {
+                    Some(v)
+                } else {
+                    None
+                }
+            }
+        }
+    };
+}
+
+impl_from_requirement!(ToolTimeLimit, ToolTimeLimit);
+impl_from_requirement!(NetworkAccess, NetworkAccess);
+impl_from_requirement!(DockerRequirement, DockerRequirement);
+impl_from_requirement!(EnvVarRequirement, EnvVarRequirement);
+impl_from_requirement!(ResourceRequirement, ResourceRequirement);
+impl_from_requirement!(InitialWorkDirRequirement, InitialWorkDirRequirement);
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
 where
@@ -177,19 +202,7 @@ pub struct ToolTimeLimit {
 }
 
 pub fn check_timelimit(doc: &CWLDocument) -> Option<u64> {
-    doc.hints
-        .iter()
-        .chain(doc.requirements.iter())
-        .flatten()
-        .map(|f| {
-            if let Requirement::ToolTimeLimit(time) = f {
-                Some(time.timelimit)
-            } else {
-                None
-            }
-        })
-        .find(Option::is_some)
-        .flatten()
+    doc.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit)
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

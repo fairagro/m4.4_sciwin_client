@@ -3,8 +3,8 @@ use et::ExpressionTool;
 use inputs::deserialize_inputs;
 use inputs::CommandInputParameter;
 use requirements::deserialize_requirements;
+use requirements::FromRequirement;
 use requirements::Requirement;
-use requirements::ResourceRequirement;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::ops::Deref;
@@ -126,18 +126,15 @@ pub struct DocumentBase {
 }
 
 impl DocumentBase {
-    /// Checks whether Document has a ResourceRequirement attached and returns an option to it.
-    pub fn get_resource_requirement(&self) -> Option<ResourceRequirement> {
+    /// Checks whether Document has a specific Requirement attached and returns an option to it
+    pub fn get_requirement<T>(&self) -> Option<&T>
+    where
+        Requirement: FromRequirement<T>,
+    {
         let reqs = self.requirements.as_ref().into_iter().flatten();
         let hints = self.hints.as_ref().into_iter().flatten();
 
-        reqs.chain(hints).find_map(|req| {
-            if let Requirement::ResourceRequirement(rr) = req {
-                Some(rr.clone())
-            } else {
-                None
-            }
-        })
+        reqs.chain(hints).find_map(|req| Requirement::get(req))
     }
 }
 
