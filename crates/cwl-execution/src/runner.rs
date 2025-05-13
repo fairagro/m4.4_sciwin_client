@@ -73,7 +73,9 @@ pub fn run_workflow(
                     WorkflowStepInput::String(in_string) => {
                         let parts: Vec<&str> = in_string.split('/').collect();
                         if parts.len() == 2 {
-                            step_inputs.insert(key.to_string(), outputs.get(in_string).unwrap().to_default_value());
+                            if let Some(out_value) = outputs.get(in_string) {
+                                step_inputs.insert(key.to_string(), out_value.to_default_value());
+                            }
                         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
                             let value = evaluate_input(input, &input_values)?;
                             step_inputs.insert(key.to_string(), value.to_owned());
