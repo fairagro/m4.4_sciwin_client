@@ -75,33 +75,35 @@ pub fn run_workflow(
                         if parts.len() == 2 {
                             step_inputs.insert(key.to_string(), outputs.get(in_string).unwrap().to_default_value());
                         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
-                            let value = evaluate_input(input, &input_values.clone())?;
+                            let value = evaluate_input(input, &input_values)?;
                             step_inputs.insert(key.to_string(), value.to_owned());
                         }
                     }
                     WorkflowStepInput::Parameter(parameter) => {
-                        let source = parameter.source.clone().unwrap_or_default();
+                        let source = parameter.source.as_deref().unwrap_or_default();
                         let source_parts: Vec<&str> = source.split('/').collect();
+
                         if source_parts.len() == 2 {
-                            //handle default
-                            if let Some(out_value) = outputs.get(&source) {
+                            //try output
+                            if let Some(out_value) = outputs.get(source) {
                                 step_inputs.insert(key.to_string(), out_value.to_default_value());
-                            } else if let Some(default) = &parameter.default {
-                                step_inputs.insert(key.to_string(), default.to_owned());
+                                continue;
                             }
-                        } else if let Some(default) = &parameter.default {
-                            step_inputs.insert(key.to_string(), default.to_owned());
                         }
+
+                        //try default
+                        if let Some(default) = &parameter.default {
+                            step_inputs.entry(key.to_string()).or_insert(default.to_owned());
+                        }
+
                         if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                            let value = evaluate_input(input, &input_values.clone())?;
-                            if step_inputs.contains_key(key) {
-                                if let DefaultValue::Any(val) = &value {
-                                    if val.is_null() {
-                                        continue; //do not overwrite existing value with null
-                                    }
+                            let value = evaluate_input(input, &input_values)?;
+                            match value {
+                                DefaultValue::Any(val) if val.is_null() => continue,
+                                _ => {
+                                    step_inputs.insert(key.to_string(), value.to_owned());
                                 }
                             }
-                            step_inputs.insert(key.to_string(), value.to_owned());
                         }
                     }
                 }
