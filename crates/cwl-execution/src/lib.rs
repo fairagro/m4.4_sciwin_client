@@ -8,7 +8,7 @@ pub mod validate;
 
 use cwl::types::{guess_type, CWLType, DefaultValue, Directory, File, PathItem};
 use cwl::CWLDocument;
-use io::join_path_string;
+use io::preprocess_path_join;
 use runner::{run_tool, run_workflow};
 use serde_yaml::Value;
 use std::{cell::RefCell, collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
@@ -49,14 +49,14 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
             location = location.strip_prefix("file://").unwrap_or(&location).to_string();
         }
 
-        item.set_location(join_path_string(path_prefix, &location));
+        item.set_location(preprocess_path_join(path_prefix, &location));
         if let Some(secondary_files) = item.secondary_files_mut() {
             for sec_file in secondary_files {
                 match sec_file {
                     DefaultValue::File(file) => {
-                        file.set_location(join_path_string(path_prefix, &file.get_location()));
+                        file.set_location(preprocess_path_join(path_prefix, &file.get_location()));
                     }
-                    DefaultValue::Directory(directory) => directory.set_location(join_path_string(path_prefix, &directory.get_location())),
+                    DefaultValue::Directory(directory) => directory.set_location(preprocess_path_join(path_prefix, &directory.get_location())),
                     _ => (),
                 }
             }

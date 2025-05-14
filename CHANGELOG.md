@@ -7,7 +7,7 @@
 ## 🐛 Bugfixes
 - correctly support `DockerRequirement.DockerOutputDirectory`
 - made `CommandOutputBinding.glob` Optional
-- ramping up runner conformance from 131/378 to 136/378
+- ramping up runner conformance from 131/378 to 137/378
 
 # v0.4.0
 ## 🚀 Features
