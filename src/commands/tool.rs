@@ -126,7 +126,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         warn!("User requested no execution, could not determine outputs!");
     } else {
         // Execute command
-        run_command(&cwl, &RuntimeEnvironment::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+        run_command(&cwl, &mut RuntimeEnvironment::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
         //add fixed inputs
         if let Some(fixed_inputs) = &args.inputs {

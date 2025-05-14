@@ -17,7 +17,7 @@ pub fn test_cwl_execute_command_multiple() {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
         let cwl = parse_command_line(&args.iter().map(AsRef::as_ref).collect::<Vec<_>>());
-        assert!(run_command(&cwl, &Default::default()).is_ok());
+        assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
         assert!(output_path.exists());
@@ -52,7 +52,7 @@ outputs:
 
 "#;
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command(&tool, &Default::default()).is_ok());
+        assert!(run_command(&tool, &mut RuntimeEnvironment::default()).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -92,12 +92,12 @@ outputs:
         let yml = "message: \"Hello World\"";
 
         let inputs = serde_yaml::from_str(yml).expect("Input parsing failed");
-        let runtime = RuntimeEnvironment {
+        let mut runtime = RuntimeEnvironment {
             inputs,
             ..Default::default()
         };
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command(&tool, &runtime).is_ok());
+        assert!(run_command(&tool, &mut runtime).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -140,13 +140,13 @@ message:
   ";
 
         let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(yml).expect("Input parsing failed");
-        let runtime = RuntimeEnvironment {
+        let mut runtime = RuntimeEnvironment {
             inputs,
             ..Default::default()
         };
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
 
-        let result = run_command(&tool, &runtime);
+        let result = run_command(&tool, &mut runtime);
         assert!(result.is_err());
     });
 }

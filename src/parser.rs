@@ -354,7 +354,7 @@ fn post_process_variables(tool: &mut CommandLineTool) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl_execution::runner::run_command;
+    use cwl_execution::{environment::RuntimeEnvironment, runner::run_command};
     use rstest::rstest;
     use serde_yaml::Number;
 
@@ -534,7 +534,7 @@ mod tests {
     #[cfg_attr(target_os = "windows", ignore)]
     pub fn test_cwl_execute_command_single() {
         let cwl = parse_command("ls -la .");
-        assert!(run_command(&cwl, &Default::default()).is_ok());
+        assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
     }
 
     #[test]

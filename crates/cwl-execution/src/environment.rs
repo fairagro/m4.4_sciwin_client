@@ -5,6 +5,7 @@ use cwl::{
     types::{DefaultValue, EnviromentDefs},
     CWLDocument,
 };
+use serde::Serialize;
 use std::{
     collections::HashMap,
     error::Error,
@@ -12,7 +13,7 @@ use std::{
     path::Path,
 };
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Debug, Default, Clone)]
 pub struct RuntimeEnvironment {
     pub runtime: HashMap<String, String>,
     pub inputs: HashMap<String, DefaultValue>,

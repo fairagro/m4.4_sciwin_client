@@ -255,17 +255,18 @@ pub fn run_tool(
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
-    prepare_expression_engine(&runtime)?;
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
-        run_command(clt, &runtime).map_err(|e| CommandError {
+        run_command(clt, &mut runtime).map_err(|e| CommandError {
             message: format!("Error in Tool execution: {}", e),
             exit_code: clt.get_error_code(),
         })?;
     } else if let CWLDocument::ExpressionTool(et) = tool {
+        prepare_expression_engine(&runtime)?;
         let expressions = parse_expressions(&et.expression);
         result_value = Some(eval_tool::<serde_yaml::Value>(&expressions[0].expression())?);
+        reset_expression_engine()?;
     }
 
     //remove staged files
@@ -277,6 +278,7 @@ pub fn run_tool(
     unstage_files(&staged_files, dir.path(), outputs)?;
 
     //evaluate output files
+    prepare_expression_engine(&runtime)?;
     let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
         evaluate_command_outputs(clt, output_directory)?
     } else if let CWLDocument::ExpressionTool(et) = &tool {
@@ -288,9 +290,10 @@ pub fn run_tool(
     } else {
         unreachable!()
     };
+    reset_expression_engine()?;
+    
     //come back to original directory
     env::set_current_dir(current)?;
-    reset_expression_engine()?;
 
     info!(
         "✔️  Tool {:?} executed successfully in {:.0?}!",
@@ -300,7 +303,7 @@ pub fn run_tool(
     Ok(outputs)
 }
 
-pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, runtime)?;
 
     if let Some(docker) = tool.get_docker_requirement() {
@@ -362,6 +365,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
     }
 
     let status_code = output.status.code().unwrap_or(1);
+    runtime.runtime.insert("exitCode".to_string(), status_code.to_string());
 
     match output.status.success() {
         true => Ok(()),

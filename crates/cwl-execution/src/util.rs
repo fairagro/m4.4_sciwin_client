@@ -220,6 +220,10 @@ fn evaluate_output_impl(
                         DefaultValue::Any(Value::String(contents))
                     };
                     outputs.insert(output.id.clone(), value);
+                } else if let Some(expression) = &binding.output_eval {
+                    let result = evaluate_expression(expression)?;
+                    let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                    outputs.insert(output.id.clone(), DefaultValue::Any(value));
                 }
             }
         }
