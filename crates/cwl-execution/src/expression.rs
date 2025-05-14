@@ -1,10 +1,15 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
-use cwl::{et::{Expression, ExpressionType}, types::DefaultValue};
+use crate::{environment::RuntimeEnvironment, split_ranges};
+use cwl::{
+    clt::{Argument, Command},
+    et::{Expression, ExpressionType},
+    types::DefaultValue,
+    CWLDocument,
+};
 use rustyscript::static_runtime;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use crate::{environment::RuntimeEnvironment, split_ranges};
 
 static_runtime!(RUNTIME);
 
@@ -36,7 +41,7 @@ pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, r
     RUNTIME::with(|rt| rt.eval::<T>(expression))
 }
 
-pub (crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
+pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
     RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))
 }
 
@@ -126,6 +131,59 @@ pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {
     expressions
 }
 
+pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box<dyn Error>> {
+    if let CWLDocument::CommandLineTool(clt) = tool {
+        clt.base_command = match std::mem::take(&mut clt.base_command) {
+            Command::Single(cmd) => Command::Single(replace_expressions(&cmd)?),
+            Command::Multiple(mut vec) => {
+                for item in vec.iter_mut() {
+                    *item = replace_expressions(item)?
+                }
+                Command::Multiple(vec)
+            }
+        };
+
+        if let Some(args) = &mut clt.arguments {
+            for arg in args.iter_mut() {
+                *arg = match arg {
+                    Argument::String(str) => Argument::String(replace_expressions(str)?),
+                    Argument::Binding(binding) => {
+                        let mut new_binding = binding.clone();
+                        if let Some(value_from) = &mut new_binding.value_from {
+                            *value_from = replace_expressions(value_from)?;
+                        }
+                        Argument::Binding(new_binding)
+                    }
+                }
+            }
+        }
+
+        for output in &mut clt.outputs {
+            if let Some(binding) = &mut output.output_binding {
+                if let Some(glob) = binding.glob.as_mut() {
+                    *glob = replace_expressions(glob)?;
+                }
+            }
+            if let Some(format) = &mut output.format {
+                let format = replace_expressions(format)?;
+                output.format = Some(format);
+            }
+        }
+
+        if let Some(stdin) = &mut clt.stdin {
+            *stdin = replace_expressions(stdin)?;
+        }
+
+        if let Some(stdout) = &mut clt.stdout {
+            *stdout = replace_expressions(stdout)?;
+        }
+
+        if let Some(stderr) = &mut clt.stderr {
+            *stderr = replace_expressions(stderr)?;
+        }
+    }
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;

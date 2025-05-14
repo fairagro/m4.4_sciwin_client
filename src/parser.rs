@@ -3,7 +3,7 @@ use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    requirements::{InitialWorkDirRequirement, Requirement},
+    requirements::{InitialWorkDirRequirement, InlineJavascriptRequirement, Requirement},
     types::{guess_type, CWLType, DefaultValue, Directory, File},
 };
 use rand::{distr::Alphanumeric, Rng};
@@ -344,9 +344,9 @@ fn post_process_variables(tool: &mut CommandLineTool) {
 
     if processed_once {
         if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::InlineJavascriptRequirement);
+            requirements.push(Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default()));
         } else {
-            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
+            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default())]);
         }
     }
 }

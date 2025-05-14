@@ -67,10 +67,8 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
                 *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
             }
         }
-    }
 
-    //set values in output format
-    for output in &mut clt.outputs {
+        //set values in output format
         if let Some(format) = &mut output.format {
             let format = set_placeholder_values_in_string(format, runtime, &clt.base.inputs);
             output.format = Some(format);

@@ -2,7 +2,9 @@ use crate::{
     container_engine,
     environment::{collect_environment, RuntimeEnvironment},
     execute,
-    expression::{eval_tool, parse_expressions, prepare_expression_engine, replace_expressions, reset_expression_engine, set_self, unset_self},
+    expression::{
+        eval_tool, parse_expressions, prepare_expression_engine, process_tool_expressions, replace_expressions, reset_expression_engine, set_self, unset_self,
+    },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
     staging::{stage_required_files, unstage_files},
@@ -16,7 +18,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::DockerRequirement,
+    requirements::{DockerRequirement, InlineJavascriptRequirement},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     wf::Workflow,
     CWLDocument,
@@ -243,6 +245,11 @@ pub fn run_tool(
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
     prepare_expression_engine(&runtime)?;
+
+    if let Some(_ijr) = tool.get_requirement::<InlineJavascriptRequirement>() {
+        //replace expressions
+        process_tool_expressions(tool)?
+    }
 
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;

@@ -1,5 +1,5 @@
 use super::types::{Dirent, Entry, EnviromentDefs};
-use crate::CWLDocument;
+use crate::{types::Include, CWLDocument};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 
@@ -13,11 +13,11 @@ pub enum Requirement {
     ShellCommandRequirement,
     ToolTimeLimit(ToolTimeLimit),
     NetworkAccess(NetworkAccess),
+    InlineJavascriptRequirement(InlineJavascriptRequirement),
     //as dummys, not used at this point
     SoftwareRequirement,
     SchemaDefRequirement,
     ScatterFeatureRequirement,
-    InlineJavascriptRequirement,
     MultipleInputFeatureRequirement,
     SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
@@ -50,6 +50,7 @@ impl_from_requirement!(DockerRequirement, DockerRequirement);
 impl_from_requirement!(EnvVarRequirement, EnvVarRequirement);
 impl_from_requirement!(ResourceRequirement, ResourceRequirement);
 impl_from_requirement!(InitialWorkDirRequirement, InitialWorkDirRequirement);
+impl_from_requirement!(InlineJavascriptRequirement, InlineJavascriptRequirement);
 
 pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
 where
@@ -194,6 +195,19 @@ pub struct ResourceRequirement {
 #[serde(rename_all = "camelCase")]
 pub struct EnvVarRequirement {
     pub env_def: EnviromentDefs,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrInclude {
+    String(String),
+    Include(Include),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct InlineJavascriptRequirement {
+    pub expression_lib: Option<Vec<StringOrInclude>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
