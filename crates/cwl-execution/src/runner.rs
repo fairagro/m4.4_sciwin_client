@@ -450,6 +450,9 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             } else if matches!(input.type_, CWLType::Array(_)) {
                 let val = evaluate_input(input, &runtime.inputs)?;
                 if let DefaultValue::Array(vec) = val {
+                    if vec.is_empty() {
+                        continue;
+                    }
                     if let Some(sep) = &binding.item_separator {
                         binding.value_from = Some(vec.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(sep).to_string());
                     } else {
