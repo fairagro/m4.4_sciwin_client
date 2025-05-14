@@ -1,15 +1,16 @@
 use clt::CommandLineTool;
 use et::ExpressionTool;
-use inputs::deserialize_inputs;
-use inputs::CommandInputParameter;
-use requirements::deserialize_requirements;
-use requirements::FromRequirement;
-use requirements::Requirement;
+use inputs::{deserialize_inputs, CommandInputParameter};
+use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::{error::Error, fmt::Debug, fs, path::Path};
+use std::{
+    error::Error,
+    fmt::Debug,
+    fs,
+    ops::{Deref, DerefMut},
+    path::Path,
+};
 use wf::Workflow;
 
 pub mod clt;
@@ -120,7 +121,7 @@ pub struct DocumentBase {
     #[serde(default)]
     pub requirements: Option<Vec<Requirement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(deserialize_with = "deserialize_hints")]
     #[serde(default)]
     pub hints: Option<Vec<Requirement>>,
 }

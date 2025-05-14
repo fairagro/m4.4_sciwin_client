@@ -56,6 +56,20 @@ pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Re
 where
     D: Deserializer<'de>,
 {
+    deserialize_requirements_or_hints(deserializer, true)
+}
+
+pub fn deserialize_hints<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_requirements_or_hints(deserializer, false)
+}
+
+fn deserialize_requirements_or_hints<'de, D>(deserializer: D, strict: bool) -> Result<Option<Vec<Requirement>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let value: Option<Value> = Deserialize::deserialize(deserializer)?;
     if value.is_none() {
         return Ok(None);
@@ -63,17 +77,26 @@ where
 
     let value = value.unwrap();
 
-    let parameters = match value {
-        Value::Sequence(seq) => seq
-            .into_iter()
-            .map(|item| {
-                let param: Requirement = serde_yaml::from_value(item).map_err(serde::de::Error::custom)?;
-                Ok(param)
-            })
-            .collect::<Result<Vec<_>, _>>()?,
-        Value::Mapping(map) => map
-            .into_iter()
-            .map(|(key, value)| {
+    let mut requirements = vec![];
+
+    let decide_about_item = |item: Value| -> Result<Option<Requirement>, D::Error> {
+        match serde_yaml::from_value(item) {
+            Ok(req) => Ok(Some(req)),
+            Err(e) if strict => Err(serde::de::Error::custom(e)),
+            Err(_) => Ok(None),
+        }
+    };
+
+    match value {
+        Value::Sequence(seq) => {
+            for item in seq {
+                if let Some(req) = decide_about_item(item)? {
+                    requirements.push(req);
+                }
+            }
+        }
+        Value::Mapping(map) => {
+            for (key, value) in map {
                 let class = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
                 let mut modified_value = value;
                 let new_map = if let Value::Mapping(ref mut inner_map) = modified_value {
@@ -84,14 +107,15 @@ where
                     map.insert(Value::String("class".to_string()), Value::String(class.to_string()));
                     map
                 };
-                let param: Requirement = serde_yaml::from_value(Value::Mapping(new_map)).map_err(serde::de::Error::custom)?;
-                Ok(param)
-            })
-            .collect::<Result<Vec<_>, _>>()?,
-        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for outputs")),
+                if let Some(req) = decide_about_item(Value::Mapping(new_map))? {
+                    requirements.push(req);
+                }
+            }
+        }
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for requirements")),
     };
 
-    Ok(Some(parameters))
+    Ok(Some(requirements))
 }
 
 fn get_entry_name(input: &str) -> String {
