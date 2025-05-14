@@ -17,7 +17,7 @@ use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
     requirements::DockerRequirement,
-    types::{CWLType, DefaultValue, Entry, PathItem},
+    types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     wf::Workflow,
     CWLDocument,
 };
@@ -122,31 +122,47 @@ pub fn run_workflow(
 
     set_print_output(true);
 
+    fn output_file(file: &File, tmp_path: &str, output_directory: &str) -> Result<File, Box<dyn Error>> {
+        let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
+        let new_loc = Path::new(&path).to_string_lossy().replace(tmp_path, output_directory);
+        copy_file(&path, &new_loc)?;
+        let mut file = file.clone();
+        file.path = Some(new_loc.to_string());
+        file.location = Some(format!("file://{}", new_loc));
+        Ok(file)
+    }
+
+    fn output_dir(dir: &Directory, tmp_path: &str, output_directory: &str) -> Result<Directory, Box<dyn Error>> {
+        let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
+        let new_loc = Path::new(&path).to_string_lossy().replace(tmp_path, output_directory);
+        copy_dir(&path, &new_loc)?;
+        let mut dir = dir.clone();
+        dir.path = Some(new_loc.to_string());
+        dir.location = Some(format!("file://{}", new_loc));
+        Ok(dir)
+    }
+
     let mut output_values = HashMap::new();
     for output in &workflow.outputs {
         let source = &output.output_source;
         if let Some(value) = &outputs.get(source) {
             let value = match value {
-                DefaultValue::File(file) => {
-                    let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
-                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_file(&path, &new_loc)?;
-                    let mut file = file.clone();
-                    file.path = Some(new_loc.to_string());
-                    file.location = Some(format!("file://{}", new_loc));
-                    DefaultValue::File(file)
-                }
-                DefaultValue::Directory(dir) => {
-                    let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
-                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_dir(&path, &new_loc)?;
-                    let mut dir = dir.clone();
-                    dir.path = Some(new_loc.to_string());
-                    dir.location = Some(format!("file://{}", new_loc));
-                    DefaultValue::Directory(dir)
-                }
-                DefaultValue::Any(str) => DefaultValue::Any(str.clone()),
-                _ => todo!(),
+                DefaultValue::File(file) => DefaultValue::File(output_file(file, &tmp_path, &output_directory)?),
+                DefaultValue::Directory(dir) => DefaultValue::Directory(output_dir(dir, &tmp_path, &output_directory)?),
+                DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+                DefaultValue::Array(array) => DefaultValue::Array(
+                    array
+                        .iter()
+                        .map(|item| {
+                            Ok(match item {
+                                DefaultValue::File(file) => DefaultValue::File(output_file(file, &tmp_path, &output_directory)?),
+                                DefaultValue::Directory(dir) => DefaultValue::Directory(output_dir(dir, &tmp_path, &output_directory)?),
+                                DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+                                _ => item.clone(),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, Box<dyn Error>>>()?,
+                ),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
