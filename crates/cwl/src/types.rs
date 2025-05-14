@@ -358,40 +358,41 @@ impl File {
     }
 
     pub fn load(&mut self, relative_to: impl AsRef<Path>) {
-        let loc = self.location.as_ref().unwrap();
-        let mut path = PathBuf::from(&loc);
-        if !path.exists() {
-            path = relative_to.as_ref().join(path);
+        if let Some(loc) = &self.location {
+            let mut path = PathBuf::from(&loc);
+            if !path.exists() {
+                path = relative_to.as_ref().join(path);
+            }
+
+            let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
+            self.path = Some(loc);
+            if self.basename.is_none() {
+                self.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            if self.nameroot.is_none() {
+                self.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            if self.nameext.is_none() {
+                self.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
+            }
+
+            if self.dirname.is_none() {
+                self.dirname = path.parent().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            let metadata = fs::metadata(&path).expect("Could not get metadata");
+            self.size = Some(metadata.len());
+
+            let mut hasher = Sha1::new();
+            let hash = fs::read(&path).ok().map(|f| {
+                hasher.update(&f);
+                let hash = hasher.finalize();
+                format!("sha1${hash:x}")
+            });
+            self.checksum = hash;
         }
-
-        let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
-        self.path = Some(loc);
-        if self.basename.is_none() {
-            self.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
-        }
-
-        if self.nameroot.is_none() {
-            self.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
-        }
-
-        if self.nameext.is_none() {
-            self.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
-        }
-
-        if self.dirname.is_none(){
-            self.dirname = path.parent().map(|f| f.to_string_lossy().into_owned());
-        }
-
-        let metadata = fs::metadata(&path).expect("Could not get metadata");
-        self.size = Some(metadata.len());
-
-        let mut hasher = Sha1::new();
-        let hash = fs::read(&path).ok().map(|f| {
-            hasher.update(&f);
-            let hash = hasher.finalize();
-            format!("sha1${hash:x}")
-        });
-        self.checksum = hash;
     }
 
     pub fn snapshot(&self) -> Self {
