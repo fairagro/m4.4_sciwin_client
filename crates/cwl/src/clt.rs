@@ -178,6 +178,15 @@ impl CommandLineTool {
         }
     }
 
+    /// Gets the success code of the `CommandLineTool`
+    pub fn get_sucess_code(&self) -> i32 {
+        if let Some(code) = &self.success_codes {
+            code[0]
+        } else {
+            0
+        }
+    }
+
     /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stdout
     pub fn has_stdout_output(&self) -> bool {
         self.outputs.iter().any(|o| matches!(o.type_, CWLType::Stdout))

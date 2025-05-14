@@ -361,9 +361,17 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
         }
     }
 
+    let status_code = output.status.code().unwrap_or(1);
+
     match output.status.success() {
         true => Ok(()),
-        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
+        false => {
+            if tool.get_sucess_code() == status_code {
+                Ok(()) //fails expectedly
+            } else {
+                Err(format!("command returned with code {:?}", status_code).into())
+            }
+        }
     }
 }
 
