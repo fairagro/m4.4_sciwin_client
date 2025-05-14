@@ -228,13 +228,7 @@ pub fn run_tool(
     let tmp_dir = tempdir()?;
 
     //build runtime object
-    let mut runtime = RuntimeEnvironment::initialize(
-        tool,
-        input_values,
-        dir.path(),
-        tool_path,
-        tmp_dir.path(),
-    )?;
+    let mut runtime = RuntimeEnvironment::initialize(tool, input_values, dir.path(), tool_path, tmp_dir.path())?;
 
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, &runtime);
@@ -332,7 +326,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
     };
 
     //handle redirection of stdout
-    if !output.stdout.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
             create_and_write_file_forced(stdout, out)?;
@@ -344,12 +338,12 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else {
+        } else if !output.stdout.is_empty() {
             eprintln!("{}", out);
         }
     }
     //handle redirection of stderr
-    if !output.stderr.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
             create_and_write_file_forced(stderr, out)?;
@@ -361,7 +355,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else {
+        } else if !output.stderr.is_empty() {
             eprintln!("❌ {}", out);
         }
     }
