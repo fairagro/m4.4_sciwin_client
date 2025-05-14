@@ -3,6 +3,7 @@
 - Support automatic downloading if files are given with `http://` or `https://` protocol
 - Detect URLs as files if given with `http://` or `https://` protocol
 - Support Detection of Arrays as inputs in `tool create` #100
+- Support ExpressionLibs
 
 ## 🐛 Bugfixes
 - correctly support `DockerRequirement.DockerOutputDirectory`#96
