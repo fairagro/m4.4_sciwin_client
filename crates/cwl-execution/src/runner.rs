@@ -3,7 +3,8 @@ use crate::{
     environment::{collect_environment, RuntimeEnvironment},
     execute,
     expression::{
-        eval_tool, parse_expressions, prepare_expression_engine, process_tool_expressions, replace_expressions, reset_expression_engine, set_self, unset_self,
+        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_tool_expressions, replace_expressions,
+        reset_expression_engine, set_self, unset_self,
     },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
@@ -18,7 +19,7 @@ use crate::{
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::{DockerRequirement, InlineJavascriptRequirement},
+    requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     wf::Workflow,
     CWLDocument,
@@ -231,7 +232,7 @@ pub fn run_tool(
         tool,
         input_values,
         dir.path(),
-        tool_path.parent().unwrap_or(Path::new(".")),
+        tool_path,
         tmp_dir.path(),
     )?;
 
@@ -239,17 +240,26 @@ pub fn run_tool(
     set_placeholder_values(tool, &runtime);
     runtime.environment = collect_environment(tool);
 
+    // run expression engine
+    prepare_expression_engine(&runtime)?;
+    if let Some(ijr) = tool.get_requirement::<InlineJavascriptRequirement>() {
+        if let Some(expression_lib) = &ijr.expression_lib {
+            for lib in expression_lib {
+                if let StringOrInclude::Include(lib_include) = lib {
+                    load_lib(tool_path.join(&lib_include.include))?;
+                } else if let StringOrInclude::String(lib_string) = lib {
+                    eval(lib_string)?;
+                }
+            }
+        }
+        process_tool_expressions(tool)?
+    }
+
     //stage files listed in input default values, input values or initial work dir requirements
     let staged_files = stage_required_files(tool, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
-    prepare_expression_engine(&runtime)?;
-
-    if let Some(_ijr) = tool.get_requirement::<InlineJavascriptRequirement>() {
-        //replace expressions
-        process_tool_expressions(tool)?
-    }
 
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;

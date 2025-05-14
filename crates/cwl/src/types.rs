@@ -1,7 +1,12 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Number, Value};
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
+use std::{
+    collections::HashMap,
+    env, fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 #[derive(Debug, Default, PartialEq, Clone, Eq, Hash)]
 pub enum CWLType {
@@ -350,6 +355,31 @@ impl File {
             location: Some(location.to_string()),
             ..Default::default()
         }
+    }
+
+    pub fn load(&mut self, relative_to: impl AsRef<Path>) {
+        let loc = self.location.as_ref().unwrap();
+        let mut path = PathBuf::from(&loc);
+        if !path.exists() {
+            path = relative_to.as_ref().join(path);
+        }
+
+        let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
+        self.path = Some(loc);
+        self.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
+        self.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
+        self.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
+
+        let metadata = fs::metadata(&path).expect("Could not get metadata");
+        self.size = Some(metadata.len());
+
+        let mut hasher = Sha1::new();
+        let hash = fs::read(&path).ok().map(|f| {
+            hasher.update(&f);
+            let hash = hasher.finalize();
+            format!("sha1${hash:x}")
+        });
+        self.checksum = hash;
     }
 
     pub fn snapshot(&self) -> Self {

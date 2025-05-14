@@ -56,7 +56,7 @@ impl RuntimeEnvironment {
             ("ram".to_string(), get_available_ram().to_string()),
         ]);
 
-        let inputs = collect_inputs(tool, input_values)?;
+        let inputs = collect_inputs(tool, input_values, tooldir)?;
 
         let mut environment = RuntimeEnvironment {
             runtime,
@@ -122,6 +122,7 @@ pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String>
 pub(crate) fn collect_inputs(
     tool: &CWLDocument,
     input_values: HashMap<String, DefaultValue>,
+    tool_dir: impl AsRef<Path>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
@@ -130,6 +131,8 @@ pub(crate) fn collect_inputs(
             if input.load_contents {
                 f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
             }
+            //load file meta
+            f.load(&tool_dir);
         }
         inputs.insert(input.id.clone(), result_input);
     }

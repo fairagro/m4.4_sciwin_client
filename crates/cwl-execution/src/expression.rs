@@ -1,15 +1,15 @@
-use std::{collections::HashMap, error::Error};
-
 use crate::{environment::RuntimeEnvironment, split_ranges};
 use cwl::{
     clt::{Argument, Command},
     et::{Expression, ExpressionType},
-    types::DefaultValue,
+    requirements::Requirement,
+    types::{DefaultValue, Entry},
     CWLDocument,
 };
 use rustyscript::static_runtime;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
+use std::{collections::HashMap, error::Error, fs, path::Path};
 
 static_runtime!(RUNTIME);
 
@@ -43,6 +43,13 @@ pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, r
 
 pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
     RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))
+}
+
+pub(crate) fn load_lib(lib: impl AsRef<Path>) -> Result<(), rustyscript::Error> {
+    RUNTIME::with(|rt| {
+        let contents = fs::read_to_string(lib.as_ref()).unwrap();
+        rt.eval(contents)
+    })
 }
 
 pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), rustyscript::Error> {
@@ -132,6 +139,25 @@ pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {
 }
 
 pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box<dyn Error>> {
+    if let Some(requirements) = &mut tool.requirements {
+        for requirement in requirements {
+            if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
+                for listing in &mut wd_req.listing {
+                    listing.entryname = replace_expressions(&listing.entryname)?;
+                    listing.entry = match &mut listing.entry {
+                        Entry::Source(src) => {
+                            *src = replace_expressions(src)?;
+                            Entry::Source(src.clone())
+                        }
+                        Entry::Include(include) => {
+                            include.include = replace_expressions(&include.include)?;
+                            Entry::Include(include.clone())
+                        }
+                    }
+                }
+            }
+        }
+    }
     if let CWLDocument::CommandLineTool(clt) = tool {
         clt.base_command = match std::mem::take(&mut clt.base_command) {
             Command::Single(cmd) => Command::Single(replace_expressions(&cmd)?),

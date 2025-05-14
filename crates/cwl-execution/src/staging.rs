@@ -258,7 +258,11 @@ fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Ve
 fn handle_filename(value: &DefaultValue) -> String {
     let join_with_basename = |location: &str, basename: &Option<String>| {
         if let Some(basename) = basename {
-            basename.to_string()
+            if !location.ends_with(basename) {
+                basename.to_string()
+            } else {
+                location.to_string()
+            }
         } else {
             location.to_string()
         }
