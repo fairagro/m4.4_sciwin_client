@@ -442,7 +442,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             if let Some(value_from) = &binding.value_from {
                 if let Some(val) = value {
                     if let DefaultValue::Any(Value::Null) = val {
-                        binding.value_from = Some(String::new())
+                        continue;
                     } else {
                         binding.value_from = Some(replace_expressions(value_from).unwrap_or(value_from.to_string()));
                     }
