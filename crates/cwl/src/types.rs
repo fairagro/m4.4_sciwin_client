@@ -256,9 +256,17 @@ impl<'de> Deserialize<'de> for DefaultValue {
                     Ok(DefaultValue::File(item))
                 }
                 "Directory" => {
+                    let listing = value
+                        .get("listing")
+                        .map(|v| serde_yaml::from_value(v.clone()))
+                        .transpose()
+                        .map_err(serde::de::Error::custom)?
+                        .unwrap_or_default();
+
                     let item = Directory {
                         location,
                         basename,
+                        listing,
                         ..Default::default()
                     };
                     Ok(DefaultValue::Directory(item))
@@ -366,6 +374,7 @@ impl File {
         }
     }
 
+    /// loads metadata and alters File
     pub fn load(&mut self, relative_to: impl AsRef<Path>) {
         if let Some(loc) = &self.location {
             let mut path = PathBuf::from(&loc);
@@ -404,6 +413,7 @@ impl File {
         }
     }
 
+    /// loads metadata and returns a **new** File
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
         let path = Path::new(&loc);
@@ -490,6 +500,18 @@ impl Directory {
         Directory {
             location: Some(location.to_string()),
             ..Default::default()
+        }
+    }
+
+    pub fn load(&mut self, relative_to: impl AsRef<Path>) {
+        if let Some(loc) = &self.location {
+            let mut path = PathBuf::from(&loc);
+            if !path.exists() {
+                path = relative_to.as_ref().join(path);
+            }
+
+            let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
+            self.path = Some(loc);
         }
     }
 }

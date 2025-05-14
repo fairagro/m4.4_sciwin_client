@@ -133,6 +133,8 @@ pub(crate) fn collect_inputs(
             }
             //load file meta
             f.load(&tool_dir);
+        } else if let DefaultValue::Directory(d) = &mut result_input {
+            d.load(&tool_dir);
         }
         inputs.insert(input.id.clone(), result_input);
     }

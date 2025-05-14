@@ -246,7 +246,7 @@ pub fn run_tool(
                 }
             }
         }
-        process_tool_expressions(tool)?
+        process_tool_expressions(tool)?;
     }
 
     //stage files listed in input default values, input values or initial work dir requirements
@@ -255,6 +255,7 @@ pub fn run_tool(
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
 
+    prepare_expression_engine(&runtime)?;
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
