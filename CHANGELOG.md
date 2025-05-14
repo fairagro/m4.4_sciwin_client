@@ -2,11 +2,11 @@
 ## 🚀 Features
 - Support automatic downloading if files are given with `http://` or `https://` protocol
 - Detect URLs as files if given with `http://` or `https://` protocol
-- Support Detection of Arrays as inputs in `tool create`
+- Support Detection of Arrays as inputs in `tool create` #100
 
 ## 🐛 Bugfixes
 - correctly support `DockerRequirement.DockerOutputDirectory`
-- made `CommandOutputBinding.glob` Optional
+- made `CommandOutputBinding.glob` Optional #99
 - ramping up runner conformance from 131/378 to 137/378
 
 # v0.4.0
