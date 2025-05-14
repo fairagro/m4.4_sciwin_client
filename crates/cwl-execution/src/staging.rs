@@ -229,12 +229,13 @@ fn stage_input_files(
 fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files = vec![];
     if let DefaultValue::File(file) = &incoming_data {
+        let file_dir = Path::new(file.location.as_ref().unwrap()).parent().unwrap_or_else(|| Path::new(""));
         if let Some(secondary_files) = &file.secondary_files {
             for value in secondary_files {
                 let incoming_file = value.as_value_string();
                 let outcoming_file = handle_filename(value);
                 let outcoming_file_stripped = outcoming_file.trim_start_matches("../").to_string();
-                let into_path = path.join(&outcoming_file_stripped);
+                let into_path = path.join(file_dir).join(&outcoming_file_stripped);
                 let path_str = &into_path.to_string_lossy();
                 match value {
                     DefaultValue::File(_) => {

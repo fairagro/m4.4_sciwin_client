@@ -373,10 +373,15 @@ impl File {
         if self.nameroot.is_none() {
             self.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
         }
-        
+
         if self.nameext.is_none() {
             self.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
         }
+
+        if self.dirname.is_none(){
+            self.dirname = path.parent().map(|f| f.to_string_lossy().into_owned());
+        }
+
         let metadata = fs::metadata(&path).expect("Could not get metadata");
         self.size = Some(metadata.len());
 
