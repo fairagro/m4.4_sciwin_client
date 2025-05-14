@@ -1,5 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yaml::{Number, Value};
+use serde_yaml::{Mapping, Number, Value};
 use sha1::{Digest, Sha1};
 use std::{
     collections::HashMap,
@@ -89,13 +89,7 @@ impl<'de> Deserialize<'de> for CWLType {
         if let Value::String(s) = value {
             return s.parse().map_err(serde::de::Error::custom);
         } else if let Value::Mapping(map) = value {
-            if let Some(Value::String(type_str)) = map.get("type") {
-                if type_str == "array" {
-                    if let Some(Value::String(item_str)) = map.get("items") {
-                        return format!("{item_str}[]").parse().map_err(serde::de::Error::custom);
-                    }
-                }
-            }
+            return deserialize_type_mapping(&map).map_err(serde::de::Error::custom);
         } else if let Value::Sequence(seq) = value {
             if seq.len() == 2 {
                 if let Value::String(type_str) = &seq[0] {
@@ -105,10 +99,25 @@ impl<'de> Deserialize<'de> for CWLType {
                         }
                     }
                 }
+            } else if seq.len() == 1 {
+                if let Value::Mapping(map) = &seq[0] {
+                    return deserialize_type_mapping(map).map_err(serde::de::Error::custom);
+                }
             }
         }
         Err(serde::de::Error::custom("Expected string, sequence or mapping for CWLType"))
     }
+}
+
+fn deserialize_type_mapping(map: &Mapping) -> Result<CWLType, String> {
+    if let Some(Value::String(type_str)) = map.get("type") {
+        if type_str == "array" {
+            if let Some(Value::String(item_str)) = map.get("items") {
+                return format!("{item_str}[]").parse();
+            }
+        }
+    }
+    Err("Could not parse type mapping".into())
 }
 
 impl Serialize for CWLType {
