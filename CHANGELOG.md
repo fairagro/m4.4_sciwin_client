@@ -1,4 +1,6 @@
 # Unreleased
+## 🐛 Bugfixes
+- fixed bugs with the `tool create -i` argument
 
 # v0.5.1
 ## 🐛 Bugfixes

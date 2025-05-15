@@ -48,7 +48,7 @@ pub fn tool_create_test_inputs_outputs() {
     stage_all(&repo).unwrap();
 
     let script = "echo_inline.py".to_string();
-    let input = "../../data/input.txt".to_string();
+    let input = "data/input.txt".to_string();
 
     let tool_create_args = CreateToolArgs {
         inputs: Some(vec![input.clone()]),
@@ -70,7 +70,7 @@ pub fn tool_create_test_inputs_outputs() {
 
     //check tool props
     let tool = load_tool(tool_path).unwrap();
-
+    
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 

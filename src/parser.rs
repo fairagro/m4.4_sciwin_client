@@ -76,8 +76,9 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
 pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     for input in inputs {
         let type_ = guess_type(input);
+        
         //todo: add requiement for directory also or add new --mount param and remove block from here
-        if type_ == CWLType::File {
+        if matches!(type_, CWLType::File) {
             if let Some(req) = &mut tool.requirements {
                 for item in req.iter_mut() {
                     if let Requirement::InitialWorkDirRequirement(req) = item {
