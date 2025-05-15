@@ -163,6 +163,25 @@ pub fn tool_create_test_no_run_explicit_inputs() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
+#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+pub fn tool_create_test_no_run_explicit_inputs_string() {
+    let tool_create_args = CreateToolArgs {
+        no_run: true,
+        inputs: Some(vec!["wurstbrot".to_string()]),
+        command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+    assert!(Path::new("workflows/echo/echo.cwl").exists());
+
+    let tool = load_tool("workflows/echo/echo.cwl").unwrap();
+    assert!(tool.inputs.iter().any(|i| i.id == "wurstbrot"));
+
+    //no uncommitted left?
+    let repo = Repository::open(".").unwrap();
+    assert!(get_modified_files(&repo).is_empty());
+}
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_is_clean() {
