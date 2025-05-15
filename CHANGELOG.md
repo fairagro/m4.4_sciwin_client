@@ -1,4 +1,6 @@
 # Unreleased
+
+# v0.5.0
 ## 🚀 Features
 - Support automatic downloading if files are given with `http://` or `https://` protocol
 - Detect URLs as files if given with `http://` or `https://` protocol
