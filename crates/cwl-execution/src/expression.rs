@@ -257,7 +257,7 @@ pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{clt::CommandLineTool, inputs::CommandLineBinding, load_tool, StringOrNumber};
+    use cwl::StringOrNumber;
 
     #[test]
     fn test_expression() {
