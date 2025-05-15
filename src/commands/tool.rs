@@ -128,11 +128,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         // Execute command
         run_command(&cwl, &mut RuntimeEnvironment::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
-        //add fixed inputs
-        if let Some(fixed_inputs) = &args.inputs {
-            parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>());
-        }
-
         // Check files that changed
         let mut files = get_modified_files(&repo);
         files.retain(|f| !modified.contains(f)); //remove files that were changed before run
@@ -175,6 +170,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         if outputs.is_empty() {
             cwl = cwl.with_outputs(parser::get_outputs(&files));
         }
+    }
+
+    //add fixed inputs
+    if let Some(fixed_inputs) = &args.inputs {
+        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>());
     }
 
     // Handle container requirements
