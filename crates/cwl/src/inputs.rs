@@ -24,7 +24,7 @@ pub struct CommandInputParameter {
 }
 
 impl CommandInputParameter {
-    pub fn with_id(mut self, id: &str) -> Self {
+    pub fn with_id(mut self, id: impl ToString) -> Self {
         self.id = id.to_string();
         self
     }
@@ -71,7 +71,7 @@ pub struct CommandLineBinding {
 }
 
 impl CommandLineBinding {
-    pub fn with_prefix(mut self, prefix: &String) -> Self {
+    pub fn with_prefix(mut self, prefix: impl ToString) -> Self {
         self.prefix = Some(prefix.to_string());
         self
     }

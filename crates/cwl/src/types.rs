@@ -551,7 +551,7 @@ pub enum Entry {
 }
 
 impl Entry {
-    pub fn from_file(path: &str) -> Entry {
+    pub fn from_file(path: impl ToString) -> Entry {
         Entry::Include(Include { include: path.to_string() })
     }
 }

@@ -341,7 +341,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
@@ -355,7 +355,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
@@ -369,7 +369,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let values = HashMap::new();
         let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
@@ -382,7 +382,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
@@ -394,7 +394,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
@@ -406,7 +406,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::from([("test".to_string(), DefaultValue::Any(Value::Null))])).unwrap();
         //if any and null, take default

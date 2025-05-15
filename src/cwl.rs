@@ -302,7 +302,7 @@ mod tests {
             CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
         ];
         let mut clt = CommandLineTool::default()
@@ -328,7 +328,7 @@ mod tests {
             *req_0,
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
                 listing: vec![Dirent {
-                    entry: Entry::from_file(&os_path("../../test/script.py")),
+                    entry: Entry::from_file(os_path("../../test/script.py")),
                     entryname: "test/script.py".to_string()
                 }]
             })
@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(
             *req_1,
             Requirement::DockerRequirement(DockerRequirement {
-                docker_file: Some(Entry::from_file(&os_path("../../test/data/Dockerfile"))),
+                docker_file: Some(Entry::from_file(os_path("../../test/data/Dockerfile"))),
                 docker_image_id: Some("test".to_string()),
                 ..Default::default()
             })

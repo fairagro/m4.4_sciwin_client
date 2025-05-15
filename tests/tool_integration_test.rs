@@ -254,7 +254,7 @@ pub fn tool_create_test_dockerfile() {
 
     if let Requirement::DockerRequirement(docker_req) = &requirements[1] {
         if let (Some(docker_file), Some(docker_image_id)) = (&docker_req.docker_file, &docker_req.docker_image_id) {
-            assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); // as file is in root and CWL in workflows/echo
+            assert_eq!(*docker_file, Entry::from_file(os_path("../../Dockerfile"))); // as file is in root and CWL in workflows/echo
             assert_eq!(docker_image_id, "sciwin-client");
         } else {
             panic!("DockerRequirement does not contain dockerFile and dockerImageId");

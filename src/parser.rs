@@ -188,7 +188,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
 fn get_flag(current: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     CommandInputParameter::default()
-        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_binding(CommandLineBinding::default().with_prefix(current))
         .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(CWLType::Boolean)
         .with_default_value(DefaultValue::Any(Value::Bool(true)))
@@ -200,7 +200,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let default_value = parse_default_value(next, &cwl_type);
 
     CommandInputParameter::default()
-        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_binding(CommandLineBinding::default().with_prefix(current))
         .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
@@ -391,17 +391,17 @@ mod tests {
             CommandInputParameter::default()
                 .with_id("argument1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--argument1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--argument1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
             CommandInputParameter::default()
                 .with_id("flag")
                 .with_type(CWLType::Boolean)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--flag".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--flag"))
                 .with_default_value(DefaultValue::Any(Value::Bool(true))),
             CommandInputParameter::default()
                 .with_id("a")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"-a".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("-a"))
                 .with_default_value(DefaultValue::Any(Value::String("value2".to_string()))),
             CommandInputParameter::default()
                 .with_id("positional1")
@@ -411,7 +411,7 @@ mod tests {
             CommandInputParameter::default()
                 .with_id("v")
                 .with_type(CWLType::Int)
-                .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("-v"))
                 .with_default_value(DefaultValue::Any(serde_yaml::from_str("1").unwrap())),
         ];
 
@@ -429,7 +429,7 @@ mod tests {
         let expected = CommandInputParameter::default()
             .with_id("v")
             .with_type(CWLType::Int)
-            .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("-v"))
             .with_default_value(DefaultValue::Any(Value::Number(Number::from(42))));
 
         let args = shlex::split(commandline_args).unwrap();
@@ -464,7 +464,7 @@ mod tests {
             .with_inputs(vec![CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
@@ -473,7 +473,7 @@ mod tests {
             .with_inputs(vec![CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
@@ -488,7 +488,7 @@ mod tests {
                 CommandInputParameter::default()
                     .with_id("option1")
                     .with_type(CWLType::String)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                    .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                     .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))
             ])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
@@ -499,7 +499,7 @@ mod tests {
                 CommandInputParameter::default()
                     .with_id("test")
                     .with_type(CWLType::File)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
+                    .with_binding(CommandLineBinding::default().with_prefix("--test"))
                     .with_default_value(DefaultValue::File(File::from_location("tests/test_data/input.txt")))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))])
     )]
