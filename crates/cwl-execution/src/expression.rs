@@ -257,7 +257,7 @@ pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::StringOrNumber;
+    use cwl::{clt::CommandLineTool, inputs::CommandLineBinding, load_tool, StringOrNumber};
 
     #[test]
     fn test_expression() {
@@ -302,5 +302,61 @@ mod tests {
         reset_expression_engine().unwrap();
         let result = replace_expressions(input);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_output_eval() {
+        let input = "This is $(\"a \")$(\"string\")";
+        let result = output_eval(input).unwrap_or_default();
+        assert_eq!(result, "This is a string".to_string());
+    }
+
+    #[test]
+    fn test_output_eval_single_expression() {
+        let input = "$(\"string\")";
+        let result = output_eval(input).unwrap_or_default();
+        assert_eq!(result, "string".to_string());
+    }
+
+    #[test]
+    fn test_process_tool_expressions() {
+        let tool = r#"
+        #!/usr/bin/env cwl-runner
+
+cwlVersion: v1.2
+class: CommandLineTool
+
+inputs:
+- id: dirname
+  type: string
+
+outputs: 
+  out: 
+    type: Directory
+    outputBinding:
+      glob: 
+        $(inputs.dirname)
+arguments:
+- mkdir
+- $(inputs.dirname)
+
+stdout: $(inputs.dirname)/stdout
+stderr: $(inputs.dirname)/stderr
+"#;
+
+        let runtime = RuntimeEnvironment {
+            inputs: HashMap::from([("dirname".to_string(), DefaultValue::Any(serde_yaml::Value::String("testdir".to_string())))]),
+            ..Default::default()
+        };
+        prepare_expression_engine(&runtime).unwrap();
+        let mut tool: CWLDocument = serde_yaml::from_str(tool).unwrap();
+        process_tool_expressions(&mut tool).unwrap();
+        reset_expression_engine().unwrap();
+
+        assert!(matches!(tool, CWLDocument::CommandLineTool(_)));
+        if let CWLDocument::CommandLineTool(tool) = tool {
+            assert_eq!(tool.stdout, Some("testdir/stdout".to_string()));
+            assert_eq!(tool.stderr, Some("testdir/stderr".to_string()));
+        }
     }
 }
