@@ -241,7 +241,7 @@ outputs:
         input_values.insert("newname".to_string(), DefaultValue::Any(Value::String("neuer_name.txt".to_string())));
         input_values.insert(
             "srcfile".to_string(),
-            DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())),
+            DefaultValue::File(File::from_location("tests/test_data/input.txt")),
         );
 
         let runtime = RuntimeEnvironment {
@@ -266,7 +266,7 @@ outputs:
         let inputs = vec![CommandInputParameter::default()
             .with_id("infile")
             .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
+            .with_default_value(DefaultValue::File(File::from_location(file)))];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = format!("Searching for file {file}");
@@ -283,7 +283,7 @@ outputs:
         let inputs = vec![CommandInputParameter::default()
             .with_id("infile")
             .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
+            .with_default_value(DefaultValue::File(File::from_location(file)))];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = format!("File has size {size}");
@@ -299,7 +299,7 @@ outputs:
         let inputs = vec![CommandInputParameter::default()
             .with_id("infile")
             .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(&file.to_string())))];
+            .with_default_value(DefaultValue::File(File::from_location(file)))];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = "Greeting: tests/test_data/input.txt";
@@ -313,7 +313,7 @@ outputs:
         let file = "tests/test_data/input.txt";
 
         let mut values: HashMap<String, DefaultValue> = HashMap::new();
-        values.insert("infile".to_string(), DefaultValue::File(File::from_location(&file.to_string())));
+        values.insert("infile".to_string(), DefaultValue::File(File::from_location(file)));
         let runtime = RuntimeEnvironment {
             inputs: values,
             ..Default::default()

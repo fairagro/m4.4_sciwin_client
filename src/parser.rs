@@ -208,8 +208,8 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 
 fn parse_default_value(value: &str, cwl_type: &CWLType) -> DefaultValue {
     match cwl_type {
-        CWLType::File => DefaultValue::File(File::from_location(&value.to_string())),
-        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&value.to_string())),
+        CWLType::File => DefaultValue::File(File::from_location(value)),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(value)),
         CWLType::String => DefaultValue::Any(Value::String(value.to_string())),
         _ => DefaultValue::Any(serde_yaml::from_str(value).unwrap()),
     }
@@ -500,7 +500,7 @@ mod tests {
                     .with_id("test")
                     .with_type(CWLType::File)
                     .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
-                    .with_default_value(DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())))])
+                    .with_default_value(DefaultValue::File(File::from_location("tests/test_data/input.txt")))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))])
     )]
     pub fn test_parse_command_line(#[case] input: &str, #[case] expected: CommandLineTool) {

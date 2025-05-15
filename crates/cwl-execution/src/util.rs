@@ -248,7 +248,7 @@ fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue
 }
 
 pub(crate) fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
-    let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
+    let mut f = File::from_location(path.as_ref().to_string_lossy());
     f.format = format;
     f.snapshot()
 }

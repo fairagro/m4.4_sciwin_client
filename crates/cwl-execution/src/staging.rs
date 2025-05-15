@@ -342,7 +342,7 @@ mod tests {
 
         let test_dir = "tests/";
 
-        let value = DefaultValue::Directory(Directory::from_location(&test_dir.to_string()));
+        let value = DefaultValue::Directory(Directory::from_location(test_dir));
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::Directory);
 
         let list = stage_input_files(
@@ -367,7 +367,7 @@ mod tests {
 
         let test_dir = "tests/test_data/input.txt";
 
-        let value = DefaultValue::File(File::from_location(&test_dir.to_string()));
+        let value = DefaultValue::File(File::from_location(test_dir));
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
 
         let list = stage_input_files(
@@ -393,7 +393,7 @@ mod tests {
         let test_dir = "tests/test_data/input.txt";
 
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
-        let value = DefaultValue::File(File::from_location(&test_dir.to_string()));
+        let value = DefaultValue::File(File::from_location(test_dir));
 
         let list = stage_input_files(
             &[input],
@@ -417,7 +417,7 @@ mod tests {
         let test_dir = "tests/test_data";
 
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::Directory);
-        let value = DefaultValue::Directory(Directory::from_location(&test_dir.to_string()));
+        let value = DefaultValue::Directory(Directory::from_location(test_dir));
 
         let list = stage_input_files(
             &[input],
@@ -441,7 +441,7 @@ mod tests {
         let test_file = "tests/test_data/input.txt";
 
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
-        let value = DefaultValue::File(File::from_location(&test_file.to_string()));
+        let value = DefaultValue::File(File::from_location(test_file));
 
         let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
             glob: Some("tests/test_data/input.txt".to_string()),
@@ -469,8 +469,8 @@ mod tests {
 
         let test_file = "../../tests/test_data/input.txt";
         let secondary_file = "../../tests/test_data/echo.py";
-        let mut file = File::from_location(&test_file.to_string());
-        file.secondary_files = Some(vec![DefaultValue::File(File::from_location(&secondary_file.to_string()))]);
+        let mut file = File::from_location(test_file);
+        file.secondary_files = Some(vec![DefaultValue::File(File::from_location(secondary_file))]);
         let data = DefaultValue::File(file);
         let list = stage_secondary_files(&data, tmp_dir.path()).unwrap();
 
@@ -488,7 +488,7 @@ mod tests {
         let working = tempdir().unwrap();
 
         let file = "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md";
-        let value = DefaultValue::File(File::from_location(&file.to_string()));
+        let value = DefaultValue::File(File::from_location(file));
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
 
         let list = stage_input_files(
