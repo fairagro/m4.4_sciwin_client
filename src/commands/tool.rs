@@ -174,7 +174,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     //add fixed inputs
     if let Some(fixed_inputs) = &args.inputs {
-        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>());
+        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>())?;
     }
 
     // Handle container requirements

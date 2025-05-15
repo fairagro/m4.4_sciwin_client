@@ -367,7 +367,7 @@ impl Default for File {
 }
 
 impl File {
-    pub fn from_location(location: &String) -> Self {
+    pub fn from_location(location: impl ToString) -> Self {
         File {
             location: Some(location.to_string()),
             ..Default::default()
@@ -496,7 +496,7 @@ impl Default for Directory {
 }
 
 impl Directory {
-    pub fn from_location(location: &String) -> Self {
+    pub fn from_location(location: impl ToString) -> Self {
         Directory {
             location: Some(location.to_string()),
             ..Default::default()

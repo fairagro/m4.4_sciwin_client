@@ -73,29 +73,37 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     tool
 }
 
-pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) {
-    if let Some(req) = &mut tool.requirements {
-        for item in req.iter_mut() {
-            if let Requirement::InitialWorkDirRequirement(req) = item {
-                req.add_files(inputs);
-                break;
+pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    for input in inputs {
+        let type_ = guess_type(input);
+        //todo: add requiement for directory also or add new --mount param and remove block from here
+        if type_ == CWLType::File {
+            if let Some(req) = &mut tool.requirements {
+                for item in req.iter_mut() {
+                    if let Requirement::InitialWorkDirRequirement(req) = item {
+                        req.add_files(inputs);
+                        break;
+                    }
+                }
+            } else {
+                tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
+                    inputs,
+                ))]);
             }
         }
-    } else {
-        tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-            inputs,
-        ))]);
+
+        let default = match type_ {
+            CWLType::File => DefaultValue::File(File::from_location(input)),
+            CWLType::Directory => DefaultValue::Directory(Directory::from_location(input)),
+            _ => DefaultValue::Any(serde_yaml::from_str(input)?),
+        };
+        let id = slugify!(input, separator = "_");
+
+        tool.inputs
+            .push(CommandInputParameter::default().with_id(&id).with_type(type_).with_default_value(default));
     }
 
-    let params = inputs
-        .iter()
-        .map(|i| {
-            CommandInputParameter::default()
-                .with_id(&slugify!(i, separator = "_"))
-                .with_type(guess_type(i))
-        })
-        .collect::<Vec<_>>();
-    tool.inputs.extend(params);
+    Ok(())
 }
 
 pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {

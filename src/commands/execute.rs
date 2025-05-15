@@ -125,8 +125,8 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
 
 fn default_values(cwltype: &CWLType) -> DefaultValue {
     match cwltype {
-        CWLType::File => DefaultValue::File(File::from_location(&"./path/to/file.txt".into())),
-        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&"./path/to/dir".into())),
+        CWLType::File => DefaultValue::File(File::from_location("./path/to/file.txt")),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location("./path/to/dir")),
         _ => DefaultValue::Any(defaults(cwltype)),
     }
 }
