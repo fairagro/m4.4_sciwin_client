@@ -172,9 +172,13 @@ impl InitialWorkDirRequirement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerRequirement {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docker_pull: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docker_file: Option<Entry>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docker_image_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docker_output_directory: Option<String>,
 }
 
@@ -197,13 +201,21 @@ impl DockerRequirement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceRequirement {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cores_min: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cores_max: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ram_min: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ram_max: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tmpdir_min: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tmpdir_max: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub outdir_min: Option<StringOrNumber>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub outdir_max: Option<StringOrNumber>,
 }
 
@@ -223,6 +235,7 @@ pub enum StringOrInclude {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InlineJavascriptRequirement {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub expression_lib: Option<Vec<StringOrInclude>>,
 }
 
