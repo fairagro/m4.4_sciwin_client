@@ -63,7 +63,6 @@ pub(crate) fn unset_self() -> Result<(), rustyscript::Error> {
     Ok(())
 }
 
-#[allow(unused)]
 pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let expressions = parse_expressions(input);
 
@@ -87,7 +86,7 @@ pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn std::error::Erro
     if expressions.len() == 1 {
         let expr = &expressions[0];
         if expr.indices.start == 0 && expr.indices.end == input.len() {
-            return Ok(eval(&expr.expression())?);
+            return evaluate_expression(input);
         }
     }
 
