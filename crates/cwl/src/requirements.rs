@@ -1,5 +1,5 @@
 use super::types::{Dirent, Entry, EnviromentDefs};
-use crate::{types::Include, CWLDocument};
+use crate::{types::Include, CWLDocument, StringOrNumber};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 
@@ -192,14 +192,6 @@ impl DockerRequirement {
             ..Default::default()
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum StringOrNumber {
-    String(String),
-    Integer(u64),
-    Decimal(f64),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

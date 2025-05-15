@@ -257,6 +257,7 @@ pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cwl::StringOrNumber;
 
     #[test]
     fn test_expression() {
@@ -291,7 +292,7 @@ mod tests {
     #[test]
     fn test_engine_values() {
         let runtime = RuntimeEnvironment {
-            runtime: HashMap::from([("my_value".to_string(), "Hello World!".to_string())]),
+            runtime: HashMap::from([("my_value".to_string(), StringOrNumber::String("Hello World!".to_string()))]),
             ..Default::default()
         };
         let input = "$(runtime.my_value)";

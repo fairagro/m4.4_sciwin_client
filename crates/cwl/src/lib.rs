@@ -139,6 +139,26 @@ impl DocumentBase {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrNumber {
+    String(String),
+    Integer(u64),
+    Decimal(f64),
+}
+
+use std::fmt;
+
+impl fmt::Display for StringOrNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StringOrNumber::String(s) => write!(f, "{}", s),
+            StringOrNumber::Integer(i) => write!(f, "{}", i),
+            StringOrNumber::Decimal(d) => write!(f, "{}", d),
+        }
+    }
+}
+
 /// Loads a CWL CommandLineTool from a YAML file on disk.
 ///
 /// This function reads the specified file, parses its contents as YAML, and attempts to deserialize it into a `CommandLineTool` object.

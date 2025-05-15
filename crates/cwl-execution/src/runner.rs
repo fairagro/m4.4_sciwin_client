@@ -22,7 +22,7 @@ use cwl::{
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     wf::Workflow,
-    CWLDocument,
+    CWLDocument, StringOrNumber,
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
@@ -291,7 +291,7 @@ pub fn run_tool(
         unreachable!()
     };
     reset_expression_engine()?;
-    
+
     //come back to original directory
     env::set_current_dir(current)?;
 
@@ -365,7 +365,9 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
     }
 
     let status_code = output.status.code().unwrap_or(1);
-    runtime.runtime.insert("exitCode".to_string(), status_code.to_string());
+    runtime
+        .runtime
+        .insert("exitCode".to_string(), StringOrNumber::Integer(status_code as u64));
 
     match output.status.success() {
         true => Ok(()),
@@ -547,9 +549,29 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 
     //set environment for run
     command.envs(runtime.environment.clone());
-    command.env("HOME", runtime.runtime.get("outdir").unwrap_or(&current_dir));
-    command.env("TMPDIR", runtime.runtime.get("tmpdir").unwrap_or(&current_dir));
-    command.current_dir(runtime.runtime.get("outdir").unwrap_or(&current_dir));
+    command.env(
+        "HOME",
+        runtime
+            .runtime
+            .get("outdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
+    command.env(
+        "TMPDIR",
+        runtime
+            .runtime
+            .get("tmpdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
+    command.current_dir(
+        runtime
+            .runtime
+            .get("outdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
 
     Ok(command)
 }
@@ -609,7 +631,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
         .map(|arg| {
             arg.to_string_lossy()
                 .into_owned()
-                .replace(&runtime.runtime["outdir"], workdir)
+                .replace(&runtime.runtime["outdir"].to_string(), workdir)
                 .replace("\\", "/")
         })
         .collect::<Vec<_>>();
@@ -720,8 +742,8 @@ stdout: output.txt"#;
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
-                ("outdir".to_string(), "testdir".to_string()),
-                ("tmpdir".to_string(), "testdir".to_string()),
+                ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),
+                ("tmpdir".to_string(), StringOrNumber::String("testdir".to_string())),
             ]),
             ..Default::default()
         };
@@ -740,8 +762,8 @@ stdout: output.txt"#;
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
-                ("outdir".to_string(), "testdir".to_string()),
-                ("tmpdir".to_string(), "testdir".to_string()),
+                ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),
+                ("tmpdir".to_string(), StringOrNumber::String("testdir".to_string())),
             ]),
             ..Default::default()
         };

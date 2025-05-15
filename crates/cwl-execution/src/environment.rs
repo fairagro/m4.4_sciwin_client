@@ -1,9 +1,9 @@
 use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
 use cwl::{
     inputs::CommandInputParameter,
-    requirements::{check_timelimit, Requirement, ResourceRequirement, StringOrNumber},
+    requirements::{check_timelimit, Requirement, ResourceRequirement},
     types::{DefaultValue, EnviromentDefs},
-    CWLDocument,
+    CWLDocument, StringOrNumber,
 };
 use serde::Serialize;
 use std::{
@@ -15,7 +15,7 @@ use std::{
 
 #[derive(Serialize, Debug, Default, Clone)]
 pub struct RuntimeEnvironment {
-    pub runtime: HashMap<String, String>,
+    pub runtime: HashMap<String, StringOrNumber>,
     pub inputs: HashMap<String, DefaultValue>,
     pub environment: HashMap<String, String>,
     pub time_limit: u64,
@@ -31,7 +31,7 @@ impl RuntimeEnvironment {
         self.environment = environment;
         self
     }
-    pub fn with_runtime(mut self, runtime: HashMap<String, String>) -> Self {
+    pub fn with_runtime(mut self, runtime: HashMap<String, StringOrNumber>) -> Self {
         self.runtime = runtime;
         self
     }
@@ -48,13 +48,22 @@ impl RuntimeEnvironment {
         tmpdir: impl AsRef<Path>,
     ) -> Result<Self, Box<dyn Error>> {
         let runtime = HashMap::from([
-            ("tooldir".to_string(), tooldir.as_ref().to_string_lossy().into_owned()),
-            ("outdir".to_string(), outdir.as_ref().to_string_lossy().into_owned()),
-            ("tmpdir".to_string(), tmpdir.as_ref().to_string_lossy().into_owned()),
-            ("outdirSize".to_string(), get_available_disk_space().to_string()),
-            ("tmpdirSize".to_string(), get_available_disk_space().to_string()),
-            ("cores".to_string(), get_processor_count().to_string()),
-            ("ram".to_string(), get_available_ram().to_string()),
+            (
+                "tooldir".to_string(),
+                StringOrNumber::String(tooldir.as_ref().to_string_lossy().into_owned()),
+            ),
+            (
+                "outdir".to_string(),
+                StringOrNumber::String(outdir.as_ref().to_string_lossy().into_owned()),
+            ),
+            (
+                "tmpdir".to_string(),
+                StringOrNumber::String(tmpdir.as_ref().to_string_lossy().into_owned()),
+            ),
+            ("outdirSize".to_string(), StringOrNumber::Integer(get_available_disk_space())),
+            ("tmpdirSize".to_string(), StringOrNumber::Integer(get_available_disk_space())),
+            ("cores".to_string(), StringOrNumber::Integer(get_processor_count() as u64)),
+            ("ram".to_string(), StringOrNumber::Integer(get_available_ram())),
         ]);
 
         let inputs = collect_inputs(tool, input_values, tooldir)?;
@@ -70,22 +79,24 @@ impl RuntimeEnvironment {
             if let Some(cores) = &rr.cores_min {
                 environment
                     .runtime
-                    .insert("cores".to_string(), evaluate(cores, &environment, &tool.inputs)?.to_string());
+                    .insert("cores".to_string(), StringOrNumber::Integer(evaluate(cores, &environment, &tool.inputs)?));
             }
             if let Some(ram) = &rr.ram_min {
                 environment
                     .runtime
-                    .insert("ram".to_string(), evaluate(ram, &environment, &tool.inputs)?.to_string());
+                    .insert("ram".to_string(), StringOrNumber::Integer(evaluate(ram, &environment, &tool.inputs)?));
             }
             if let Some(dir_size) = &rr.outdir_min {
-                environment
-                    .runtime
-                    .insert("outdirSize".to_string(), evaluate(dir_size, &environment, &tool.inputs)?.to_string());
+                environment.runtime.insert(
+                    "outdirSize".to_string(),
+                    StringOrNumber::Integer(evaluate(dir_size, &environment, &tool.inputs)?),
+                );
             }
             if let Some(tmp_size) = &rr.tmpdir_min {
-                environment
-                    .runtime
-                    .insert("tmpdirSize".to_string(), evaluate(tmp_size, &environment, &tool.inputs)?.to_string());
+                environment.runtime.insert(
+                    "tmpdirSize".to_string(),
+                    StringOrNumber::Integer(evaluate(tmp_size, &environment, &tool.inputs)?),
+                );
             }
         }
 

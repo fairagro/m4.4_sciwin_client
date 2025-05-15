@@ -163,9 +163,9 @@ fn stage_input_files(
                         .url()
                         .path_segments()
                         .and_then(|mut segments| segments.next_back())
-                        .map(|filename| Path::new(&runtime.runtime["tmpdir"]).join(filename))
+                        .map(|filename| Path::new(&runtime.runtime["tmpdir"].to_string()).join(filename))
                     {
-                        let path = Path::new(&runtime.runtime["tmpdir"]).join(segment);
+                        let path = Path::new(&runtime.runtime["tmpdir"].to_string()).join(segment);
                         let mut out = fs::File::create(&path)?;
                         io::copy(&mut res, &mut out)?;
 
@@ -188,7 +188,7 @@ fn stage_input_files(
 
         let mut staged_filename = handle_filename(&data);
         if let Some(tmpdir) = runtime.runtime.get("tmpdir") {
-            if let Some(diff) = diff_paths(&staged_filename, tmpdir) {
+            if let Some(diff) = diff_paths(&staged_filename, tmpdir.to_string()) {
                 staged_filename = diff.to_string_lossy().into_owned();
             }
         }
@@ -290,6 +290,7 @@ mod tests {
         outputs::CommandOutputBinding,
         requirements::InitialWorkDirRequirement,
         types::{Directory, File},
+        StringOrNumber,
     };
     use serial_test::serial;
     use std::{collections::HashMap, path::PathBuf, vec};
@@ -494,7 +495,10 @@ mod tests {
             &[input],
             &mut RuntimeEnvironment::default()
                 .with_inputs(HashMap::from([("test".to_string(), value)]))
-                .with_runtime(HashMap::from([("tmpdir".to_string(), temp.path().to_string_lossy().into_owned())])),
+                .with_runtime(HashMap::from([(
+                    "tmpdir".to_string(),
+                    StringOrNumber::String(temp.path().to_string_lossy().into_owned()),
+                )])),
             Path::new("../../"),
             working.path(),
             &PathBuf::from(""),

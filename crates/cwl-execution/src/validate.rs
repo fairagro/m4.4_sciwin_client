@@ -138,7 +138,7 @@ pub(crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvi
             let mut input_value =
                 get_input_value(base, &runtime.inputs, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {placeholder}"));
             if suffix == "dirname" {
-                if let Some(diff) = diff_paths(&input_value, &runtime.runtime["tooldir"]) {
+                if let Some(diff) = diff_paths(&input_value, runtime.runtime["tooldir"].to_string()) {
                     if let Some(diff_str) = diff.to_str() {
                         input_value = format!("./{}", input_value.trim_start_matches(diff_str));
                     }
@@ -152,7 +152,7 @@ pub(crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvi
     run_re
         .replace_all(&result, |caps: &fancy_regex::Captures| {
             let placeholder = &caps[1];
-            runtime.runtime[placeholder].clone()
+            runtime.runtime[placeholder].to_string()
         })
         .to_string()
 }
@@ -193,7 +193,10 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
 mod tests {
     use super::*;
     use crate::io::get_file_size;
-    use cwl::types::{CWLType, File};
+    use cwl::{
+        types::{CWLType, File},
+        StringOrNumber,
+    };
     use serde_yaml::Value;
 
     #[test]
@@ -233,7 +236,7 @@ outputs:
       glob: neuer_name.txt"#;
 
         let mut runtime = HashMap::new();
-        runtime.insert("true".to_string(), "true".to_string());
+        runtime.insert("true".to_string(), StringOrNumber::String("true".to_string()));
         let mut input_values = HashMap::new();
         input_values.insert("newname".to_string(), DefaultValue::Any(Value::String("neuer_name.txt".to_string())));
         input_values.insert(
@@ -327,8 +330,8 @@ outputs:
     pub fn test_set_placeholder_values_in_string_runtime() {
         let text = "Greeting: $(runtime.whatever_value)!";
 
-        let mut runtime: HashMap<String, String> = HashMap::new();
-        runtime.insert("whatever_value".to_string(), "Hello World".to_string());
+        let mut runtime: HashMap<String, StringOrNumber> = HashMap::new();
+        runtime.insert("whatever_value".to_string(), StringOrNumber::String("Hello World".to_string()));
         let runtime = RuntimeEnvironment {
             runtime,
             ..Default::default()
