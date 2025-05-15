@@ -1,5 +1,5 @@
 use crate::{
-    expression::{evaluate_expression, set_self, unset_self},
+    expression::{output_eval, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
 use cwl::{
@@ -212,7 +212,7 @@ fn evaluate_output_impl(
                         let mut ctx = ctx.snapshot();
                         ctx.contents = Some(contents);
                         set_self(&vec![&ctx])?;
-                        let result = evaluate_expression(expression)?;
+                        let result = output_eval(expression)?;
                         let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
                         unset_self()?;
                         DefaultValue::Any(value)
@@ -221,7 +221,7 @@ fn evaluate_output_impl(
                     };
                     outputs.insert(output.id.clone(), value);
                 } else if let Some(expression) = &binding.output_eval {
-                    let result = evaluate_expression(expression)?;
+                    let result = output_eval(expression)?;
                     let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
                     outputs.insert(output.id.clone(), DefaultValue::Any(value));
                 }

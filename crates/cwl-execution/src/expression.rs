@@ -63,6 +63,7 @@ pub(crate) fn unset_self() -> Result<(), rustyscript::Error> {
     Ok(())
 }
 
+#[allow(unused)]
 pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let expressions = parse_expressions(input);
 
@@ -73,6 +74,50 @@ pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::err
     }
 
     Ok(Value::String(input.to_string()))
+}
+
+pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
+    let expressions = parse_expressions(input);
+
+    if expressions.is_empty() {
+        return Ok(Value::String(input.to_string()));
+    }
+
+    // Special case: the input is a single full expression
+    if expressions.len() == 1 {
+        let expr = &expressions[0];
+        if expr.indices.start == 0 && expr.indices.end == input.len() {
+            return Ok(eval(&expr.expression())?);
+        }
+    }
+
+    let mut output = String::new();
+    let mut last = 0;
+
+    for expr in expressions {
+        // Append the part before the expression
+        output.push_str(&input[last..expr.indices.start]);
+
+        let result = eval(&expr.expression())?;
+
+        // Replace expression with result
+        match result {
+            Value::String(s) => output.push_str(&s),
+            Value::Number(n) => output.push_str(&n.to_string()),
+            Value::Bool(b) => output.push_str(&b.to_string()),
+            _ => output.push_str(&serde_json::to_string(&result)?),
+        }
+
+        last = expr.indices.end;
+    }
+
+    // Append remaining string
+    output.push_str(&input[last..]);
+
+    match serde_json::from_str(&output) {
+        Ok(parsed) => Ok(parsed),
+        Err(_) => Ok(Value::String(output)),
+    }
 }
 
 pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn std::error::Error>> {
