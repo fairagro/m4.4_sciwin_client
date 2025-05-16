@@ -1,6 +1,6 @@
 from time import sleep
 
-sleep(60)
+sleep(30)
 
 with open('sleep.txt', 'w') as f:
-    f.write('I slept for 60 seconds')
+    f.write('I slept for 30 seconds')
