@@ -131,6 +131,15 @@ impl CommandLineTool {
         self
     }
 
+    pub fn append_requirement(mut self, requirement: Requirement) -> Self {
+        if let Some(ref mut vec) = self.requirements {
+            vec.push(requirement);
+        } else {
+            self = self.with_requirements(vec![requirement]);
+        }
+        self
+    }
+
     /// Adds hints to this `CommandLineTool` and returns the updated tool
     pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
         self.hints = Some(requirements);

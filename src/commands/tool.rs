@@ -9,7 +9,7 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    requirements::{DockerRequirement, Requirement},
+    requirements::{DockerRequirement, NetworkAccess, Requirement},
 };
 use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
 use git2::Repository;
@@ -65,6 +65,8 @@ pub struct CreateToolArgs {
     pub is_clean: bool,
     #[arg(long = "no-defaults", help = "Removes default values from inputs")]
     pub no_defaults: bool,
+    #[arg(long = "net", alias = "enable-network", help = "Enables network in container")]
+    pub enable_network: bool,
     #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
     #[arg(
@@ -186,11 +188,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
         };
 
-        if let Some(ref mut vec) = cwl.requirements {
-            vec.push(requirement);
-        } else {
-            cwl = cwl.with_requirements(vec![requirement]);
-        }
+        cwl = cwl.append_requirement(requirement);
+    }
+
+    if args.enable_network {
+        cwl = cwl.append_requirement(Requirement::NetworkAccess(NetworkAccess { network_access: true }));
     }
 
     if args.no_defaults {

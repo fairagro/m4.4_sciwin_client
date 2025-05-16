@@ -3,7 +3,7 @@ use common::os_path;
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
-    requirements::Requirement,
+    requirements::{NetworkAccess, Requirement},
     types::{CWLType, Entry},
 };
 use fstest::fstest;
@@ -70,7 +70,7 @@ pub fn tool_create_test_inputs_outputs() {
 
     //check tool props
     let tool = load_tool(tool_path).unwrap();
-    
+
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
@@ -448,4 +448,21 @@ pub fn tool_create_remote_file() {
     let tool = load_tool(tool_path).unwrap();
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.inputs[0].type_, CWLType::File);
+}
+
+#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+pub fn tool_create_test_network() {
+    let tool_create_args = CreateToolArgs {
+        command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+        container_image: Some("python".to_string()),
+        enable_network: true,
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+
+    let tool_path = Path::new("workflows/echo/echo.cwl");
+    let tool = load_tool(tool_path).unwrap();
+    
+    assert!(tool.get_requirement::<NetworkAccess>().is_some());
 }

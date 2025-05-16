@@ -64,11 +64,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     };
 
     if tool.arguments.is_some() {
-        if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::ShellCommandRequirement);
-        } else {
-            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement]);
-        }
+        tool = tool.append_requirement(Requirement::ShellCommandRequirement);
     }
     tool
 }
@@ -76,7 +72,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
 pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     for input in inputs {
         let type_ = guess_type(input);
-        
+
         //todo: add requiement for directory also or add new --mount param and remove block from here
         if matches!(type_, CWLType::File) {
             if let Some(req) = &mut tool.requirements {
