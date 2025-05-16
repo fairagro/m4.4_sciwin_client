@@ -1,4 +1,7 @@
 # Unreleased
+## 🚀 Features
+- added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
+
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
 - ramping up runner conformance from 160/378 to 162/378
