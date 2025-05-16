@@ -42,6 +42,8 @@ The `tool create` command can be used to easily generate CWL CommandLineTools. I
           --no-commit                          Do not commit at the end of tool creation
           --no-run                             Do not run given command
           --clean                              Deletes created outputs after usage
+          --no-defaults                        Removes default values from inputs
+          --net                                Enables network in container
       -i, --inputs <INPUTS>                    Force values to be considered as an input.
       -o, --outputs <OUTPUTS>                  Force values to be considered as an output.
       -h, --help                               Print help
