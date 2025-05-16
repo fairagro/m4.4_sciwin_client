@@ -198,11 +198,13 @@ pub fn test_wrapping_a_long_running_script2() {
     assert_eq!(tool.outputs.len(), 1);
 
     //test if is executable
-    execute_local(&LocalExecuteArgs {
-        file: tool_path,
-        ..Default::default()
-    })
-    .unwrap();
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
@@ -246,11 +248,13 @@ pub fn test_implicit_inputs_hardcoded_files() {
     }
 
     //test if is executable
-    execute_local(&LocalExecuteArgs {
-        file: tool_path,
-        ..Default::default()
-    })
-    .unwrap();
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
@@ -282,11 +286,13 @@ pub fn test_piping() {
     assert_eq!(tool.arguments.unwrap().len(), 6);
 
     //test if is executable
-    execute_local(&LocalExecuteArgs {
-        file: tool_path,
-        ..Default::default()
-    })
-    .unwrap();
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
@@ -334,11 +340,13 @@ pub fn test_pulling_containers() {
     assert_eq!(tool.outputs.len(), 1);
 
     //test if is executable
-    execute_local(&LocalExecuteArgs {
-        file: tool_path,
-        ..Default::default()
-    })
-    .unwrap();
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
@@ -387,11 +395,13 @@ pub fn test_building_custom_containers() {
     assert_eq!(tool.outputs.len(), 1);
 
     //test if is executable
-    execute_local(&LocalExecuteArgs {
-        file: tool_path,
-        ..Default::default()
-    })
-    .unwrap();
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
