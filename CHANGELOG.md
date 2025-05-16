@@ -1,11 +1,12 @@
 # Unreleased
 ## 🚀 Features
 - added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
+- Support InlineTools in Workflow step #111
 
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
 - handle NetworkAccess Requirment in runner
-- ramping up runner conformance from 160/378 to 164/378
+- ramping up runner conformance from 160/378 to 176/378
 
 # v0.5.2
 ## 🐛 Bugfixes

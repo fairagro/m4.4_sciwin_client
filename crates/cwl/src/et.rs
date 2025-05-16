@@ -22,7 +22,7 @@ impl Default for ExpressionTool {
     fn default() -> Self {
         Self {
             base: DocumentBase {
-                cwl_version: String::from("v1.2"),
+                cwl_version: Some(String::from("v1.2")),
                 class: String::from("ExpressionTool"),
                 id: Option::default(),
                 label: Option::default(),

@@ -3,7 +3,7 @@ use super::{
     inputs::WorkflowStepInput,
     outputs::WorkflowOutputParameter,
 };
-use crate::DocumentBase;
+use crate::{CWLDocument, DocumentBase};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, VecDeque},
@@ -15,7 +15,7 @@ use std::{
 /// directed acyclic graph, and independent steps may run concurrently.
 ///
 /// Reference: <https://www.commonwl.org/v1.2/Workflow.html>
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
     #[serde(flatten)]
@@ -34,7 +34,7 @@ impl Default for Workflow {
                 label: None,
                 doc: None,
                 class: String::from("Workflow"),
-                cwl_version: String::from("v1.2"),
+                cwl_version: Some(String::from("v1.2")),
                 requirements: Default::default(),
                 hints: Default::default(),
                 inputs: Default::default(),
@@ -102,7 +102,6 @@ impl Workflow {
         step.unwrap().out.iter().any(|output| output == parts[1])
     }
 
-    
     /// Returns the `Workflow`'s `WorkflowStep` with id `id`
     pub fn get_step(&self, id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|s| s.id == *id)
@@ -166,7 +165,7 @@ impl Workflow {
 pub struct WorkflowStep {
     #[serde(default)]
     pub id: String,
-    pub run: String,
+    pub run: StringOrDocument,
     pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
 }
@@ -178,6 +177,19 @@ impl Identifiable for WorkflowStep {
 
     fn set_id(&mut self, id: String) {
         self.id = id;
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrDocument {
+    String(String),
+    Document(Box<CWLDocument>),
+}
+
+impl Default for StringOrDocument {
+    fn default() -> Self {
+        Self::String(String::default())
     }
 }
 

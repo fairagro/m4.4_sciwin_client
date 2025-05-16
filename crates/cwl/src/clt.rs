@@ -59,7 +59,7 @@ impl Default for CommandLineTool {
                 label: Option::default(),
                 doc: Option::default(),
                 class: String::from("CommandLineTool"),
-                cwl_version: String::from("v1.2"),
+                cwl_version: Some(String::from("v1.2")),
                 inputs: Vec::default(),
                 requirements: Option::default(),
                 hints: Option::default(),

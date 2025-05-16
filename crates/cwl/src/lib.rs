@@ -47,7 +47,7 @@ pub mod wf;
 /// let document: CWLDocument = serde_yaml::from_str(yaml).unwrap();
 /// assert!(matches!(document, CWLDocument::CommandLineTool(_)));
 /// ```
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
@@ -107,7 +107,7 @@ impl<'de> Deserialize<'de> for CWLDocument {
 #[serde(rename_all = "camelCase")]
 pub struct DocumentBase {
     pub class: String,
-    pub cwl_version: String,
+    pub cwl_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

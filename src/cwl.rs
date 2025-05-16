@@ -6,7 +6,7 @@ use cwl::{
     outputs::WorkflowOutputParameter,
     requirements::Requirement,
     types::{DefaultValue, Entry, PathItem},
-    wf::{Workflow, WorkflowStep},
+    wf::{StringOrDocument, Workflow, WorkflowStep},
 };
 use log::{info, warn};
 use std::{collections::HashMap, error::Error};
@@ -67,7 +67,7 @@ impl Connectable for Workflow {
         if !self.has_step(name) {
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
-                run: format!("../{name}/{name}.cwl"),
+                run: StringOrDocument::String(format!("../{name}/{name}.cwl")),
                 in_: HashMap::new(),
                 out: tool.get_output_ids(),
             };
@@ -271,7 +271,7 @@ mod tests {
         clt::Command,
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
-        types::{CWLType, File, Dirent},
+        types::{CWLType, Dirent, File},
     };
     use serde_yaml::Value;
     use std::path::Path;

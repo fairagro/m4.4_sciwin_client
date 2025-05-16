@@ -8,8 +8,9 @@ use colored::Colorize;
 use cwl::{
     format::format_cwl,
     inputs::WorkflowStepInput,
-    wf::Workflow,
-    {load_tool, load_workflow},
+    load_tool, load_workflow,
+    wf::{StringOrDocument, Workflow},
+    CWLDocument,
 };
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;
@@ -208,8 +209,13 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     table.add_row(row![b -> "Steps:"]);
 
     for step in &workflow.steps {
-        let tool = load_tool(path.join(&step.run))?;
-
+        let tool = match &step.run {
+            StringOrDocument::String(run) => load_tool(path.join(run))?,
+            StringOrDocument::Document(boxed_doc) => match &**boxed_doc {
+                CWLDocument::CommandLineTool(doc) => doc.clone(),
+                _ => unreachable!(), //see #95
+            },
+        };
         let input_status = tool
             .inputs
             .iter()
@@ -246,7 +252,12 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
             })
             .collect::<Vec<_>>()
             .join("\n");
-        table.add_row(row![b -> &step.run, &input_status, &output_status]);
+        let run = if let StringOrDocument::String(run) = &step.run {
+            run
+        } else {
+            &String::from("Inline Document")
+        };
+        table.add_row(row![b -> run, &input_status, &output_status]);
     }
 
     table.printstd();

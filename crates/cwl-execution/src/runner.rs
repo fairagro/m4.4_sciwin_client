@@ -21,7 +21,7 @@ use cwl::{
     inputs::{CommandLineBinding, WorkflowStepInput},
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
-    wf::Workflow,
+    wf::{StringOrDocument, Workflow},
     CWLDocument, StringOrNumber,
 };
 use log::{info, warn};
@@ -66,7 +66,11 @@ pub fn run_workflow(
     let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
-            let path = workflow_folder.join(step.run.clone());
+            let path = if let StringOrDocument::String(run) = &step.run {
+                Some(workflow_folder.join(run))
+            } else {
+                None
+            };
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
@@ -113,8 +117,13 @@ pub fn run_workflow(
                     }
                 }
             }
-
-            let step_outputs = execute(&path, step_inputs, Some(tmp_path.clone()))?;
+            let step_outputs = if let Some(path) = path {
+                execute(&path, step_inputs, Some(tmp_path.clone()), None)?
+            } else if let StringOrDocument::Document(doc) = &step.run {
+                execute(workflow_folder, step_inputs, Some(tmp_path.clone()), Some(doc))?
+            } else {
+                unreachable!()
+            };
             for (key, value) in step_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }

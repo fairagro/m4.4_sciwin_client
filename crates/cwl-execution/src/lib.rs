@@ -77,7 +77,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
         }
     }
 
-    let output_values = execute(cwlfile, inputs, outdir)?;
+    let output_values = execute(cwlfile, inputs, outdir, None)?;
     let json = serde_json::to_string_pretty(&output_values)?;
     println!("{json}");
 
@@ -88,11 +88,16 @@ pub fn execute(
     cwlfile: impl AsRef<Path>,
     inputs: HashMap<String, DefaultValue>,
     outdir: Option<impl AsRef<Path>>,
+    cwl_doc: Option<&CWLDocument>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //load cwl
-    let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
-    let contents = preprocess_cwl(&contents, &cwlfile)?;
-    let mut doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?;
+    let mut doc: CWLDocument = if let Some(doc) = cwl_doc {
+        doc.clone()
+    } else {
+        let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
+        let contents = preprocess_cwl(&contents, &cwlfile)?;
+        serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?
+    };
 
     match doc {
         CWLDocument::CommandLineTool(_) | CWLDocument::ExpressionTool(_) => run_tool(
