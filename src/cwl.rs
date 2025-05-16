@@ -4,7 +4,7 @@ use cwl::{
     inputs::{CommandInputParameter, WorkflowStepInput},
     load_tool,
     outputs::WorkflowOutputParameter,
-    requirements::Requirement,
+    requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, PathItem},
     wf::{StringOrDocument, Workflow, WorkflowStep},
 };
@@ -51,8 +51,10 @@ impl Saveable for CommandLineTool {
                     }
                 } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
                     for listing in &mut iwdr.listing {
-                        if let Entry::Include(include) = &mut listing.entry {
-                            include.include = resolve_path(&include.include, path);
+                        if let WorkDirItem::Dirent(dirent) = listing {
+                            if let Entry::Include(include) = &mut dirent.entry {
+                                include.include = resolve_path(&include.include, path);
+                            }
                         }
                     }
                 }
@@ -327,10 +329,10 @@ mod tests {
         assert_eq!(
             *req_0,
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
-                listing: vec![Dirent {
+                listing: vec![WorkDirItem::Dirent(Dirent {
                     entry: Entry::from_file(os_path("../../test/script.py")),
                     entryname: "test/script.py".to_string()
-                }]
+                })]
             })
         );
         assert_eq!(

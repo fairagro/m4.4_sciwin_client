@@ -2,7 +2,7 @@ use crate::{environment::RuntimeEnvironment, io::get_file_property};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
-    requirements::Requirement,
+    requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, EnviromentDefs, PathItem},
     CWLDocument,
 };
@@ -112,16 +112,18 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
 
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
             for listing in &mut wd_req.listing {
-                listing.entryname = set_placeholder_values_in_string(&listing.entryname, runtime, inputs);
-                listing.entry = match &mut listing.entry {
-                    Entry::Source(src) => {
-                        *src = set_placeholder_values_in_string(src, runtime, inputs);
-                        Entry::Source(src.clone())
-                    }
-                    Entry::Include(include) => {
-                        let updated_include = set_placeholder_values_in_string(&include.include, runtime, inputs);
-                        include.include = updated_include;
-                        Entry::Include(include.clone())
+                if let WorkDirItem::Dirent(dirent) = listing {
+                    dirent.entryname = set_placeholder_values_in_string(&dirent.entryname, runtime, inputs);
+                    dirent.entry = match &mut dirent.entry {
+                        Entry::Source(src) => {
+                            *src = set_placeholder_values_in_string(src, runtime, inputs);
+                            Entry::Source(src.clone())
+                        }
+                        Entry::Include(include) => {
+                            let updated_include = set_placeholder_values_in_string(&include.include, runtime, inputs);
+                            include.include = updated_include;
+                            Entry::Include(include.clone())
+                        }
                     }
                 }
             }

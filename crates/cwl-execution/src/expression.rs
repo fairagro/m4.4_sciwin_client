@@ -2,7 +2,7 @@ use crate::{environment::RuntimeEnvironment, split_ranges};
 use cwl::{
     clt::{Argument, Command},
     et::{Expression, ExpressionType},
-    requirements::Requirement,
+    requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry},
     CWLDocument,
 };
@@ -187,15 +187,17 @@ pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box
         for requirement in requirements {
             if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
                 for listing in &mut wd_req.listing {
-                    listing.entryname = replace_expressions(&listing.entryname)?;
-                    listing.entry = match &mut listing.entry {
-                        Entry::Source(src) => {
-                            *src = replace_expressions(src)?;
-                            Entry::Source(src.clone())
-                        }
-                        Entry::Include(include) => {
-                            include.include = replace_expressions(&include.include)?;
-                            Entry::Include(include.clone())
+                    if let WorkDirItem::Dirent(dirent) = listing {
+                        dirent.entryname = replace_expressions(&dirent.entryname)?;
+                        dirent.entry = match &mut dirent.entry {
+                            Entry::Source(src) => {
+                                *src = replace_expressions(src)?;
+                                Entry::Source(src.clone())
+                            }
+                            Entry::Include(include) => {
+                                include.include = replace_expressions(&include.include)?;
+                                Entry::Include(include.clone())
+                            }
                         }
                     }
                 }

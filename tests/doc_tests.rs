@@ -1,7 +1,12 @@
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 mod common;
 use common::{check_git_user, setup_python};
-use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, types::Entry};
+use cwl::{
+    clt::Command,
+    load_tool, load_workflow,
+    requirements::{Requirement, WorkDirItem},
+    types::Entry,
+};
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
     execute::{execute_local, LocalExecuteArgs, Runner},
@@ -240,9 +245,15 @@ pub fn test_implicit_inputs_hardcoded_files() {
 
     if let Requirement::InitialWorkDirRequirement(initial) = &requirements[0] {
         assert_eq!(initial.listing.len(), 2);
-        assert_eq!(initial.listing[0].entryname, "load.py");
-        assert_eq!(initial.listing[1].entryname, "file.txt");
-        assert_eq!(initial.listing[1].entry, Entry::Source("$(inputs.file_txt)".into()));
+        assert!(matches!(initial.listing[0], WorkDirItem::Dirent(_)));
+        assert!(matches!(initial.listing[1], WorkDirItem::Dirent(_)));
+        if let WorkDirItem::Dirent(dirent) = &initial.listing[0] {
+            assert_eq!(dirent.entryname, "load.py");
+        }
+        if let WorkDirItem::Dirent(dirent) = &initial.listing[1] {
+            assert_eq!(dirent.entryname, "file.txt");
+            assert_eq!(dirent.entry, Entry::Source("$(inputs.file_txt)".into()));
+        }
     } else {
         panic!("InitialWorkDirRequirement not found!");
     }

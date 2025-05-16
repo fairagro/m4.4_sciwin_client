@@ -1,5 +1,8 @@
 use super::types::{Dirent, Entry, EnviromentDefs};
-use crate::{types::Include, CWLDocument, StringOrNumber};
+use crate::{
+    types::{DefaultValue, Include},
+    CWLDocument, StringOrNumber,
+};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
 
@@ -127,44 +130,56 @@ fn get_entry_name(input: &str) -> String {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum WorkDirItem {
+    Dirent(Dirent),
+    FileOrDirectory(Box<DefaultValue>),
+    Expression(String),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWorkDirRequirement {
-    pub listing: Vec<Dirent>,
+    pub listing: Vec<WorkDirItem>,
 }
 
 impl InitialWorkDirRequirement {
     pub fn from_file(filename: &str) -> Self {
         InitialWorkDirRequirement {
-            listing: vec![Dirent {
+            listing: vec![WorkDirItem::Dirent(Dirent {
                 entryname: filename.to_string(),
                 entry: Entry::from_file(filename),
-            }],
+            })],
         }
     }
     pub fn from_files(filenames: &[&str]) -> Self {
         InitialWorkDirRequirement {
             listing: filenames
                 .iter()
-                .map(|&filename| Dirent {
-                    entryname: filename.to_string(),
-                    entry: Entry::Source(get_entry_name(filename)),
+                .map(|&filename| {
+                    WorkDirItem::Dirent(Dirent {
+                        entryname: filename.to_string(),
+                        entry: Entry::Source(get_entry_name(filename)),
+                    })
                 })
                 .collect(),
         }
     }
     pub fn from_contents(entryname: &str, contents: &str) -> Self {
         InitialWorkDirRequirement {
-            listing: vec![Dirent {
+            listing: vec![WorkDirItem::Dirent(Dirent {
                 entryname: entryname.to_string(),
                 entry: Entry::Source(contents.to_string()),
-            }],
+            })],
         }
     }
 
     pub fn add_files(&mut self, filenames: &[&str]) {
-        self.listing.extend(filenames.iter().map(|&f| Dirent {
-            entryname: f.to_string(),
-            entry: Entry::Source(get_entry_name(f)),
+        self.listing.extend(filenames.iter().map(|&f| {
+            WorkDirItem::Dirent(Dirent {
+                entryname: f.to_string(),
+                entry: Entry::Source(get_entry_name(f)),
+            })
         }));
     }
 }
@@ -262,7 +277,10 @@ mod tests {
     pub fn test_initial_workdir_requirement() {
         let req = InitialWorkDirRequirement::from_file("../../tests/test_data/echo.py");
         assert_eq!(req.listing.len(), 1);
-        assert_eq!(req.listing[0].entryname, "../../tests/test_data/echo.py".to_string());
+        assert!(matches!(req.listing[0], WorkDirItem::Dirent(_)));
+        if let WorkDirItem::Dirent(dirent) = &req.listing[0] {
+            assert_eq!(dirent.entryname, "../../tests/test_data/echo.py".to_string());
+        }
     }
 
     #[test]

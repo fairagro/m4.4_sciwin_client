@@ -3,7 +3,7 @@ use common::os_path;
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
-    requirements::{NetworkAccess, Requirement},
+    requirements::{NetworkAccess, Requirement, WorkDirItem},
     types::{CWLType, Entry},
 };
 use fstest::fstest;
@@ -77,8 +77,15 @@ pub fn tool_create_test_inputs_outputs() {
     if let Some(req) = &tool.requirements {
         if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
             assert_eq!(iwdr.listing.len(), 2);
-            assert_eq!(iwdr.listing[0].entryname, script);
-            assert_eq!(iwdr.listing[1].entryname, input);
+            assert!(matches!(iwdr.listing[0], WorkDirItem::Dirent(_)));
+            assert!(matches!(iwdr.listing[1], WorkDirItem::Dirent(_)));
+
+            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+                assert_eq!(dirent.entryname, script);
+            }
+            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[1] {
+                assert_eq!(dirent.entryname, input);
+            }
         } else {
             panic!("Not an InitialWorkDirRequirement")
         }
@@ -393,7 +400,9 @@ pub fn test_shell_script() {
     if let Some(req) = &tool.requirements {
         assert_eq!(req.len(), 1);
         if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
-            assert_eq!(iwdr.listing[0].entryname, "./script.sh");
+            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+                assert_eq!(dirent.entryname, "./script.sh");
+            }
         } else {
             panic!("Not an InitialWorkDirRequirement")
         }
@@ -463,6 +472,6 @@ pub fn tool_create_test_network() {
 
     let tool_path = Path::new("workflows/echo/echo.cwl");
     let tool = load_tool(tool_path).unwrap();
-    
+
     assert!(tool.get_requirement::<NetworkAccess>().is_some());
 }
