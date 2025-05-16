@@ -623,6 +623,15 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
         docker_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
     }
 
+    if let Some(StringOrNumber::Integer(i)) = runtime.runtime.get("network") {
+        if *i != 1 {
+            docker_command.arg("--net=none");
+        }
+        //net enabled if i == 1 = not append arg
+    } else {
+        docker_command.arg("--net=none");
+    }
+
     docker_command.arg(docker_image);
     docker_command.arg(command.get_program());
 
@@ -643,11 +652,9 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
 
 #[cfg(test)]
 mod tests {
-    use cwl::load_tool;
-
-    use crate::set_container_engine;
-
     use super::*;
+    use crate::set_container_engine;
+    use cwl::load_tool;
 
     #[test]
     fn test_build_command() {

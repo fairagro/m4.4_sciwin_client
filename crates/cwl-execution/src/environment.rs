@@ -1,7 +1,7 @@
 use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
 use cwl::{
     inputs::CommandInputParameter,
-    requirements::{check_timelimit, Requirement, ResourceRequirement},
+    requirements::{check_timelimit, NetworkAccess, Requirement, ResourceRequirement},
     types::{DefaultValue, EnviromentDefs},
     CWLDocument, StringOrNumber,
 };
@@ -47,7 +47,7 @@ impl RuntimeEnvironment {
         tooldir: impl AsRef<Path>,
         tmpdir: impl AsRef<Path>,
     ) -> Result<Self, Box<dyn Error>> {
-        let runtime = HashMap::from([
+        let mut runtime = HashMap::from([
             (
                 "tooldir".to_string(),
                 StringOrNumber::String(tooldir.as_ref().to_string_lossy().into_owned()),
@@ -65,6 +65,15 @@ impl RuntimeEnvironment {
             ("cores".to_string(), StringOrNumber::Integer(get_processor_count() as u64)),
             ("ram".to_string(), StringOrNumber::Integer(get_available_ram())),
         ]);
+
+        runtime.insert(
+            "network".to_string(),
+            if tool.get_requirement::<NetworkAccess>().is_some() {
+                StringOrNumber::Integer(1)
+            } else {
+                StringOrNumber::Integer(0)
+            },
+        );
 
         let inputs = collect_inputs(tool, input_values, tooldir)?;
 
