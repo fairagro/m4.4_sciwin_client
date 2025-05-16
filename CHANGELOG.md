@@ -1,4 +1,6 @@
 # Unreleased
+## 🐛 Bugfixes
+- fixed a bug with Dockerfile path resolution
 
 # v0.5.2
 ## 🐛 Bugfixes
