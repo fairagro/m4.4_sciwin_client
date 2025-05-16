@@ -7,7 +7,7 @@
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
 - handle NetworkAccess Requirment in runner
-- ramping up runner conformance from 160/378 to 176/378
+- ramping up runner conformance from 160/378 to 177/378
 
 # v0.5.2
 ## 🐛 Bugfixes
