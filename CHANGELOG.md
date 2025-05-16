@@ -2,6 +2,7 @@
 ## 🚀 Features
 - added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
 - Support InlineTools in Workflow step #111
+- Support Files and Directories as `InitialWorkDirRequirement` (in additon to Dirents)
 
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
