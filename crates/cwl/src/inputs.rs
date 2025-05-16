@@ -21,6 +21,9 @@ pub struct CommandInputParameter {
     #[serde(default)]
     #[serde(skip_serializing_if = "<&bool>::not")]
     pub load_contents: bool,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "<&bool>::not")]
+    pub streamable: bool,
 }
 
 impl CommandInputParameter {

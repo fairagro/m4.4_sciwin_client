@@ -10,7 +10,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
 };
 use glob::glob;
-use serde_yaml::Value;
+use serde_yaml::{Mapping, Value};
 use std::{
     collections::HashMap,
     env,
@@ -285,7 +285,7 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String,
     let mut yaml: Value = serde_yaml::from_str(contents)?;
     let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
     resolve_imports(&mut yaml, path)?;
-
+    resolve_shortcuts(&mut yaml);
     Ok(serde_yaml::to_string(&yaml)?)
 }
 
@@ -314,6 +314,50 @@ fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Er
         _ => {}
     }
     Ok(())
+}
+
+fn resolve_shortcuts(value: &mut Value) {
+    //get inputs block
+    let mut stdin_id: Option<String> = None;
+    if let Value::Mapping(cwl) = value {
+        let inputs = cwl.get_mut("inputs").unwrap(); //block is mandatory!
+        if let Value::Mapping(map) = inputs {
+            for (id, map_val) in map {
+                //if shortcut of shortcut expand first time
+                if map_val == &Value::String("stdin".to_string()) {
+                    let mut mapping = Mapping::new();
+                    mapping.insert(Value::String("type".to_string()), Value::String("stdin".to_string()));
+                    *map_val = Value::Mapping(mapping);
+                }
+                if let Value::Mapping(map_map) = map_val {
+                    process_stdin_input(map_map, id, &mut stdin_id);
+                }
+            }
+        } else if let Value::Sequence(seq) = inputs {
+            for item in seq {
+                if let Value::Mapping(map) = item {
+                    let id_val = map.get("id").cloned().unwrap();
+                    process_stdin_input(map, &id_val, &mut stdin_id);
+                }
+            }
+        }
+
+        if let Some(stdin_id) = stdin_id {
+            cwl.insert(Value::String("stdin".to_string()), Value::String(format!("$(inputs.{stdin_id}.path)")));
+        }
+    }
+}
+
+fn process_stdin_input(map: &mut Mapping, id: &Value, stdin_id: &mut Option<String>) {
+    if let Some(Value::String(type_str)) = map.get_mut(Value::String("type".to_string())) {
+        if type_str == "stdin" {
+            *type_str = "File".to_string();
+            map.insert(Value::String("streamable".to_string()), Value::Bool(true));
+            if let Value::String(id_str) = id {
+                *stdin_id = Some(id_str.clone());
+            }
+        }
+    }
 }
 
 pub fn is_docker_installed() -> bool {
