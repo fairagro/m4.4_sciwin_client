@@ -13,7 +13,7 @@ use std::{collections::HashMap, error::Error, fs, path::Path};
 
 static_runtime!(RUNTIME);
 
-pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Result<(), rustyscript::Error> {
+pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
     let inputs = serde_json::to_string(&environment.inputs)?;
     let runtime = serde_json::to_string(&environment.runtime)?;
 
@@ -22,48 +22,48 @@ pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Res
     Ok(())
 }
 
-pub(crate) fn reset_expression_engine() -> Result<(), rustyscript::Error> {
-    RUNTIME::with(|rt| {
+pub(crate) fn reset_expression_engine() -> Result<(), Box<dyn Error>> {
+    Ok(RUNTIME::with(|rt| {
         rt.eval::<()>(
             r#"
             var inputs = undefined;
             var runtime = undefined;
             var self = undefined;"#,
         )
-    })
+    })?)
 }
 
-pub(crate) fn eval(expression: &str) -> Result<Value, rustyscript::Error> {
+pub(crate) fn eval(expression: &str) -> Result<Value, Box<dyn Error>> {
     eval_generic(expression)
 }
 
-pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
-    RUNTIME::with(|rt| rt.eval::<T>(expression))
+pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, Box<dyn Error>> {
+    Ok(RUNTIME::with(|rt| rt.eval::<T>(expression))?)
 }
 
-pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, rustyscript::Error> {
-    RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))
+pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, Box<dyn Error>> {
+    Ok(RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))?)
 }
 
-pub(crate) fn load_lib(lib: impl AsRef<Path>) -> Result<(), rustyscript::Error> {
-    RUNTIME::with(|rt| {
+pub(crate) fn load_lib(lib: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
+    Ok(RUNTIME::with(|rt| {
         let contents = fs::read_to_string(lib.as_ref()).unwrap();
         rt.eval(contents)
-    })
+    })?)
 }
 
-pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), rustyscript::Error> {
+pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), Box<dyn Error>> {
     let json = serde_json::to_string(me)?;
     RUNTIME::with(|rt| rt.eval::<()>(format!("var self = {json};")))?;
     Ok(())
 }
 
-pub(crate) fn unset_self() -> Result<(), rustyscript::Error> {
+pub(crate) fn unset_self() -> Result<(), Box<dyn Error>> {
     RUNTIME::with(|rt| rt.eval::<()>("var self = undefined;".to_string()))?;
     Ok(())
 }
 
-pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
+pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn Error>> {
     let expressions = parse_expressions(input);
 
     if !expressions.is_empty() {
@@ -75,7 +75,7 @@ pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn std::err
     Ok(Value::String(input.to_string()))
 }
 
-pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn std::error::Error>> {
+pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn Error>> {
     let expressions = parse_expressions(input);
 
     if expressions.is_empty() {
@@ -119,7 +119,7 @@ pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn std::error::Erro
     }
 }
 
-pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn Error>> {
     let expressions = parse_expressions(input);
     let evaluations = expressions
         .iter()

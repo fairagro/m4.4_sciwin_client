@@ -1,6 +1,7 @@
 # Unreleased
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
+- ramping up runner conformance from 160/378 to 162/378
 
 # v0.5.2
 ## 🐛 Bugfixes

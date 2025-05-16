@@ -122,7 +122,7 @@ where
 #[serde(untagged)]
 pub enum WorkflowStepInput {
     String(String),
-    Parameter(WorkflowStepInputParameter),
+    Parameter(Box<WorkflowStepInputParameter>),
 }
 
 impl Default for WorkflowStepInput {
