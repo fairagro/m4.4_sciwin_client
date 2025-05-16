@@ -133,8 +133,8 @@ fn get_entry_name(input: &str) -> String {
 #[serde(untagged)]
 pub enum WorkDirItem {
     Dirent(Dirent),
-    FileOrDirectory(Box<DefaultValue>),
     Expression(String),
+    FileOrDirectory(Box<DefaultValue>),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

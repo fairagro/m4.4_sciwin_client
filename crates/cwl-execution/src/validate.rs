@@ -125,6 +125,15 @@ fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runt
                             Entry::Include(include.clone())
                         }
                     }
+                } else if let WorkDirItem::Expression(expr) = listing {
+                    // this kind of expression seems to be unfolding into File or Directory itself.
+                    // So we just need to find the correct input and set it to listing
+                    let re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
+                    if let Ok(Some(caps)) = re.captures(expr) {
+                        if let Some(input) = runtime.inputs.get(&caps[1]) {
+                            *listing = WorkDirItem::FileOrDirectory(Box::new(input.clone()));
+                        }
+                    }
                 }
             }
         }
