@@ -54,6 +54,9 @@ syntect = { version = "5.2.0", default-features = false, features = [
 ] }
 tokio = { version = "1.44.2", features = ["macros"] }
 walkdir = "2.5.0"
+toml = "0.8.22"
+semver = { version = "1.0.26", features = ["serde"] }
+smart-default = "0.7.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
