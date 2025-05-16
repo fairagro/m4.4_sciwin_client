@@ -57,6 +57,13 @@ pub fn test_wrapping_echo() {
     assert_eq!(tool.base_command, Command::Single("echo".to_string()));
     assert_eq!(tool.inputs.len(), 1);
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -86,6 +93,13 @@ pub fn test_wrapping_echo_2() {
     assert_eq!(tool.outputs.len(), 1);
     assert_eq!(tool.stdout, Some("hello.yaml".to_string()));
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -113,6 +127,13 @@ pub fn test_wrapping_python_script() {
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -139,6 +160,13 @@ pub fn test_wrapping_a_long_running_script() {
     assert_eq!(tool.base_command, Command::Multiple(vec!["python".to_string(), "sleep.py".to_string()]));
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 0);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }
@@ -168,6 +196,13 @@ pub fn test_wrapping_a_long_running_script2() {
     assert_eq!(tool.base_command, Command::Multiple(vec!["python".to_string(), "sleep.py".to_string()]));
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }
@@ -210,6 +245,13 @@ pub fn test_implicit_inputs_hardcoded_files() {
         panic!("InitialWorkDirRequirement not found!");
     }
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -238,6 +280,13 @@ pub fn test_piping() {
     assert_eq!(tool.outputs.len(), 1);
     assert!(tool.arguments.is_some());
     assert_eq!(tool.arguments.unwrap().len(), 6);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }
@@ -284,6 +333,13 @@ pub fn test_pulling_containers() {
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -329,6 +385,13 @@ pub fn test_building_custom_containers() {
     );
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }

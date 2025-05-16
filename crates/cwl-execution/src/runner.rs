@@ -32,7 +32,7 @@ use std::{
     env,
     error::Error,
     fs::{self},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     process::Command as SystemCommand,
     time::{Duration, Instant},
 };
@@ -590,6 +590,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
                 path
             }
         };
+        let path = path.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
         let mut build = SystemCommand::new(&container_engine);
         build.args(["build", "-f", &path, "-t", docker_image_id, "."]);
