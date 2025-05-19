@@ -108,13 +108,13 @@ pub fn execute(
         CWLDocument::CommandLineTool(_) | CWLDocument::ExpressionTool(_) => run_tool(
             &mut doc,
             input_values,
-            Some(&cwlfile.as_ref().to_path_buf()),
+            &cwlfile.as_ref().to_path_buf(),
             outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
         ),
         CWLDocument::Workflow(mut workflow) => run_workflow(
             &mut workflow,
             input_values,
-            Some(&cwlfile.as_ref().to_path_buf()),
+            &cwlfile.as_ref().to_path_buf(),
             outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
         ),
     }

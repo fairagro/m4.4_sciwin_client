@@ -42,7 +42,7 @@ use wait_timeout::ChildExt;
 pub fn run_workflow(
     workflow: &mut Workflow,
     input_values: &InputObject,
-    cwl_path: Option<&PathBuf>,
+    cwl_path: &PathBuf,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let clock = Instant::now();
@@ -58,7 +58,12 @@ pub fn run_workflow(
         current.to_string_lossy().into_owned()
     };
 
-    let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
+    let workflow_folder = if cwl_path.is_file() {
+        cwl_path.parent().unwrap_or(Path::new("."))
+    } else {
+        cwl_path
+    };
+
     let input_values = input_values.handle_requirements(&workflow.requirements, &workflow.hints);
 
     //prevent tool from outputting
@@ -187,24 +192,20 @@ pub fn run_workflow(
         }
     }
 
-    info!(
-        "✔️  Workflow {:?} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or(&PathBuf::default()),
-        clock.elapsed()
-    );
+    info!("✔️  Workflow {:?} executed successfully in {:.0?}!", &cwl_path, clock.elapsed());
     Ok(output_values.into_iter().map(|(k, v)| (k.clone(), v)).collect())
 }
 
 pub fn run_tool(
     tool: &mut CWLDocument,
     input_values: &InputObject,
-    cwl_path: Option<&PathBuf>,
+    cwl_path: &PathBuf,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        info!("🚲 Executing Tool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
+        info!("🚲 Executing Tool {:?} ...", cwl_path);
     }
     //create staging directory
     let dir = tempdir()?;
@@ -215,11 +216,7 @@ pub fn run_tool(
     let output_directory = if let Some(out) = out_dir { &PathBuf::from(out) } else { &current };
 
     //set tool path. all paths are given relative to the tool
-    let tool_path = if let Some(file) = cwl_path.as_ref() {
-        file.parent().unwrap()
-    } else {
-        Path::new(".")
-    };
+    let tool_path = cwl_path.parent().unwrap_or(Path::new("."));
 
     //create runtime tmpdir
     let tmp_dir = tempdir()?;
@@ -295,11 +292,7 @@ pub fn run_tool(
     //come back to original directory
     env::set_current_dir(current)?;
 
-    info!(
-        "✔️  Tool {:?} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or(&PathBuf::default()),
-        clock.elapsed()
-    );
+    info!("✔️  Tool {:?} executed successfully in {:.0?}!", &cwl_path, clock.elapsed());
     Ok(outputs)
 }
 
