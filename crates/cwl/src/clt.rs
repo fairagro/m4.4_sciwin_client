@@ -63,6 +63,7 @@ impl Default for CommandLineTool {
                 inputs: Vec::default(),
                 requirements: Option::default(),
                 hints: Option::default(),
+                intent: Option::default(),
             },
             base_command: Default::default(),
             stdin: Option::default(),

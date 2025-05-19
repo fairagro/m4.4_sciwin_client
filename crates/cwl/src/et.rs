@@ -30,6 +30,7 @@ impl Default for ExpressionTool {
                 requirements: Option::default(),
                 hints: Option::default(),
                 inputs: Vec::default(),
+                intent: Option::default(),
             },
             outputs: Vec::default(),
             expression: Default::default(),

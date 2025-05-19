@@ -38,6 +38,7 @@ impl Default for Workflow {
                 requirements: Default::default(),
                 hints: Default::default(),
                 inputs: Default::default(),
+                intent: Option::default(),
             },
             outputs: Default::default(),
             steps: Default::default(),

@@ -113,6 +113,8 @@ pub struct DocumentBase {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub intent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
