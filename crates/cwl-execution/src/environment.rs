@@ -78,7 +78,7 @@ impl RuntimeEnvironment {
         );
 
         let inputs = collect_inputs(tool, &input_values.inputs, tooldir)?;
-        
+
         let mut environment = RuntimeEnvironment {
             runtime,
             time_limit: input_values.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit).unwrap_or(0),
@@ -144,6 +144,9 @@ pub(crate) fn collect_inputs(
         let mut result_input = evaluate_input(input, input_values)?;
         if let DefaultValue::File(f) = &mut result_input {
             if input.load_contents {
+                if fs::metadata(f.location.as_ref().expect("Could not read file"))?.len() > 64 * 1024 {
+                    return Err("File is too large to load contents (see: https://www.commonwl.org/v1.2/CommandLineTool.html#CommandInputParameter)".into());
+                }
                 f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
             }
             //load file meta
