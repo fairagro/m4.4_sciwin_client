@@ -1,7 +1,7 @@
 use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
 use cwl::{
     inputs::CommandInputParameter,
-    requirements::{check_timelimit, NetworkAccess, Requirement, ResourceRequirement},
+    requirements::{check_timelimit, EnvVarRequirement, NetworkAccess, ResourceRequirement},
     types::{DefaultValue, EnviromentDefs},
     CWLDocument, StringOrNumber,
 };
@@ -122,22 +122,14 @@ fn evaluate(val: &StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[Comman
 }
 
 pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String> {
-    tool.hints
-        .iter()
-        .chain(tool.requirements.iter())
-        .flatten()
-        .filter_map(|req| {
-            if let Requirement::EnvVarRequirement(env) = req {
-                match &env.env_def {
-                    EnviromentDefs::Vec(vec) => Some(vec.iter().map(|i| (i.env_name.clone(), i.env_value.clone())).collect::<HashMap<_, _>>()),
-                    EnviromentDefs::Map(map) => Some(map.clone()),
-                }
-            } else {
-                None
-            }
-        })
-        .flatten()
-        .collect()
+    if let Some(env) = tool.get_requirement::<EnvVarRequirement>() {
+        match &env.env_def {
+            EnviromentDefs::Vec(vec) => vec.iter().map(|i| (i.env_name.clone(), i.env_value.clone())).collect::<HashMap<_, _>>(),
+            EnviromentDefs::Map(map) => map.clone(),
+        }
+    } else {
+        HashMap::new()
+    }
 }
 
 pub(crate) fn collect_inputs(
@@ -165,7 +157,7 @@ pub(crate) fn collect_inputs(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{clt::CommandLineTool, requirements::EnvVarRequirement};
+    use cwl::{clt::CommandLineTool, requirements::{EnvVarRequirement, Requirement}};
 
     #[test]
     fn test_requirements_overwrite_hints() {
