@@ -3,7 +3,7 @@ use crate::{
     environment::{collect_environment, RuntimeEnvironment},
     execute,
     expression::{
-        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_tool_expressions, replace_expressions,
+        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions,
         reset_expression_engine, set_self, unset_self,
     },
     format_command,
@@ -14,7 +14,7 @@ use crate::{
         is_docker_installed,
     },
     validate::set_placeholder_values,
-    CommandError,
+    CommandError, InputObject,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
@@ -41,7 +41,7 @@ use wait_timeout::ChildExt;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
-    input_values: HashMap<String, DefaultValue>,
+    input_values: InputObject,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -59,6 +59,18 @@ pub fn run_workflow(
     };
 
     let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
+
+    let mut input_values = input_values;
+    if let Some(requirements) = &workflow.requirements {
+        for req in requirements {
+            input_values.add_requirement(req);
+        }
+    }
+    if let Some(hints) = &workflow.hints {
+        for hint in hints {
+            input_values.add_hint(hint);
+        }
+    }
 
     //prevent tool from outputting
     set_print_output(false);
@@ -84,7 +96,7 @@ pub fn run_workflow(
                                 step_inputs.insert(key.to_string(), out_value.to_default_value());
                             }
                         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
-                            let value = evaluate_input(input, &input_values)?;
+                            let value = evaluate_input(input, &input_values.inputs)?;
                             step_inputs.insert(key.to_string(), value.to_owned());
                         }
                     }
@@ -106,7 +118,7 @@ pub fn run_workflow(
                         }
 
                         if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                            let value = evaluate_input(input, &input_values)?;
+                            let value = evaluate_input(input, &input_values.inputs)?;
                             match value {
                                 DefaultValue::Any(val) if val.is_null() => continue,
                                 _ => {
@@ -117,10 +129,15 @@ pub fn run_workflow(
                     }
                 }
             }
+            let input_values = InputObject {
+                inputs: step_inputs,
+                requirements: input_values.requirements.clone(),
+                hints: input_values.hints.clone(),
+            };
             let step_outputs = if let Some(path) = path {
-                execute(&path, step_inputs, Some(tmp_path.clone()), None)?
+                execute(&path, input_values, Some(tmp_path.clone()), None)?
             } else if let StringOrDocument::Document(doc) = &step.run {
-                execute(workflow_folder, step_inputs, Some(tmp_path.clone()), Some(doc))?
+                execute(workflow_folder, input_values, Some(tmp_path.clone()), Some(doc))?
             } else {
                 unreachable!()
             };
@@ -178,7 +195,7 @@ pub fn run_workflow(
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-            let result = evaluate_input(input, &input_values)?;
+            let result = evaluate_input(input, &input_values.inputs)?;
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
@@ -209,7 +226,7 @@ pub fn run_workflow(
 
 pub fn run_tool(
     tool: &mut CWLDocument,
-    input_values: HashMap<String, DefaultValue>,
+    input_values: InputObject,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -236,16 +253,28 @@ pub fn run_tool(
     //create runtime tmpdir
     let tmp_dir = tempdir()?;
 
+    let mut input_values = input_values;
+    if let Some(requirements) = &tool.requirements {
+        for req in requirements {
+            input_values.add_requirement(req);
+        }
+    }
+    if let Some(hints) = &tool.hints {
+        for hint in hints {
+            input_values.add_hint(hint);
+        }
+    }
+
     //build runtime object
-    let mut runtime = RuntimeEnvironment::initialize(tool, input_values, dir.path(), tool_path, tmp_dir.path())?;
+    let mut runtime = RuntimeEnvironment::initialize(tool, &input_values, dir.path(), tool_path, tmp_dir.path())?;
 
     //replace inputs and runtime placeholders in tool with the actual values
-    set_placeholder_values(tool, &runtime);
-    runtime.environment = collect_environment(tool);
+    set_placeholder_values(tool, &runtime, &mut input_values);
+    runtime.environment = collect_environment(&input_values);
 
     // run expression engine
     prepare_expression_engine(&runtime)?;
-    if let Some(ijr) = tool.get_requirement::<InlineJavascriptRequirement>() {
+    if let Some(ijr) = input_values.get_requirement::<InlineJavascriptRequirement>() {
         if let Some(expression_lib) = &ijr.expression_lib {
             for lib in expression_lib {
                 if let StringOrInclude::Include(lib_include) = lib {
@@ -255,11 +284,11 @@ pub fn run_tool(
                 }
             }
         }
-        process_tool_expressions(tool)?;
+        process_expressions(tool, &mut input_values)?;
     }
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &mut runtime, tool_path, dir.path(), output_directory)?;
+    let staged_files = stage_required_files(tool, &input_values, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;

@@ -1,4 +1,4 @@
-use crate::{environment::RuntimeEnvironment, split_ranges};
+use crate::{environment::RuntimeEnvironment, split_ranges, InputObject};
 use cwl::{
     clt::{Argument, Command},
     et::{Expression, ExpressionType},
@@ -182,22 +182,20 @@ pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {
     expressions
 }
 
-pub(crate) fn process_tool_expressions(tool: &mut CWLDocument) -> Result<(), Box<dyn Error>> {
-    if let Some(requirements) = &mut tool.requirements {
-        for requirement in requirements {
-            if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
-                for listing in &mut wd_req.listing {
-                    if let WorkDirItem::Dirent(dirent) = listing {
-                        dirent.entryname = replace_expressions(&dirent.entryname)?;
-                        dirent.entry = match &mut dirent.entry {
-                            Entry::Source(src) => {
-                                *src = replace_expressions(src)?;
-                                Entry::Source(src.clone())
-                            }
-                            Entry::Include(include) => {
-                                include.include = replace_expressions(&include.include)?;
-                                Entry::Include(include.clone())
-                            }
+pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut InputObject) -> Result<(), Box<dyn Error>> {
+    for requirement in &mut input_values.requirements {
+        if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
+            for listing in &mut wd_req.listing {
+                if let WorkDirItem::Dirent(dirent) = listing {
+                    dirent.entryname = replace_expressions(&dirent.entryname)?;
+                    dirent.entry = match &mut dirent.entry {
+                        Entry::Source(src) => {
+                            *src = replace_expressions(src)?;
+                            Entry::Source(src.clone())
+                        }
+                        Entry::Include(include) => {
+                            include.include = replace_expressions(&include.include)?;
+                            Entry::Include(include.clone())
                         }
                     }
                 }
@@ -352,7 +350,8 @@ stderr: $(inputs.dirname)/stderr
         };
         prepare_expression_engine(&runtime).unwrap();
         let mut tool: CWLDocument = serde_yaml::from_str(tool).unwrap();
-        process_tool_expressions(&mut tool).unwrap();
+        let mut input_values = InputObject::default();
+        process_expressions(&mut tool, &mut input_values).unwrap();
         reset_expression_engine().unwrap();
 
         assert!(matches!(tool, CWLDocument::CommandLineTool(_)));

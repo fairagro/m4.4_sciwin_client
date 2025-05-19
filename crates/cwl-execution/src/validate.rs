@@ -1,4 +1,4 @@
-use crate::{environment::RuntimeEnvironment, io::get_file_property};
+use crate::{environment::RuntimeEnvironment, io::get_file_property, InputObject};
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
@@ -11,17 +11,11 @@ use pathdiff::diff_paths;
 use std::collections::HashMap;
 
 /// Replaces placeholders like $(inputs.test) or $(runtime.cpu) with its actual evaluated values
-pub(crate) fn set_placeholder_values(cwl: &mut CWLDocument, runtime: &RuntimeEnvironment) {
+pub(crate) fn set_placeholder_values(cwl: &mut CWLDocument, runtime: &RuntimeEnvironment, input_values: &mut InputObject) {
     let inputs = &cwl.inputs.clone();
     //set values in requirements
-    if let Some(requirements) = &mut cwl.requirements {
-        set_placeholder_values_requirements(requirements, runtime, inputs);
-    }
-
-    //set values in hints
-    if let Some(requirements) = &mut cwl.hints {
-        set_placeholder_values_requirements(requirements, runtime, inputs);
-    }
+    set_placeholder_values_requirements(&mut input_values.requirements, runtime, inputs);
+    set_placeholder_values_requirements(&mut input_values.hints, runtime, inputs);
 
     if let CWLDocument::CommandLineTool(clt) = cwl {
         set_placeholder_values_tool(clt, runtime);
@@ -91,7 +85,11 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
     }
 }
 
-fn set_placeholder_values_requirements(requirements: &mut Vec<Requirement>, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) {
+pub(crate) fn set_placeholder_values_requirements(
+    requirements: &mut Vec<Requirement>,
+    runtime: &RuntimeEnvironment,
+    inputs: &[CommandInputParameter],
+) {
     for requirement in requirements {
         if let Requirement::EnvVarRequirement(env_req) = requirement {
             env_req.env_def = match &mut env_req.env_def {
@@ -257,12 +255,12 @@ outputs:
 
         let runtime = RuntimeEnvironment {
             runtime,
-            inputs: input_values,
+            inputs: input_values.clone(),
             ..Default::default()
         };
-
+        
         let mut cwl_test: CWLDocument = serde_yaml::from_str(cwl_str).unwrap();
-        set_placeholder_values(&mut cwl_test, &runtime);
+        set_placeholder_values(&mut cwl_test, &runtime, &mut input_values.into());
 
         let cwl_expected: CWLDocument = serde_yaml::from_str(expected_str).unwrap();
 

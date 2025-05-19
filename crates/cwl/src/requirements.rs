@@ -1,7 +1,7 @@
 use super::types::{Dirent, Entry, EnviromentDefs};
 use crate::{
     types::{DefaultValue, Include},
-    CWLDocument, StringOrNumber,
+    StringOrNumber,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::{Mapping, Value};
@@ -257,10 +257,6 @@ pub struct InlineJavascriptRequirement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ToolTimeLimit {
     pub timelimit: u64,
-}
-
-pub fn check_timelimit(doc: &CWLDocument) -> Option<u64> {
-    doc.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit)
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

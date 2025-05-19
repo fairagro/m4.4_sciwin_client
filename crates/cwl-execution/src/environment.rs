@@ -1,7 +1,9 @@
-use crate::{get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string};
+use crate::{
+    get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string, InputObject,
+};
 use cwl::{
     inputs::CommandInputParameter,
-    requirements::{check_timelimit, EnvVarRequirement, NetworkAccess, ResourceRequirement},
+    requirements::{EnvVarRequirement, NetworkAccess, ResourceRequirement, ToolTimeLimit},
     types::{DefaultValue, EnviromentDefs},
     CWLDocument, StringOrNumber,
 };
@@ -42,7 +44,7 @@ impl RuntimeEnvironment {
 
     pub fn initialize(
         tool: &CWLDocument,
-        input_values: HashMap<String, DefaultValue>,
+        input_values: &InputObject,
         outdir: impl AsRef<Path>,
         tooldir: impl AsRef<Path>,
         tmpdir: impl AsRef<Path>,
@@ -68,23 +70,23 @@ impl RuntimeEnvironment {
 
         runtime.insert(
             "network".to_string(),
-            if tool.get_requirement::<NetworkAccess>().is_some() {
+            if input_values.get_requirement::<NetworkAccess>().is_some() {
                 StringOrNumber::Integer(1)
             } else {
                 StringOrNumber::Integer(0)
             },
         );
 
-        let inputs = collect_inputs(tool, input_values, tooldir)?;
+        let inputs = collect_inputs(tool, &input_values.inputs, tooldir)?;
 
         let mut environment = RuntimeEnvironment {
             runtime,
-            time_limit: check_timelimit(tool).unwrap_or(0),
+            time_limit: input_values.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit).unwrap_or(0),
             inputs,
             ..Default::default()
         };
 
-        if let Some(rr) = tool.get_requirement::<ResourceRequirement>() {
+        if let Some(rr) = input_values.get_requirement::<ResourceRequirement>() {
             if let Some(cores) = &rr.cores_min {
                 environment
                     .runtime
@@ -121,8 +123,8 @@ fn evaluate(val: &StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[Comman
     }
 }
 
-pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String> {
-    if let Some(env) = tool.get_requirement::<EnvVarRequirement>() {
+pub(crate) fn collect_environment(input_values: &InputObject) -> HashMap<String, String> {
+    if let Some(env) = input_values.get_requirement::<EnvVarRequirement>() {
         match &env.env_def {
             EnviromentDefs::Vec(vec) => vec.iter().map(|i| (i.env_name.clone(), i.env_value.clone())).collect::<HashMap<_, _>>(),
             EnviromentDefs::Map(map) => map.clone(),
@@ -134,12 +136,12 @@ pub(crate) fn collect_environment(tool: &CWLDocument) -> HashMap<String, String>
 
 pub(crate) fn collect_inputs(
     tool: &CWLDocument,
-    input_values: HashMap<String, DefaultValue>,
+    input_values: &HashMap<String, DefaultValue>,
     tool_dir: impl AsRef<Path>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
-        let mut result_input = evaluate_input(input, &input_values)?;
+        let mut result_input = evaluate_input(input, input_values)?;
         if let DefaultValue::File(f) = &mut result_input {
             if input.load_contents {
                 f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
@@ -157,7 +159,7 @@ pub(crate) fn collect_inputs(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{clt::CommandLineTool, requirements::{EnvVarRequirement, Requirement}};
+    use cwl::requirements::{EnvVarRequirement, Requirement};
 
     #[test]
     fn test_requirements_overwrite_hints() {
@@ -167,12 +169,13 @@ mod tests {
         let requirement = EnvVarRequirement {
             env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "REQUIREMENT".to_string())])),
         };
+        let input_values = InputObject {
+            requirements: vec![Requirement::EnvVarRequirement(requirement.clone())],
+            hints: vec![Requirement::EnvVarRequirement(hint.clone())],
+            ..Default::default()
+        };
 
-        let tool = CommandLineTool::default()
-            .with_requirements(vec![Requirement::EnvVarRequirement(requirement)])
-            .with_hints(vec![Requirement::EnvVarRequirement(hint)]);
-
-        let environment = collect_environment(&CWLDocument::CommandLineTool(tool));
+        let environment = collect_environment(&input_values);
 
         assert_eq!(environment["MY_ENV"], "REQUIREMENT".to_string())
     }
