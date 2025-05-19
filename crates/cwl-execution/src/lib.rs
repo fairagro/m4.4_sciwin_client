@@ -124,11 +124,9 @@ pub fn execute(
 pub struct InputObject {
     #[serde(flatten)]
     pub inputs: HashMap<String, DefaultValue>,
-    #[serde(rename = "cwl:requirements")]
-    #[serde(default)]
+    #[serde(default, rename = "cwl:requirements")]
     pub requirements: Vec<Requirement>,
-    #[serde(rename = "cwl:hints")]
-    #[serde(default)]
+    #[serde(default, rename = "cwl:hints")]
     pub hints: Vec<Requirement>,
 
     #[serde(skip)]

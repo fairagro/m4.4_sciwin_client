@@ -78,7 +78,7 @@ impl RuntimeEnvironment {
         );
 
         let inputs = collect_inputs(tool, &input_values.inputs, tooldir)?;
-
+        
         let mut environment = RuntimeEnvironment {
             runtime,
             time_limit: input_values.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit).unwrap_or(0),

@@ -117,7 +117,8 @@ pub fn run_workflow(
                     }
                 }
             }
-            let input_values = input_values.handle_requirements(&step.requirements, &step.hints);
+            let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
+            input_values.inputs = step_inputs;
 
             let step_outputs = if let Some(path) = path {
                 execute(&path, &input_values, Some(tmp_path.clone()), None)?
@@ -243,7 +244,7 @@ pub fn run_tool(
 
     //build runtime object
     let mut runtime = RuntimeEnvironment::initialize(tool, &input_values, dir.path(), tool_path, tmp_dir.path())?;
-
+    
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, &runtime, &mut input_values);
     runtime.environment = collect_environment(&input_values);
