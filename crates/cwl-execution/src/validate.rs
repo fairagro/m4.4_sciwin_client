@@ -213,11 +213,6 @@ mod tests {
         let cwl_str = r"class: CommandLineTool
 cwlVersion: v1.2
 baseCommand: $(runtime.true)
-requirements:
-  InitialWorkDirRequirement:
-    listing:
-      - entryname: $(inputs.newname)
-        entry: $(inputs.srcfile)
 inputs:
   srcfile: File
   newname: string
@@ -230,11 +225,6 @@ outputs:
         let expected_str = r#"class: CommandLineTool
 cwlVersion: v1.2
 baseCommand: "true"
-requirements:
-  InitialWorkDirRequirement:
-    listing:
-      - entryname: neuer_name.txt
-        entry: tests/test_data/input.txt
 inputs:
   srcfile: File
   newname: string
@@ -258,7 +248,7 @@ outputs:
             inputs: input_values.clone(),
             ..Default::default()
         };
-        
+
         let mut cwl_test: CWLDocument = serde_yaml::from_str(cwl_str).unwrap();
         set_placeholder_values(&mut cwl_test, &runtime, &mut input_values.into());
 
