@@ -7,7 +7,6 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    inputs::WorkflowStepInput,
     load_tool, load_workflow,
     wf::{StringOrDocument, Workflow},
     CWLDocument,
@@ -220,7 +219,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
             .inputs
             .iter()
             .map(|input| {
-                if step.in_.contains_key(&input.id) {
+                if step.in_.iter().any(|i| i.id == input.id) {
                     format!("✅    {}", input.id)
                 } else if input.default.is_some() {
                     format!("🔘    {}", input.id)
@@ -235,15 +234,11 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
             .outputs
             .iter()
             .map(|output| {
-                if workflow.steps.iter().any(|s| {
-                    s.in_.clone().into_values().any(|v| {
-                        let src = match v {
-                            WorkflowStepInput::String(str) => str,
-                            WorkflowStepInput::Parameter(par) => par.source.unwrap_or_default(),
-                        };
-                        src == format!("{}/{}", step.id, output.id)
-                    })
-                }) || workflow.outputs.iter().any(|o| o.output_source == format!("{}/{}", step.id, output.id))
+                if workflow
+                    .steps
+                    .iter()
+                    .any(|s| s.in_.clone().iter().any(|v| v.source == Some(format!("{}/{}", step.id, output.id))))
+                    || workflow.outputs.iter().any(|o| o.output_source == format!("{}/{}", step.id, output.id))
                 {
                     format!("✅    {}", output.id)
                 } else {

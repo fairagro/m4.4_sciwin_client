@@ -18,7 +18,7 @@ use crate::{
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
-    inputs::{CommandLineBinding, WorkflowStepInput},
+    inputs::CommandLineBinding,
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     wf::{StringOrDocument, Workflow},
@@ -75,44 +75,29 @@ pub fn run_workflow(
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
-            for (key, input) in &step.in_ {
-                match input {
-                    WorkflowStepInput::String(in_string) => {
-                        let parts: Vec<&str> = in_string.split('/').collect();
-                        if parts.len() == 2 {
-                            if let Some(out_value) = outputs.get(in_string) {
-                                step_inputs.insert(key.to_string(), out_value.to_default_value());
-                            }
-                        } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
-                            let value = evaluate_input(input, &input_values.inputs)?;
-                            step_inputs.insert(key.to_string(), value.to_owned());
-                        }
+            for parameter in &step.in_ {
+                let source = parameter.source.as_deref().unwrap_or_default();
+                let source_parts: Vec<&str> = source.split('/').collect();
+
+                //try output
+                if source_parts.len() == 2 {
+                    if let Some(out_value) = outputs.get(source) {
+                        step_inputs.insert(parameter.id.to_string(), out_value.to_default_value());
+                        continue;
                     }
-                    WorkflowStepInput::Parameter(parameter) => {
-                        let source = parameter.source.as_deref().unwrap_or_default();
-                        let source_parts: Vec<&str> = source.split('/').collect();
+                }
+                //try default
+                if let Some(default) = &parameter.default {
+                    step_inputs.entry(parameter.id.to_string()).or_insert(default.to_owned());
+                }
 
-                        if source_parts.len() == 2 {
-                            //try output
-                            if let Some(out_value) = outputs.get(source) {
-                                step_inputs.insert(key.to_string(), out_value.to_default_value());
-                                continue;
-                            }
-                        }
-
-                        //try default
-                        if let Some(default) = &parameter.default {
-                            step_inputs.entry(key.to_string()).or_insert(default.to_owned());
-                        }
-
-                        if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                            let value = evaluate_input(input, &input_values.inputs)?;
-                            match value {
-                                DefaultValue::Any(val) if val.is_null() => continue,
-                                _ => {
-                                    step_inputs.insert(key.to_string(), value.to_owned());
-                                }
-                            }
+                //try input
+                if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
+                    let value = evaluate_input(input, &input_values.inputs)?;
+                    match value {
+                        DefaultValue::Any(val) if val.is_null() => continue,
+                        _ => {
+                            step_inputs.insert(parameter.id.to_string(), value.to_owned());
                         }
                     }
                 }
@@ -244,7 +229,7 @@ pub fn run_tool(
 
     //build runtime object
     let mut runtime = RuntimeEnvironment::initialize(tool, &input_values, dir.path(), tool_path, tmp_dir.path())?;
-    
+
     //replace inputs and runtime placeholders in tool with the actual values
     set_placeholder_values(tool, &runtime, &mut input_values);
     runtime.environment = collect_environment(&input_values);

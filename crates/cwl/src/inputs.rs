@@ -121,26 +121,32 @@ where
     Ok(parameters)
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum WorkflowStepInput {
-    String(String),
-    Parameter(Box<WorkflowStepInputParameter>),
-}
-
-impl Default for WorkflowStepInput {
-    fn default() -> Self {
-        WorkflowStepInput::String(String::default())
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStepInputParameter {
+    #[serde(default)]
+    pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
+}
+
+impl WorkflowStepInputParameter {
+    pub fn with_id(mut self, id: impl ToString) -> Self {
+        self.id = id.to_string();
+        self
+    }
+
+    pub fn with_source(mut self, source: impl ToString) -> Self {
+        self.source = Some(source.to_string());
+        self
+    }
+
+    pub fn with_default(mut self, f: DefaultValue) -> Self {
+        self.default = Some(f);
+        self
+    }
 }
 
 #[cfg(test)]
@@ -153,11 +159,5 @@ mod tests {
         assert_eq!(input.id(), "");
         input.set_id("test".to_string());
         assert_eq!(input.id(), "test");
-    }
-
-    #[test]
-    pub fn test_workflow_step_input_default() {
-        let input = WorkflowStepInput::default();
-        assert_eq!(input, WorkflowStepInput::String(String::default()));
     }
 }

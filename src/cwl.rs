@@ -1,7 +1,7 @@
 use crate::io::{get_workflows_folder, resolve_path};
 use cwl::{
     clt::CommandLineTool,
-    inputs::{CommandInputParameter, WorkflowStepInput},
+    inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_tool,
     outputs::WorkflowOutputParameter,
     requirements::{Requirement, WorkDirItem},
@@ -98,7 +98,11 @@ impl Connectable for Workflow {
             .find(|step| step.id == to_parts[0])
             .unwrap()
             .in_
-            .insert(to_parts[1].to_string(), WorkflowStepInput::String(from_input.to_owned()));
+            .push(WorkflowStepInputParameter {
+                id: to_parts[1].to_string(),
+                source: Some(from_input.to_owned()),
+                ..Default::default()
+            });
 
         info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
@@ -160,7 +164,11 @@ impl Connectable for Workflow {
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
-        step.in_.insert(to_parts[1].to_string(), WorkflowStepInput::String(from.to_string()));
+        step.in_.push(WorkflowStepInputParameter {
+            id: to_parts[1].to_string(),
+            source: Some(from.to_string()),
+            ..Default::default()
+        });
 
         Ok(())
     }
@@ -182,7 +190,8 @@ impl Connectable for Workflow {
         // If the step is found, try to remove the connection by removing input from `tool_y` that uses output of `tool_x`
         //Input is empty, change that?
         if let Some(step) = step {
-            if step.in_.remove(to_parts[1]).is_some() {
+            if step.in_.iter().any(|v| v.id == to_parts[1]) {
+                step.in_.retain(|v| v.id != to_parts[1]);
                 info!("🔗 Successfully disconnected {from} from {to}");
             } else {
                 warn!("No connection found between {from} and {to}. Nothing to disconnect.");
@@ -203,7 +212,8 @@ impl Connectable for Workflow {
             self.inputs.remove(index);
         }
         if let Some(step) = self.steps.iter_mut().find(|s| s.id == to_parts[0]) {
-            if step.in_.remove(to_parts[1]).is_some() {
+            if step.in_.iter().any(|v| v.id == to_parts[1]) {
+                step.in_.retain(|v| v.id != to_parts[1]);
                 info!("➖ Successfully disconnected input {from_input} from {to}");
             } else {
                 warn!("No input connection found for {from_input} to disconnect.");
