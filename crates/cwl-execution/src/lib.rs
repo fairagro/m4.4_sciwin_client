@@ -315,13 +315,13 @@ mod tests {
             env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "BASE".to_string())])),
         });
         input.add_requirement(&base_req);
-        assert_eq!(input.requirements.len(), 1);
+        assert_eq!(input.cwl_requirements.len(), 1);
 
         let requirement = Requirement::EnvVarRequirement(EnvVarRequirement {
             env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "OVERWRITE".to_string())])),
         });
         input.add_requirement(&requirement);
-        assert_eq!(input.requirements.len(), 1);
-        assert_eq!(input.requirements[0], requirement);
+        assert_eq!(input.cwl_requirements.len(), 1);
+        assert_eq!(input.cwl_requirements[0], requirement);
     }
 }
