@@ -75,17 +75,11 @@ pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(
 
         //todo: add requiement for directory also or add new --mount param and remove block from here
         if matches!(type_, CWLType::File) {
-            if let Some(req) = &mut tool.requirements {
-                for item in req.iter_mut() {
-                    if let Requirement::InitialWorkDirRequirement(req) = item {
-                        req.add_files(inputs);
-                        break;
-                    }
+            for item in &mut tool.requirements {
+                if let Requirement::InitialWorkDirRequirement(req) = item {
+                    req.add_files(inputs);
+                    break;
                 }
-            } else {
-                tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-                    inputs,
-                ))]);
             }
         }
 
@@ -348,11 +342,8 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     }
 
     if processed_once {
-        if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default()));
-        } else {
-            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default())]);
-        }
+        tool.requirements
+            .push(Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default()));
     }
 }
 

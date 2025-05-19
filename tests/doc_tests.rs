@@ -239,11 +239,9 @@ pub fn test_implicit_inputs_hardcoded_files() {
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
-    assert!(tool.requirements.is_some());
-    let requirements = tool.requirements.clone().unwrap();
-    assert_eq!(requirements.len(), 1);
+    assert_eq!(tool.requirements.len(), 1);
 
-    if let Requirement::InitialWorkDirRequirement(initial) = &requirements[0] {
+    if let Requirement::InitialWorkDirRequirement(initial) = &tool.requirements[0] {
         assert_eq!(initial.listing.len(), 2);
         assert!(matches!(initial.listing[0], WorkDirItem::Dirent(_)));
         assert!(matches!(initial.listing[1], WorkDirItem::Dirent(_)));

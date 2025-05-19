@@ -3,8 +3,8 @@ use crate::{
     environment::{collect_environment, RuntimeEnvironment},
     execute,
     expression::{
-        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions,
-        reset_expression_engine, set_self, unset_self,
+        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions, reset_expression_engine,
+        set_self, unset_self,
     },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
@@ -61,15 +61,11 @@ pub fn run_workflow(
     let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
 
     let mut input_values = input_values;
-    if let Some(requirements) = &workflow.requirements {
-        for req in requirements {
-            input_values.add_requirement(req);
-        }
+    for req in &workflow.requirements {
+        input_values.add_requirement(req);
     }
-    if let Some(hints) = &workflow.hints {
-        for hint in hints {
-            input_values.add_hint(hint);
-        }
+    for hint in &workflow.hints {
+        input_values.add_hint(hint);
     }
 
     //prevent tool from outputting
@@ -86,7 +82,6 @@ pub fn run_workflow(
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
-
             for (key, input) in &step.in_ {
                 match input {
                     WorkflowStepInput::String(in_string) => {
@@ -129,11 +124,17 @@ pub fn run_workflow(
                     }
                 }
             }
-            let input_values = InputObject {
+            let mut input_values = InputObject {
                 inputs: step_inputs,
                 requirements: input_values.requirements.clone(),
                 hints: input_values.hints.clone(),
             };
+            for req in &step.requirements {
+                input_values.add_requirement(req);
+            }
+            for hint in &step.hints {
+                input_values.add_hint(hint);
+            }
             let step_outputs = if let Some(path) = path {
                 execute(&path, input_values, Some(tmp_path.clone()), None)?
             } else if let StringOrDocument::Document(doc) = &step.run {
@@ -254,15 +255,11 @@ pub fn run_tool(
     let tmp_dir = tempdir()?;
 
     let mut input_values = input_values;
-    if let Some(requirements) = &tool.requirements {
-        for req in requirements {
-            input_values.add_requirement(req);
-        }
+    for req in &tool.requirements {
+        input_values.add_requirement(req);
     }
-    if let Some(hints) = &tool.hints {
-        for hint in hints {
-            input_values.add_hint(hint);
-        }
+    for hint in &tool.hints {
+        input_values.add_hint(hint);
     }
 
     //build runtime object

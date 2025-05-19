@@ -74,23 +74,19 @@ pub fn tool_create_test_inputs_outputs() {
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
-    if let Some(req) = &tool.requirements {
-        if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
-            assert_eq!(iwdr.listing.len(), 2);
-            assert!(matches!(iwdr.listing[0], WorkDirItem::Dirent(_)));
-            assert!(matches!(iwdr.listing[1], WorkDirItem::Dirent(_)));
+    if let Requirement::InitialWorkDirRequirement(iwdr) = &tool.requirements[0] {
+        assert_eq!(iwdr.listing.len(), 2);
+        assert!(matches!(iwdr.listing[0], WorkDirItem::Dirent(_)));
+        assert!(matches!(iwdr.listing[1], WorkDirItem::Dirent(_)));
 
-            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
-                assert_eq!(dirent.entryname, script);
-            }
-            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[1] {
-                assert_eq!(dirent.entryname, input);
-            }
-        } else {
-            panic!("Not an InitialWorkDirRequirement")
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+            assert_eq!(dirent.entryname, script);
+        }
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[1] {
+            assert_eq!(dirent.entryname, input);
         }
     } else {
-        panic!("No Requirements set")
+        panic!("Not an InitialWorkDirRequirement")
     }
 
     //no uncommitted left?
@@ -222,10 +218,9 @@ pub fn tool_create_test_container_image() {
     let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
     let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-    let requirements = cwl.requirements.clone().expect("No requirements found!");
-    assert_eq!(requirements.len(), 2);
+    assert_eq!(cwl.requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(docker_req) = &requirements[1] {
+    if let Requirement::DockerRequirement(docker_req) = &cwl.requirements[1] {
         if let Some(image) = &docker_req.docker_pull {
             assert_eq!(image, "python");
         } else {
@@ -256,10 +251,9 @@ pub fn tool_create_test_dockerfile() {
     let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
     let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-    let requirements = cwl.requirements.clone().expect("No requirements found!");
-    assert_eq!(requirements.len(), 2);
+    assert_eq!(cwl.requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(docker_req) = &requirements[1] {
+    if let Requirement::DockerRequirement(docker_req) = &cwl.requirements[1] {
         if let (Some(docker_file), Some(docker_image_id)) = (&docker_req.docker_file, &docker_req.docker_image_id) {
             assert_eq!(*docker_file, Entry::from_file(os_path("../../Dockerfile"))); // as file is in root and CWL in workflows/echo
             assert_eq!(docker_image_id, "sciwin-client");
@@ -397,17 +391,13 @@ pub fn test_shell_script() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 0);
 
-    if let Some(req) = &tool.requirements {
-        assert_eq!(req.len(), 1);
-        if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
-            if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
-                assert_eq!(dirent.entryname, "./script.sh");
-            }
-        } else {
-            panic!("Not an InitialWorkDirRequirement")
+    assert_eq!(tool.requirements.len(), 1);
+    if let Requirement::InitialWorkDirRequirement(iwdr) = &&tool.requirements[0] {
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+            assert_eq!(dirent.entryname, "./script.sh");
         }
     } else {
-        panic!("No requirements found")
+        panic!("Not an InitialWorkDirRequirement")
     }
 }
 

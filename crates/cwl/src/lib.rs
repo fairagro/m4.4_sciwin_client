@@ -118,14 +118,14 @@ pub struct DocumentBase {
     pub doc: Option<String>,
     #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_requirements")]
     #[serde(default)]
-    pub requirements: Option<Vec<Requirement>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requirements: Vec<Requirement>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_hints")]
     #[serde(default)]
-    pub hints: Option<Vec<Requirement>>,
+    pub hints: Vec<Requirement>,
 }
 
 impl DocumentBase {
@@ -134,10 +134,7 @@ impl DocumentBase {
     where
         Requirement: FromRequirement<T>,
     {
-        let reqs = self.requirements.as_ref().into_iter().flatten();
-        let hints = self.hints.as_ref().into_iter().flatten();
-
-        reqs.chain(hints).find_map(|req| Requirement::get(req))
+        self.requirements.iter().chain(self.hints.iter()).find_map(|req| Requirement::get(req))
     }
 }
 

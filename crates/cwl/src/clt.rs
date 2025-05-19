@@ -61,8 +61,8 @@ impl Default for CommandLineTool {
                 class: String::from("CommandLineTool"),
                 cwl_version: Some(String::from("v1.2")),
                 inputs: Vec::default(),
-                requirements: Option::default(),
-                hints: Option::default(),
+                requirements: Vec::default(),
+                hints: Vec::default(),
                 intent: Option::default(),
             },
             base_command: Default::default(),
@@ -128,22 +128,18 @@ impl CommandLineTool {
 
     /// Adds requirements to this `CommandLineTool` and returns the updated tool
     pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
-        self.requirements = Some(requirements);
+        self.requirements = requirements;
         self
     }
 
     pub fn append_requirement(mut self, requirement: Requirement) -> Self {
-        if let Some(ref mut vec) = self.requirements {
-            vec.push(requirement);
-        } else {
-            self = self.with_requirements(vec![requirement]);
-        }
+        self.requirements.push(requirement);
         self
     }
 
     /// Adds hints to this `CommandLineTool` and returns the updated tool
     pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
-        self.hints = Some(requirements);
+        self.hints = requirements;
         self
     }
 
@@ -166,17 +162,13 @@ impl CommandLineTool {
 
     /// Checks whether the `CommandLineTool` has a `ShellCommandRequirement` in requirements
     pub fn has_shell_command_requirement(&self) -> bool {
-        if let Some(requirements) = &self.requirements {
-            requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
-        } else {
-            false
-        }
+        self.requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
     }
 
     /// Checks whether the `CommandLineTool` has a `DockerRequirement` in requirements and returns an Option to it
     /// do not change calls to the generic get_requirement
     pub fn get_docker_requirement(&self) -> Option<&DockerRequirement> {
-        self.requirements.as_ref()?.iter().find_map(|req| Requirement::get(req))
+        self.requirements.iter().find_map(|req| Requirement::get(req))
     }
 
     /// Gets the permanent fail code of the `CommandLineTool`

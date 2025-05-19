@@ -9,7 +9,7 @@ use cwl::{
     wf::{StringOrDocument, Workflow, WorkflowStep},
 };
 use log::{info, warn};
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -43,18 +43,16 @@ impl Saveable for CommandLineTool {
             }
         }
 
-        if let Some(requirements) = &mut self.requirements {
-            for requirement in requirements {
-                if let Requirement::DockerRequirement(docker) = requirement {
-                    if let Some(Entry::Include(include)) = &mut docker.docker_file {
-                        include.include = resolve_path(&include.include, path);
-                    }
-                } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
-                    for listing in &mut iwdr.listing {
-                        if let WorkDirItem::Dirent(dirent) = listing {
-                            if let Entry::Include(include) = &mut dirent.entry {
-                                include.include = resolve_path(&include.include, path);
-                            }
+        for requirement in &mut self.requirements {
+            if let Requirement::DockerRequirement(docker) = requirement {
+                if let Some(Entry::Include(include)) = &mut docker.docker_file {
+                    include.include = resolve_path(&include.include, path);
+                }
+            } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
+                for listing in &mut iwdr.listing {
+                    if let WorkDirItem::Dirent(dirent) = listing {
+                        if let Entry::Include(include) = &mut dirent.entry {
+                            include.include = resolve_path(&include.include, path);
                         }
                     }
                 }
@@ -70,8 +68,8 @@ impl Connectable for Workflow {
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
                 run: StringOrDocument::String(format!("../{name}/{name}.cwl")),
-                in_: HashMap::new(),
                 out: tool.get_output_ids(),
+                ..Default::default()
             };
             self.steps.push(workflow_step);
 
@@ -323,7 +321,7 @@ mod tests {
             clt.inputs[0].default,
             Some(DefaultValue::File(File::from_location(os_path("../../test_data/input.txt"))))
         );
-        let requirements = &clt.requirements.as_ref().unwrap();
+        let requirements = &clt.requirements;
         let req_0 = &requirements[0];
         let req_1 = &requirements[1];
         assert_eq!(

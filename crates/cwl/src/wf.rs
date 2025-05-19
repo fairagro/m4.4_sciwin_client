@@ -2,8 +2,9 @@ use super::{
     deserialize::{deserialize_list, Identifiable},
     inputs::WorkflowStepInput,
     outputs::WorkflowOutputParameter,
+    requirements::{deserialize_hints, deserialize_requirements, Requirement},
+    CWLDocument, DocumentBase,
 };
-use crate::{CWLDocument, DocumentBase};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, VecDeque},
@@ -169,6 +170,15 @@ pub struct WorkflowStep {
     pub run: StringOrDocument,
     pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    #[serde(default)]
+    pub requirements: Vec<Requirement>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "deserialize_hints")]
+    #[serde(default)]
+    pub hints: Vec<Requirement>,
 }
 
 impl Identifiable for WorkflowStep {

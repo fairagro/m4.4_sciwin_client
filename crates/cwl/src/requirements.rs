@@ -55,27 +55,27 @@ impl_from_requirement!(ResourceRequirement, ResourceRequirement);
 impl_from_requirement!(InitialWorkDirRequirement, InitialWorkDirRequirement);
 impl_from_requirement!(InlineJavascriptRequirement, InlineJavascriptRequirement);
 
-pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
+pub fn deserialize_requirements<'de, D>(deserializer: D) -> Result<Vec<Requirement>, D::Error>
 where
     D: Deserializer<'de>,
 {
     deserialize_requirements_or_hints(deserializer, true)
 }
 
-pub fn deserialize_hints<'de, D>(deserializer: D) -> Result<Option<Vec<Requirement>>, D::Error>
+pub fn deserialize_hints<'de, D>(deserializer: D) -> Result<Vec<Requirement>, D::Error>
 where
     D: Deserializer<'de>,
 {
     deserialize_requirements_or_hints(deserializer, false)
 }
 
-fn deserialize_requirements_or_hints<'de, D>(deserializer: D, strict: bool) -> Result<Option<Vec<Requirement>>, D::Error>
+fn deserialize_requirements_or_hints<'de, D>(deserializer: D, strict: bool) -> Result<Vec<Requirement>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let value: Option<Value> = Deserialize::deserialize(deserializer)?;
     if value.is_none() {
-        return Ok(None);
+        return Ok(vec![]);
     }
 
     let value = value.unwrap();
@@ -118,7 +118,7 @@ where
         _ => return Err(serde::de::Error::custom("Expected sequence or mapping for requirements")),
     };
 
-    Ok(Some(requirements))
+    Ok(requirements)
 }
 
 fn get_entry_name(input: &str) -> String {
