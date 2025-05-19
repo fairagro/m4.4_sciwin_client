@@ -41,7 +41,7 @@ use wait_timeout::ChildExt;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
-    input_values: InputObject,
+    input_values: &InputObject,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -59,14 +59,7 @@ pub fn run_workflow(
     };
 
     let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
-
-    let mut input_values = input_values;
-    for req in &workflow.requirements {
-        input_values.add_requirement(req);
-    }
-    for hint in &workflow.hints {
-        input_values.add_hint(hint);
-    }
+    let input_values = input_values.handle_requirements(&workflow.requirements, &workflow.hints);
 
     //prevent tool from outputting
     set_print_output(false);
@@ -124,21 +117,12 @@ pub fn run_workflow(
                     }
                 }
             }
-            let mut input_values = InputObject {
-                inputs: step_inputs,
-                requirements: input_values.requirements.clone(),
-                hints: input_values.hints.clone(),
-            };
-            for req in &step.requirements {
-                input_values.add_requirement(req);
-            }
-            for hint in &step.hints {
-                input_values.add_hint(hint);
-            }
+            let input_values = input_values.handle_requirements(&step.requirements, &step.hints);
+
             let step_outputs = if let Some(path) = path {
-                execute(&path, input_values, Some(tmp_path.clone()), None)?
+                execute(&path, &input_values, Some(tmp_path.clone()), None)?
             } else if let StringOrDocument::Document(doc) = &step.run {
-                execute(workflow_folder, input_values, Some(tmp_path.clone()), Some(doc))?
+                execute(workflow_folder, &input_values, Some(tmp_path.clone()), Some(doc))?
             } else {
                 unreachable!()
             };
@@ -227,7 +211,7 @@ pub fn run_workflow(
 
 pub fn run_tool(
     tool: &mut CWLDocument,
-    input_values: InputObject,
+    input_values: &InputObject,
     cwl_path: Option<&PathBuf>,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -254,13 +238,8 @@ pub fn run_tool(
     //create runtime tmpdir
     let tmp_dir = tempdir()?;
 
-    let mut input_values = input_values;
-    for req in &tool.requirements {
-        input_values.add_requirement(req);
-    }
-    for hint in &tool.hints {
-        input_values.add_hint(hint);
-    }
+    let mut input_values = input_values.handle_requirements(&tool.requirements, &tool.hints);
+    input_values.lock();
 
     //build runtime object
     let mut runtime = RuntimeEnvironment::initialize(tool, &input_values, dir.path(), tool_path, tmp_dir.path())?;

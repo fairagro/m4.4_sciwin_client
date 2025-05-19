@@ -82,7 +82,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
         }
     }
 
-    let output_values = execute(cwlfile, input_values, outdir, None)?;
+    let output_values = execute(cwlfile, &input_values, outdir, None)?;
     let json = serde_json::to_string_pretty(&output_values)?;
     println!("{json}");
 
@@ -91,7 +91,7 @@ pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir:
 
 pub fn execute(
     cwlfile: impl AsRef<Path>,
-    input_values: InputObject,
+    input_values: &InputObject,
     outdir: Option<impl AsRef<Path>>,
     cwl_doc: Option<&CWLDocument>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
@@ -130,6 +130,11 @@ pub struct InputObject {
     #[serde(rename = "cwl:hints")]
     #[serde(default)]
     pub hints: Vec<Requirement>,
+
+    #[serde(skip)]
+    cwl_requirements: Vec<Requirement>,
+    #[serde(skip)]
+    cwl_hints: Vec<Requirement>,
 }
 
 impl InputObject {
@@ -141,21 +146,56 @@ impl InputObject {
     }
 
     pub fn add_requirement(&mut self, requirement: &Requirement) {
-        if self
-            .requirements
-            .iter()
-            .any(|r| std::mem::discriminant(r) == std::mem::discriminant(requirement))
+        if let Some(r) = self
+            .cwl_requirements
+            .iter_mut()
+            .find(|r| std::mem::discriminant(*r) == std::mem::discriminant(requirement))
         {
-            return;
+            *r = requirement.clone();
+        } else {
+            self.cwl_requirements.push(requirement.clone());
         }
-        self.requirements.push(requirement.clone());
     }
 
     pub fn add_hint(&mut self, hint: &Requirement) {
-        if self.hints.iter().any(|r| std::mem::discriminant(r) == std::mem::discriminant(hint)) {
-            return;
+        if let Some(r) = self
+            .cwl_hints
+            .iter_mut()
+            .find(|r| std::mem::discriminant(*r) == std::mem::discriminant(hint))
+        {
+            *r = hint.clone();
+        } else {
+            self.cwl_hints.push(hint.clone());
         }
-        self.hints.push(hint.clone());
+    }
+
+    pub fn handle_requirements(&self, requirements: &[Requirement], hints: &[Requirement]) -> Self {
+        let mut new_obj = self.clone();
+        for hint in hints {
+            new_obj.add_hint(hint);
+        }
+
+        for req in requirements {
+            new_obj.add_requirement(req);
+        }
+        new_obj
+    }
+
+    pub fn lock(&mut self) {
+        fn merge(dst: &mut Vec<Requirement>, src: &[Requirement]) {
+            for req in src {
+                if let Some(r) = dst.iter_mut().find(|r| std::mem::discriminant(*r) == std::mem::discriminant(req)) {
+                    *r = req.clone();
+                } else {
+                    dst.push(req.clone());
+                }
+            }
+        }
+        merge(&mut self.cwl_requirements, &self.requirements);
+        self.requirements = self.cwl_requirements.clone();
+
+        merge(&mut self.cwl_hints, &self.hints);
+        self.hints = self.cwl_hints.clone();
     }
 }
 
@@ -263,4 +303,27 @@ pub fn set_container_engine(value: ContainerEngine) {
 
 pub fn container_engine() -> ContainerEngine {
     CONTAINER_ENGINE.with(|engine| *engine.borrow())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cwl::{requirements::EnvVarRequirement, types::EnviromentDefs};
+
+    #[test]
+    fn test_add_requirement() {
+        let mut input = InputObject::default();
+        let base_req = Requirement::EnvVarRequirement(EnvVarRequirement {
+            env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "BASE".to_string())])),
+        });
+        input.add_requirement(&base_req);
+        assert_eq!(input.requirements.len(), 1);
+
+        let requirement = Requirement::EnvVarRequirement(EnvVarRequirement {
+            env_def: EnviromentDefs::Map(HashMap::from([("MY_ENV".to_string(), "OVERWRITE".to_string())])),
+        });
+        input.add_requirement(&requirement);
+        assert_eq!(input.requirements.len(), 1);
+        assert_eq!(input.requirements[0], requirement);
+    }
 }

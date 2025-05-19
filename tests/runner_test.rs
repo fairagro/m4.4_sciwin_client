@@ -188,7 +188,7 @@ baseCommand:
 ";
 
     let mut tool: CWLDocument = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-    let result = run_tool(&mut tool, Default::default(), None, None);
+    let result = run_tool(&mut tool, &Default::default(), None, None);
     assert!(result.is_ok());
     //delete results.txt
     let _ = fs::remove_file("results.txt");
@@ -203,6 +203,6 @@ baseCommand:
 pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
     let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
-    let result = run_tool(&mut tool, Default::default(), None, Some(dir.path().to_string_lossy().into_owned()));
+    let result = run_tool(&mut tool, &Default::default(), None, Some(dir.path().to_string_lossy().into_owned()));
     assert!(result.is_ok(), "{result:?}");
 }
