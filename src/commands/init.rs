@@ -9,6 +9,7 @@ use rust_xlsxwriter::Workbook;
 use std::{
     env,
     fs::{self, File},
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -117,8 +118,12 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
-        File::create(gitignore_path)?;
+        File::create(&gitignore_path)?;
     }
+
+    //append .s4n folder to .gitignore, whatever it may contains
+    let mut gitignore = fs::OpenOptions::new().append(true).open(gitignore_path)?;
+    writeln!(gitignore, ".s4n")?;
 
     Ok(repo)
 }
