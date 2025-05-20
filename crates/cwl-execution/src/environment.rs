@@ -88,25 +88,27 @@ impl RuntimeEnvironment {
 
         if let Some(rr) = input_values.get_requirement::<ResourceRequirement>() {
             if let Some(cores) = &rr.cores_min {
-                environment
-                    .runtime
-                    .insert("cores".to_string(), StringOrNumber::Integer(evaluate(cores, &environment, &tool.inputs)?));
+                environment.runtime.insert(
+                    "cores".to_string(),
+                    StringOrNumber::Integer(evaluate(cores, &environment, &tool.inputs, &tool.cwl_version)?),
+                );
             }
             if let Some(ram) = &rr.ram_min {
-                environment
-                    .runtime
-                    .insert("ram".to_string(), StringOrNumber::Integer(evaluate(ram, &environment, &tool.inputs)?));
+                environment.runtime.insert(
+                    "ram".to_string(),
+                    StringOrNumber::Integer(evaluate(ram, &environment, &tool.inputs, &tool.cwl_version)?),
+                );
             }
             if let Some(dir_size) = &rr.outdir_min {
                 environment.runtime.insert(
                     "outdirSize".to_string(),
-                    StringOrNumber::Integer(evaluate(dir_size, &environment, &tool.inputs)?),
+                    StringOrNumber::Integer(evaluate(dir_size, &environment, &tool.inputs, &tool.cwl_version)?),
                 );
             }
             if let Some(tmp_size) = &rr.tmpdir_min {
                 environment.runtime.insert(
                     "tmpdirSize".to_string(),
-                    StringOrNumber::Integer(evaluate(tmp_size, &environment, &tool.inputs)?),
+                    StringOrNumber::Integer(evaluate(tmp_size, &environment, &tool.inputs, &tool.cwl_version)?),
                 );
             }
         }
@@ -115,7 +117,15 @@ impl RuntimeEnvironment {
     }
 }
 
-fn evaluate(val: &StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter]) -> Result<u64, Box<dyn Error>> {
+fn evaluate(
+    val: &StringOrNumber,
+    runtime: &RuntimeEnvironment,
+    inputs: &[CommandInputParameter],
+    cwl_version: &Option<String>,
+) -> Result<u64, Box<dyn Error>> {
+    if *cwl_version == Some("v1.0".into()) || *cwl_version == Some("v1.1".into()) && matches!(val, StringOrNumber::Decimal(_)) {
+        return Err("CWL v1.0 and v1.1 do not support decimal values in runtime".into());
+    }
     match val {
         StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(str, runtime, inputs).parse()?),
         StringOrNumber::Integer(uint) => Ok(*uint),
@@ -145,7 +155,9 @@ pub(crate) fn collect_inputs(
         if let DefaultValue::File(f) = &mut result_input {
             if input.load_contents {
                 if fs::metadata(f.location.as_ref().expect("Could not read file"))?.len() > 64 * 1024 {
-                    return Err("File is too large to load contents (see: https://www.commonwl.org/v1.2/CommandLineTool.html#CommandInputParameter)".into());
+                    return Err(
+                        "File is too large to load contents (see: https://www.commonwl.org/v1.2/CommandLineTool.html#CommandInputParameter)".into(),
+                    );
                 }
                 f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
             }
