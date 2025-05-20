@@ -3,8 +3,8 @@ use crate::{
     environment::{collect_environment, RuntimeEnvironment},
     execute,
     expression::{
-        eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions, reset_expression_engine,
-        set_self, unset_self,
+        eval, eval_tool, evaluate_condition, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions,
+        reset_expression_engine, set_self, unset_self,
     },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
@@ -109,6 +109,13 @@ pub fn run_workflow(
             }
             let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
             input_values.inputs = step_inputs;
+
+            //check conditional execution
+            if let Some(condition) = &step.when {
+                if !evaluate_condition(condition, &input_values.inputs)? {
+                    continue;
+                }
+            }
 
             let step_outputs = if let Some(path) = path {
                 execute(&path, &input_values, Some(tmp_path.clone()), None)?

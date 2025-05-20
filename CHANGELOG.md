@@ -3,12 +3,13 @@
 - added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
 - Support InlineTools in Workflow step #111
 - Support Expressions, Files and Directories as `InitialWorkDirRequirement` (in additon to Dirents)
+- Support Conditional Execution
 
 ## 🐛 Bugfixes
 - fixed a bug with Dockerfile path resolution
 - handle NetworkAccess Requirment in runner
 - inherit parents requirements correclty
-- ramping up runner conformance from 160/378 to 192/378
+- ramping up runner conformance from 160/378 to 196/378
 
 # v0.5.2
 ## 🐛 Bugfixes

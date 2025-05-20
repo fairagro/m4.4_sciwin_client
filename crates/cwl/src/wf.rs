@@ -160,16 +160,14 @@ pub struct WorkflowStep {
     pub run: StringOrDocument,    
     #[serde(deserialize_with = "deserialize_workflow_inputs")]
     pub in_: Vec<WorkflowStepInputParameter>,
-    //pub in_: HashMap<String, WorkflowStepInput>,
     pub out: Vec<String>,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub when: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_requirements")]
-    #[serde(default)]
     pub requirements: Vec<Requirement>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_hints")]
-    #[serde(default)]
     pub hints: Vec<Requirement>,
 }
 

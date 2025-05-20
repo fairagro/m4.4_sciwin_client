@@ -75,6 +75,13 @@ pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn Error>> 
     Ok(Value::String(input.to_string()))
 }
 
+pub(crate) fn evaluate_condition(input: &str, inputs: &HashMap<String, DefaultValue>) -> Result<bool, Box<dyn Error>> {
+    prepare_expression_engine(&RuntimeEnvironment { inputs: inputs.clone(), ..Default::default() })?;
+    let result = evaluate_expression(input)?.as_bool().unwrap_or(false);
+    reset_expression_engine()?;
+    Ok(result)
+}
+
 pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn Error>> {
     let expressions = parse_expressions(input);
 
