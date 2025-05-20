@@ -9,6 +9,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
 };
+use glob::glob;
 use pathdiff::diff_paths;
 use std::{
     env,
@@ -223,6 +224,7 @@ fn stage_input_files(
             copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());
             staged_files.extend(stage_secondary_files(&data, path)?);
+            staged_files.extend(stage_secondary_inputs(&data, path, input)?);
         } else if input.type_ == CWLType::Directory {
             copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {:?} to {:?}: {}", data_path, staged_path, e))?;
             staged_files.push(staged_path_str.clone());
@@ -231,6 +233,34 @@ fn stage_input_files(
     Ok(staged_files)
 }
 
+fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &CommandInputParameter) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut staged_files = vec![];
+
+    if let DefaultValue::File(file) = &incoming_data {
+        let file_loc = file.location.as_ref().unwrap().trim_start_matches("../").to_string();
+        let file_dir = if let Some(dir_name) = &file.dirname {
+            Path::new(dir_name)
+        } else {
+            Path::new(&file_loc).parent().unwrap_or_else(|| Path::new(""))
+        };
+        for item in &input.secondary_files {
+            let mut matched = false;
+            let pattern = file_dir.join(format!("*{}", item.pattern));
+            for res in glob(&pattern.to_string_lossy())? {
+                let res = res?;
+                let dest = path.join(&res);
+                copy_file(&res, &dest).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", res, dest, e))?;
+                staged_files.push(dest.to_string_lossy().into_owned());
+                matched = true;
+            }
+            if !matched && item.required {
+                return Err(format!("Required secondary file pattern {} not found in {:?}", item.pattern, file_dir).into());
+            }
+        }
+    }
+
+    Ok(staged_files)
+}
 fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut staged_files = vec![];
     if let DefaultValue::File(file) = &incoming_data {

@@ -18,12 +18,12 @@ pub struct CommandInputParameter {
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "<&bool>::not")]
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub load_contents: bool,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "<&bool>::not")]
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub streamable: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secondary_files: Vec<SecondaryFileSchema>,
 }
 
 impl CommandInputParameter {
@@ -119,6 +119,48 @@ where
     };
 
     Ok(parameters)
+}
+
+#[derive(Serialize, Debug, Default, PartialEq, Clone)]
+pub struct SecondaryFileSchema {
+    pub pattern: String,
+    pub required: bool,
+}
+
+impl From<String> for SecondaryFileSchema {
+    fn from(pattern: String) -> Self {
+        if pattern.ends_with("?") {
+            let pattern = pattern.trim_end_matches('?').to_string();
+            SecondaryFileSchema { pattern, required: false }
+        } else {
+            SecondaryFileSchema { pattern, required: true }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SecondaryFileSchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        match value {
+            Value::String(pattern) => Ok(SecondaryFileSchema::from(pattern)),
+            Value::Mapping(map) => {
+                let pattern = map
+                    .get("pattern")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| serde::de::Error::custom("Expected string for pattern"))?
+                    .to_string();
+                let required = map
+                    .get("required")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                Ok(SecondaryFileSchema { pattern, required })
+            }
+            _ => Err(serde::de::Error::custom("Expected string or mapping for secondary file schema")),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]

@@ -112,6 +112,9 @@ pub fn run_workflow(
 
             //check conditional execution
             if let Some(condition) = &step.when {
+                if workflow.cwl_version == Some("v1.0".to_string()) {
+                    return Err("Conditional execution is not supported in CWL v1.0".into());
+                }
                 if !evaluate_condition(condition, &input_values.inputs)? {
                     continue;
                 }
