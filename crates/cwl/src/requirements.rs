@@ -147,8 +147,9 @@ impl InitialWorkDirRequirement {
     pub fn from_file(filename: &str) -> Self {
         InitialWorkDirRequirement {
             listing: vec![WorkDirItem::Dirent(Dirent {
-                entryname: filename.to_string(),
+                entryname: Some(filename.to_string()),
                 entry: Entry::from_file(filename),
+                ..Default::default()
             })],
         }
     }
@@ -158,8 +159,9 @@ impl InitialWorkDirRequirement {
                 .iter()
                 .map(|&filename| {
                     WorkDirItem::Dirent(Dirent {
-                        entryname: filename.to_string(),
+                        entryname: Some(filename.to_string()),
                         entry: Entry::Source(get_entry_name(filename)),
+                        ..Default::default()
                     })
                 })
                 .collect(),
@@ -168,8 +170,9 @@ impl InitialWorkDirRequirement {
     pub fn from_contents(entryname: &str, contents: &str) -> Self {
         InitialWorkDirRequirement {
             listing: vec![WorkDirItem::Dirent(Dirent {
-                entryname: entryname.to_string(),
+                entryname: Some(entryname.to_string()),
                 entry: Entry::Source(contents.to_string()),
+                ..Default::default()
             })],
         }
     }
@@ -177,8 +180,9 @@ impl InitialWorkDirRequirement {
     pub fn add_files(&mut self, filenames: &[&str]) {
         self.listing.extend(filenames.iter().map(|&f| {
             WorkDirItem::Dirent(Dirent {
-                entryname: f.to_string(),
+                entryname: Some(f.to_string()),
                 entry: Entry::Source(get_entry_name(f)),
+                ..Default::default()
             })
         }));
     }
@@ -275,7 +279,7 @@ mod tests {
         assert_eq!(req.listing.len(), 1);
         assert!(matches!(req.listing[0], WorkDirItem::Dirent(_)));
         if let WorkDirItem::Dirent(dirent) = &req.listing[0] {
-            assert_eq!(dirent.entryname, "../../tests/test_data/echo.py".to_string());
+            assert_eq!(dirent.entryname, Some("../../tests/test_data/echo.py".to_string()));
         }
     }
 

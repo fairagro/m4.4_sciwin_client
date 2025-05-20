@@ -9,7 +9,7 @@
 - fixed a bug with Dockerfile path resolution
 - handle NetworkAccess Requirment in runner
 - inherit parents requirements correclty
-- ramping up runner conformance from 160/378 to 199/378
+- ramping up runner conformance from 160/378 to 202/378
 
 # v0.5.2
 ## 🐛 Bugfixes

@@ -604,9 +604,22 @@ pub enum EnviromentDefs {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Dirent {
-    pub entryname: String,
+    pub entryname: Option<String>,
     pub entry: Entry,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub writeable: Option<bool>,
 }
+
+impl Default for Dirent {
+    fn default() -> Self {
+        Self {
+            entryname: None,
+            entry: Entry::Source(String::new()),
+            writeable: None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Entry {

@@ -339,7 +339,8 @@ mod tests {
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
                 listing: vec![WorkDirItem::Dirent(Dirent {
                     entry: Entry::from_file(os_path("../../test/script.py")),
-                    entryname: "test/script.py".to_string()
+                    entryname: Some("test/script.py".to_string()),
+                    ..Default::default()
                 })]
             })
         );

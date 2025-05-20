@@ -55,7 +55,17 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
         if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
             for listing in &iwdr.listing {
                 let into_path = match listing {
-                    WorkDirItem::Dirent(dirent) => path.join(&dirent.entryname),
+                    WorkDirItem::Dirent(dirent) => {
+                        if let Some(entryname) = &dirent.entryname {
+                            path.join(entryname)
+                        } else {
+                            let eval = match &dirent.entry {
+                                Entry::Source(src) => Path::new(src),
+                                Entry::Include(include) => &get_iwdr_src(tool_path, &include.include)?,
+                            };
+                            path.join(eval.file_name().unwrap())
+                        }
+                    }
                     WorkDirItem::FileOrDirectory(val) => match &**val {
                         DefaultValue::File(file) => {
                             let location = Path::new(file.location.as_ref().unwrap());
@@ -75,7 +85,12 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
                     WorkDirItem::Dirent(dirent) => match &dirent.entry {
                         Entry::Source(src) => {
                             if fs::exists(src).unwrap_or(false) {
-                                copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {} to {}: {}", src, path_str, e))?;
+                                let src = Path::new(src); //is safer ;)
+                                if src.is_file() {
+                                    copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {:?} to {}: {}", src, path_str, e))?;
+                                } else {
+                                    copy_dir(src, &into_path).map_err(|e| format!("Failed to copy dir from {:?} to {}: {}", src, path_str, e))?;
+                                }
                             } else {
                                 create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
                             }
@@ -251,7 +266,7 @@ fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &Com
                 &file_dir.join(format!("*{}", item.pattern)).to_string_lossy().into_owned()
             };
             let pattern = pattern.trim();
-            
+
             for res in glob(pattern)? {
                 let res = res?;
                 let dest = path.join(&res);

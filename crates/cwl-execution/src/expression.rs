@@ -197,7 +197,9 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
             for listing in &mut wd_req.listing {
                 if let WorkDirItem::Dirent(dirent) = listing {
-                    dirent.entryname = replace_expressions(&dirent.entryname)?;
+                    if let Some(entryname) = &mut dirent.entryname {
+                        *entryname = replace_expressions(entryname)?;
+                    }
                     dirent.entry = match &mut dirent.entry {
                         Entry::Source(src) => {
                             *src = replace_expressions(src)?;

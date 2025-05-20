@@ -111,7 +111,9 @@ pub(crate) fn set_placeholder_values_requirements(
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
             for listing in &mut wd_req.listing {
                 if let WorkDirItem::Dirent(dirent) = listing {
-                    dirent.entryname = set_placeholder_values_in_string(&dirent.entryname, runtime, inputs);
+                    if let Some(entryname) = &mut dirent.entryname {
+                        *entryname = set_placeholder_values_in_string(entryname, runtime, inputs);
+                    }
                     dirent.entry = match &mut dirent.entry {
                         Entry::Source(src) => {
                             *src = set_placeholder_values_in_string(src, runtime, inputs);
