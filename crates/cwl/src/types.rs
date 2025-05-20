@@ -542,8 +542,8 @@ pub struct Directory {
     pub secondary_files: Option<Vec<DefaultValue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basename: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub listing: Vec<DefaultValue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listing: Option<Vec<DefaultValue>>,
 }
 
 impl Default for Directory {

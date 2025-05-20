@@ -233,7 +233,7 @@ fn evaluate_output_impl(
 }
 
 fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
-    let current_dir = env::temp_dir().to_string_lossy().into_owned();
+    let current_dir = env::current_dir()?.to_string_lossy().into_owned();
     let path = &initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(entry));
     fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {entry:?} to {path:?}: {e}"))?;
     info!("📜 Wrote output file: {path:?}");
@@ -241,14 +241,14 @@ fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutpu
     let mut file = get_file_metadata(path, output.format.clone());
     if !output.secondary_files.is_empty() {
         set_self(&file)?;
-        let folder = entry.parent().unwrap_or(Path::new("."));
+        let folder = entry.parent().unwrap_or(Path::new(""));
         let mut secondary_files = vec![];
         for secondary in &output.secondary_files {
             let pattern = replace_expressions(&secondary.pattern)?;
-            let pattern = format!("{}*{}", folder.to_string_lossy(), pattern);
+            let pattern = format!("{}/*{}", folder.to_string_lossy(), pattern);
             for entry in glob(&pattern)? {
                 let entry = entry?;
-                let sec_path = initial_dir.join(&entry);
+                let sec_path = initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(&entry));
                 fs::copy(&entry, &sec_path).map_err(|e| format!("Failed to copy file from {entry:?} to {sec_path:?}: {e}"))?;
                 info!("📜 Wrote secondary file: {sec_path:?}");
                 secondary_files.push(DefaultValue::File(get_file_metadata(&sec_path, None)));
@@ -287,17 +287,22 @@ pub(crate) fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
 pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
-
+    dir.listing = Some(vec![]);
+    
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
         let dest_path = dest.as_ref().join(entry.file_name());
-        if src_path.is_dir() {
+        let entry = if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            dir.listing.push(DefaultValue::Directory(sub_dir));
+            DefaultValue::Directory(sub_dir)
         } else {
             copy_file(src_path, &dest_path)?;
-            dir.listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
+            DefaultValue::File(get_file_metadata(dest_path, None))
+        };
+
+        if let Some(ref mut listing) = dir.listing {
+            listing.push(entry);
         }
     }
     Ok(dir)
@@ -549,18 +554,19 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing.sort_by_key(|item| match item {
-            DefaultValue::File(file) => file.basename.clone(),
-            _ => Some(String::new()),
-        });
-
+        if let Some(ref mut listing) = result.listing {
+            listing.sort_by_key(|item| match item {
+                DefaultValue::File(file) => file.basename.clone(),
+                _ => Some(String::new()),
+            });
+        }
         let file = current.join("file.txt").to_string_lossy().into_owned();
         let input = current.join("input.txt").to_string_lossy().into_owned();
 
         let expected = Directory {
             location: Some(format!("file://{cwd}")),
             basename: Some("test_dir".to_string()),
-            listing: vec![
+            listing: Some(vec![
                 DefaultValue::File(File {
                     class: "File".into(),
                     location: Some(format!("file://{file}")),
@@ -583,7 +589,7 @@ mod tests {
                     path: Some(input),
                     ..Default::default()
                 }),
-            ],
+            ]),
             path: Some(cwd.to_string()),
             ..Default::default()
         };
