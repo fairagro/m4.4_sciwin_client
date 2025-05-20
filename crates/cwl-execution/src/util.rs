@@ -1,5 +1,5 @@
 use crate::{
-    expression::{output_eval, set_self, unset_self},
+    expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
 use cwl::{
@@ -10,6 +10,7 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
 };
 use glob::glob;
+use log::info;
 use serde_yaml::{Mapping, Value};
 use std::{
     collections::HashMap,
@@ -233,10 +234,31 @@ fn evaluate_output_impl(
 
 fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
     let current_dir = env::temp_dir().to_string_lossy().into_owned();
-    let path = &initial_dir.join(entry.strip_prefix(current_dir).unwrap_or(entry));
+    let path = &initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(entry));
     fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {entry:?} to {path:?}: {e}"))?;
-    eprintln!("📜 Wrote output file: {path:?}");
-    Ok(DefaultValue::File(get_file_metadata(path, output.format.clone())))
+    info!("📜 Wrote output file: {path:?}");
+
+    let mut file = get_file_metadata(path, output.format.clone());
+    if !output.secondary_files.is_empty() {
+        set_self(&file)?;
+        let folder = entry.parent().unwrap_or(Path::new("."));
+        let mut secondary_files = vec![];
+        for secondary in &output.secondary_files {
+            let pattern = replace_expressions(&secondary.pattern)?;
+            let pattern = format!("{}*{}", folder.to_string_lossy(), pattern);
+            for entry in glob(&pattern)? {
+                let entry = entry?;
+                let sec_path = initial_dir.join(&entry);
+                fs::copy(&entry, &sec_path).map_err(|e| format!("Failed to copy file from {entry:?} to {sec_path:?}: {e}"))?;
+                info!("📜 Wrote secondary file: {sec_path:?}");
+                secondary_files.push(DefaultValue::File(get_file_metadata(&sec_path, None)));
+            }
+        }
+        file.secondary_files = Some(secondary_files);
+        unset_self()?;
+    }
+
+    Ok(DefaultValue::File(file))
 }
 
 fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue, Box<dyn Error>> {

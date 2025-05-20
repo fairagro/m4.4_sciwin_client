@@ -420,7 +420,7 @@ impl File {
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
-        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let metadata = fs::metadata(path).unwrap_or_else(|_| panic!("Could not get metadata for {absolute_str}"));
         let mut hasher = Sha1::new();
         let hash = fs::read(path).ok().map(|f| {
             hasher.update(&f);
@@ -441,6 +441,30 @@ impl File {
             format: resolve_format(self.format.clone()),
             ..Default::default()
         }
+    }
+
+    pub fn preload(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let path = Path::new(&loc);
+
+        let mut item = self.clone();
+        if item.path.is_none() {
+            item.path = Some(path.display().to_string());
+        }
+
+        if item.basename.is_none() {
+            item.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
+        }
+
+        if item.nameroot.is_none() {
+            item.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
+        }
+
+        if item.nameext.is_none() {
+            item.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
+        }
+
+        item
     }
 }
 
@@ -464,6 +488,45 @@ impl PathItem for File {
 
     fn get_location(&self) -> String {
         self.location.as_ref().unwrap_or(&String::new()).clone()
+    }
+}
+
+#[derive(Serialize, Debug, Default, PartialEq, Clone)]
+pub struct SecondaryFileSchema {
+    pub pattern: String,
+    pub required: bool,
+}
+
+impl From<String> for SecondaryFileSchema {
+    fn from(pattern: String) -> Self {
+        if pattern.ends_with("?") {
+            let pattern = pattern.trim_end_matches('?').to_string();
+            SecondaryFileSchema { pattern, required: false }
+        } else {
+            SecondaryFileSchema { pattern, required: true }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SecondaryFileSchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        match value {
+            Value::String(pattern) => Ok(SecondaryFileSchema::from(pattern)),
+            Value::Mapping(map) => {
+                let pattern = map
+                    .get("pattern")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| serde::de::Error::custom("Expected string for pattern"))?
+                    .to_string();
+                let required = map.get("required").and_then(|v| v.as_bool()).unwrap_or(true);
+                Ok(SecondaryFileSchema { pattern, required })
+            }
+            _ => Err(serde::de::Error::custom("Expected string or mapping for secondary file schema")),
+        }
     }
 }
 

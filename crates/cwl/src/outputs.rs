@@ -1,4 +1,5 @@
 use super::{deserialize::Identifiable, types::CWLType};
+use crate::types::SecondaryFileSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 
@@ -12,6 +13,8 @@ pub struct CommandOutputParameter {
     pub output_binding: Option<CommandOutputBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secondary_files: Vec<SecondaryFileSchema>,
 }
 
 impl CommandOutputParameter {

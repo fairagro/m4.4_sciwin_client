@@ -217,9 +217,9 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
         if input.secondary_files.is_empty() {
             continue;
         }
-        
-        if let DefaultValue::File(file) = &input_values.inputs[&tmp] {            
-            set_self(&file.snapshot())?;
+
+        if let Some(DefaultValue::File(file)) = input_values.inputs.get(&tmp) {
+            set_self(&file.preload())?;
             for sec_file in &mut input.secondary_files {
                 sec_file.pattern = replace_expressions(&sec_file.pattern)?;
             }
