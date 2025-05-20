@@ -80,10 +80,10 @@ pub fn tool_create_test_inputs_outputs() {
         assert!(matches!(iwdr.listing[1], WorkDirItem::Dirent(_)));
 
         if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
-            assert_eq!(dirent.entryname, script);
+            assert_eq!(dirent.entryname, Some(script));
         }
         if let WorkDirItem::Dirent(dirent) = &iwdr.listing[1] {
-            assert_eq!(dirent.entryname, input);
+            assert_eq!(dirent.entryname, Some(input));
         }
     } else {
         panic!("Not an InitialWorkDirRequirement")
@@ -394,7 +394,7 @@ pub fn test_shell_script() {
     assert_eq!(tool.requirements.len(), 1);
     if let Requirement::InitialWorkDirRequirement(iwdr) = &&tool.requirements[0] {
         if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
-            assert_eq!(dirent.entryname, "./script.sh");
+            assert_eq!(dirent.entryname, Some("./script.sh".to_string()));
         }
     } else {
         panic!("Not an InitialWorkDirRequirement")

@@ -246,10 +246,10 @@ pub fn test_implicit_inputs_hardcoded_files() {
         assert!(matches!(initial.listing[0], WorkDirItem::Dirent(_)));
         assert!(matches!(initial.listing[1], WorkDirItem::Dirent(_)));
         if let WorkDirItem::Dirent(dirent) = &initial.listing[0] {
-            assert_eq!(dirent.entryname, "load.py");
+            assert_eq!(dirent.entryname, Some("load.py".to_string()));
         }
         if let WorkDirItem::Dirent(dirent) = &initial.listing[1] {
-            assert_eq!(dirent.entryname, "file.txt");
+            assert_eq!(dirent.entryname, Some("file.txt".to_string()));
             assert_eq!(dirent.entry, Entry::Source("$(inputs.file_txt)".into()));
         }
     } else {
