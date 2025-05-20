@@ -1,5 +1,5 @@
 use crate::{
-    expression::{evaluate_expression, set_self, unset_self},
+    expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
 use cwl::{
@@ -10,7 +10,8 @@ use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
 };
 use glob::glob;
-use serde_yaml::Value;
+use log::info;
+use serde_yaml::{Mapping, Value};
 use std::{
     collections::HashMap,
     env,
@@ -140,12 +141,14 @@ fn evaluate_output_impl(
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             } else {
                 let filename = match output.type_ {
@@ -169,48 +172,59 @@ fn evaluate_output_impl(
         }
         CWLType::Array(inner) if matches!(&**inner, CWLType::File) || matches!(&**inner, CWLType::Directory) => {
             if let Some(binding) = &output.output_binding {
-                let result = glob(&binding.glob)?;
-                let values: Result<Vec<_>, Box<dyn Error>> = result
-                    .map(|entry| {
-                        let entry = entry?;
-                        match **inner {
-                            CWLType::File => handle_file_output(&entry, initial_dir, output),
-                            CWLType::Directory => handle_dir_output(&entry, initial_dir),
-                            _ => unreachable!(),
-                        }
-                    })
-                    .collect();
-                outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                if let Some(glob_) = &binding.glob {
+                    let result = glob(glob_)?;
+                    let values: Result<Vec<_>, Box<dyn Error>> = result
+                        .map(|entry| {
+                            let entry = entry?;
+                            match **inner {
+                                CWLType::File => handle_file_output(&entry, initial_dir, output),
+                                CWLType::Directory => handle_dir_output(&entry, initial_dir),
+                                _ => unreachable!(),
+                            }
+                        })
+                        .collect();
+                    outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                }
             }
         }
         CWLType::Directory => {
             if let Some(binding) = &output.output_binding {
-                let mut result = glob(&binding.glob)?;
-                if let Some(entry) = result.next() {
-                    let entry = &entry?;
-                    outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
-                } else {
-                    Err(format!("Could not evaluate glob: {}", binding.glob))?;
+                if let Some(glob_) = &binding.glob {
+                    let mut result = glob(glob_)?;
+                    if let Some(entry) = result.next() {
+                        let entry = &entry?;
+                        outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
+                    } else {
+                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                    }
                 }
             }
         }
         _ => {
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
-                let contents = fs::read_to_string(&binding.glob)?;
+                if let Some(glob_) = &binding.glob {
+                    let contents = fs::read_to_string(glob_)?;
 
-                if let Some(expression) = &binding.output_eval {
-                    let mut ctx = File::from_location(&binding.glob);
-                    ctx.format = output.format.clone();
-                    let mut ctx = ctx.snapshot();
-                    ctx.contents = Some(contents);
-                    set_self(&vec![&ctx])?;
-                    let result = evaluate_expression(expression)?;
+                    let value = if let Some(expression) = &binding.output_eval {
+                        let mut ctx = File::from_location(glob_);
+                        ctx.format = output.format.clone();
+                        let mut ctx = ctx.snapshot();
+                        ctx.contents = Some(contents);
+                        set_self(&vec![&ctx])?;
+                        let result = output_eval(expression)?;
+                        let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
+                        unset_self()?;
+                        DefaultValue::Any(value)
+                    } else {
+                        DefaultValue::Any(Value::String(contents))
+                    };
+                    outputs.insert(output.id.clone(), value);
+                } else if let Some(expression) = &binding.output_eval {
+                    let result = output_eval(expression)?;
                     let value = serde_yaml::from_str(&serde_json::to_string(&result)?)?;
                     outputs.insert(output.id.clone(), DefaultValue::Any(value));
-                    unset_self()?;
-                } else {
-                    outputs.insert(output.id.clone(), DefaultValue::Any(Value::String(contents)));
                 }
             }
         }
@@ -219,21 +233,44 @@ fn evaluate_output_impl(
 }
 
 fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
-    let path = &initial_dir.join(entry);
-    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", entry, path, e))?;
-    eprintln!("📜 Wrote output file: {:?}", path);
-    Ok(DefaultValue::File(get_file_metadata(path, output.format.clone())))
+    let current_dir = env::current_dir()?.to_string_lossy().into_owned();
+    let path = &initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(entry));
+    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {entry:?} to {path:?}: {e}"))?;
+    info!("📜 Wrote output file: {path:?}");
+
+    let mut file = get_file_metadata(path, output.format.clone());
+    if !output.secondary_files.is_empty() {
+        set_self(&file)?;
+        let folder = entry.parent().unwrap_or(Path::new(""));
+        let mut secondary_files = vec![];
+        for secondary in &output.secondary_files {
+            let pattern = replace_expressions(&secondary.pattern)?;
+            let pattern = format!("{}/*{}", folder.to_string_lossy(), pattern);
+            for entry in glob(&pattern)? {
+                let entry = entry?;
+                let sec_path = initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(&entry));
+                fs::copy(&entry, &sec_path).map_err(|e| format!("Failed to copy file from {entry:?} to {sec_path:?}: {e}"))?;
+                info!("📜 Wrote secondary file: {sec_path:?}");
+                secondary_files.push(DefaultValue::File(get_file_metadata(&sec_path, None)));
+            }
+        }
+        file.secondary_files = Some(secondary_files);
+        unset_self()?;
+    }
+
+    Ok(DefaultValue::File(file))
 }
 
 fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue, Box<dyn Error>> {
-    let path = &initial_dir.join(entry);
+    let current_dir = env::temp_dir().to_string_lossy().into_owned();
+    let path = &initial_dir.join(entry.strip_prefix(current_dir).unwrap_or(entry));
     fs::create_dir_all(path)?;
-    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {}", e))?;
+    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {e}"))?;
     Ok(DefaultValue::Directory(out_dir))
 }
 
 pub(crate) fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
-    let mut f = File::from_location(&path.as_ref().to_string_lossy().to_string());
+    let mut f = File::from_location(path.as_ref().to_string_lossy());
     f.format = format;
     f.snapshot()
 }
@@ -250,25 +287,22 @@ pub(crate) fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
 pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
-
+    dir.listing = Some(vec![]);
+    
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
         let dest_path = dest.as_ref().join(entry.file_name());
-        if src_path.is_dir() {
+        let entry = if src_path.is_dir() {
             let sub_dir = copy_output_dir(src_path, dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::Directory(sub_dir));
-            } else {
-                dir.listing = Some(vec![DefaultValue::Directory(sub_dir)])
-            }
+            DefaultValue::Directory(sub_dir)
         } else {
             copy_file(src_path, &dest_path)?;
-            if let Some(listing) = &mut dir.listing {
-                listing.push(DefaultValue::File(get_file_metadata(dest_path, None)));
-            } else {
-                dir.listing = Some(vec![DefaultValue::File(get_file_metadata(dest_path, None))])
-            }
+            DefaultValue::File(get_file_metadata(dest_path, None))
+        };
+
+        if let Some(ref mut listing) = dir.listing {
+            listing.push(entry);
         }
     }
     Ok(dir)
@@ -278,7 +312,7 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String,
     let mut yaml: Value = serde_yaml::from_str(contents)?;
     let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
     resolve_imports(&mut yaml, path)?;
-
+    resolve_shortcuts(&mut yaml);
     Ok(serde_yaml::to_string(&yaml)?)
 }
 
@@ -309,6 +343,50 @@ fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Er
     Ok(())
 }
 
+fn resolve_shortcuts(value: &mut Value) {
+    //get inputs block
+    let mut stdin_id: Option<String> = None;
+    if let Value::Mapping(cwl) = value {
+        let inputs = cwl.get_mut("inputs").unwrap(); //block is mandatory!
+        if let Value::Mapping(map) = inputs {
+            for (id, map_val) in map {
+                //if shortcut of shortcut expand first time
+                if map_val == &Value::String("stdin".to_string()) {
+                    let mut mapping = Mapping::new();
+                    mapping.insert(Value::String("type".to_string()), Value::String("stdin".to_string()));
+                    *map_val = Value::Mapping(mapping);
+                }
+                if let Value::Mapping(map_map) = map_val {
+                    process_stdin_input(map_map, id, &mut stdin_id);
+                }
+            }
+        } else if let Value::Sequence(seq) = inputs {
+            for item in seq {
+                if let Value::Mapping(map) = item {
+                    let id_val = map.get("id").cloned().unwrap();
+                    process_stdin_input(map, &id_val, &mut stdin_id);
+                }
+            }
+        }
+
+        if let Some(stdin_id) = stdin_id {
+            cwl.insert(Value::String("stdin".to_string()), Value::String(format!("$(inputs.{stdin_id}.path)")));
+        }
+    }
+}
+
+fn process_stdin_input(map: &mut Mapping, id: &Value, stdin_id: &mut Option<String>) {
+    if let Some(Value::String(type_str)) = map.get_mut(Value::String("type".to_string())) {
+        if type_str == "stdin" {
+            *type_str = "File".to_string();
+            map.insert(Value::String("streamable".to_string()), Value::Bool(true));
+            if let Value::String(id_str) = id {
+                *stdin_id = Some(id_str.clone());
+            }
+        }
+    }
+}
+
 pub fn is_docker_installed() -> bool {
     let output = Command::new("docker").arg("--version").output();
 
@@ -334,7 +412,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
@@ -348,7 +426,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()));
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
         let mut values = HashMap::new();
         values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
 
@@ -362,7 +440,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let values = HashMap::new();
         let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
@@ -375,7 +453,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
@@ -387,7 +465,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
 
@@ -399,7 +477,7 @@ mod tests {
         let input = CommandInputParameter::default()
             .with_id("test")
             .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix(&"--arg".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
             .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
         let evaluation = evaluate_input_as_string(&input, &HashMap::from([("test".to_string(), DefaultValue::Any(Value::Null))])).unwrap();
         //if any and null, take default
@@ -416,7 +494,7 @@ mod tests {
             .with_id("out")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: "tests/test_data/file.txt".to_string(),
+                glob: Some("tests/test_data/file.txt".to_string()),
                 ..Default::default()
             });
 
@@ -476,14 +554,12 @@ mod tests {
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 
         let mut result = copy_output_dir(stage.to_str().unwrap(), cwd).expect("could not copy dir");
-        result.listing = result.listing.map(|mut listing| {
+        if let Some(ref mut listing) = result.listing {
             listing.sort_by_key(|item| match item {
                 DefaultValue::File(file) => file.basename.clone(),
                 _ => Some(String::new()),
             });
-            listing
-        });
-
+        }
         let file = current.join("file.txt").to_string_lossy().into_owned();
         let input = current.join("input.txt").to_string_lossy().into_owned();
 

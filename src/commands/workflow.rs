@@ -7,9 +7,9 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    inputs::WorkflowStepInput,
-    wf::Workflow,
-    {load_tool, load_workflow},
+    load_tool, load_workflow,
+    wf::{StringOrDocument, Workflow},
+    CWLDocument,
 };
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;
@@ -87,7 +87,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     }
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
-    info!("📄 Created new Workflow file: {}", filename);
+    info!("📄 Created new Workflow file: {filename}");
 
     Ok(())
 }
@@ -122,7 +122,7 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    info!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {filename}!");
 
     Ok(())
 }
@@ -148,7 +148,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     yaml = format_cwl(&yaml)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
-    info!("✔️  Updated Workflow {}!", filename);
+    info!("✔️  Updated Workflow {filename}!");
 
     Ok(())
 }
@@ -208,13 +208,18 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     table.add_row(row![b -> "Steps:"]);
 
     for step in &workflow.steps {
-        let tool = load_tool(path.join(&step.run))?;
-
+        let tool = match &step.run {
+            StringOrDocument::String(run) => load_tool(path.join(run))?,
+            StringOrDocument::Document(boxed_doc) => match &**boxed_doc {
+                CWLDocument::CommandLineTool(doc) => doc.clone(),
+                _ => unreachable!(), //see #95
+            },
+        };
         let input_status = tool
             .inputs
             .iter()
             .map(|input| {
-                if step.in_.contains_key(&input.id) {
+                if step.in_.iter().any(|i| i.id == input.id) {
                     format!("✅    {}", input.id)
                 } else if input.default.is_some() {
                     format!("🔘    {}", input.id)
@@ -229,15 +234,11 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
             .outputs
             .iter()
             .map(|output| {
-                if workflow.steps.iter().any(|s| {
-                    s.in_.clone().into_values().any(|v| {
-                        let src = match v {
-                            WorkflowStepInput::String(str) => str,
-                            WorkflowStepInput::Parameter(par) => par.source.unwrap_or_default(),
-                        };
-                        src == format!("{}/{}", step.id, output.id)
-                    })
-                }) || workflow.outputs.iter().any(|o| o.output_source == format!("{}/{}", step.id, output.id))
+                if workflow
+                    .steps
+                    .iter()
+                    .any(|s| s.in_.clone().iter().any(|v| v.source == Some(format!("{}/{}", step.id, output.id))))
+                    || workflow.outputs.iter().any(|o| o.output_source == format!("{}/{}", step.id, output.id))
                 {
                     format!("✅    {}", output.id)
                 } else {
@@ -246,7 +247,12 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
             })
             .collect::<Vec<_>>()
             .join("\n");
-        table.add_row(row![b -> &step.run, &input_status, &output_status]);
+        let run = if let StringOrDocument::String(run) = &step.run {
+            run
+        } else {
+            &String::from("Inline Document")
+        };
+        table.add_row(row![b -> run, &input_status, &output_status]);
     }
 
     table.printstd();

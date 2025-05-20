@@ -1,4 +1,4 @@
-//! Contains the structure of CWL CommandLineTool definitions together with helpful functions for convenience
+//! Contains the structure of CWL `CommandLineTool` definitions together with helpful functions for convenience
 
 use super::{
     inputs::{CommandInputParameter, CommandLineBinding},
@@ -6,7 +6,10 @@ use super::{
     requirements::Requirement,
     types::CWLType,
 };
-use crate::{requirements::DockerRequirement, DocumentBase};
+use crate::{
+    requirements::{DockerRequirement, FromRequirement},
+    DocumentBase,
+};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -52,24 +55,25 @@ impl Default for CommandLineTool {
     fn default() -> Self {
         Self {
             base: DocumentBase {
-                id: None,
-                label: None,
-                doc: None,
+                id: Option::default(),
+                label: Option::default(),
+                doc: Option::default(),
                 class: String::from("CommandLineTool"),
-                cwl_version: String::from("v1.2"),
-                inputs: Default::default(),
-                requirements: Default::default(),
-                hints: Default::default(),
+                cwl_version: Some(String::from("v1.2")),
+                inputs: Vec::default(),
+                requirements: Vec::default(),
+                hints: Vec::default(),
+                intent: Option::default(),
             },
             base_command: Default::default(),
-            stdin: Default::default(),
-            stdout: Default::default(),
-            stderr: Default::default(),
-            outputs: Default::default(),
-            arguments: Default::default(),
-            success_codes: None,
-            permanent_fail_codes: None,
-            temporary_fail_codes: None,
+            stdin: Option::default(),
+            stdout: Option::default(),
+            stderr: Option::default(),
+            outputs: Vec::default(),
+            arguments: Option::default(),
+            success_codes: Option::default(),
+            permanent_fail_codes: Option::default(),
+            temporary_fail_codes: Option::default(),
         }
     }
 }
@@ -91,7 +95,7 @@ impl DerefMut for CommandLineTool {
 impl Display for CommandLineTool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_yaml::to_string(self) {
-            Ok(yaml) => write!(f, "{}", yaml),
+            Ok(yaml) => write!(f, "{yaml}"),
             Err(_) => Err(fmt::Error),
         }
     }
@@ -124,13 +128,18 @@ impl CommandLineTool {
 
     /// Adds requirements to this `CommandLineTool` and returns the updated tool
     pub fn with_requirements(mut self, requirements: Vec<Requirement>) -> Self {
-        self.requirements = Some(requirements);
+        self.requirements = requirements;
+        self
+    }
+
+    pub fn append_requirement(mut self, requirement: Requirement) -> Self {
+        self.requirements.push(requirement);
         self
     }
 
     /// Adds hints to this `CommandLineTool` and returns the updated tool
     pub fn with_hints(mut self, requirements: Vec<Requirement>) -> Self {
-        self.hints = Some(requirements);
+        self.hints = requirements;
         self
     }
 
@@ -151,24 +160,15 @@ impl CommandLineTool {
         self.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>()
     }
 
-    /// Checks whether the `CommandLineTool` has a ShellCommandRequirement in requirements
+    /// Checks whether the `CommandLineTool` has a `ShellCommandRequirement` in requirements
     pub fn has_shell_command_requirement(&self) -> bool {
-        if let Some(requirements) = &self.requirements {
-            requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
-        } else {
-            false
-        }
+        self.requirements.iter().any(|req| matches!(req, Requirement::ShellCommandRequirement))
     }
 
-    /// Checks whether the `CommandLineTool` has a DockerRequirement in requirements and returns an Option to it
-    pub fn get_docker_requirement(&self) -> Option<DockerRequirement> {
-        self.requirements.as_ref()?.iter().find_map(|req| {
-            if let Requirement::DockerRequirement(dr) = req {
-                Some(dr.clone()) // Return the found DockerRequirement
-            } else {
-                None
-            }
-        })
+    /// Checks whether the `CommandLineTool` has a `DockerRequirement` in requirements and returns an Option to it
+    /// do not change calls to the generic get_requirement
+    pub fn get_docker_requirement(&self) -> Option<&DockerRequirement> {
+        self.requirements.iter().find_map(|req| Requirement::get(req))
     }
 
     /// Gets the permanent fail code of the `CommandLineTool`
@@ -177,6 +177,15 @@ impl CommandLineTool {
             code[0]
         } else {
             1
+        }
+    }
+
+    /// Gets the success code of the `CommandLineTool`
+    pub fn get_sucess_code(&self) -> i32 {
+        if let Some(code) = &self.success_codes {
+            code[0]
+        } else {
+            0
         }
     }
 
@@ -291,8 +300,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stdout".to_string(),
             type_: CWLType::Stdout,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stdout_output());
     }
@@ -302,8 +310,7 @@ baseCommand:
         let tool = CommandLineTool::default().with_outputs(vec![CommandOutputParameter {
             id: "stderr".to_string(),
             type_: CWLType::Stderr,
-            output_binding: None,
-            format: None,
+            ..Default::default()
         }]);
         assert!(tool.has_stderr_output());
     }

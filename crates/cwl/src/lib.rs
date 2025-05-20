@@ -1,15 +1,16 @@
 use clt::CommandLineTool;
 use et::ExpressionTool;
-use inputs::deserialize_inputs;
-use inputs::CommandInputParameter;
-use requirements::deserialize_requirements;
-use requirements::Requirement;
-use requirements::ResourceRequirement;
+use inputs::{deserialize_inputs, CommandInputParameter};
+use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::{error::Error, fmt::Debug, fs, path::Path};
+use std::{
+    error::Error,
+    fmt::Debug,
+    fs,
+    ops::{Deref, DerefMut},
+    path::Path,
+};
 use wf::Workflow;
 
 pub mod clt;
@@ -46,7 +47,7 @@ pub mod wf;
 /// let document: CWLDocument = serde_yaml::from_str(yaml).unwrap();
 /// assert!(matches!(document, CWLDocument::CommandLineTool(_)));
 /// ```
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum CWLDocument {
     CommandLineTool(CommandLineTool),
@@ -106,38 +107,54 @@ impl<'de> Deserialize<'de> for CWLDocument {
 #[serde(rename_all = "camelCase")]
 pub struct DocumentBase {
     pub class: String,
-    pub cwl_version: String,
+    pub cwl_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub intent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub doc: Option<String>,
     #[serde(deserialize_with = "deserialize_inputs")]
     pub inputs: Vec<CommandInputParameter>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_requirements")]
     #[serde(default)]
-    pub requirements: Option<Vec<Requirement>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deserialize_requirements")]
+    pub requirements: Vec<Requirement>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "deserialize_hints")]
     #[serde(default)]
-    pub hints: Option<Vec<Requirement>>,
+    pub hints: Vec<Requirement>,
 }
 
 impl DocumentBase {
-    /// Checks whether Document has a ResourceRequirement attached and returns an option to it.
-    pub fn get_resource_requirement(&self) -> Option<ResourceRequirement> {
-        let reqs = self.requirements.as_ref().into_iter().flatten();
-        let hints = self.hints.as_ref().into_iter().flatten();
+    /// Checks whether Document has a specific Requirement attached and returns an option to it
+    pub fn get_requirement<T>(&self) -> Option<&T>
+    where
+        Requirement: FromRequirement<T>,
+    {
+        self.requirements.iter().chain(self.hints.iter()).find_map(|req| Requirement::get(req))
+    }
+}
 
-        reqs.chain(hints).find_map(|req| {
-            if let Requirement::ResourceRequirement(rr) = req {
-                Some(rr.clone())
-            } else {
-                None
-            }
-        })
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrNumber {
+    String(String),
+    Integer(u64),
+    Decimal(f64),
+}
+
+use std::fmt;
+
+impl fmt::Display for StringOrNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StringOrNumber::String(s) => write!(f, "{}", s),
+            StringOrNumber::Integer(i) => write!(f, "{}", i),
+            StringOrNumber::Decimal(d) => write!(f, "{}", d),
+        }
     }
 }
 

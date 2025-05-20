@@ -1,8 +1,35 @@
 # Unreleased
 ## 🚀 Features
+- added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
+- Support InlineTools in Workflow step #111
+- Support Expressions, Files and Directories as `InitialWorkDirRequirement` (in additon to Dirents)
+- Support Conditional Execution
+
+## 🐛 Bugfixes
+- fixed a bug with Dockerfile path resolution
+- handle NetworkAccess Requirment in runner
+- inherit parents requirements correclty
+- ramping up runner conformance from 160/378 to 202/378
+
+# v0.5.2
+## 🐛 Bugfixes
+- fixed bugs with the `tool create -i` argument
+
+# v0.5.1
+## 🐛 Bugfixes
+- fixed serialisation error
+
+# v0.5.0
+## 🚀 Features
 - Support automatic downloading if files are given with `http://` or `https://` protocol
 - Detect URLs as files if given with `http://` or `https://` protocol
-- Support Detection of Arrays as inputs in `tool create`
+- Support Detection of Arrays as inputs in `tool create` #100
+- Support ExpressionLibs
+
+## 🐛 Bugfixes
+- correctly support `DockerRequirement.DockerOutputDirectory`#96
+- made `CommandOutputBinding.glob` Optional #99
+- ramping up runner conformance from 131/378 to 160/378
 
 # v0.4.0
 ## 🚀 Features

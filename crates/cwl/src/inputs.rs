@@ -1,3 +1,5 @@
+use crate::types::SecondaryFileSchema;
+
 use super::{
     deserialize::Identifiable,
     types::{CWLType, DefaultValue},
@@ -18,13 +20,16 @@ pub struct CommandInputParameter {
     pub input_binding: Option<CommandLineBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "<&bool>::not")]
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub load_contents: bool,
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
+    pub streamable: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secondary_files: Vec<SecondaryFileSchema>,
 }
 
 impl CommandInputParameter {
-    pub fn with_id(mut self, id: &str) -> Self {
+    pub fn with_id(mut self, id: impl ToString) -> Self {
         self.id = id.to_string();
         self
     }
@@ -65,13 +70,13 @@ pub struct CommandLineBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shell_quote: Option<bool>,    
+    pub shell_quote: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_separator: Option<String>,
 }
 
 impl CommandLineBinding {
-    pub fn with_prefix(mut self, prefix: &String) -> Self {
+    pub fn with_prefix(mut self, prefix: impl ToString) -> Self {
         self.prefix = Some(prefix.to_string());
         self
     }
@@ -100,16 +105,13 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let param = match value {
-                    Value::String(type_str) => {
-                        let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
-                        CommandInputParameter::default().with_id(id).with_type(type_)
-                    }
-                    _ => {
-                        let mut param: CommandInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
-                        param.id = id.to_string();
-                        param
-                    }
+                let param = if let Value::String(type_str) = value {
+                    let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                    CommandInputParameter::default().with_id(id).with_type(type_)
+                } else {
+                    let mut param: CommandInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
+                    param.id = id.to_string();
+                    param
                 };
 
                 Ok(param)
@@ -121,26 +123,32 @@ where
     Ok(parameters)
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum WorkflowStepInput {
-    String(String),
-    Parameter(WorkflowStepInputParameter),
-}
-
-impl Default for WorkflowStepInput {
-    fn default() -> Self {
-        WorkflowStepInput::String(String::default())
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStepInputParameter {
+    #[serde(default)]
+    pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
+}
+
+impl WorkflowStepInputParameter {
+    pub fn with_id(mut self, id: impl ToString) -> Self {
+        self.id = id.to_string();
+        self
+    }
+
+    pub fn with_source(mut self, source: impl ToString) -> Self {
+        self.source = Some(source.to_string());
+        self
+    }
+
+    pub fn with_default(mut self, f: DefaultValue) -> Self {
+        self.default = Some(f);
+        self
+    }
 }
 
 #[cfg(test)]
@@ -153,11 +161,5 @@ mod tests {
         assert_eq!(input.id(), "");
         input.set_id("test".to_string());
         assert_eq!(input.id(), "test");
-    }
-
-    #[test]
-    pub fn test_workflow_step_input_default() {
-        let input = WorkflowStepInput::default();
-        assert_eq!(input, WorkflowStepInput::String(String::default()));
     }
 }

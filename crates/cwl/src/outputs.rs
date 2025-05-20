@@ -1,4 +1,5 @@
 use super::{deserialize::Identifiable, types::CWLType};
+use crate::types::SecondaryFileSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 
@@ -12,10 +13,12 @@ pub struct CommandOutputParameter {
     pub output_binding: Option<CommandOutputBinding>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub secondary_files: Vec<SecondaryFileSchema>,
 }
 
 impl CommandOutputParameter {
-    pub fn with_id(mut self, id: &str) -> Self {
+    pub fn with_id(mut self, id: impl ToString) -> Self {
         self.id = id.to_string();
         self
     }
@@ -35,7 +38,7 @@ impl Identifiable for CommandOutputParameter {
     }
 
     fn set_id(&mut self, id: String) {
-        self.id = id
+        self.id = id;
     }
 }
 
@@ -57,16 +60,13 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let param = match value {
-                    Value::String(type_str) => {
-                        let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
-                        CommandOutputParameter::default().with_id(id).with_type(type_)
-                    }
-                    _ => {
-                        let mut param: CommandOutputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
-                        param.id = id.to_string();
-                        param
-                    }
+                let param = if let Value::String(type_str) = value {
+                    let type_ = serde_yaml::from_value::<CWLType>(Value::String(type_str)).map_err(serde::de::Error::custom)?;
+                    CommandOutputParameter::default().with_id(id).with_type(type_)
+                } else {
+                    let mut param: CommandOutputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
+                    param.id = id.to_string();
+                    param
                 };
 
                 Ok(param)
@@ -81,7 +81,8 @@ where
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
-    pub glob: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub glob: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_eval: Option<String>,
 }
@@ -96,7 +97,7 @@ pub struct WorkflowOutputParameter {
 }
 
 impl WorkflowOutputParameter {
-    pub fn with_id(&mut self, id: &str) -> &Self {
+    pub fn with_id(&mut self, id: impl ToString) -> &Self {
         self.id = id.to_string();
         self
     }
@@ -108,7 +109,7 @@ impl Identifiable for WorkflowOutputParameter {
     }
 
     fn set_id(&mut self, id: String) {
-        self.id = id
+        self.id = id;
     }
 }
 

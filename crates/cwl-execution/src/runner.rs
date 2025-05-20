@@ -2,24 +2,27 @@ use crate::{
     container_engine,
     environment::{collect_environment, RuntimeEnvironment},
     execute,
-    expression::{eval_tool, parse_expressions, prepare_expression_engine, replace_expressions, reset_expression_engine, set_self, unset_self},
+    expression::{
+        eval, eval_tool, evaluate_condition, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions,
+        reset_expression_engine, set_self, unset_self,
+    },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
-    staging::{stage_required_files, unstage_files},
+    staging::stage_required_files,
     util::{
         copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata,
         is_docker_installed,
     },
     validate::set_placeholder_values,
-    CommandError,
+    CommandError, InputObject,
 };
 use cwl::{
     clt::{Argument, Command, CommandLineTool},
-    inputs::{CommandLineBinding, WorkflowStepInput},
-    requirements::DockerRequirement,
-    types::{CWLType, DefaultValue, Entry, PathItem},
-    wf::Workflow,
-    CWLDocument,
+    inputs::CommandLineBinding,
+    requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
+    types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
+    wf::{StringOrDocument, Workflow},
+    CWLDocument, StringOrNumber,
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
@@ -29,7 +32,7 @@ use std::{
     env,
     error::Error,
     fs::{self},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     process::Command as SystemCommand,
     time::{Duration, Instant},
 };
@@ -38,8 +41,8 @@ use wait_timeout::ChildExt;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
-    input_values: HashMap<String, DefaultValue>,
-    cwl_path: Option<&PathBuf>,
+    input_values: &InputObject,
+    cwl_path: &PathBuf,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let clock = Instant::now();
@@ -55,7 +58,13 @@ pub fn run_workflow(
         current.to_string_lossy().into_owned()
     };
 
-    let workflow_folder = cwl_path.unwrap().parent().unwrap_or(Path::new("."));
+    let workflow_folder = if cwl_path.is_file() {
+        cwl_path.parent().unwrap_or(Path::new("."))
+    } else {
+        cwl_path
+    };
+
+    let input_values = input_values.handle_requirements(&workflow.requirements, &workflow.hints);
 
     //prevent tool from outputting
     set_print_output(false);
@@ -63,51 +72,61 @@ pub fn run_workflow(
     let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for step_id in sorted_step_ids {
         if let Some(step) = workflow.get_step(&step_id) {
-            let path = workflow_folder.join(step.run.clone());
+            let path = if let StringOrDocument::String(run) = &step.run {
+                Some(workflow_folder.join(run))
+            } else {
+                None
+            };
 
             //map inputs to correct fields
             let mut step_inputs = HashMap::new();
+            for parameter in &step.in_ {
+                let source = parameter.source.as_deref().unwrap_or_default();
+                let source_parts: Vec<&str> = source.split('/').collect();
 
-            for (key, input) in &step.in_ {
-                match input {
-                    WorkflowStepInput::String(in_string) => {
-                        let parts: Vec<&str> = in_string.split('/').collect();
-                        if parts.len() == 2 {
-                            step_inputs.insert(key.to_string(), outputs.get(in_string).unwrap().to_default_value());
-                        } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *in_string) {
-                            let value = evaluate_input(input, &input_values.clone())?;
-                            step_inputs.insert(key.to_string(), value.to_owned());
-                        }
+                //try output
+                if source_parts.len() == 2 {
+                    if let Some(out_value) = outputs.get(source) {
+                        step_inputs.insert(parameter.id.to_string(), out_value.to_default_value());
+                        continue;
                     }
-                    WorkflowStepInput::Parameter(parameter) => {
-                        let source = parameter.source.clone().unwrap_or_default();
-                        let source_parts: Vec<&str> = source.split('/').collect();
-                        if source_parts.len() == 2 {
-                            //handle default
-                            if let Some(out_value) = outputs.get(&source) {
-                                step_inputs.insert(key.to_string(), out_value.to_default_value());
-                            } else if let Some(default) = &parameter.default {
-                                step_inputs.insert(key.to_string(), default.to_owned());
-                            }
-                        } else if let Some(default) = &parameter.default {
-                            step_inputs.insert(key.to_string(), default.to_owned());
-                        }
-                        if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                            let value = evaluate_input(input, &input_values.clone())?;
-                            if step_inputs.contains_key(key) {
-                                if let DefaultValue::Any(val) = &value {
-                                    if val.is_null() {
-                                        continue; //do not overwrite existing value with null
-                                    }
-                                }
-                            }
-                            step_inputs.insert(key.to_string(), value.to_owned());
+                }
+                //try default
+                if let Some(default) = &parameter.default {
+                    step_inputs.entry(parameter.id.to_string()).or_insert(default.to_owned());
+                }
+
+                //try input
+                if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
+                    let value = evaluate_input(input, &input_values.inputs)?;
+                    match value {
+                        DefaultValue::Any(val) if val.is_null() => continue,
+                        _ => {
+                            step_inputs.insert(parameter.id.to_string(), value.to_owned());
                         }
                     }
                 }
             }
+            let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
+            input_values.inputs = step_inputs;
 
-            let step_outputs = execute(&path, step_inputs, Some(tmp_path.clone()))?;
+            //check conditional execution
+            if let Some(condition) = &step.when {
+                if workflow.cwl_version == Some("v1.0".to_string()) {
+                    return Err("Conditional execution is not supported in CWL v1.0".into());
+                }
+                if !evaluate_condition(condition, &input_values.inputs)? {
+                    continue;
+                }
+            }
+
+            let step_outputs = if let Some(path) = path {
+                execute(&path, &input_values, Some(tmp_path.clone()), None)?
+            } else if let StringOrDocument::Document(doc) = &step.run {
+                execute(workflow_folder, &input_values, Some(tmp_path.clone()), Some(doc))?
+            } else {
+                unreachable!()
+            };
             for (key, value) in step_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
@@ -118,35 +137,51 @@ pub fn run_workflow(
 
     set_print_output(true);
 
+    fn output_file(file: &File, tmp_path: &str, output_directory: &str) -> Result<File, Box<dyn Error>> {
+        let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
+        let new_loc = Path::new(&path).to_string_lossy().replace(tmp_path, output_directory);
+        copy_file(&path, &new_loc)?;
+        let mut file = file.clone();
+        file.path = Some(new_loc.to_string());
+        file.location = Some(format!("file://{}", new_loc));
+        Ok(file)
+    }
+
+    fn output_dir(dir: &Directory, tmp_path: &str, output_directory: &str) -> Result<Directory, Box<dyn Error>> {
+        let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
+        let new_loc = Path::new(&path).to_string_lossy().replace(tmp_path, output_directory);
+        copy_dir(&path, &new_loc)?;
+        let mut dir = dir.clone();
+        dir.path = Some(new_loc.to_string());
+        dir.location = Some(format!("file://{}", new_loc));
+        Ok(dir)
+    }
+
     let mut output_values = HashMap::new();
     for output in &workflow.outputs {
         let source = &output.output_source;
         if let Some(value) = &outputs.get(source) {
             let value = match value {
-                DefaultValue::File(file) => {
-                    let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
-                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_file(&path, &new_loc)?;
-                    let mut file = file.clone();
-                    file.path = Some(new_loc.to_string());
-                    file.location = Some(format!("file://{}", new_loc));
-                    DefaultValue::File(file)
-                }
-                DefaultValue::Directory(dir) => {
-                    let path = dir.path.as_ref().map_or_else(String::new, |p| p.clone());
-                    let new_loc = Path::new(&path).to_string_lossy().replace(&tmp_path, &output_directory);
-                    copy_dir(&path, &new_loc)?;
-                    let mut dir = dir.clone();
-                    dir.path = Some(new_loc.to_string());
-                    dir.location = Some(format!("file://{}", new_loc));
-                    DefaultValue::Directory(dir)
-                }
-                DefaultValue::Any(str) => DefaultValue::Any(str.clone()),
-                _ => todo!(),
+                DefaultValue::File(file) => DefaultValue::File(output_file(file, &tmp_path, &output_directory)?),
+                DefaultValue::Directory(dir) => DefaultValue::Directory(output_dir(dir, &tmp_path, &output_directory)?),
+                DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+                DefaultValue::Array(array) => DefaultValue::Array(
+                    array
+                        .iter()
+                        .map(|item| {
+                            Ok(match item {
+                                DefaultValue::File(file) => DefaultValue::File(output_file(file, &tmp_path, &output_directory)?),
+                                DefaultValue::Directory(dir) => DefaultValue::Directory(output_dir(dir, &tmp_path, &output_directory)?),
+                                DefaultValue::Any(value) => DefaultValue::Any(value.clone()),
+                                _ => item.clone(),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, Box<dyn Error>>>()?,
+                ),
             };
             output_values.insert(&output.id, value.clone());
         } else if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-            let result = evaluate_input(input, &input_values)?;
+            let result = evaluate_input(input, &input_values.inputs)?;
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
@@ -167,24 +202,20 @@ pub fn run_workflow(
         }
     }
 
-    info!(
-        "✔️  Workflow {:?} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or(&PathBuf::default()),
-        clock.elapsed()
-    );
+    info!("✔️  Workflow {:?} executed successfully in {:.0?}!", &cwl_path, clock.elapsed());
     Ok(output_values.into_iter().map(|(k, v)| (k.clone(), v)).collect())
 }
 
 pub fn run_tool(
     tool: &mut CWLDocument,
-    input_values: HashMap<String, DefaultValue>,
-    cwl_path: Option<&PathBuf>,
+    input_values: &InputObject,
+    cwl_path: &PathBuf,
     out_dir: Option<String>,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        info!("🚲 Executing Tool {:?} ...", cwl_path.unwrap_or(&PathBuf::default()));
+        info!("🚲 Executing Tool {:?} ...", cwl_path);
     }
     //create staging directory
     let dir = tempdir()?;
@@ -195,56 +226,58 @@ pub fn run_tool(
     let output_directory = if let Some(out) = out_dir { &PathBuf::from(out) } else { &current };
 
     //set tool path. all paths are given relative to the tool
-    let tool_path = if let Some(file) = cwl_path.as_ref() {
-        file.parent().unwrap()
-    } else {
-        Path::new(".")
-    };
+    let tool_path = cwl_path.parent().unwrap_or(Path::new("."));
 
     //create runtime tmpdir
     let tmp_dir = tempdir()?;
 
+    let mut input_values = input_values.handle_requirements(&tool.requirements, &tool.hints);
+    input_values.lock();
+
     //build runtime object
-    let mut runtime = RuntimeEnvironment::initialize(
-        tool,
-        input_values,
-        dir.path(),
-        tool_path.parent().unwrap_or(Path::new(".")),
-        tmp_dir.path(),
-    )?;
+    let mut runtime = RuntimeEnvironment::initialize(tool, &input_values, dir.path(), tool_path, tmp_dir.path())?;
 
     //replace inputs and runtime placeholders in tool with the actual values
-    set_placeholder_values(tool, &runtime);
-    runtime.environment = collect_environment(tool);
+    set_placeholder_values(tool, &runtime, &mut input_values);
+    runtime.environment = collect_environment(&input_values);
+
+    // run expression engine
+    prepare_expression_engine(&runtime)?;
+    if let Some(ijr) = input_values.get_requirement::<InlineJavascriptRequirement>() {
+        if let Some(expression_lib) = &ijr.expression_lib {
+            for lib in expression_lib {
+                if let StringOrInclude::Include(lib_include) = lib {
+                    load_lib(tool_path.join(&lib_include.include))?;
+                } else if let StringOrInclude::String(lib_string) = lib {
+                    eval(lib_string)?;
+                }
+            }
+        }
+        process_expressions(tool, &mut input_values)?;
+    }
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &mut runtime, tool_path, dir.path(), output_directory)?;
+    stage_required_files(tool, &input_values, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
-    prepare_expression_engine(&runtime)?;
 
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
-        run_command(clt, &runtime).map_err(|e| CommandError {
+        run_command(clt, &mut runtime).map_err(|e| CommandError {
             message: format!("Error in Tool execution: {}", e),
             exit_code: clt.get_error_code(),
         })?;
     } else if let CWLDocument::ExpressionTool(et) = tool {
+        prepare_expression_engine(&runtime)?;
         let expressions = parse_expressions(&et.expression);
         result_value = Some(eval_tool::<serde_yaml::Value>(&expressions[0].expression())?);
+        reset_expression_engine()?;
     }
 
-    //remove staged files
-    let outputs = match &tool {
-        CWLDocument::CommandLineTool(clt) => &clt.outputs,
-        CWLDocument::ExpressionTool(et) => &et.outputs,
-        CWLDocument::Workflow(_) => unreachable!(),
-    };
-    unstage_files(&staged_files, dir.path(), outputs)?;
-
     //evaluate output files
+    prepare_expression_engine(&runtime)?;
     let outputs = if let CWLDocument::CommandLineTool(clt) = &tool {
         evaluate_command_outputs(clt, output_directory)?
     } else if let CWLDocument::ExpressionTool(et) = &tool {
@@ -256,19 +289,16 @@ pub fn run_tool(
     } else {
         unreachable!()
     };
-    //come back to original directory
-    env::set_current_dir(current)?;
     reset_expression_engine()?;
 
-    info!(
-        "✔️  Tool {:?} executed successfully in {:.0?}!",
-        &cwl_path.unwrap_or(&PathBuf::default()),
-        clock.elapsed()
-    );
+    //come back to original directory
+    env::set_current_dir(current)?;
+
+    info!("✔️  Tool {:?} executed successfully in {:.0?}!", &cwl_path, clock.elapsed());
     Ok(outputs)
 }
 
-pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
     let mut command = build_command(tool, runtime)?;
 
     if let Some(docker) = tool.get_docker_requirement() {
@@ -295,43 +325,54 @@ pub fn run_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Resu
     };
 
     //handle redirection of stdout
-    if !output.stdout.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stdout);
         if let Some(stdout) = &tool.stdout {
             create_and_write_file_forced(stdout, out)?;
         } else if tool.has_stdout_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stdout)).collect::<Vec<_>>()[0];
-            let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
-            } else {
-                &get_random_filename(&format!("{}_stdout", output.id), "out")
-            };
+            let filename = output
+                .output_binding
+                .as_ref()
+                .and_then(|binding| binding.glob.clone())
+                .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else {
+        } else if !output.stdout.is_empty() {
             eprintln!("{}", out);
         }
     }
     //handle redirection of stderr
-    if !output.stderr.is_empty() {
+    {
         let out = &String::from_utf8_lossy(&output.stderr);
         if let Some(stderr) = &tool.stderr {
             create_and_write_file_forced(stderr, out)?;
         } else if tool.has_stderr_output() {
             let output = tool.outputs.iter().filter(|o| matches!(o.type_, CWLType::Stderr)).collect::<Vec<_>>()[0];
-            let filename = if let Some(binding) = &output.output_binding {
-                &binding.glob
-            } else {
-                &get_random_filename(&format!("{}_stderr", output.id), "out")
-            };
+            let filename = output
+                .output_binding
+                .as_ref()
+                .and_then(|binding| binding.glob.clone())
+                .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else {
+        } else if !output.stderr.is_empty() {
             eprintln!("❌ {}", out);
         }
     }
 
+    let status_code = output.status.code().unwrap_or(1);
+    runtime
+        .runtime
+        .insert("exitCode".to_string(), StringOrNumber::Integer(status_code as u64));
+
     match output.status.success() {
         true => Ok(()),
-        false => Err(format!("command returned with code {:?}", output.status.code().unwrap_or(1)).into()),
+        false => {
+            if tool.get_sucess_code() == status_code {
+                Ok(()) //fails expectedly
+            } else {
+                Err(format!("command returned with code {:?}", status_code).into())
+            }
+        }
     }
 }
 
@@ -411,7 +452,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             if let Some(value_from) = &binding.value_from {
                 if let Some(val) = value {
                     if let DefaultValue::Any(Value::Null) = val {
-                        binding.value_from = Some(String::new())
+                        continue;
                     } else {
                         binding.value_from = Some(replace_expressions(value_from).unwrap_or(value_from.to_string()));
                     }
@@ -419,6 +460,9 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             } else if matches!(input.type_, CWLType::Array(_)) {
                 let val = evaluate_input(input, &runtime.inputs)?;
                 if let DefaultValue::Array(vec) = val {
+                    if vec.is_empty() {
+                        continue;
+                    }
                     if let Some(sep) = &binding.item_separator {
                         binding.value_from = Some(vec.iter().map(|i| i.as_value_string()).collect::<Vec<_>>().join(sep).to_string());
                     } else {
@@ -500,42 +544,65 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 
     //set environment for run
     command.envs(runtime.environment.clone());
-    command.env("HOME", runtime.runtime.get("outdir").unwrap_or(&current_dir));
-    command.env("TMPDIR", runtime.runtime.get("tmpdir").unwrap_or(&current_dir));
-    command.current_dir(runtime.runtime.get("outdir").unwrap_or(&current_dir));
+    command.env(
+        "HOME",
+        runtime
+            .runtime
+            .get("outdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
+    command.env(
+        "TMPDIR",
+        runtime
+            .runtime
+            .get("tmpdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
+    command.current_dir(
+        runtime
+            .runtime
+            .get("outdir")
+            .unwrap_or(&StringOrNumber::String(current_dir.clone()))
+            .to_string(),
+    );
 
     Ok(command)
 }
 
-fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
     let container_engine = container_engine().to_string();
 
-    let docker_image = match docker {
-        DockerRequirement::DockerPull(pull) => pull,
-        DockerRequirement::DockerFile {
-            docker_file,
-            docker_image_id,
-        } => {
-            let path = match docker_file {
-                Entry::Include(include) => include.include,
-                Entry::Source(src) => {
-                    let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
-                    fs::write(&path, src).unwrap();
-                    path
-                }
-            };
+    let docker_image = if let Some(pull) = &docker.docker_pull {
+        pull
+    } else if let (Some(docker_file), Some(docker_image_id)) = (&docker.docker_file, &docker.docker_image_id) {
+        let path = match docker_file {
+            Entry::Include(include) => include.include.clone(),
+            Entry::Source(src) => {
+                let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
+                fs::write(&path, src).unwrap();
+                path
+            }
+        };
+        let path = path.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
-            let mut build = SystemCommand::new(&container_engine);
-            build.args(["build", "-f", &path, "-t", &docker_image_id, "."]);
-            let output = build.output().expect("Could not build container!");
-            println!("{}", String::from_utf8_lossy(&output.stderr));
-            docker_image_id
-        }
+        let mut build = SystemCommand::new(&container_engine);
+        build.args(["build", "-f", &path, "-t", docker_image_id, "."]);
+        let output = build.output().expect("Could not build container!");
+        println!("{}", String::from_utf8_lossy(&output.stderr));
+        docker_image_id
+    } else {
+        unreachable!()
     };
     let mut docker_command = SystemCommand::new(&container_engine);
 
     //create workdir vars
-    let workdir = format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>());
+    let workdir = if let Some(docker_output_directory) = &docker.docker_output_directory {
+        docker_output_directory
+    } else {
+        &format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
+    };
     let outdir = &runtime.runtime["outdir"];
     let tmpdir = &runtime.runtime["tmpdir"];
 
@@ -551,7 +618,16 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         docker_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
     }
 
-    docker_command.arg(&docker_image);
+    if let Some(StringOrNumber::Integer(i)) = runtime.runtime.get("network") {
+        if *i != 1 {
+            docker_command.arg("--net=none");
+        }
+        //net enabled if i == 1 = not append arg
+    } else {
+        docker_command.arg("--net=none");
+    }
+
+    docker_command.arg(docker_image);
     docker_command.arg(command.get_program());
 
     //rewrite home dir
@@ -560,7 +636,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
         .map(|arg| {
             arg.to_string_lossy()
                 .into_owned()
-                .replace(&runtime.runtime["outdir"], &workdir)
+                .replace(&runtime.runtime["outdir"].to_string(), workdir)
                 .replace("\\", "/")
         })
         .collect::<Vec<_>>();
@@ -571,11 +647,9 @@ fn build_docker_command(command: &mut SystemCommand, docker: DockerRequirement, 
 
 #[cfg(test)]
 mod tests {
-    use cwl::load_tool;
-
-    use crate::set_container_engine;
-
     use super::*;
+    use crate::set_container_engine;
+    use cwl::load_tool;
 
     #[test]
     fn test_build_command() {
@@ -671,8 +745,8 @@ stdout: output.txt"#;
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
-                ("outdir".to_string(), "testdir".to_string()),
-                ("tmpdir".to_string(), "testdir".to_string()),
+                ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),
+                ("tmpdir".to_string(), StringOrNumber::String("testdir".to_string())),
             ]),
             ..Default::default()
         };
@@ -691,8 +765,8 @@ stdout: output.txt"#;
         let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
-                ("outdir".to_string(), "testdir".to_string()),
-                ("tmpdir".to_string(), "testdir".to_string()),
+                ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),
+                ("tmpdir".to_string(), StringOrNumber::String("testdir".to_string())),
             ]),
             ..Default::default()
         };

@@ -3,7 +3,7 @@ use crate::DocumentBase;
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut, Range};
 
-/// An ExpressionTool is a type of Process object that can be run by itself or as a Workflow step. 
+/// An `ExpressionTool` is a type of Process object that can be run by itself or as a Workflow step. 
 /// It executes a pure Javascript expression that has access to the same input parameters as a workflow. 
 /// It is meant to be used sparingly as a way to isolate complex Javascript expressions that need to operate on input data and produce some result; 
 /// perhaps just a rearrangement of the inputs. No Docker software container is required or allowed.
@@ -22,16 +22,17 @@ impl Default for ExpressionTool {
     fn default() -> Self {
         Self {
             base: DocumentBase {
-                cwl_version: Default::default(),
+                cwl_version: Some(String::from("v1.2")),
                 class: String::from("ExpressionTool"),
-                id: Default::default(),
-                label: Default::default(),
-                doc: Default::default(),
-                requirements: Default::default(),
-                hints: Default::default(),
-                inputs: Default::default(),
+                id: Option::default(),
+                label: Option::default(),
+                doc: Option::default(),
+                requirements: Vec::default(),
+                hints: Vec::default(),
+                inputs: Vec::default(),
+                intent: Option::default(),
             },
-            outputs: Default::default(),
+            outputs: Vec::default(),
             expression: Default::default(),
         }
     }

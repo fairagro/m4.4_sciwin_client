@@ -3,7 +3,7 @@ use cwl::{
     clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    requirements::{InitialWorkDirRequirement, Requirement},
+    requirements::{InitialWorkDirRequirement, InlineJavascriptRequirement, Requirement},
     types::{guess_type, CWLType, DefaultValue, Directory, File},
 };
 use rand::{distr::Alphanumeric, Rng};
@@ -34,7 +34,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
-        let (cmd, piped) = split_vec_at(remainder, "|");
+        let (cmd, piped) = split_vec_at(remainder, &"|");
 
         let stdout_pos = cmd.iter().position(|i| *i == ">").unwrap_or(cmd.len());
         let stderr_pos = cmd.iter().position(|i| *i == "2>").unwrap_or(cmd.len());
@@ -64,41 +64,40 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     };
 
     if tool.arguments.is_some() {
-        if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::ShellCommandRequirement);
-        } else {
-            tool = tool.with_requirements(vec![Requirement::ShellCommandRequirement])
-        }
+        tool = tool.append_requirement(Requirement::ShellCommandRequirement);
     }
     tool
 }
 
-pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: Vec<&str>) {
-    if let Some(req) = &mut tool.requirements {
-        for item in req.iter_mut() {
-            if let Requirement::InitialWorkDirRequirement(req) = item {
-                req.add_files(&inputs);
-                break;
+pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    for input in inputs {
+        let type_ = guess_type(input);
+
+        //todo: add requiement for directory also or add new --mount param and remove block from here
+        if matches!(type_, CWLType::File) {
+            for item in &mut tool.requirements {
+                if let Requirement::InitialWorkDirRequirement(req) = item {
+                    req.add_files(inputs);
+                    break;
+                }
             }
         }
-    } else {
-        tool.requirements = Some(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_files(
-            &inputs,
-        ))])
+
+        let default = match type_ {
+            CWLType::File => DefaultValue::File(File::from_location(input)),
+            CWLType::Directory => DefaultValue::Directory(Directory::from_location(input)),
+            _ => DefaultValue::Any(serde_yaml::from_str(input)?),
+        };
+        let id = slugify!(input, separator = "_");
+
+        tool.inputs
+            .push(CommandInputParameter::default().with_id(&id).with_type(type_).with_default_value(default));
     }
 
-    let params = inputs
-        .iter()
-        .map(|i| {
-            CommandInputParameter::default()
-                .with_id(&slugify!(i, separator = "_"))
-                .with_type(guess_type(i))
-        })
-        .collect::<Vec<_>>();
-    tool.inputs.extend(params);
+    Ok(())
 }
 
-pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
+pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
     files
         .iter()
         .map(|f| {
@@ -112,7 +111,7 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
                 .with_type(output_type)
                 .with_id(&filename)
                 .with_binding(CommandOutputBinding {
-                    glob: f.to_string(),
+                    glob: Some(f.to_string()),
                     ..Default::default()
                 })
         })
@@ -121,8 +120,8 @@ pub fn get_outputs(files: Vec<String>) -> Vec<CommandOutputParameter> {
 
 pub fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
-        return Command::Single(String::from(""));
-    };
+        return Command::Single(String::new());
+    }
 
     let mut base_command = vec![command[0].to_string()];
 
@@ -146,7 +145,7 @@ pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
             if i + 1 < args.len() && !args[i + 1].starts_with('-') {
                 //is not a flag, as next one is a value
                 input = get_option(arg, args[i + 1]);
-                i += 1
+                i += 1;
             } else {
                 input = get_flag(arg);
             }
@@ -180,7 +179,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
 fn get_flag(current: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
     CommandInputParameter::default()
-        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_binding(CommandLineBinding::default().with_prefix(current))
         .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(CWLType::Boolean)
         .with_default_value(DefaultValue::Any(Value::Bool(true)))
@@ -192,7 +191,7 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let default_value = parse_default_value(next, &cwl_type);
 
     CommandInputParameter::default()
-        .with_binding(CommandLineBinding::default().with_prefix(&current.to_string()))
+        .with_binding(CommandLineBinding::default().with_prefix(current))
         .with_id(slugify!(&id, separator = "_").as_str())
         .with_type(cwl_type)
         .with_default_value(default_value)
@@ -200,8 +199,8 @@ fn get_option(current: &str, next: &str) -> CommandInputParameter {
 
 fn parse_default_value(value: &str, cwl_type: &CWLType) -> DefaultValue {
     match cwl_type {
-        CWLType::File => DefaultValue::File(File::from_location(&value.to_string())),
-        CWLType::Directory => DefaultValue::Directory(Directory::from_location(&value.to_string())),
+        CWLType::File => DefaultValue::File(File::from_location(value)),
+        CWLType::Directory => DefaultValue::Directory(Directory::from_location(value)),
         CWLType::String => DefaultValue::Any(Value::String(value.to_string())),
         _ => DefaultValue::Any(serde_yaml::from_str(value).unwrap()),
     }
@@ -290,10 +289,10 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     let inputs = tool.inputs.clone();
     for input in &inputs {
         if let Some(default) = &input.default {
-            for output in tool.outputs.iter_mut() {
+            for output in &mut tool.outputs {
                 if let Some(binding) = &mut output.output_binding {
-                    if binding.glob == default.as_value_string() {
-                        binding.glob = process_input(input);
+                    if binding.glob == Some(default.as_value_string()) {
+                        binding.glob = Some(process_input(input));
                         processed_once = true;
                     }
                 }
@@ -333,28 +332,25 @@ fn post_process_variables(tool: &mut CommandLineTool) {
         }
     }
 
-    for output in tool.outputs.iter_mut() {
+    for output in &mut tool.outputs {
         if let Some(binding) = &mut output.output_binding {
-            if binding.glob == "." {
+            if matches!(binding.glob.as_deref(), Some(".")) {
                 output.id = "output_directory".to_string();
-                binding.glob = "$(runtime.outdir)".into();
+                binding.glob = Some("$(runtime.outdir)".to_string());
             }
         }
     }
 
     if processed_once {
-        if let Some(requirements) = &mut tool.requirements {
-            requirements.push(Requirement::InlineJavascriptRequirement);
-        } else {
-            tool.requirements = Some(vec![Requirement::InlineJavascriptRequirement]);
-        }
+        tool.requirements
+            .push(Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default()));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl_execution::runner::run_command;
+    use cwl_execution::{environment::RuntimeEnvironment, runner::run_command};
     use rstest::rstest;
     use serde_yaml::Number;
 
@@ -383,17 +379,17 @@ mod tests {
             CommandInputParameter::default()
                 .with_id("argument1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--argument1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--argument1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
             CommandInputParameter::default()
                 .with_id("flag")
                 .with_type(CWLType::Boolean)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--flag".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--flag"))
                 .with_default_value(DefaultValue::Any(Value::Bool(true))),
             CommandInputParameter::default()
                 .with_id("a")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"-a".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("-a"))
                 .with_default_value(DefaultValue::Any(Value::String("value2".to_string()))),
             CommandInputParameter::default()
                 .with_id("positional1")
@@ -403,7 +399,7 @@ mod tests {
             CommandInputParameter::default()
                 .with_id("v")
                 .with_type(CWLType::Int)
-                .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("-v"))
                 .with_default_value(DefaultValue::Any(serde_yaml::from_str("1").unwrap())),
         ];
 
@@ -421,7 +417,7 @@ mod tests {
         let expected = CommandInputParameter::default()
             .with_id("v")
             .with_type(CWLType::Int)
-            .with_binding(CommandLineBinding::default().with_prefix(&"-v".to_string()))
+            .with_binding(CommandLineBinding::default().with_prefix("-v"))
             .with_default_value(DefaultValue::Any(Value::Number(Number::from(42))));
 
         let args = shlex::split(commandline_args).unwrap();
@@ -456,7 +452,7 @@ mod tests {
             .with_inputs(vec![CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
@@ -465,7 +461,7 @@ mod tests {
             .with_inputs(vec![CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
@@ -480,7 +476,7 @@ mod tests {
                 CommandInputParameter::default()
                     .with_id("option1")
                     .with_type(CWLType::String)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                    .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                     .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))
             ])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
@@ -491,8 +487,8 @@ mod tests {
                 CommandInputParameter::default()
                     .with_id("test")
                     .with_type(CWLType::File)
-                    .with_binding(CommandLineBinding::default().with_prefix(&"--test".to_string()))
-                    .with_default_value(DefaultValue::File(File::from_location(&"tests/test_data/input.txt".to_string())))])
+                    .with_binding(CommandLineBinding::default().with_prefix("--test"))
+                    .with_default_value(DefaultValue::File(File::from_location("tests/test_data/input.txt")))])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))])
     )]
     pub fn test_parse_command_line(#[case] input: &str, #[case] expected: CommandLineTool) {
@@ -534,7 +530,7 @@ mod tests {
     #[cfg_attr(target_os = "windows", ignore)]
     pub fn test_cwl_execute_command_single() {
         let cwl = parse_command("ls -la .");
-        assert!(run_command(&cwl, &Default::default()).is_ok());
+        assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
     }
 
     #[test]
@@ -545,19 +541,19 @@ mod tests {
                 .with_type(CWLType::File)
                 .with_id("my-file")
                 .with_binding(CommandOutputBinding {
-                    glob: "my-file.txt".to_string(),
+                    glob: Some("my-file.txt".to_string()),
                     ..Default::default()
                 }),
             CommandOutputParameter::default()
                 .with_type(CWLType::File)
                 .with_id("archive")
                 .with_binding(CommandOutputBinding {
-                    glob: "archive.tar.gz".to_string(),
+                    glob: Some("archive.tar.gz".to_string()),
                     ..Default::default()
                 }),
         ];
 
-        let outputs = get_outputs(files);
+        let outputs = get_outputs(&files);
         assert_eq!(outputs, expected);
     }
 

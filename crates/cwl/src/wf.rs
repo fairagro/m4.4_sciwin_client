@@ -1,10 +1,12 @@
 use super::{
     deserialize::{deserialize_list, Identifiable},
-    inputs::WorkflowStepInput,
+    inputs::WorkflowStepInputParameter,
     outputs::WorkflowOutputParameter,
+    requirements::{deserialize_hints, deserialize_requirements, Requirement},
+    CWLDocument, DocumentBase,
 };
-use crate::DocumentBase;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_yaml::Value;
 use std::{
     collections::{HashMap, VecDeque},
     ops::{Deref, DerefMut},
@@ -15,7 +17,7 @@ use std::{
 /// directed acyclic graph, and independent steps may run concurrently.
 ///
 /// Reference: <https://www.commonwl.org/v1.2/Workflow.html>
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Workflow {
     #[serde(flatten)]
@@ -34,10 +36,11 @@ impl Default for Workflow {
                 label: None,
                 doc: None,
                 class: String::from("Workflow"),
-                cwl_version: String::from("v1.2"),
+                cwl_version: Some(String::from("v1.2")),
                 requirements: Default::default(),
                 hints: Default::default(),
                 inputs: Default::default(),
+                intent: Option::default(),
             },
             outputs: Default::default(),
             steps: Default::default(),
@@ -77,15 +80,9 @@ impl Workflow {
 
     /// Checks whether the `Workflow` has a `WorkflowStep` with an input of id `id`
     pub fn has_step_input(&self, id: &str) -> bool {
-        self.steps.iter().any(|step| {
-            step.in_.clone().into_values().any(|val| {
-                let src = match val {
-                    WorkflowStepInput::String(str) => str,
-                    WorkflowStepInput::Parameter(par) => par.source.unwrap_or_default(),
-                };
-                src == id
-            })
-        })
+        self.steps
+            .iter()
+            .any(|step| step.in_.iter().any(|val| val.source == Some(id.to_string())))
     }
 
     /// Checks whether the `Workflow` has a `WorkflowStep` with an ouput of id `id`
@@ -102,7 +99,6 @@ impl Workflow {
         step.unwrap().out.iter().any(|output| output == parts[1])
     }
 
-    
     /// Returns the `Workflow`'s `WorkflowStep` with id `id`
     pub fn get_step(&self, id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|s| s.id == *id)
@@ -116,16 +112,11 @@ impl Workflow {
         for step in &self.steps {
             in_degree.entry(step.id.clone()).or_insert(0);
 
-            for input in step.in_.values() {
-                let parts: Vec<&str> = match input {
-                    WorkflowStepInput::String(string) => string.split('/').collect(),
-                    WorkflowStepInput::Parameter(parameter) => {
-                        if let Some(source) = &parameter.source {
-                            source.split('/').collect()
-                        } else {
-                            vec![]
-                        }
-                    }
+            for input in &step.in_ {
+                let parts: Vec<&str> = if let Some(source) = &input.source {
+                    source.split('/').collect()
+                } else {
+                    vec![]
                 };
 
                 if parts.len() == 2 {
@@ -166,9 +157,18 @@ impl Workflow {
 pub struct WorkflowStep {
     #[serde(default)]
     pub id: String,
-    pub run: String,
-    pub in_: HashMap<String, WorkflowStepInput>,
+    pub run: StringOrDocument,    
+    #[serde(deserialize_with = "deserialize_workflow_inputs")]
+    pub in_: Vec<WorkflowStepInputParameter>,
     pub out: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub when: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "deserialize_requirements")]
+    pub requirements: Vec<Requirement>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "deserialize_hints")]
+    pub hints: Vec<Requirement>,
 }
 
 impl Identifiable for WorkflowStep {
@@ -178,6 +178,54 @@ impl Identifiable for WorkflowStep {
 
     fn set_id(&mut self, id: String) {
         self.id = id;
+    }
+}
+
+pub fn deserialize_workflow_inputs<'de, D>(deserializer: D) -> Result<Vec<WorkflowStepInputParameter>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    let parameters = match value {
+        Value::Sequence(seq) => seq
+            .into_iter()
+            .map(|item| {
+                let param: WorkflowStepInputParameter = serde_yaml::from_value(item).map_err(serde::de::Error::custom)?;
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        Value::Mapping(map) => map
+            .into_iter()
+            .map(|(key, value)| {
+                let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
+                let param = if let Value::String(source_str) = value {
+                    WorkflowStepInputParameter::default().with_id(id).with_source(source_str)
+                } else {
+                    let mut param: WorkflowStepInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
+                    param.id = id.to_string();
+                    param
+                };
+
+                Ok(param)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(serde::de::Error::custom("Expected sequence or mapping for inputs")),
+    };
+
+    Ok(parameters)
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrDocument {
+    String(String),
+    Document(Box<CWLDocument>),
+}
+
+impl Default for StringOrDocument {
+    fn default() -> Self {
+        Self::String(String::default())
     }
 }
 

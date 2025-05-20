@@ -1,5 +1,5 @@
 use clap::{Args, Subcommand};
-use colored::*;
+use colored::Colorize;
 use cwl::format::format_cwl;
 use dialoguer::Select;
 use log::error;
@@ -104,7 +104,7 @@ pub enum AnnotateCommands {
         cwl_name: String,
         #[arg(short = 'n', long = "namespace", help = "Namespace to annotate")]
         namespace: String,
-        #[arg(short='s', long = "short", help = "Namespace abbreviation to annotate")]
+        #[arg(short = 's', long = "short", help = "Namespace abbreviation to annotate")]
         short: Option<String>,
     },
     #[command(about = "Annotates author of a tool or workflow (schema.org)")]
@@ -211,7 +211,7 @@ pub fn annotate_person(args: &PersonArgs, role: &str) -> Result<(), Box<dyn Erro
         }
 
         if let Some(ref person_mail) = args.mail {
-            person_info.insert(Value::String("s:email".to_string()), Value::String(format!("mailto:{}", person_mail)));
+            person_info.insert(Value::String("s:email".to_string()), Value::String(format!("mailto:{person_mail}")));
         }
 
         person_info.insert(Value::String("s:name".to_string()), Value::String(args.name.clone()));
@@ -313,9 +313,10 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
     let mut yaml = parse_cwl(&args.cwl_name)?;
 
     // Ensure the root of the YAML is a mapping
-    let mapping = match yaml {
-        Value::Mapping(ref mut mapping) => mapping,
-        _ => return Err("The CWL file does not have a valid YAML mapping at its root.".into()),
+    let mapping = if let Value::Mapping(ref mut mapping) = yaml {
+        mapping
+    } else {
+        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     };
 
     // Prepare performer information
@@ -439,7 +440,7 @@ pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>
     let formatted_yaml = format_cwl(&yaml_str)?;
     File::create(&path)
         .and_then(|mut file| file.write_all(formatted_yaml.as_bytes()))
-        .map_err(|e| format!("Failed to write to file '{}': {}", path, e))?;
+        .map_err(|e| format!("Failed to write to file '{path}': {e}"))?;
 
     Ok(())
 }
@@ -455,7 +456,7 @@ pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Bo
         // Check if the field is already present for fields like `s:license`
         if let Some(existing_value) = mapping.get(Value::String(field.to_string())) {
             if existing_value == &Value::String(value.to_string()) {
-                println!("Field '{}' already has the value '{}'.", field, value);
+                println!("Field '{field}' already has the value '{value}'.");
                 return Ok(());
             }
         }
@@ -495,7 +496,7 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     let filename = if name.ends_with(".cwl") {
         name.to_string()
     } else {
-        format!("{}.cwl", name)
+        format!("{name}.cwl")
     };
 
     // Get the current working directory
@@ -514,11 +515,7 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     } else if workflows_path.is_file() {
         workflows_path
     } else {
-        return Err(format!(
-            "CWL file '{}' not found in current directory or workflows/{}/{}",
-            filename, base_name, filename
-        )
-        .into());
+        return Err(format!("CWL file '{filename}' not found in current directory or workflows/{base_name}/{filename}").into());
     };
 
     Ok(file_path.canonicalize()?.to_string_lossy().to_string())
@@ -547,7 +544,9 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
 
     if let Value::Mapping(ref mut mapping) = yaml {
         // Create a process sequence if it doesn't exist
-        if !mapping.contains_key(Value::String("arc:has process sequence".to_string())) {
+        if mapping.contains_key(Value::String("arc:has process sequence".to_string())) {
+            println!("Process sequence already exists");
+        } else {
             let mut process_sequence = Mapping::new();
             process_sequence.insert(Value::String("class".to_string()), Value::String("arc:process sequence".to_string()));
             process_sequence.insert(Value::String("arc:name".to_string()), Value::String(args.name.clone()));
@@ -623,8 +622,6 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
                 Value::String("arc:has process sequence".to_string()),
                 Value::Sequence(vec![Value::Mapping(process_sequence)]),
             );
-        } else {
-            println!("Process sequence already exists");
         }
     }
     write_updated_yaml(&args.cwl_name, &yaml)
@@ -642,14 +639,14 @@ pub async fn process_annotation_with_mapping(value: &str, mut parameter_name: Ma
 
             parameter_name.extend(annotation_mapping);
         }
-        Err(e) => return Err(format!("Failed to process annotation value  {}: {}", value, e).into()),
+        Err(e) => return Err(format!("Failed to process annotation value  {value}: {e}").into()),
     }
 
     Ok(parameter_name)
 }
 
 pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, term: String) -> Result<(String, String, String), Box<dyn Error>> {
-    println!("{}", format!("Available annotations for '{}':", term).green());
+    println!("{}", format!("Available annotations for '{term}':").green());
 
     // Collect elements into a vector for indexing
     let elements: Vec<&(String, String, String)> = recommendations.iter().collect();
@@ -662,19 +659,9 @@ pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, te
     // Create a vector of options for the menu
     let mut menu_options: Vec<String> = elements
         .iter()
-        .map(|(label, ontology, id)| {
-            format!(
-                "{: <width_label$} | {: <width_ontology$} | {: <width_id$}",
-                label,
-                ontology,
-                id,
-                width_label = max_label_width,
-                width_ontology = max_ontology_width,
-                width_id = max_id_width
-            )
-        })
+        .map(|(label, ontology, id)| format!("{label: <max_label_width$} | {ontology: <max_ontology_width$} | {id: <max_id_width$}"))
         .collect();
-    menu_options.push(format!("Do not use ontology, annotate '{}'", term)); // Add skip option
+    menu_options.push(format!("Do not use ontology, annotate '{term}'")); // Add skip option
 
     // Use dialoguer's Select to create a menu
     let selection = Select::new()
@@ -695,7 +682,7 @@ pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, te
 
 pub async fn ts_recommendations(search_term: &str, max_recommendations: usize) -> Result<(String, String, String), Box<dyn Error>> {
     let client = reqwest::Client::new();
-    let query = format!("{}{}", REST_URL_TS, search_term);
+    let query = format!("{REST_URL_TS}{search_term}");
     // GET request
     let response = client.get(&query).send().await?;
 

@@ -22,7 +22,7 @@ pub struct InitArgs {
 
 pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     if let Err(e) = initialize_project(args.project.clone(), args.arc) {
-        error!("Project Initialization failed: {}", e);
+        error!("Project Initialization failed: {e}");
         git_cleanup(args.project.clone());
         return Err(e);
     }
@@ -31,10 +31,10 @@ pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Er
 
 pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
-    let repo = if !is_git_repo(folder) {
-        init_git_repo(folder)?
-    } else {
+    let repo = if is_git_repo(folder) {
         Repository::open(folder.unwrap_or("."))?
+    } else {
+        init_git_repo(folder)?
     };
     if arc {
         create_arc_folder_structure(folder)?;
@@ -45,15 +45,15 @@ pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), 
     write_config(folder)?;
 
     let files = get_modified_files(&repo);
-    if !files.is_empty() {
+    if files.is_empty() {
+        error!("Nothing to commit");
+    } else {
         stage_all(&repo)?;
         if repo.head().is_ok() {
             commit(&repo, "🚀 Initialized Project")?;
         } else {
             initial_commit(&repo)?;
         }
-    } else {
-        error!("Nothing to commit");
     }
 
     Ok(())
@@ -90,9 +90,9 @@ pub fn git_cleanup(folder_name: Option<String>) {
     // init project in folder name failed, delete it
     if let Some(folder) = folder_name {
         if std::fs::remove_dir_all(&folder).is_ok() {
-            info!("Cleaned up failed init in folder: {}", folder);
+            info!("Cleaned up failed init in folder: {folder}");
         } else {
-            warn!("Failed to clean up folder: {}", folder);
+            warn!("Failed to clean up folder: {folder}");
         }
     }
     // init project in current folder failed, only delete .git folder
@@ -243,7 +243,7 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
     // Write column names
     for (i, &col) in columns.iter().enumerate() {
-        worksheet.write_string(i as u32, 0, col)?;
+        worksheet.write_string(u32::try_from(i)?, 0, col)?;
     }
 
     // Save the workbook to the specified file path

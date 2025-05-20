@@ -1,7 +1,12 @@
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yaml::{Number, Value};
+use serde_yaml::{Mapping, Number, Value};
 use sha1::{Digest, Sha1};
-use std::{collections::HashMap, env, fs, path::Path, str::FromStr};
+use std::{
+    collections::HashMap,
+    env, fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 #[derive(Debug, Default, PartialEq, Clone, Eq, Hash)]
 pub enum CWLType {
@@ -44,7 +49,7 @@ impl FromStr for CWLType {
                 "Any" => Ok(CWLType::Any),
                 "stdout" => Ok(CWLType::Stdout),
                 "stderr" => Ok(CWLType::Stderr),
-                _ => Err(format!("Invalid CWLType: {}", s)),
+                _ => Err(format!("Invalid CWLType: {s}")),
             }
         }
     }
@@ -84,13 +89,7 @@ impl<'de> Deserialize<'de> for CWLType {
         if let Value::String(s) = value {
             return s.parse().map_err(serde::de::Error::custom);
         } else if let Value::Mapping(map) = value {
-            if let Some(Value::String(type_str)) = map.get("type") {
-                if type_str == "array" {
-                    if let Some(Value::String(item_str)) = map.get("items") {
-                        return format!("{item_str}[]").parse().map_err(serde::de::Error::custom);
-                    }
-                }
-            }
+            return deserialize_type_mapping(&map).map_err(serde::de::Error::custom);
         } else if let Value::Sequence(seq) = value {
             if seq.len() == 2 {
                 if let Value::String(type_str) = &seq[0] {
@@ -100,10 +99,25 @@ impl<'de> Deserialize<'de> for CWLType {
                         }
                     }
                 }
+            } else if seq.len() == 1 {
+                if let Value::Mapping(map) = &seq[0] {
+                    return deserialize_type_mapping(map).map_err(serde::de::Error::custom);
+                }
             }
         }
         Err(serde::de::Error::custom("Expected string, sequence or mapping for CWLType"))
     }
+}
+
+fn deserialize_type_mapping(map: &Mapping) -> Result<CWLType, String> {
+    if let Some(Value::String(type_str)) = map.get("type") {
+        if type_str == "array" {
+            if let Some(Value::String(item_str)) = map.get("items") {
+                return format!("{item_str}[]").parse();
+            }
+        }
+    }
+    Err("Could not parse type mapping".into())
 }
 
 impl Serialize for CWLType {
@@ -242,9 +256,17 @@ impl<'de> Deserialize<'de> for DefaultValue {
                     Ok(DefaultValue::File(item))
                 }
                 "Directory" => {
+                    let listing = value
+                        .get("listing")
+                        .map(|v| serde_yaml::from_value(v.clone()))
+                        .transpose()
+                        .map_err(serde::de::Error::custom)?
+                        .unwrap_or_default();
+
                     let item = Directory {
                         location,
                         basename,
+                        listing,
                         ..Default::default()
                     };
                     Ok(DefaultValue::Directory(item))
@@ -345,20 +367,60 @@ impl Default for File {
 }
 
 impl File {
-    pub fn from_location(location: &String) -> Self {
+    pub fn from_location(location: impl ToString) -> Self {
         File {
             location: Some(location.to_string()),
             ..Default::default()
         }
     }
 
+    /// loads metadata and alters File
+    pub fn load(&mut self, relative_to: impl AsRef<Path>) {
+        if let Some(loc) = &self.location {
+            let mut path = PathBuf::from(&loc);
+            if !path.exists() {
+                path = relative_to.as_ref().join(path);
+            }
+
+            let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
+            self.path = Some(loc);
+            if self.basename.is_none() {
+                self.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            if self.nameroot.is_none() {
+                self.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            if self.nameext.is_none() {
+                self.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
+            }
+
+            if self.dirname.is_none() {
+                self.dirname = path.parent().map(|f| f.to_string_lossy().into_owned());
+            }
+
+            let metadata = fs::metadata(&path).expect("Could not get metadata");
+            self.size = Some(metadata.len());
+
+            let mut hasher = Sha1::new();
+            let hash = fs::read(&path).ok().map(|f| {
+                hasher.update(&f);
+                let hash = hasher.finalize();
+                format!("sha1${hash:x}")
+            });
+            self.checksum = hash;
+        }
+    }
+
+    /// loads metadata and returns a **new** File
     pub fn snapshot(&self) -> Self {
         let loc = self.location.clone().unwrap_or_default();
         let path = Path::new(&loc);
         let current = env::current_dir().unwrap_or_default();
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
-        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let metadata = fs::metadata(path).unwrap_or_else(|_| panic!("Could not get metadata for {absolute_str}"));
         let mut hasher = Sha1::new();
         let hash = fs::read(path).ok().map(|f| {
             hasher.update(&f);
@@ -379,6 +441,30 @@ impl File {
             format: resolve_format(self.format.clone()),
             ..Default::default()
         }
+    }
+
+    pub fn preload(&self) -> Self {
+        let loc = self.location.clone().unwrap_or_default();
+        let path = Path::new(&loc);
+
+        let mut item = self.clone();
+        if item.path.is_none() {
+            item.path = Some(path.display().to_string());
+        }
+
+        if item.basename.is_none() {
+            item.basename = path.file_name().map(|f| f.to_string_lossy().into_owned());
+        }
+
+        if item.nameroot.is_none() {
+            item.nameroot = path.file_stem().map(|f| f.to_string_lossy().into_owned());
+        }
+
+        if item.nameext.is_none() {
+            item.nameext = path.extension().map(|f| format!(".{}", f.to_string_lossy()));
+        }
+
+        item
     }
 }
 
@@ -402,6 +488,45 @@ impl PathItem for File {
 
     fn get_location(&self) -> String {
         self.location.as_ref().unwrap_or(&String::new()).clone()
+    }
+}
+
+#[derive(Serialize, Debug, Default, PartialEq, Clone)]
+pub struct SecondaryFileSchema {
+    pub pattern: String,
+    pub required: bool,
+}
+
+impl From<String> for SecondaryFileSchema {
+    fn from(pattern: String) -> Self {
+        if pattern.ends_with("?") {
+            let pattern = pattern.trim_end_matches('?').to_string();
+            SecondaryFileSchema { pattern, required: false }
+        } else {
+            SecondaryFileSchema { pattern, required: true }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SecondaryFileSchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
+        match value {
+            Value::String(pattern) => Ok(SecondaryFileSchema::from(pattern)),
+            Value::Mapping(map) => {
+                let pattern = map
+                    .get("pattern")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| serde::de::Error::custom("Expected string for pattern"))?
+                    .to_string();
+                let required = map.get("required").and_then(|v| v.as_bool()).unwrap_or(true);
+                Ok(SecondaryFileSchema { pattern, required })
+            }
+            _ => Err(serde::de::Error::custom("Expected string or mapping for secondary file schema")),
+        }
     }
 }
 
@@ -435,10 +560,22 @@ impl Default for Directory {
 }
 
 impl Directory {
-    pub fn from_location(location: &String) -> Self {
+    pub fn from_location(location: impl ToString) -> Self {
         Directory {
             location: Some(location.to_string()),
             ..Default::default()
+        }
+    }
+
+    pub fn load(&mut self, relative_to: impl AsRef<Path>) {
+        if let Some(loc) = &self.location {
+            let mut path = PathBuf::from(&loc);
+            if !path.exists() {
+                path = relative_to.as_ref().join(path);
+            }
+
+            let loc = path.strip_prefix(relative_to).unwrap_or(&path).to_string_lossy().into_owned();
+            self.path = Some(loc);
         }
     }
 }
@@ -466,10 +603,23 @@ pub enum EnviromentDefs {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Listing {
-    pub entryname: String,
+pub struct Dirent {
+    pub entryname: Option<String>,
     pub entry: Entry,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub writeable: Option<bool>,
 }
+
+impl Default for Dirent {
+    fn default() -> Self {
+        Self {
+            entryname: None,
+            entry: Entry::Source(String::new()),
+            writeable: None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Entry {
@@ -478,7 +628,7 @@ pub enum Entry {
 }
 
 impl Entry {
-    pub fn from_file(path: &str) -> Entry {
+    pub fn from_file(path: impl ToString) -> Entry {
         Entry::Include(Include { include: path.to_string() })
     }
 }

@@ -3,7 +3,7 @@ use common::os_path;
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
-    requirements::{DockerRequirement, Requirement},
+    requirements::{NetworkAccess, Requirement, WorkDirItem},
     types::{CWLType, Entry},
 };
 use fstest::fstest;
@@ -48,7 +48,7 @@ pub fn tool_create_test_inputs_outputs() {
     stage_all(&repo).unwrap();
 
     let script = "echo_inline.py".to_string();
-    let input = "../../data/input.txt".to_string();
+    let input = "data/input.txt".to_string();
 
     let tool_create_args = CreateToolArgs {
         inputs: Some(vec![input.clone()]),
@@ -74,16 +74,19 @@ pub fn tool_create_test_inputs_outputs() {
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
-    if let Some(req) = &tool.requirements {
-        if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
-            assert_eq!(iwdr.listing.len(), 2);
-            assert_eq!(iwdr.listing[0].entryname, script);
-            assert_eq!(iwdr.listing[1].entryname, input);
-        } else {
-            panic!("Not an InitialWorkDirRequirement")
+    if let Requirement::InitialWorkDirRequirement(iwdr) = &tool.requirements[0] {
+        assert_eq!(iwdr.listing.len(), 2);
+        assert!(matches!(iwdr.listing[0], WorkDirItem::Dirent(_)));
+        assert!(matches!(iwdr.listing[1], WorkDirItem::Dirent(_)));
+
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+            assert_eq!(dirent.entryname, Some(script));
+        }
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[1] {
+            assert_eq!(dirent.entryname, Some(input));
         }
     } else {
-        panic!("No Requirements set")
+        panic!("Not an InitialWorkDirRequirement")
     }
 
     //no uncommitted left?
@@ -143,6 +146,46 @@ pub fn tool_create_test_no_run() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
+#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py", "tests/test_data/data.bin"])]
+pub fn tool_create_test_no_run_explicit_inputs() {
+    let tool_create_args = CreateToolArgs {
+        no_run: true,
+        inputs: Some(vec!["data.bin".to_string()]),
+        command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+    assert!(Path::new("workflows/echo/echo.cwl").exists());
+
+    let tool = load_tool("workflows/echo/echo.cwl").unwrap();
+    assert!(tool.inputs.iter().any(|i| i.id == "data_bin"));
+
+    //no uncommitted left?
+    let repo = Repository::open(".").unwrap();
+    assert!(get_modified_files(&repo).is_empty());
+}
+
+#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+pub fn tool_create_test_no_run_explicit_inputs_string() {
+    let tool_create_args = CreateToolArgs {
+        no_run: true,
+        inputs: Some(vec!["wurstbrot".to_string()]),
+        command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+    assert!(Path::new("workflows/echo/echo.cwl").exists());
+
+    let tool = load_tool("workflows/echo/echo.cwl").unwrap();
+    assert!(tool.inputs.iter().any(|i| i.id == "wurstbrot"));
+
+    //no uncommitted left?
+    let repo = Repository::open(".").unwrap();
+    assert!(get_modified_files(&repo).is_empty());
+}
+
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_is_clean() {
     let tool_create_args = CreateToolArgs {
@@ -175,13 +218,16 @@ pub fn tool_create_test_container_image() {
     let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
     let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-    let requirements = cwl.requirements.clone().expect("No requirements found!");
-    assert_eq!(requirements.len(), 2);
+    assert_eq!(cwl.requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(DockerRequirement::DockerPull(image)) = &requirements[1] {
-        assert_eq!(image, "python");
+    if let Requirement::DockerRequirement(docker_req) = &cwl.requirements[1] {
+        if let Some(image) = &docker_req.docker_pull {
+            assert_eq!(image, "python");
+        } else {
+            panic!("DockerRequirement does not contain a dockerPull");
+        }
     } else {
-        panic!("Requirement is not a Docker pull");
+        panic!("Requirement is not a DockerRequirement");
     }
 
     //no uncommitted left?
@@ -205,18 +251,17 @@ pub fn tool_create_test_dockerfile() {
     let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
     let cwl: CommandLineTool = serde_yaml::from_str(&cwl_contents).expect("Could not convert CWL");
 
-    let requirements = cwl.requirements.clone().expect("No requirements found!");
-    assert_eq!(requirements.len(), 2);
+    assert_eq!(cwl.requirements.len(), 2);
 
-    if let Requirement::DockerRequirement(DockerRequirement::DockerFile {
-        docker_file,
-        docker_image_id,
-    }) = &requirements[1]
-    {
-        assert_eq!(*docker_file, Entry::from_file(&os_path("../../Dockerfile"))); //as file is in root and cwl in workflows/echo
-        assert_eq!(*docker_image_id, "sciwin-client".to_string());
+    if let Requirement::DockerRequirement(docker_req) = &cwl.requirements[1] {
+        if let (Some(docker_file), Some(docker_image_id)) = (&docker_req.docker_file, &docker_req.docker_image_id) {
+            assert_eq!(*docker_file, Entry::from_file(os_path("../../Dockerfile"))); // as file is in root and CWL in workflows/echo
+            assert_eq!(docker_image_id, "sciwin-client");
+        } else {
+            panic!("DockerRequirement does not contain dockerFile and dockerImageId");
+        }
     } else {
-        panic!("Requirement is not a Dockerfile");
+        panic!("Requirement is not a DockerRequirement");
     }
 
     //no uncommitted left?
@@ -238,7 +283,10 @@ pub fn test_tool_magic_outputs() {
 
     let tool = load_tool("workflows/touch/touch.cwl").unwrap();
 
-    assert!(tool.outputs[0].output_binding.as_ref().unwrap().glob == *"$(inputs.output_txt)");
+    assert_eq!(
+        tool.outputs[0].output_binding.as_ref().unwrap().glob.as_deref(),
+        Some("$(inputs.output_txt)")
+    );
 }
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt"])]
@@ -282,7 +330,7 @@ pub fn test_tool_output_is_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -301,7 +349,7 @@ pub fn test_tool_output_complete_dir() {
     let command = &["python", "create_dir.py"];
     let args = CreateToolArgs {
         outputs: Some(vec![".".into()]), //
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -311,7 +359,7 @@ pub fn test_tool_output_complete_dir() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1); //only root folder
     if let Some(binding) = &tool.outputs[0].output_binding {
-        assert_eq!(binding.glob, "$(runtime.outdir)".to_string())
+        assert_eq!(binding.glob, Some("$(runtime.outdir)".to_string()));
     } else {
         panic!("No Binding")
     }
@@ -331,7 +379,7 @@ pub fn test_shell_script() {
     let name = "script";
     let command = &["./script.sh"];
     let args = CreateToolArgs {
-        command: command.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -343,15 +391,13 @@ pub fn test_shell_script() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 0);
 
-    if let Some(req) = &tool.requirements {
-        assert_eq!(req.len(), 1);
-        if let Requirement::InitialWorkDirRequirement(iwdr) = &req[0] {
-            assert_eq!(iwdr.listing[0].entryname, "./script.sh");
-        } else {
-            panic!("Not an InitialWorkDirRequirement")
+    assert_eq!(tool.requirements.len(), 1);
+    if let Requirement::InitialWorkDirRequirement(iwdr) = &&tool.requirements[0] {
+        if let WorkDirItem::Dirent(dirent) = &iwdr.listing[0] {
+            assert_eq!(dirent.entryname, Some("./script.sh".to_string()));
         }
     } else {
-        panic!("No requirements found")
+        panic!("Not an InitialWorkDirRequirement")
     }
 }
 
@@ -401,4 +447,21 @@ pub fn tool_create_remote_file() {
     let tool = load_tool(tool_path).unwrap();
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.inputs[0].type_, CWLType::File);
+}
+
+#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+pub fn tool_create_test_network() {
+    let tool_create_args = CreateToolArgs {
+        command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+        container_image: Some("python".to_string()),
+        enable_network: true,
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+
+    let tool_path = Path::new("workflows/echo/echo.cwl");
+    let tool = load_tool(tool_path).unwrap();
+
+    assert!(tool.get_requirement::<NetworkAccess>().is_some());
 }

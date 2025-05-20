@@ -7,7 +7,7 @@ use cwl_execution::{
 };
 use s4n::parser::parse_command_line;
 use serial_test::serial;
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 use tempfile::tempdir;
 
 #[test]
@@ -17,7 +17,7 @@ pub fn test_cwl_execute_command_multiple() {
         let command = "python scripts/echo.py --test data/input.txt";
         let args = shlex::split(command).expect("parsing failed");
         let cwl = parse_command_line(&args.iter().map(AsRef::as_ref).collect::<Vec<_>>());
-        assert!(run_command(&cwl, &Default::default()).is_ok());
+        assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
 
         let output_path = dir.path().join(Path::new("results.txt"));
         assert!(output_path.exists());
@@ -52,7 +52,7 @@ outputs:
 
 "#;
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command(&tool, &Default::default()).is_ok());
+        assert!(run_command(&tool, &mut RuntimeEnvironment::default()).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -92,12 +92,12 @@ outputs:
         let yml = "message: \"Hello World\"";
 
         let inputs = serde_yaml::from_str(yml).expect("Input parsing failed");
-        let runtime = RuntimeEnvironment {
+        let mut runtime = RuntimeEnvironment {
             inputs,
             ..Default::default()
         };
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-        assert!(run_command(&tool, &runtime).is_ok());
+        assert!(run_command(&tool, &mut runtime).is_ok());
 
         let output = dir.path().join("output.txt");
         assert!(output.exists());
@@ -140,13 +140,13 @@ message:
   ";
 
         let inputs: HashMap<String, DefaultValue> = serde_yaml::from_str(yml).expect("Input parsing failed");
-        let runtime = RuntimeEnvironment {
+        let mut runtime = RuntimeEnvironment {
             inputs,
             ..Default::default()
         };
         let tool: CommandLineTool = serde_yaml::from_str(cwl).expect("Tool parsing failed");
 
-        let result = run_command(&tool, &runtime);
+        let result = run_command(&tool, &mut runtime);
         assert!(result.is_err());
     });
 }
@@ -188,7 +188,7 @@ baseCommand:
 ";
 
     let mut tool: CWLDocument = serde_yaml::from_str(cwl).expect("Tool parsing failed");
-    let result = run_tool(&mut tool, HashMap::new(), None, None);
+    let result = run_tool(&mut tool, &Default::default(), &PathBuf::default(), None);
     assert!(result.is_ok());
     //delete results.txt
     let _ = fs::remove_file("results.txt");
@@ -203,6 +203,6 @@ baseCommand:
 pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
     let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
-    let result = run_tool(&mut tool, HashMap::new(), None, Some(dir.path().to_string_lossy().into_owned()));
-    assert!(result.is_ok(), "{:?}", result);
+    let result = run_tool(&mut tool, &Default::default(), &PathBuf::default(), Some(dir.path().to_string_lossy().into_owned()));
+    assert!(result.is_ok(), "{result:?}");
 }

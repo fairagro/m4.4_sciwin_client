@@ -1,16 +1,21 @@
 use crate::io::{get_workflows_folder, resolve_path};
 use cwl::{
     clt::CommandLineTool,
-    inputs::{CommandInputParameter, WorkflowStepInput},
+    inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_tool,
     outputs::WorkflowOutputParameter,
-    requirements::{DockerRequirement, Requirement},
+    requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, PathItem},
-    wf::{Workflow, WorkflowStep},
+    wf::{StringOrDocument, Workflow, WorkflowStep},
 };
 use log::{info, warn};
-use syntect::{easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::{as_24_bit_terminal_escaped, LinesWithEndings}};
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
+use syntect::{
+    easy::HighlightLines,
+    highlighting::ThemeSet,
+    parsing::SyntaxSet,
+    util::{as_24_bit_terminal_escaped, LinesWithEndings},
+};
 
 pub trait Connectable {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
@@ -38,20 +43,16 @@ impl Saveable for CommandLineTool {
             }
         }
 
-        if let Some(requirements) = &mut self.requirements {
-            for requirement in requirements {
-                if let Requirement::DockerRequirement(docker) = requirement {
-                    if let DockerRequirement::DockerFile {
-                        docker_file: Entry::Include(include),
-                        docker_image_id: _,
-                    } = docker
-                    {
-                        include.include = resolve_path(&include.include, path)
-                    }
-                } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
-                    for listing in &mut iwdr.listing {
-                        if let Entry::Include(include) = &mut listing.entry {
-                            include.include = resolve_path(&include.include, path)
+        for requirement in &mut self.requirements {
+            if let Requirement::DockerRequirement(docker) = requirement {
+                if let Some(Entry::Include(include)) = &mut docker.docker_file {
+                    include.include = resolve_path(&include.include, path);
+                }
+            } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
+                for listing in &mut iwdr.listing {
+                    if let WorkDirItem::Dirent(dirent) = listing {
+                        if let Entry::Include(include) = &mut dirent.entry {
+                            include.include = resolve_path(&include.include, path);
                         }
                     }
                 }
@@ -66,9 +67,9 @@ impl Connectable for Workflow {
         if !self.has_step(name) {
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
-                run: format!("../{name}/{name}.cwl"),
-                in_: HashMap::new(),
+                run: StringOrDocument::String(format!("../{name}/{name}.cwl")),
                 out: tool.get_output_ids(),
+                ..Default::default()
             };
             self.steps.push(workflow_step);
 
@@ -76,7 +77,7 @@ impl Connectable for Workflow {
         }
     }
 
-    /// Adds a connection between an input and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow input will be added.
+    /// Adds a connection between an input and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow input will be added.
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
@@ -97,14 +98,18 @@ impl Connectable for Workflow {
             .find(|step| step.id == to_parts[0])
             .unwrap()
             .in_
-            .insert(to_parts[1].to_string(), WorkflowStepInput::String(from_input.to_owned()));
+            .push(WorkflowStepInputParameter {
+                id: to_parts[1].to_string(),
+                source: Some(from_input.to_owned()),
+                ..Default::default()
+            });
 
         info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
         Ok(())
     }
 
-    /// Adds a connection between an output and a CommandLineTool. The tool will be registered as step if it is not already and an Workflow output will be added.
+    /// Adds a connection between an output and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow output will be added.
     fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
@@ -125,12 +130,14 @@ impl Connectable for Workflow {
         Ok(())
     }
 
-    /// Adds a connection between two a CommandLineToos. The tools will be registered as step if registered not already.
+    /// Adds a connection between two `CommandLineTools`. The tools will be registered as step if registered not already.
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         //handle from
         let from_parts = from.split('/').collect::<Vec<_>>();
         //check if step already exists and create if not
-        if !self.has_step(from_parts[0]) {
+        if self.has_step(from_parts[0]) {
+            info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
+        } else {
             let from_filename = resolve_filename(from_parts[0]);
             let from_tool: CommandLineTool = load_tool(&from_filename)?;
             let from_outputs = from_tool.get_output_ids();
@@ -144,8 +151,6 @@ impl Connectable for Workflow {
 
             //create step
             self.add_new_step_if_not_exists(from_parts[0], &from_tool);
-        } else {
-            info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
         }
 
         //handle to
@@ -159,12 +164,16 @@ impl Connectable for Workflow {
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
-        step.in_.insert(to_parts[1].to_string(), WorkflowStepInput::String(from.to_string()));
+        step.in_.push(WorkflowStepInputParameter {
+            id: to_parts[1].to_string(),
+            source: Some(from.to_string()),
+            ..Default::default()
+        });
 
         Ok(())
     }
 
-    /// Removes a connection between two CommandLineTools by removing input from tool_y that is also output of tool_x.
+    /// Removes a connection between two `CommandLineTools` by removing input from `tool_y` that is also output of `tool_x`.
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
         let to_parts = to.split('/').collect::<Vec<_>>();
@@ -178,10 +187,11 @@ impl Connectable for Workflow {
             return Err(format!("Step {} not found!", to_parts[0]).into());
         }
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]);
-        // If the step is found, try to remove the connection by removing input from tool_y that uses output of tool_x
+        // If the step is found, try to remove the connection by removing input from `tool_y` that uses output of `tool_x`
         //Input is empty, change that?
         if let Some(step) = step {
-            if step.in_.remove(to_parts[1]).is_some() {
+            if step.in_.iter().any(|v| v.id == to_parts[1]) {
+                step.in_.retain(|v| v.id != to_parts[1]);
                 info!("🔗 Successfully disconnected {from} from {to}");
             } else {
                 warn!("No connection found between {from} and {to}. Nothing to disconnect.");
@@ -192,7 +202,7 @@ impl Connectable for Workflow {
         }
     }
 
-    /// Removes an input from inputs and removes it from CommandLineTool input.
+    /// Removes an input from inputs and removes it from `CommandLineTool` input.
     fn remove_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
         if to_parts.len() != 2 {
@@ -202,7 +212,8 @@ impl Connectable for Workflow {
             self.inputs.remove(index);
         }
         if let Some(step) = self.steps.iter_mut().find(|s| s.id == to_parts[0]) {
-            if step.in_.remove(to_parts[1]).is_some() {
+            if step.in_.iter().any(|v| v.id == to_parts[1]) {
+                step.in_.retain(|v| v.id != to_parts[1]);
                 info!("➖ Successfully disconnected input {from_input} from {to}");
             } else {
                 warn!("No input connection found for {from_input} to disconnect.");
@@ -259,7 +270,7 @@ pub fn highlight_cwl(yaml: &str) {
     for line in LinesWithEndings::from(yaml) {
         let ranges = h.highlight_line(line, &ps).unwrap();
         let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
-        print!("{escaped}")
+        print!("{escaped}");
     }
 }
 
@@ -269,8 +280,8 @@ mod tests {
     use cwl::{
         clt::Command,
         inputs::CommandLineBinding,
-        requirements::InitialWorkDirRequirement,
-        types::{CWLType, File, Listing},
+        requirements::{DockerRequirement, InitialWorkDirRequirement},
+        types::{CWLType, Dirent, File},
     };
     use serde_yaml::Value;
     use std::path::Path;
@@ -295,13 +306,13 @@ mod tests {
         let inputs = vec![
             CommandInputParameter::default()
                 .with_id("positional1")
-                .with_default_value(DefaultValue::File(File::from_location(&"test_data/input.txt".to_string())))
+                .with_default_value(DefaultValue::File(File::from_location("test_data/input.txt")))
                 .with_type(CWLType::String)
                 .with_binding(CommandLineBinding::default().with_position(0)),
             CommandInputParameter::default()
                 .with_id("option1")
                 .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix(&"--option1".to_string()))
+                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
         ];
         let mut clt = CommandLineTool::default()
@@ -318,25 +329,27 @@ mod tests {
 
         assert_eq!(
             clt.inputs[0].default,
-            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
+            Some(DefaultValue::File(File::from_location(os_path("../../test_data/input.txt"))))
         );
-        let requirements = &clt.requirements.as_ref().unwrap();
+        let requirements = &clt.requirements;
         let req_0 = &requirements[0];
         let req_1 = &requirements[1];
         assert_eq!(
             *req_0,
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
-                listing: vec![Listing {
-                    entry: Entry::from_file(&os_path("../../test/script.py")),
-                    entryname: "test/script.py".to_string()
-                }]
+                listing: vec![WorkDirItem::Dirent(Dirent {
+                    entry: Entry::from_file(os_path("../../test/script.py")),
+                    entryname: Some("test/script.py".to_string()),
+                    ..Default::default()
+                })]
             })
         );
         assert_eq!(
             *req_1,
-            Requirement::DockerRequirement(DockerRequirement::DockerFile {
-                docker_file: Entry::from_file(&os_path("../../test/data/Dockerfile")),
-                docker_image_id: "test".to_string()
+            Requirement::DockerRequirement(DockerRequirement {
+                docker_file: Some(Entry::from_file(os_path("../../test/data/Dockerfile"))),
+                docker_image_id: Some("test".to_string()),
+                ..Default::default()
             })
         );
     }

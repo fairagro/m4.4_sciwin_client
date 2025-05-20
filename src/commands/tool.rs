@@ -9,9 +9,9 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    requirements::{DockerRequirement, Requirement},
+    requirements::{DockerRequirement, NetworkAccess, Requirement},
 };
-use cwl_execution::{io::create_and_write_file, runner::run_command};
+use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
 use git2::Repository;
 use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};
@@ -65,6 +65,8 @@ pub struct CreateToolArgs {
     pub is_clean: bool,
     #[arg(long = "no-defaults", help = "Removes default values from inputs")]
     pub no_defaults: bool,
+    #[arg(long = "net", alias = "enable-network", help = "Enables network in container")]
+    pub enable_network: bool,
     #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
     #[arg(
@@ -103,7 +105,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         info!("📂 The current working directory is {}", cwd.to_string_lossy().green().bold());
     }
 
-    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {:?}: {}", cwd, e))?;
+    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {cwd:?}: {e}"))?;
     let modified = get_modified_files(&repo);
 
     //check for uncommited changes if a run will be made
@@ -118,24 +120,21 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     // Handle outputs
     let outputs = args.outputs.as_deref().unwrap_or(&[]);
     if !outputs.is_empty() {
-        cwl = cwl.with_outputs(parser::get_outputs(outputs.to_vec()));
+        cwl = cwl.with_outputs(parser::get_outputs(outputs));
     }
 
     // Only run if not prohibited
-    if !args.no_run {
+    if args.no_run {
+        warn!("User requested no execution, could not determine outputs!");
+    } else {
         // Execute command
-        run_command(&cwl, &Default::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
-
-        //add fixed inputs
-        if let Some(fixed_inputs) = &args.inputs {
-            parser::add_fixed_inputs(&mut cwl, fixed_inputs.iter().map(|i| i.as_str()).collect::<Vec<_>>());
-        }
+        run_command(&cwl, &mut RuntimeEnvironment::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
         // Check files that changed
         let mut files = get_modified_files(&repo);
         files.retain(|f| !modified.contains(f)); //remove files that were changed before run
         if files.is_empty() && outputs.is_empty() {
-            warn!("No output produced!")
+            warn!("No output produced!");
         } else if !args.is_raw {
             info!("📜 Found changes:");
             print_list(&files);
@@ -171,10 +170,13 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         }
         // Add outputs if not specified
         if outputs.is_empty() {
-            cwl = cwl.with_outputs(parser::get_outputs(files));
+            cwl = cwl.with_outputs(parser::get_outputs(&files));
         }
-    } else {
-        warn!("User requested no execution, could not determine outputs!");
+    }
+
+    //add fixed inputs
+    if let Some(fixed_inputs) = &args.inputs {
+        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>())?;
     }
 
     // Handle container requirements
@@ -186,15 +188,15 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             Requirement::DockerRequirement(DockerRequirement::from_pull(container))
         };
 
-        if let Some(ref mut vec) = cwl.requirements {
-            vec.push(requirement);
-        } else {
-            cwl = cwl.with_requirements(vec![requirement]);
-        }
+        cwl = cwl.append_requirement(requirement);
+    }
+
+    if args.enable_network {
+        cwl = cwl.append_requirement(Requirement::NetworkAccess(NetworkAccess { network_access: true }));
     }
 
     if args.no_defaults {
-        for input in cwl.inputs.iter_mut() {
+        for input in &mut cwl.inputs {
             if input.default.is_some() {
                 input.default = None;
                 info!("Removed default value from input: {}", input.id);
@@ -207,9 +209,11 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
     let path = get_qualified_filename(&cwl.base_command, args.name.clone());
     let mut yaml = cwl.prepare_save(&path);
     yaml = format_cwl(&yaml)?;
-    if !args.is_raw {
+    if args.is_raw {
+        highlight_cwl(&yaml);
+    } else {
         match create_and_write_file(&path, &yaml) {
-            Ok(_) => {
+            Ok(()) => {
                 info!("\n📄 Created CWL file {}", path.green().bold());
                 if !args.no_commit {
                     stage_file(&repo, &path)?;
@@ -218,8 +222,6 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
             }
             Err(e) => return Err(Box::new(e)),
         }
-    } else {
-        highlight_cwl(&yaml);
     }
     Ok(())
 }
@@ -263,7 +265,7 @@ pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
                                 if let Some(inputs) = parsed_yaml.get("inputs") {
                                     for input in inputs.as_sequence().unwrap_or(&vec![]) {
                                         if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                                            inputs_list.push(format!("{}/{}", tool_name, id));
+                                            inputs_list.push(format!("{tool_name}/{id}"));
                                         }
                                     }
                                 }
@@ -271,7 +273,7 @@ pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
                                 if let Some(outputs) = parsed_yaml.get("outputs") {
                                     for output in outputs.as_sequence().unwrap_or(&vec![]) {
                                         if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
-                                            outputs_list.push(format!("{}/{}", tool_name, id));
+                                            outputs_list.push(format!("{tool_name}/{id}"));
                                         }
                                     }
                                 }
@@ -320,7 +322,7 @@ pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn Error>> {
         if tool_path.exists() && tool_path.is_dir() {
             fs::remove_dir_all(&tool_path)?;
             info!("{} {}", "🗑️ Removed ".green(), tool_path.to_string_lossy().green());
-            commit(&repo, format!("🗑️ Removed `{}`", tool).as_str()).unwrap();
+            commit(&repo, format!("🗑️ Removed `{tool}`").as_str()).unwrap();
         } else {
             error!("Tool '{}' does not exist.", tool_path.to_string_lossy().red());
         }

@@ -1,7 +1,12 @@
-///This file contains all examples described here: https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/
+///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 mod common;
 use common::{check_git_user, setup_python};
-use cwl::{clt::Command, load_tool, load_workflow, requirements::Requirement, types::Entry};
+use cwl::{
+    clt::Command,
+    load_tool, load_workflow,
+    requirements::{Requirement, WorkDirItem},
+    types::Entry,
+};
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
     execute::{execute_local, LocalExecuteArgs, Runner},
@@ -32,7 +37,7 @@ fn setup() -> (PathBuf, TempDir) {
 
 fn cleanup(current: PathBuf, dir: TempDir) {
     env::set_current_dir(current).unwrap();
-    dir.close().unwrap()
+    dir.close().unwrap();
 }
 
 #[test]
@@ -56,6 +61,13 @@ pub fn test_wrapping_echo() {
     let tool = load_tool(&tool_path).unwrap();
     assert_eq!(tool.base_command, Command::Single("echo".to_string()));
     assert_eq!(tool.inputs.len(), 1);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }
@@ -86,6 +98,13 @@ pub fn test_wrapping_echo_2() {
     assert_eq!(tool.outputs.len(), 1);
     assert_eq!(tool.stdout, Some("hello.yaml".to_string()));
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -113,6 +132,13 @@ pub fn test_wrapping_python_script() {
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
 
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
+
     cleanup(current, dir);
 }
 
@@ -139,6 +165,13 @@ pub fn test_wrapping_a_long_running_script() {
     assert_eq!(tool.base_command, Command::Multiple(vec!["python".to_string(), "sleep.py".to_string()]));
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 0);
+
+    //test if is executable
+    execute_local(&LocalExecuteArgs {
+        file: tool_path,
+        ..Default::default()
+    })
+    .unwrap();
 
     cleanup(current, dir);
 }
@@ -169,6 +202,15 @@ pub fn test_wrapping_a_long_running_script2() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1);
 
+    //test if is executable
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
+
     cleanup(current, dir);
 }
 
@@ -197,17 +239,30 @@ pub fn test_implicit_inputs_hardcoded_files() {
     assert_eq!(tool.inputs.len(), 1);
     assert_eq!(tool.outputs.len(), 1);
 
-    assert!(tool.requirements.is_some());
-    let requirements = tool.requirements.clone().unwrap();
-    assert_eq!(requirements.len(), 1);
+    assert_eq!(tool.requirements.len(), 1);
 
-    if let Requirement::InitialWorkDirRequirement(initial) = &requirements[0] {
+    if let Requirement::InitialWorkDirRequirement(initial) = &tool.requirements[0] {
         assert_eq!(initial.listing.len(), 2);
-        assert_eq!(initial.listing[0].entryname, "load.py");
-        assert_eq!(initial.listing[1].entryname, "file.txt");
-        assert_eq!(initial.listing[1].entry, Entry::Source("$(inputs.file_txt)".into()));
+        assert!(matches!(initial.listing[0], WorkDirItem::Dirent(_)));
+        assert!(matches!(initial.listing[1], WorkDirItem::Dirent(_)));
+        if let WorkDirItem::Dirent(dirent) = &initial.listing[0] {
+            assert_eq!(dirent.entryname, Some("load.py".to_string()));
+        }
+        if let WorkDirItem::Dirent(dirent) = &initial.listing[1] {
+            assert_eq!(dirent.entryname, Some("file.txt".to_string()));
+            assert_eq!(dirent.entry, Entry::Source("$(inputs.file_txt)".into()));
+        }
     } else {
         panic!("InitialWorkDirRequirement not found!");
+    }
+
+    //test if is executable
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
     }
 
     cleanup(current, dir);
@@ -238,6 +293,15 @@ pub fn test_piping() {
     assert_eq!(tool.outputs.len(), 1);
     assert!(tool.arguments.is_some());
     assert_eq!(tool.arguments.unwrap().len(), 6);
+
+    //test if is executable
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
@@ -284,6 +348,15 @@ pub fn test_pulling_containers() {
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
 
+    //test if is executable
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
+
     cleanup(current, dir);
 }
 
@@ -329,6 +402,15 @@ pub fn test_building_custom_containers() {
     );
     assert_eq!(tool.inputs.len(), 2);
     assert_eq!(tool.outputs.len(), 1);
+
+    //test if is executable
+    if !cfg!(target_os = "macos") {
+        execute_local(&LocalExecuteArgs {
+            file: tool_path,
+            ..Default::default()
+        })
+        .unwrap();
+    }
 
     cleanup(current, dir);
 }
