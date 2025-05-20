@@ -76,7 +76,10 @@ pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn Error>> 
 }
 
 pub(crate) fn evaluate_condition(input: &str, inputs: &HashMap<String, DefaultValue>) -> Result<bool, Box<dyn Error>> {
-    prepare_expression_engine(&RuntimeEnvironment { inputs: inputs.clone(), ..Default::default() })?;
+    prepare_expression_engine(&RuntimeEnvironment {
+        inputs: inputs.clone(),
+        ..Default::default()
+    })?;
     let result = evaluate_expression(input)?.as_bool().unwrap_or(false);
     reset_expression_engine()?;
     Ok(result)
@@ -207,6 +210,20 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
                     }
                 }
             }
+        }
+    }
+    for input in &mut tool.inputs {
+        let tmp = input.id.clone();
+        if input.secondary_files.is_empty() {
+            continue;
+        }
+        
+        if let DefaultValue::File(file) = &input_values.inputs[&tmp] {            
+            set_self(&file.snapshot())?;
+            for sec_file in &mut input.secondary_files {
+                sec_file.pattern = replace_expressions(&sec_file.pattern)?;
+            }
+            unset_self()?;
         }
     }
     if let CWLDocument::CommandLineTool(clt) = tool {

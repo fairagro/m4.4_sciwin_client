@@ -245,8 +245,14 @@ fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &Com
         };
         for item in &input.secondary_files {
             let mut matched = false;
-            let pattern = file_dir.join(format!("*{}", item.pattern));
-            for res in glob(&pattern.to_string_lossy())? {
+            let pattern = if item.pattern.starts_with(file_dir.to_string_lossy().as_ref()) {
+                &item.pattern
+            } else {
+                &file_dir.join(format!("*{}", item.pattern)).to_string_lossy().into_owned()
+            };
+            let pattern = pattern.trim();
+            
+            for res in glob(pattern)? {
                 let res = res?;
                 let dest = path.join(&res);
                 copy_file(&res, &dest).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", res, dest, e))?;
