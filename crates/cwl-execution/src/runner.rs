@@ -8,7 +8,7 @@ use crate::{
     },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
-    staging::{stage_required_files, unstage_files},
+    staging::stage_required_files,
     util::{
         copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata,
         is_docker_installed,
@@ -254,7 +254,7 @@ pub fn run_tool(
     }
 
     //stage files listed in input default values, input values or initial work dir requirements
-    let staged_files = stage_required_files(tool, &input_values, &mut runtime, tool_path, dir.path(), output_directory)?;
+    stage_required_files(tool, &input_values, &mut runtime, tool_path, dir.path(), output_directory)?;
 
     //change working directory to tmp folder, we will execute tool from root here
     env::set_current_dir(dir.path())?;
@@ -272,14 +272,6 @@ pub fn run_tool(
         result_value = Some(eval_tool::<serde_yaml::Value>(&expressions[0].expression())?);
         reset_expression_engine()?;
     }
-
-    //remove staged files
-    let outputs = match &tool {
-        CWLDocument::CommandLineTool(clt) => &clt.outputs,
-        CWLDocument::ExpressionTool(et) => &et.outputs,
-        CWLDocument::Workflow(_) => unreachable!(),
-    };
-    unstage_files(&staged_files, dir.path(), outputs)?;
 
     //evaluate output files
     prepare_expression_engine(&runtime)?;

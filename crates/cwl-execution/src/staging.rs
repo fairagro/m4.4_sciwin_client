@@ -5,7 +5,6 @@ use crate::{
 };
 use cwl::{
     inputs::CommandInputParameter,
-    outputs::CommandOutputParameter,
     requirements::{Requirement, WorkDirItem},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
     CWLDocument,
@@ -46,34 +45,6 @@ pub(crate) fn stage_required_files<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path
     staged_files.dedup();
 
     Ok(staged_files)
-}
-
-pub(crate) fn unstage_files(staged_files: &[String], tmp_dir: &Path, outputs: &[CommandOutputParameter]) -> Result<(), Box<dyn Error>> {
-    for file in staged_files {
-        let mut should_remove = true;
-
-        for output in outputs {
-            if let Some(binding) = &output.output_binding {
-                if let Some(glob) = &binding.glob {
-                    let binding_path = tmp_dir.join(glob);
-                    if binding_path.to_str().unwrap().matches(file).next().is_some() {
-                        should_remove = false;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if should_remove {
-            let path = Path::new(file);
-            if path.is_dir() {
-                fs::remove_dir_all(file).map_err(|e| format!("Could not remove staged dir {}: {}", file, e))?;
-            } else {
-                fs::remove_file(file).map_err(|e| format!("Could not remove staged file {}: {}", file, e))?;
-            }
-        }
-    }
-    Ok(())
 }
 
 fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Path) -> Result<Vec<String>, Box<dyn Error>> {
@@ -321,7 +292,6 @@ fn handle_filename(value: &DefaultValue) -> String {
 mod tests {
     use super::*;
     use cwl::{
-        outputs::CommandOutputBinding,
         requirements::InitialWorkDirRequirement,
         types::{Directory, File},
         StringOrNumber,
@@ -417,83 +387,6 @@ mod tests {
 
         assert_eq!(list.len(), 1);
         assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
-    }
-
-    #[test]
-    #[serial]
-    fn test_unstage_files() {
-        let tmp_dir = tempdir().unwrap();
-
-        let test_dir = "tests/test_data/input.txt";
-
-        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
-        let value = DefaultValue::File(File::from_location(test_dir));
-
-        let list = stage_input_files(
-            &[input],
-            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
-            Path::new("../../"),
-            tmp_dir.path(),
-            &PathBuf::from(""),
-        )
-        .unwrap();
-
-        unstage_files(&list, tmp_dir.path(), &[]).unwrap();
-        //file should be gone
-        assert!(!Path::new(&list[0]).exists());
-    }
-
-    #[test]
-    #[serial]
-    fn test_unstage_files_dir() {
-        let tmp_dir = tempdir().unwrap();
-
-        let test_dir = "tests/test_data";
-
-        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::Directory);
-        let value = DefaultValue::Directory(Directory::from_location(test_dir));
-
-        let list = stage_input_files(
-            &[input],
-            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
-            Path::new("../../"),
-            tmp_dir.path(),
-            &PathBuf::from(""),
-        )
-        .unwrap();
-
-        unstage_files(&list, tmp_dir.path(), &[]).unwrap();
-        //file should be gone
-        assert!(!Path::new(&list[0]).exists());
-    }
-
-    #[test]
-    #[serial]
-    fn test_unstage_files_not_in_output() {
-        let tmp_dir = tempdir().unwrap();
-
-        let test_file = "tests/test_data/input.txt";
-
-        let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
-        let value = DefaultValue::File(File::from_location(test_file));
-
-        let output = CommandOutputParameter::default().with_binding(CommandOutputBinding {
-            glob: Some("tests/test_data/input.txt".to_string()),
-            ..Default::default()
-        });
-
-        let list = stage_input_files(
-            &[input],
-            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), value)])),
-            Path::new("../../"),
-            tmp_dir.path(),
-            &PathBuf::from(""),
-        )
-        .unwrap();
-
-        unstage_files(&list, tmp_dir.path(), &[output]).unwrap();
-        //file should still be there
-        assert!(Path::new(&list[0]).exists());
     }
 
     #[test]
