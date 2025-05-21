@@ -1,14 +1,15 @@
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{Args, Subcommand};
 use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
     CWLDocument,
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
-use remote_execution::api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files};
-use remote_execution::parser::generate_workflow_json_from_cwl;
+use remote_execution::{
+    api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files},
+    parser::generate_workflow_json_from_cwl,
+};
 use serde_yaml::{Number, Value};
-use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
-use std::{thread, time::Duration};
+use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -64,7 +65,6 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     if args.is_quiet {
         log::set_max_level(log::LevelFilter::Error);
     }
-
     if args.podman {
         set_container_engine(ContainerEngine::Podman);
     } else {
