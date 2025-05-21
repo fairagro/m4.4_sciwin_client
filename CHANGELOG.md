@@ -1,4 +1,6 @@
 # Unreleased
+
+# v0.6.0
 ## 🚀 Features
 - Remote Execution `s4n execute remote` using REANA (testing) #101 + #108
 - Added workflow.toml as config format #102

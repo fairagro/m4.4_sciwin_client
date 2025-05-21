@@ -1,6 +1,6 @@
 [package]
 name = "cwl"
-version = "0.5.2"
+version = "0.6.0"
 description = "CWL Rust library, intended to be used for YAML parsing with serde"
 edition = "2021"
 readme = "README.md"
