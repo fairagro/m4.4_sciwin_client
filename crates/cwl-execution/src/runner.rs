@@ -610,8 +610,9 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
-    docker_command.arg(get_user_flag());
-
+    if cfg!(unix) {
+        docker_command.arg(get_user_flag());
+    }
     //add all environment vars
     docker_command.arg(format!("--env=HOME={}", &workdir));
     docker_command.arg("--env=TMPDIR=/tmp");
@@ -649,13 +650,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
 #[cfg(unix)]
 fn get_user_flag() -> String {
     use nix::unistd::{getgid, getuid};
-    format!("--user {}:{}", getuid().as_raw(), getgid().as_raw())
-}
-
-#[cfg(windows)]
-fn get_user_flag() -> String {
-    // Windows doesn't support Unix-style users, so skip it
-    String::new()
+    format!("--user={}:{}", getuid().as_raw(), getgid().as_raw())
 }
 
 #[cfg(test)]
