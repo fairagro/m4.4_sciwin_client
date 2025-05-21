@@ -9,7 +9,7 @@ use cwl::{
 };
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
-    execute::{execute_local, LocalExecuteArgs, Runner},
+    execute::{execute_local, LocalExecuteArgs},
     init::initialize_project,
     tool::{create_tool, list_tools, CreateToolArgs},
     workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
@@ -547,7 +547,6 @@ pub fn test_example_project() {
 
     //execute workflow
     execute_local(&LocalExecuteArgs {
-        runner: Runner::Custom,
         is_quiet: false,
         file: wf_path,
         args: vec!["inputs.yml".to_string()],

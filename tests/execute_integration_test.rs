@@ -1,5 +1,5 @@
 use cwl_execution::io::copy_dir;
-use s4n::commands::execute::{execute_local, LocalExecuteArgs, Runner};
+use s4n::commands::execute::{execute_local, LocalExecuteArgs};
 use serial_test::serial;
 use std::{
     env,
@@ -103,23 +103,6 @@ pub fn test_execute_local_is_quiet() {
     //does not really test if it is quiet but rather that the process works
     let args = LocalExecuteArgs {
         is_quiet: true,
-        file: PathBuf::from("tests/test_data/echo.cwl"),
-        ..Default::default()
-    };
-
-    execute_local(&args).expect("Could not execute CommandLineTool");
-
-    let file = Path::new("results.txt");
-    assert!(file.exists());
-    fs::remove_file(file).unwrap();
-}
-
-#[test]
-#[serial]
-#[cfg_attr(target_os = "windows", ignore)]
-pub fn test_execute_local_cwltool() {
-    let args = LocalExecuteArgs {
-        runner: Runner::CWLTool,
         file: PathBuf::from("tests/test_data/echo.cwl"),
         ..Default::default()
     };
