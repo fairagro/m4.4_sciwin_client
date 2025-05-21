@@ -648,7 +648,7 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
 
 #[cfg(unix)]
 fn get_user_flag() -> String {
-    use nix::unistd::{getuid, getgid};
+    use nix::unistd::{getgid, getuid};
     format!("--user {}:{}", getuid().as_raw(), getgid().as_raw())
 }
 
@@ -657,7 +657,6 @@ fn get_user_flag() -> String {
     // Windows doesn't support Unix-style users, so skip it
     String::new()
 }
-
 
 #[cfg(test)]
 mod tests {
