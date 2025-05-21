@@ -4,11 +4,10 @@ use cwl::{
     CWLDocument,
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
-use log::info;
+use remote_execution::api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files};
+use remote_execution::parser::generate_workflow_json_from_cwl;
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, process::Command};
-use remote_execution::api::{ping_reana, upload_files, start_workflow, download_files, create_workflow, get_workflow_status};
-use remote_execution::parser::generate_workflow_json_from_cwl;
 use std::{thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
@@ -37,8 +36,6 @@ pub struct MakeTemplateArgs {
 
 #[derive(Args, Debug, Default)]
 pub struct LocalExecuteArgs {
-    #[arg(value_enum, default_value_t = Runner::Custom, short = 'r', long = "runner", help="Choose your cwl runner implementation")]
-    pub runner: Runner,
     #[arg(long = "outdir", help = "A path to output resulting files to")]
     pub out_dir: Option<String>,
     #[arg(long = "quiet", help = "Runner does not print to stdout")]
@@ -51,75 +48,31 @@ pub struct LocalExecuteArgs {
     pub args: Vec<String>,
 }
 
-
 #[derive(Args, Debug, Default)]
 pub struct RemoteExecuteArgs {
-    #[arg(short = 'r', long = "instance", help="Reana instance")]
+    #[arg(short = 'r', long = "instance", help = "Reana instance")]
     pub instance: String,
-    #[arg(short = 't', long = "token", help="Your reana token")]
+    #[arg(short = 't', long = "token", help = "Your reana token")]
     pub token: String,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
-    #[arg(short = 'i', long = "input", help="Input yaml file")]
+    #[arg(short = 'i', long = "input", help = "Input yaml file")]
     pub input_file: Option<String>,
 }
 
-#[derive(ValueEnum, Debug, Clone, Default)]
-pub enum Runner {
-    #[clap(name = "cwltool")]
-    CWLTool,
-    #[default]
-    Custom,
-}
-
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
-    match args.runner {
-        Runner::CWLTool => {
-            if !args.is_quiet {
-                eprintln!("💻 Executing {:?} using cwltool.", &args.file);
-            }
-            let mut cmd = Command::new("cwltool");
-
-            //handle args
-            if args.is_quiet {
-                cmd.arg("--quiet");
-            }
-            if let Some(outdir) = &args.out_dir {
-                cmd.arg("--outdir").arg(outdir);
-            }
-            if args.podman {
-                cmd.arg("--podman");
-            }
-
-            cmd.arg(&args.file).args(&args.args);
-            let output = &cmd.output()?;
-            if !output.stdout.is_empty() {
-                println!("{}", String::from_utf8_lossy(&output.stdout));
-            }
-            if !output.stderr.is_empty() {
-                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-            }
-            Ok(())
-        }
-        Runner::Custom => {
-            if !args.is_quiet {
-                info!(
-                    "💻 Executing {:?} using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed).",
-                    &args.file
-                );
-            }
-
-            if args.podman {
-                set_container_engine(ContainerEngine::Podman);
-            } else {
-                set_container_engine(ContainerEngine::Docker);
-            }
-
-            execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
-        }
+    if args.is_quiet {
+        log::set_max_level(log::LevelFilter::Error);
     }
-}
 
+    if args.podman {
+        set_container_engine(ContainerEngine::Podman);
+    } else {
+        set_container_engine(ContainerEngine::Docker);
+    }
+
+    execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
+}
 
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
@@ -143,9 +96,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
         start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)?;
         loop {
             let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)?;
-            let workflow_status = status_response["status"]
-                .as_str()
-                .unwrap_or("unknown");
+            let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
             if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {
                     "finished" => {
@@ -171,7 +122,6 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
 
 pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(filename)?;
