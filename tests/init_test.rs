@@ -1,9 +1,14 @@
 mod common;
 use calamine::{open_workbook, Reader, Xlsx};
 use common::check_git_user;
-use s4n::commands::init::{create_arc_folder_structure, git_cleanup, create_investigation_excel_file, create_minimal_folder_structure, init_git_repo, initialize_project, is_git_repo};
+use s4n::commands::init::{
+    create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, git_cleanup, init_git_repo, initialize_project,
+};
 use serial_test::serial;
-use std::{env, path::{PathBuf, Path}};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 use tempfile::{tempdir, Builder, NamedTempFile};
 
 #[test]
@@ -60,7 +65,7 @@ fn test_cleanup_no_folder() {
     let git_folder = ".git";
     std::fs::create_dir(git_folder).unwrap();
     assert!(Path::new(git_folder).exists());
-    
+
     git_cleanup(None);
     assert!(!Path::new(git_folder).exists());
 }
@@ -91,20 +96,6 @@ fn test_init_s4n_without_folder_with_arc() {
     assert!(PathBuf::from("assays").exists());
     assert!(PathBuf::from("studies").exists());
     assert!(PathBuf::from("runs").exists());
-}
-
-#[test]
-#[serial]
-fn test_init_git_repo() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let base_folder = temp_dir.path().join("my_repo");
-
-    let result = init_git_repo(Some(base_folder.to_str().unwrap()));
-    assert!(result.is_ok(), "Expected successful initialization");
-
-    // Verify that the .git directory was created
-    let git_dir = base_folder.join(".git");
-    assert!(git_dir.exists(), "Expected .git directory to be created");
 }
 
 #[test]
@@ -163,7 +154,10 @@ fn test_create_investigation_excel_file() {
     let directory = temp_dir.path().to_str().unwrap();
 
     //call the function
-    assert!(create_investigation_excel_file(directory).is_ok(), "Unexpected function create_investigation_excel fail");
+    assert!(
+        create_investigation_excel_file(directory).is_ok(),
+        "Unexpected function create_investigation_excel fail"
+    );
 
     //verify file exists
     let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
@@ -259,32 +253,4 @@ fn test_init_s4n_minimal() {
         let full_path = PathBuf::from(temp_dir.path()).join(dir);
         assert!(!full_path.exists(), "Directory {dir} does exist, but should not exist");
     }
-}
-
-#[test]
-#[serial]
-fn test_is_git_repo() {
-    let repo_dir = Builder::new().prefix("valid_git_repo").tempdir().unwrap();
-    let repo_dir_str = repo_dir.path().to_str().unwrap();
-    let repo_dir_string = String::from(repo_dir_str);
-
-    let _ = init_git_repo(Some(&repo_dir_string));
-    let result = is_git_repo(Some(&repo_dir_string));
-    // Assert that directory is a git repo
-    assert!(result, "Expected directory to be a git repo true, got false");
-}
-
-#[test]
-fn test_is_not_git_repo() {
-    //create directory that is not a git repo
-    let no_repo = Builder::new().prefix("no_repo_test").tempdir().unwrap();
-
-    let no_repo_str = no_repo.path().to_str().unwrap();
-    let no_repo_string = String::from(no_repo_str);
-
-    // call is_git repo_function
-    let result = is_git_repo(Some(&no_repo_string));
-
-    // assert that it is not a git repo
-    assert!(!result, "Expected directory to not be a git repo");
 }

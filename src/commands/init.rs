@@ -1,4 +1,7 @@
-use crate::repo::{commit, get_modified_files, initial_commit, stage_all};
+use crate::{
+    config::Config,
+    repo::{commit, get_modified_files, initial_commit, stage_all},
+};
 use clap::Args;
 use git2::Repository;
 use log::{error, info, warn};
@@ -6,6 +9,7 @@ use rust_xlsxwriter::Workbook;
 use std::{
     env,
     fs::{self, File},
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -39,6 +43,8 @@ pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), 
         create_minimal_folder_structure(folder, false)?;
     }
 
+    write_config(folder)?;
+
     let files = get_modified_files(&repo);
     if files.is_empty() {
         error!("Nothing to commit");
@@ -54,7 +60,21 @@ pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), 
     Ok(())
 }
 
-pub fn is_git_repo(path: Option<&str>) -> bool {
+fn write_config(folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    // create workflow toml
+    let mut cfg = Config::default();
+    let dir = if let Some(folder) = folder {
+        PathBuf::from(folder)
+    } else {
+        env::current_dir().unwrap_or_default()
+    };
+    cfg.workflow.name = dir.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+    fs::write(dir.join("workflow.toml"), toml::to_string_pretty(&cfg)?)?;
+
+    Ok(())
+}
+
+fn is_git_repo(path: Option<&str>) -> bool {
     // Determine the base directory from the provided path or use the current directory
     let base_dir = match path {
         Some(folder) => Path::new(folder).to_path_buf(),
@@ -98,8 +118,12 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
-        File::create(gitignore_path)?;
+        File::create(&gitignore_path)?;
     }
+
+    //append .s4n folder to .gitignore, whatever it may contains
+    let mut gitignore = fs::OpenOptions::new().append(true).open(gitignore_path)?;
+    writeln!(gitignore, "\n.s4n")?;
 
     Ok(repo)
 }
@@ -231,4 +255,54 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
     workbook.save(excel_path)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    #[test]
+    #[serial]
+    fn test_init_git_repo() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let base_folder = temp_dir.path().join("my_repo");
+
+        let result = init_git_repo(Some(base_folder.to_str().unwrap()));
+        assert!(result.is_ok(), "Expected successful initialization");
+
+        // Verify that the .git directory was created
+        let git_dir = base_folder.join(".git");
+        assert!(git_dir.exists(), "Expected .git directory to be created");
+    }
+
+    #[test]
+    #[serial]
+    fn test_is_git_repo() {
+        let repo_dir = tempdir().unwrap();
+        let repo_dir_str = repo_dir.path().to_str().unwrap();
+        let repo_dir_string = String::from(repo_dir_str);
+
+        let _ = init_git_repo(Some(&repo_dir_string));
+        let result = is_git_repo(Some(&repo_dir_string));
+        // Assert that directory is a git repo
+        assert!(result, "Expected directory to be a git repo true, got false");
+    }
+
+    #[test]
+    #[serial]
+    fn test_is_not_git_repo() {
+        //create directory that is not a git repo
+        let no_repo = tempdir().unwrap();
+
+        let no_repo_str = no_repo.path().to_str().unwrap();
+        let no_repo_string = String::from(no_repo_str);
+
+        // call is_git repo_function
+        let result = is_git_repo(Some(&no_repo_string));
+
+        // assert that it is not a git repo
+        assert!(!result, "Expected directory to not be a git repo");
+    }
 }
