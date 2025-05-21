@@ -1,6 +1,6 @@
 # Unreleased
 ## 🚀 Features
-- Remote Execution `s4n execute remote` using REANA (testing)
+- Remote Execution `s4n execute remote` using REANA (testing) #101 + #108
 - added NetworkAccess Requirment via `--net/--enable-network` in `s4n tool create` #104
 - Support InlineTools in Workflow step #111
 - Support Expressions, Files and Directories as `InitialWorkDirRequirement` (in additon to Dirents)
