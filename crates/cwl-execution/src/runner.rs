@@ -610,7 +610,8 @@ fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement,
     let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
     let workdir_arg = format!("--workdir={}", &workdir);
     docker_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
-    if cfg!(unix) {
+    #[cfg(unix)]
+    {
         docker_command.arg(get_user_flag());
     }
     //add all environment vars
