@@ -80,6 +80,7 @@ nav:
     - Tool Creation: examples/tool-creation.md
     - Workflow Creation: examples/workflow-creation.md
     - Example Project: getting-started/example.md
+    - Advanced Example: examples/advanced-example.md
   - Reference: 
     - reference/index.md
     - Project Initialization: reference/init.md
