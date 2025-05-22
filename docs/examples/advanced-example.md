@@ -53,8 +53,9 @@ Options:
 ```
 
 ## Demo Repository
-The [Demo Repository](https://github.com/fairagro/sciwin_client_demo) mainly contains two folders `data` and `code`. The result workflow will convert input data into a `geojson` file, download election data and maps it onto the `geojson` data resulting in a `choropleth` graph.
+The [Demo Repository](https://github.com/fairagro/sciwin_client_demo) mainly contains two folders `data` and `code`. The result workflow will print election results as png, convert input data into a `geojson` file, download election data and maps it onto the `geojson` data resulting in a `choropleth` graph.
 
+![result](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/election.png)
 ![result](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/plot.png)
 
 ## Creating the CommandLineTools
@@ -106,7 +107,30 @@ baseCommand: ogr2ogr
 
 However it may is tedious to write those files by hand. That is where `s4n` comes to the rescue. A Command that would normally happen on the command line just needs to be prefixed with `s4n tool create`. Examples can be found at the [documentation](https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/).
 
-The first tool, we need to create uses [GDAL](https://de.wikipedia.org/wiki/Geospatial_Data_Abstraction_Library) to convert the shape file in `data/braunschweig` to a `geojson` file. The Command one would typically use would be
+To create Tools based of the Python scripts in the `code` Directory a virtual environment needs to be created using 
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install plotly pandas kaleido matplotlib
+```
+
+The next step is to download election data using a series of API calls for which luckily already a script exists. The script downloads the data from `votemanager.kdo.de` and writes the `csv` to stdout.
+A tool can be created easily be prefixing the python call. However we also need to escape the `>` using a backslash for it to properly work
+```bash
+s4n tool create python code/download_election_data.py --ags 03101000 --election "Bundestagswahl 2025" \> election.csv
+```
+
+The written csv file lacks the header information of which party results correspond to which column. Therefore we use the `get_feature_info` script and create a tool as follows:
+```bash
+s4n tool create python code/get_feature_info.py --data election.csv
+```
+
+With this information the election plot can be outputted. The script `plot_election` does the job and accepts the json file from `get_feature_info` and the aforementioned csv.
+```bash
+s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_election.py --data election.csv --features features.json
+```
+
+The next tool, that is needed uses [GDAL](https://de.wikipedia.org/wiki/Geospatial_Data_Abstraction_Library) to convert the shape file in `data/braunschweig` to a `geojson` file. The Command one would typically use would be
 ```bash
 ogr2ogr districts.geojson data/braunschweig -lco RFC7946=YES
 # s4n command
@@ -127,19 +151,6 @@ The outputted file now needs to be committed to move on
 git add . && git commit -m "Execution of shp2geojson"
 ```
 
-To create Tools based of the Python scripts in the `code` Directory a virtual environment needs to be created using 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install plotly pandas kaleido
-```
-
-The next step is to download election data using a series of API calls for which luckily already a script exists. The script downloads the data from `votemanager.kdo.de` and writes the `csv` to stdout.
-A tool can be created easily be prefixing the python call. However we also need to escape the `>` using a backslash for it to properly work
-```bash
-s4n tool create python code/download_election_data.py --ags 03101000 --election "Bundestagswahl 2025" \> election.csv
-```
-
 In the last step the plot tool needs to be created. In this tool `plotly` is used to create a `choropleth` graph based on the outputs of the preceeding steps. The packages installed to the virtual environment are needed here. A Dockerfile to use is already in the repo.
 ```bash
 s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_map.py --geojson districts.geojson --csv election.csv --feature F3 --on gebiet-nr:BEZNUM --output_name plot
@@ -154,12 +165,25 @@ s4n workflow create demo
 The workflow we want to build looks like the graph represented in the following image
 ![the resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow.svg)
 
+First of all a connection between the donwload script and `get_feature_info` as well as `plot_election` is created by
+```bash
+s4n workflow connect demo --from download_election_data/election --to get_feature_info/data
+s4n workflow connect demo --from download_election_data/election --to plot_election/data
+```
+To get the correct values for `--from` and `--to` the command `s4n tool ls -a` can be used.
+
+The plot tool also needs the feature information, so the next step is to combine both tools:
+
+```bash
+s4n workflow connect demo --from get_feature_info/features --to plot_election/features
+```
+
 Knowing that the plot tool needs the geojson, a connection from the geojson output to the corresponding input can be created.
 ```bash
 s4n workflow connect demo --from shp2geojson/districts --to plot_map/geojson
 ```
 
-To get the correct values for `--from` and `--to` the command `s4n tool ls -a` can be used. As the plot step also needs the election data, another connection can be created.
+As the plot step also needs the election data, another connection can be created.
 ```bash
 s4n workflow connect demo --from download_election_data/election --to plot_map/csv
 ```
@@ -172,9 +196,10 @@ s4n workflow connect demo --from @inputs/feature --to plot_map/feature
 s4n workflow connect demo --from @inputs/shapes --to shp2geojson/data_braunschweig
 ```
 
-The last step is to add the outputs to the workflow. Only the `png` file is desired, therefore a single output is created using
+The last step is to add the outputs to the workflow. Only the `png` files are desired, therefore two outputs are created using
 ```bash
-s4n workflow connect demo --from plot_map/plot --to @outputs/result
+s4n workflow connect demo --from plot_map/plot --to @outputs/map
+s4n workflow connect demo --from plot_election/election --to @outputs/election
 ```
 
 Saving the workflow is neccessary to have a clean git history for further creating CommandLineTools.
