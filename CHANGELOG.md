@@ -3,6 +3,7 @@
 - Added command `s4n workflow visualize` which accepts a path and either `mermaid` or `dot` as renderer outputting diagrams (see example below)
 <details><summary><strong>Workflow Visualization</strong></summary>
 
+Mermaid (rendered by GitHub)
 ```mermaid
 ---
 config:
@@ -39,8 +40,9 @@ flowchart TB
   style speakers fill: #6fc1b5
   style out fill: #c2df94
 ```
+Dot (as SVG):
+![workflow](https://github.com/user-attachments/assets/4b19b2d7-0397-40c0-8934-7a968d643d1e)
 
-</details>
 
 # v0.6.0
 ## 🚀 Features
