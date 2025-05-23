@@ -136,6 +136,7 @@ The three CommandLineTools now will be combined into an automated pipeline. A ba
 s4n workflow create demo
 ```
 The workflow that is being built looks like the graph represented in the following image
+
 ![the final resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_interim.svg)
 
 First of all a connection between the donwload script and `get_feature_info` as well as `plot_election` is created by
