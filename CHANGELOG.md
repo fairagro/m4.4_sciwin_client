@@ -1,4 +1,42 @@
 # Unreleased
+## 🚀 Features
+- Added command `s4n workflow visualize` which accepts a path and either `mermaid` or `dot` as renderer outputting diagrams such as
+```mermaid
+---
+config:
+  theme: base
+  look: neo
+  themeVariables:
+    primaryColor: '#9acb4e'
+    primaryTextColor: '#231f20'
+    lineColor: '#0f9884'
+    tertiaryTextColor: '#231f20'
+    fontFamily: 'Fira Sans, trebuchet ms, verdana, arial'
+---
+flowchart TB
+  subgraph inputs
+    direction TB
+        population(population)
+        speakers(speakers)
+  end
+  subgraph outputs
+    direction TB
+        out(out)
+    end
+
+  calculation(calculation)
+  population --> calculation
+  speakers --> calculation
+  plot(plot)
+  calculation --> plot
+  plot --> out
+
+  style inputs fill: #cfeae6
+  style outputs fill: #e1f2df
+  style population fill: #6fc1b5
+  style speakers fill: #6fc1b5
+  style out fill: #c2df94
+```
 
 # v0.6.0
 ## 🚀 Features
