@@ -3949,6 +3949,7 @@ dependencies = [
  "reqwest",
  "rstest",
  "rust_xlsxwriter",
+ "rustyscript",
  "semver 1.0.26",
  "serde",
  "serde_json",

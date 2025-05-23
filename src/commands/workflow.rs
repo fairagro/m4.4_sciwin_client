@@ -3,7 +3,7 @@ use crate::{
     io::get_workflows_folder,
     repo::{commit, stage_file},
 };
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
@@ -29,6 +29,7 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dy
         WorkflowCommands::Status(args) => get_workflow_status(args),
         WorkflowCommands::List(args) => list_workflows(args),
         WorkflowCommands::Remove(args) => remove_workflow(args),
+        WorkflowCommands::Visualize(args) => visualize(&args.filenme, &args.renderer),
     }
 }
 
@@ -48,6 +49,8 @@ pub enum WorkflowCommands {
     List(ListWorkflowArgs),
     #[command(about = "Remove a workflow", visible_alias = "rm")]
     Remove(RemoveWorkflowArgs),
+    #[command(about = "Creates a visual representation of a workflow")]
+    Visualize(VisualizeWorkflowArgs),
 }
 
 #[derive(Args, Debug)]
@@ -404,4 +407,140 @@ pub fn remove_workflow(args: &RemoveWorkflowArgs) -> Result<(), Box<dyn Error>> 
         error!("Please enter a tool or a list of workflows");
     }
     Ok(())
+}
+
+#[derive(Args, Debug)]
+pub struct VisualizeWorkflowArgs {
+    #[arg(help = "Path to a workflow")]
+    pub filenme: PathBuf,
+    #[arg(short = 'r', long = "renderer", help = "Select a flavor", value_enum, default_value_t = Renderer::Mermaid)]
+    pub renderer: Renderer,
+}
+
+#[derive(Default, Debug, Clone, ValueEnum)]
+pub enum Renderer {
+    #[default]
+    Mermaid,
+    Dot,
+}
+
+pub fn visualize(filename: &PathBuf, renderer: &Renderer) -> Result<(), Box<dyn Error>> {
+    let cwl = load_workflow(filename)?;
+
+    let code = match renderer {
+        Renderer::Dot => dot(&cwl)?,
+        Renderer::Mermaid => mermaid(&cwl)?,
+    };
+    println!("{code}");
+    Ok(())
+}
+
+fn mermaid(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
+    let cfg = r#"---
+config:
+  theme: base
+  look: neo
+  themeVariables:
+    primaryColor: '#9acb4e'
+    primaryTextColor: '#231f20'
+    lineColor: '#0f9884'
+    tertiaryTextColor: '#231f20'
+    fontFamily: 'Fira Sans, trebuchet ms, verdana, arial'
+---"#;
+
+    let mut nodes = vec![cfg.to_string()];
+    nodes.push("flowchart TB".to_string());
+    nodes.push("  subgraph inputs".to_string());
+    nodes.push("    direction TB".to_string());
+    for input in &cwl.inputs {
+        nodes.push(format!("        {}({})", input.id, input.id));
+    }
+    nodes.push("  end".to_string());
+
+    nodes.push("  subgraph outputs".to_string());
+    nodes.push("    direction TB".to_string());
+    for output in &cwl.outputs {
+        nodes.push(format!("        {}({})", output.id, output.id));
+    }
+    nodes.push("    end".to_string());
+
+    nodes.push(String::new());
+    for step in &cwl.steps {
+        nodes.push(format!("  {}({})", step.id, step.id));
+
+        for input in &step.in_ {
+            if let Some(src) = &input.source {
+                let src_id = src.split("/").next().unwrap();
+                nodes.push(format!("  {} --> {}", src_id, step.id));
+            }
+        }
+    }
+
+    for output in &cwl.outputs {
+        let src = output.output_source.split("/").next().unwrap();
+        nodes.push(format!("  {} --> {}", src, output.id));
+    }
+
+    nodes.push(String::new());
+    nodes.push("  style inputs fill: #cfeae6".to_string());
+    nodes.push("  style outputs fill: #e1f2df".to_string());
+
+    for input in &cwl.inputs {
+        nodes.push(format!("  style {} fill: #6fc1b5", input.id));
+    }
+
+    for output in &cwl.outputs {
+        nodes.push(format!("  style {} fill: #c2df94", output.id))
+    }
+
+    Ok(nodes.join("\n"))
+}
+
+fn dot(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
+    let mut nodes = vec![
+        "digraph workflow {".to_string(),
+        "  rankdir=TB;".to_string(),
+        "  node [fontname=\"Fira Sans\", style=filled, shape=box];".to_string(),
+    ];
+
+    nodes.push("  subgraph cluster_inputs {".to_string());
+    nodes.push("    label=\"inputs\";".to_string());
+    nodes.push("    fontname=\"Fira Sans\";".to_string());
+    nodes.push("    style=\"filled\";".to_string());
+    nodes.push("    color=\"#6fc1b5\";".to_string());
+    nodes.push("    fillcolor=\"#cfeae6\";".to_string());
+    for input in &cwl.inputs {
+        nodes.push(format!("    {} [label=\"{}\", fillcolor=\"#6fc1b5\"];", input.id, input.id));
+    }
+    nodes.push("  }".to_string());
+
+    nodes.push("  subgraph cluster_outputs {".to_string());
+    nodes.push("    label=\"outputs\";".to_string());
+    nodes.push("    fontname=\"Fira Sans\";".to_string());
+    nodes.push("    style=filled;".to_string());
+    nodes.push("    color=\"#a5d89d\";".to_string());
+    nodes.push("    fillcolor=\"#e1f2df\";".to_string());
+    for output in &cwl.outputs {
+        nodes.push(format!("    {} [label=\"{}\", fillcolor=\"#c2df94\"];", output.id, output.id));
+    }
+    nodes.push("  }".to_string());
+    for step in &cwl.steps {
+        nodes.push(format!("  {} [label=\"{}\", fillcolor=\"#9acb4e\"];", step.id, step.id));
+
+        for input in &step.in_ {
+            if let Some(src) = &input.source {
+                let src_id = src.split("/").next().unwrap();
+                nodes.push(format!("  {} -> {};", src_id, step.id));
+            }
+        }
+    }
+
+    for output in &cwl.outputs {
+        let src = output.output_source.split("/").next().unwrap();
+        nodes.push(format!("  {} -> {};", src, output.id));
+    }
+
+    nodes.push("}".to_string());
+
+    Ok(nodes.join("\n"))
 }
