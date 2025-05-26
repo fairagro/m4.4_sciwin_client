@@ -25,8 +25,14 @@ h1.title {
 
 .hero {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     min-height: 60vh;
+    justify-content: center;
+}
+
+.hero-left {
+    display: flex;
+    flex-direction: column;
     justify-content: center;
 }
 

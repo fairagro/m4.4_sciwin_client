@@ -4,15 +4,18 @@ hide:
   - toc
 ---
 <div class="hero" markdown>
+<div class="hero-left" markdown>
 <img src="assets/logo.svg" alt="logo" width="600"/> 
 
 # SciWin Client User Documentation { .title }
-
 Computational workflows, which describe complex, multi-step procedures for automated execution, are essential for ensuring reproducibility, scalability, and efficiency in scientific research. The FAIRagro Scientific Workflow Infrastructure (SciWIn) supports scientists to create, execute, share, and publish these workflows, fostering collaboration and transparency.
 
-[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
-
 [Get started](./getting-started/index.md){ .md-button .md-button--primary }
+
+</div>
+
+![screenshot](assets/s4n_screenshot.png)
+
 </div>
 
 <div class="grid cards" markdown>
