@@ -30,18 +30,18 @@ h1.title {
         flex-direction: row;
         justify-content: center;
     }
-}
 
-.hero-left {
-    display: flex;
-    flex: 2;
-    flex-direction: column;
-    justify-content: center;
-}
+    .hero-left {
+        display: flex;
+        flex: 2;
+        flex-direction: column;
+        justify-content: center;
+    }
 
-.hero>p {
-    align-content: center;
-    flex: 1.2;
+    .hero>p {
+        align-content: center;
+        flex: 1.2;
+    }
 }
 
 .hero .md-button {
