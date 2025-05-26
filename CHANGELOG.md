@@ -1,4 +1,6 @@
 # Unreleased
+
+# v0.6.1
 ## 🚀 Features
 - Added command `s4n workflow visualize` which accepts a path and either `mermaid` or `dot` as renderer outputting diagrams
 
