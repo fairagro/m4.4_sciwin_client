@@ -435,29 +435,41 @@ pub fn visualize(filename: &PathBuf, renderer: &Renderer) -> Result<(), Box<dyn 
     Ok(())
 }
 
+static BROWN_LIGHT: &str = "#F8CBAD";
+static BROWN_DARK: &str = "#823909";
+static GRAY_LIGHT: &str = "#EEEEEE";
+static GRAY_DARK: &str = "#818281";
+static GREEN_LIGHT: &str = "#C5E0B4";
+static GREEN_DARK: &str = "#385723";
+static BLUE_LIGHT: &str = "#6FC1B5";
+static BLUE_DARK: &str = "#0f9884";
+
 fn mermaid(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
-    let cfg = r#"---
+    let cfg = format!(
+        r#"---
 config:
   theme: base
   look: neo
   themeVariables:
-    primaryColor: '#9acb4e'
+    primaryColor: '{GREEN_LIGHT}'
     primaryTextColor: '#231f20'
-    lineColor: '#0f9884'
+    lineColor: '{GREEN_DARK}'
     tertiaryTextColor: '#231f20'
     fontFamily: 'Fira Sans, trebuchet ms, verdana, arial'
----"#;
+---"#
+    );
 
     let mut nodes = vec![cfg.to_string()];
     nodes.push("flowchart TB".to_string());
-    nodes.push("  subgraph inputs".to_string());
+    nodes.push(format!("  linkStyle default stroke:{GREEN_DARK},stroke-width: 2px;"));
+    nodes.push("  subgraph inputs[Workflow Inputs]".to_string());
     nodes.push("    direction TB".to_string());
     for input in &cwl.inputs {
         nodes.push(format!("        {}({})", input.id, input.id));
     }
     nodes.push("  end".to_string());
 
-    nodes.push("  subgraph outputs".to_string());
+    nodes.push("  subgraph outputs[Workflow Outputs]".to_string());
     nodes.push("    direction TB".to_string());
     for output in &cwl.outputs {
         nodes.push(format!("        {}({})", output.id, output.id));
@@ -467,6 +479,7 @@ config:
     nodes.push(String::new());
     for step in &cwl.steps {
         nodes.push(format!("  {}({})", step.id, step.id));
+        nodes.push(format!("  style {} stroke:{GREEN_DARK},stroke-width:2px;", step.id));
 
         for input in &step.in_ {
             if let Some(src) = &input.source {
@@ -482,15 +495,15 @@ config:
     }
 
     nodes.push(String::new());
-    nodes.push("  style inputs fill: #cfeae6".to_string());
-    nodes.push("  style outputs fill: #e1f2df".to_string());
+    nodes.push(format!("  style inputs fill:{GRAY_LIGHT},stroke-width:2px;"));
+    nodes.push(format!("  style outputs fill:{GRAY_LIGHT},stroke-width:2px;"));
 
     for input in &cwl.inputs {
-        nodes.push(format!("  style {} fill: #6fc1b5", input.id));
+        nodes.push(format!("  style {} stroke:{BLUE_DARK},fill:{BLUE_LIGHT},stroke-width:2px;", input.id));
     }
 
     for output in &cwl.outputs {
-        nodes.push(format!("  style {} fill: #c2df94", output.id))
+        nodes.push(format!("  style {} stroke:{BROWN_DARK},fill:{BROWN_LIGHT},stroke-width:2px;", output.id))
     }
 
     Ok(nodes.join("\n"))
@@ -500,44 +513,58 @@ fn dot(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
     let mut nodes = vec![
         "digraph workflow {".to_string(),
         "  rankdir=TB;".to_string(),
-        "  node [fontname=\"Fira Sans\", style=filled, shape=box];".to_string(),
+        "  bgcolor=\"transparent\";".to_string(),
+        "  node [fontname=\"Fira Sans\", style=filled, shape=box, penwidth=2];".to_string(),
     ];
 
     nodes.push("  subgraph cluster_inputs {".to_string());
-    nodes.push("    label=\"inputs\";".to_string());
+    nodes.push("    label=\"Workflow Inputs\";".to_string());
     nodes.push("    fontname=\"Fira Sans\";".to_string());
+    nodes.push("    labelloc=t;".to_string());
+    nodes.push("    penwidth=2;".to_string());
     nodes.push("    style=\"filled\";".to_string());
-    nodes.push("    color=\"#6fc1b5\";".to_string());
-    nodes.push("    fillcolor=\"#cfeae6\";".to_string());
+    nodes.push(format!("    color=\"{GRAY_DARK}\";"));
+    nodes.push(format!("    fillcolor=\"{GRAY_LIGHT}\";"));
     for input in &cwl.inputs {
-        nodes.push(format!("    {} [label=\"{}\", fillcolor=\"#6fc1b5\"];", input.id, input.id));
+        nodes.push(format!(
+            "    {} [label=\"{}\", fillcolor=\"{BLUE_LIGHT}\", color=\"{BLUE_DARK}\"];",
+            input.id, input.id
+        ));
     }
     nodes.push("  }".to_string());
 
     nodes.push("  subgraph cluster_outputs {".to_string());
-    nodes.push("    label=\"outputs\";".to_string());
+    nodes.push("    label=\"Workflow Outputs\";".to_string());
     nodes.push("    fontname=\"Fira Sans\";".to_string());
+    nodes.push("    labelloc=b;".to_string());
+    nodes.push("    penwidth=2;".to_string());
     nodes.push("    style=filled;".to_string());
-    nodes.push("    color=\"#a5d89d\";".to_string());
-    nodes.push("    fillcolor=\"#e1f2df\";".to_string());
+    nodes.push(format!("    color=\"{GRAY_DARK}\";"));
+    nodes.push(format!("    fillcolor=\"{GRAY_LIGHT}\";"));
     for output in &cwl.outputs {
-        nodes.push(format!("    {} [label=\"{}\", fillcolor=\"#c2df94\"];", output.id, output.id));
+        nodes.push(format!(
+            "    {} [label=\"{}\", fillcolor=\"{BROWN_LIGHT}\", color=\"{BROWN_DARK}\"];",
+            output.id, output.id
+        ));
     }
     nodes.push("  }".to_string());
     for step in &cwl.steps {
-        nodes.push(format!("  {} [label=\"{}\", fillcolor=\"#9acb4e\"];", step.id, step.id));
+        nodes.push(format!(
+            "  {} [label=\"{}\", fillcolor=\"{GREEN_LIGHT}\", color=\"{GREEN_DARK}\"];",
+            step.id, step.id
+        ));
 
         for input in &step.in_ {
             if let Some(src) = &input.source {
                 let src_id = src.split("/").next().unwrap();
-                nodes.push(format!("  {} -> {};", src_id, step.id));
+                nodes.push(format!("  {} -> {}[penwidth=2, color=\"{GREEN_DARK}\"];", src_id, step.id));
             }
         }
     }
 
     for output in &cwl.outputs {
         let src = output.output_source.split("/").next().unwrap();
-        nodes.push(format!("  {} -> {};", src, output.id));
+        nodes.push(format!("  {} -> {}[penwidth=2, color=\"{GREEN_DARK}\"];", src, output.id));
     }
 
     nodes.push("}".to_string());
