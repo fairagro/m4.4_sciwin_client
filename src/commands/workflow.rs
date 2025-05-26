@@ -8,7 +8,7 @@ use colored::Colorize;
 use cwl::{
     format::format_cwl,
     load_tool, load_workflow,
-    wf::{StringOrDocument, Workflow},
+    wf::{StringOrDocument, Workflow, WorkflowStep},
     CWLDocument,
 };
 use cwl_execution::io::create_and_write_file;
@@ -29,7 +29,7 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dy
         WorkflowCommands::Status(args) => get_workflow_status(args),
         WorkflowCommands::List(args) => list_workflows(args),
         WorkflowCommands::Remove(args) => remove_workflow(args),
-        WorkflowCommands::Visualize(args) => visualize(&args.filenme, &args.renderer),
+        WorkflowCommands::Visualize(args) => visualize(&args.filename, &args.renderer, args.no_defaults),
     }
 }
 
@@ -412,9 +412,11 @@ pub fn remove_workflow(args: &RemoveWorkflowArgs) -> Result<(), Box<dyn Error>> 
 #[derive(Args, Debug)]
 pub struct VisualizeWorkflowArgs {
     #[arg(help = "Path to a workflow")]
-    pub filenme: PathBuf,
+    pub filename: PathBuf,
     #[arg(short = 'r', long = "renderer", help = "Select a flavor", value_enum, default_value_t = Renderer::Mermaid)]
     pub renderer: Renderer,
+    #[arg(long = "no-defaults", help = "Do not print default values", default_value_t = false)]
+    pub no_defaults: bool,
 }
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -424,12 +426,12 @@ pub enum Renderer {
     Dot,
 }
 
-pub fn visualize(filename: &PathBuf, renderer: &Renderer) -> Result<(), Box<dyn Error>> {
+pub fn visualize(filename: &PathBuf, renderer: &Renderer, no_defaults: bool) -> Result<(), Box<dyn Error>> {
     let cwl = load_workflow(filename)?;
 
     let code = match renderer {
-        Renderer::Dot => dot(&cwl)?,
-        Renderer::Mermaid => mermaid(&cwl)?,
+        Renderer::Dot => dot(&cwl, filename, no_defaults)?,
+        Renderer::Mermaid => mermaid(&cwl, filename, no_defaults)?,
     };
     println!("{code}");
     Ok(())
@@ -443,8 +445,10 @@ static GREEN_LIGHT: &str = "#C5E0B4";
 static GREEN_DARK: &str = "#385723";
 static BLUE_LIGHT: &str = "#6FC1B5";
 static BLUE_DARK: &str = "#0f9884";
+static BLUE_LIGHTER: &str = "#9FD6CE";
+static BLUE_LIGHTEST: &str = "#cfeae6";
 
-fn mermaid(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
+fn mermaid(cwl: &Workflow, filename: &Path, no_defaults: bool) -> Result<String, Box<dyn Error>> {
     let cfg = format!(
         r#"---
 config:
@@ -453,7 +457,9 @@ config:
   themeVariables:
     primaryColor: '{GREEN_LIGHT}'
     primaryTextColor: '#231f20'
-    lineColor: '{GREEN_DARK}'
+    secondaryColor: '{GRAY_LIGHT}'
+    lineColor: '{GREEN_DARK}'    
+    fontSize: 12px
     tertiaryTextColor: '#231f20'
     fontFamily: 'Fira Sans, trebuchet ms, verdana, arial'
 ---"#
@@ -484,14 +490,34 @@ config:
         for input in &step.in_ {
             if let Some(src) = &input.source {
                 let src_id = src.split("/").next().unwrap();
-                nodes.push(format!("  {} --> {}", src_id, step.id));
+                nodes.push(format!("  {} --> |{}|{}", src_id, input.id, step.id));
+            }
+        }
+
+        if !no_defaults {
+            if let Some(doc) = load_step(step, filename) {
+                for input in &doc.inputs {
+                    if !step.in_.iter().any(|i| i.id == input.id) && input.default.is_some() {
+                        nodes.push(format!(
+                            "  {}_{}({})",
+                            step.id,
+                            input.id,
+                            input.default.as_ref().unwrap().as_value_string()
+                        ));
+                        nodes.push(format!(
+                            "  style {}_{} font-size:9px,fill:{BLUE_LIGHTEST}, stroke:{BLUE_LIGHTER},stroke-width:2px;",
+                            step.id, input.id
+                        ));
+                        nodes.push(format!("  {}_{} -->|{}| {}", step.id, input.id, input.id, step.id));
+                    }
+                }
             }
         }
     }
 
     for output in &cwl.outputs {
         let src = output.output_source.split("/").next().unwrap();
-        nodes.push(format!("  {} --> {}", src, output.id));
+        nodes.push(format!("  {} --> |{}|{}", src, output.id, output.id));
     }
 
     nodes.push(String::new());
@@ -509,12 +535,13 @@ config:
     Ok(nodes.join("\n"))
 }
 
-fn dot(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
+fn dot(cwl: &Workflow, filename: &Path, no_defaults: bool) -> Result<String, Box<dyn Error>> {
     let mut nodes = vec![
         "digraph workflow {".to_string(),
         "  rankdir=TB;".to_string(),
         "  bgcolor=\"transparent\";".to_string(),
-        "  node [fontname=\"Fira Sans\", style=filled, shape=box, penwidth=2];".to_string(),
+        "  node [fontname=\"Fira Sans\", style=filled, shape=record, penwidth=2];".to_string(),
+        format!("  edge [fontname=\"Fira Sans\", fontsize=\"9\",fontcolor=\"{GRAY_DARK}\",penwidth=2, color=\"{GREEN_DARK}\"]"),
     ];
 
     nodes.push("  subgraph cluster_inputs {".to_string());
@@ -557,17 +584,49 @@ fn dot(cwl: &Workflow) -> Result<String, Box<dyn Error>> {
         for input in &step.in_ {
             if let Some(src) = &input.source {
                 let src_id = src.split("/").next().unwrap();
-                nodes.push(format!("  {} -> {}[penwidth=2, color=\"{GREEN_DARK}\"];", src_id, step.id));
+                nodes.push(format!("  {} -> {}[label=\"{}\"];", src_id, step.id, input.id));
+            }
+        }
+        if !no_defaults {
+            if let Some(doc) = load_step(step, filename) {
+                for input in &doc.inputs {
+                    if !step.in_.iter().any(|i| i.id == input.id) && input.default.is_some() {
+                        nodes.push(format!(
+                            "  {}_{} [label=\"{}\", height=0.25, fontsize=10, color=\"{BLUE_LIGHTER}\", fillcolor=\"{BLUE_LIGHTEST}\"];",
+                            step.id,
+                            input.id,
+                            input.default.as_ref().unwrap().as_value_string()
+                        ));
+                        nodes.push(format!(
+                            "  {}_{} -> {}[label=\"{}\", style=dashed];",
+                            step.id, input.id, step.id, input.id
+                        ));
+                    }
+                }
             }
         }
     }
 
     for output in &cwl.outputs {
         let src = output.output_source.split("/").next().unwrap();
-        nodes.push(format!("  {} -> {}[penwidth=2, color=\"{GREEN_DARK}\"];", src, output.id));
+        nodes.push(format!("  {} -> {}[label=\"{}\"];", src, output.id, output.id));
     }
 
     nodes.push("}".to_string());
 
     Ok(nodes.join("\n"))
+}
+
+fn load_step(step: &WorkflowStep, filename: &Path) -> Option<CWLDocument> {
+    match &step.run {
+        StringOrDocument::String(f) => {
+            let step_path = filename.parent().unwrap_or(Path::new("")).join(f);
+            if step_path.exists() {
+                Some(serde_yaml::from_str(&fs::read_to_string(step_path).ok()?).ok()?)
+            } else {
+                None
+            }
+        }
+        StringOrDocument::Document(doc) => Some((**doc).clone()),
+    }
 }
