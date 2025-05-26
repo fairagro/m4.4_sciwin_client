@@ -15,6 +15,7 @@ The workflow commands provide easy ways to perform operations on CWL Workflow fi
       status      Shows socket status of workflow
       list        List all workflows [aliases: ls]
       remove      Remove a workflow [aliases: rm]
+      visualize   Creates a visual representation of a workflow
       help        Print this message or the help of the given subcommand(s)
 
     Options:
@@ -156,7 +157,7 @@ The save command simply commits the changes made to a workflow using git.
     Options:
       -f, --force  Overwrites existing workflow
       -h, --help   Print help
-```
+    ```
 
 ## `workflow status`
 The `workflow status` command shows the current connection status of a workflow. Successfully connected sockets are marked in green, a gray icon shows the usage of a tool's default value and the red cross shows unconnected sockets.
@@ -219,4 +220,21 @@ The `workflow status` command shows the current connection status of a workflow.
 
     Options:
       -h, --help  Print help
+    ```
+  
+## `workflow visualize`
+Enables to publishing visual representation of workflows using either the GraphViz (dot) or mermaid format.
+
+!!! abstract "Usage"
+    ```
+    Creates a visual representation of a workflow
+
+    Usage: s4n workflow visualize [OPTIONS] <FILENME>
+    
+    Arguments:
+      <FILENME>  Path to a workflow
+    
+    Options:
+      -r, --renderer <RENDERER>  Select a flavor [default: mermaid] [possible values: mermaid, dot]
+      -h, --help                 Print help
     ```
