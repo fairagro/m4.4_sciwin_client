@@ -25,15 +25,27 @@ h1.title {
 
 .hero {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     min-height: 60vh;
     justify-content: center;
 }
 
+@media screen and (min-width: 905px) {
+    .hero {
+        flex-direction: row;
+    }
+}
+
 .hero-left {
     display: flex;
+    flex: 2;
     flex-direction: column;
     justify-content: center;
+}
+
+.hero>p {
+    align-content: center;
+    flex: 1.2;
 }
 
 .hero .md-button {
