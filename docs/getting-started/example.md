@@ -366,7 +366,6 @@ speakers:
 Before running the workflow the output files of the script execution should be deleted to verify the correct execution. The workflow can be executed locally by using the following command which concludes this example.
 ```bash
 s4n execute local workflows/main/main.cwl inputs.yml
-# 💻 Executing "workflows/main/main.cwl" using SciWIn's custom runner. Use `--runner cwltool` to use reference runner (if installed). 
 # ⚠️  The internal runner currently is for testing purposes only and does not support containerization, yet!
 # 🚲 Executing CommandLineTool "workflows/main/../calculation/calculation.cwl" ...
 # 📁 Created staging directory: "/tmp/.tmpo1VAdn"

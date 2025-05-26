@@ -110,9 +110,9 @@ As input parameter we wish to use the `hello-world` input of the `echo` tool and
 
 To save the workflow `s4n workflow save echo-cat` is used.
 
-Workflow visualizations can be achieved using `cwltool`
+Workflow visualizations can be achieved using `s4n workflow visualize`
 ```
-cwltool --print-dot workflows/echo-cat/echo-cat.cwl | dot -Tsvg > workflow.svg
+s4n workflow visualize -r dot workflows/echo-cat/echo-cat.cwl | dot -Tsvg > workflow.svg
 ```
 
 ![created workflow](../assets/workflow_01.svg)

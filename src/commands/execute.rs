@@ -21,7 +21,7 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
 
 #[derive(Debug, Subcommand)]
 pub enum ExecuteCommands {
-    #[command(about = "Runs CWL files locally using a custom runner or cwltool", visible_alias = "l")]
+    #[command(about = "Runs CWL files locally", visible_alias = "l")]
     Local(LocalExecuteArgs),
     #[command(about = "Runs CWL files remotely using reana", visible_alias = "r")]
     Remote(RemoteExecuteArgs),

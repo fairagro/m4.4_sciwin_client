@@ -7,7 +7,7 @@ The `execute` command provides tools to execute CWL documents locally or on a re
     Usage: s4n execute <COMMAND>
 
     Commands:
-      local  Runs CWL files locally using a custom runner or cwltool [aliases: l]      
+      local  Runs CWL files locally [aliases: l]      
       make-template  Creates job file template for execution (e.g. inputs.yaml)
       help   Print this message or the help of the given subcommand(s)
 
@@ -18,7 +18,7 @@ The `execute` command provides tools to execute CWL documents locally or on a re
 ## `execute local`
 !!! abstract "Usage"
     ```
-    Runs CWL files locally using a custom runner or cwltool
+    Runs CWL files locally
 
     Usage: s4n execute local [OPTIONS] <FILE> [ARGS]...
 
