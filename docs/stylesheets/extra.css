@@ -28,7 +28,6 @@ h1.title {
     flex-direction: column;
     min-height: 60vh;
     justify-content: center;
-    font-size: 1.25rem;
 }
 
 .hero .md-button {
