@@ -13,7 +13,7 @@ use slugify::slugify;
 use std::{collections::HashSet, fs, path::Path};
 
 //TODO complete list
-static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript"];
+static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
