@@ -117,17 +117,17 @@ pip install plotly pandas kaleido matplotlib
 The next step is to download election data using a series of API calls for which luckily already a script exists. The script downloads the data from `votemanager.kdo.de` and writes the `csv` to stdout.
 A tool can be created easily be prefixing the python call. However we also need to escape the `>` using a backslash for it to properly work
 ```bash
-s4n tool create python code/download_election_data.py --ags 03101000 --election "Bundestagswahl 2025" \> election.csv
+s4n tool create python code/download_election_data.py --ags 03101000 --election "Bundestagswahl 2025" \> data.csv
 ```
 
 The written csv file lacks the header information of which party results correspond to which column. Therefore we use the `get_feature_info` script and create a tool as follows:
 ```bash
-s4n tool create python code/get_feature_info.py --data election.csv
+s4n tool create python code/get_feature_info.py --data data.csv
 ```
 
 With this information the election plot can be outputted. The script `plot_election` does the job and accepts the json file from `get_feature_info` and the aforementioned csv.
 ```bash
-s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_election.py --data election.csv --features features.json
+s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_election.py --data data.csv --features features.json
 ```
 
 ## Combining the Tools into a workflow
@@ -137,12 +137,12 @@ s4n workflow create demo
 ```
 The workflow that is being built looks like the graph represented in the following image
 
-![the final resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_interim.svg)
+![the resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_interim.svg)
 
 First of all a connection between the donwload script and `get_feature_info` as well as `plot_election` is created by
 ```bash
-s4n workflow connect demo --from download_election_data/election --to get_feature_info/data
-s4n workflow connect demo --from download_election_data/election --to plot_election/data
+s4n workflow connect demo --from download_election_data/data --to get_feature_info/data
+s4n workflow connect demo --from download_election_data/data --to plot_election/data
 ```
 To get the correct values for `--from` and `--to` the command `s4n tool ls -a` can be used.
 
@@ -194,7 +194,7 @@ git add . && git commit -m "Execution of shp2geojson"
 
 In the last step the plot tool needs to be created. In this tool `plotly` is used to create a `choropleth` graph based on the outputs of the preceeding steps. The packages installed to the virtual environment are needed here. A Dockerfile to use is already in the repo.
 ```bash
-s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_map.py --geojson districts.geojson --csv election.csv --feature F3 --on gebiet-nr:BEZNUM --output_name plot
+s4n tool create -c Dockerfile --container-tag pyplot --enable-network python code/plot_map.py --geojson districts.geojson --csv data.csv --feature F3 --on gebiet-nr:BEZNUM --output_name plot
 ```
 
 ## Adding the new tools to Workflow
@@ -209,7 +209,7 @@ s4n workflow connect demo --from shp2geojson/districts --to plot_map/geojson
 
 As the plot step also needs the election data, another connection can be created.
 ```bash
-s4n workflow connect demo --from download_election_data/election --to plot_map/csv
+s4n workflow connect demo --from download_election_data/data --to plot_map/csv
 ```
 
 Now we need to wire up the inputs. The input connections for `ags`, `election`, `feature`and `shapes` will be created as follows:
@@ -242,9 +242,4 @@ shapes:
   class: Directory
   location: data/braunschweig
 feature: F3
-```
-
-Execution of the Workflow is done by
-```bash
-s4n execute local workflows/demo/demo.cwl inputs.yml
 ```
