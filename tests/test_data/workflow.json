@@ -1,0 +1,200 @@
+{
+  "inputs": {
+    "directories": [
+      "tests/test_data/hello_world/workflows"
+    ],
+    "files": [
+      "data/speakers_revised.csv",
+      "data/population.csv"
+    ],
+    "parameters": {
+      "population": {
+        "class": "File",
+        "location": "data/population.csv"
+      },
+      "speakers": {
+        "class": "File",
+        "location": "data/speakers_revised.csv"
+      }
+    }
+  },
+  "outputs": {
+    "files": [
+      "results.svg"
+    ]
+  },
+  "version": "0.9.4",
+  "workflow": {
+    "file": "hello_world/workflows/main/main.cwl",
+    "specification": {
+      "$graph": [
+        {
+          "class": "Workflow",
+          "cwlVersion": "v1.2",
+          "id": "#main",
+          "name": "execution of main.cwl",
+          "description": "calculates the number of speakers per language",
+          "license": "https://spdx.org/licenses/CC-BY-4.0.html",
+          "inputs": [
+            {
+              "id": "#main/population",
+              "type": "File"
+            },
+            {
+              "id": "#main/speakers",
+              "type": "File"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "out",
+              "outputSource": "#main/plot/results",
+              "type": "File"
+            }
+          ],
+          "steps": [
+            {
+              "id": "#main/calculation",
+              "in": [
+                {
+                  "id": "#main/calculation/population",
+                  "source": "#main/population"
+                },
+                {
+                  "id": "#main/calculation/speakers",
+                  "source": "#main/speakers"
+                }
+              ],
+              "out": [
+                {
+                  "id": "#main/calculation/results"
+                }
+              ],
+              "run": "#calculation/calculation.cwl"
+            },
+            {
+              "id": "#main/plot",
+              "in": [
+                {
+                  "id": "#main/plot/results",
+                  "source": "#main/calculation/results"
+                }
+              ],
+              "out": [
+                {
+                  "id": "#main/plot/results"
+                }
+              ],
+              "run": "#plot/plot.cwl"
+            }
+          ]
+        },
+        {
+          "baseCommand": [
+            "python",
+            "calculation.py"
+          ],
+          "class": "CommandLineTool",
+          "id": "#calculation/calculation.cwl",
+          "inputs": [
+            {
+              "default": {
+                "class": "File",
+                "location": "file:///mnt/c/Users/user/Documents/M4_4/hello_world/data/population.csv"
+              },
+              "id": "#calculation/calculation.cwl/population",
+              "inputBinding": {
+                "prefix": "--population"
+              },
+              "type": "File"
+            },
+            {
+              "default": {
+                "class": "File",
+                "location": "file:///mnt/c/Users/user/Documents/M4_4/hello_world/data/speakers_revised.csv"
+              },
+              "id": "#calculation/calculation.cwl/speakers",
+              "inputBinding": {
+                "prefix": "--speakers"
+              },
+              "type": "File"
+            }
+          ],
+          "label": null,
+          "outputs": [
+            {
+              "id": "#calculation/calculation.cwl/results",
+              "outputBinding": {
+                "glob": "results.csv"
+              },
+              "type": "File"
+            }
+          ],
+          "requirements": [
+            {
+              "class": "InitialWorkDirRequirement",
+              "listing": [
+                {
+                  "entry": "import pandas as pd\nimport argparse\n\nparser = argparse.ArgumentParser(prog=\"python calculation.py\", description=\"Calculates the percentage of speakers for each language\")\nparser.add_argument(\"-p\", \"--population\", required=True, help=\"Path to the population.csv File\")\nparser.add_argument(\"-s\", \"--speakers\", required=True, help=\"Path to the speakers.csv File\")\n\nargs = parser.parse_args()\n\ndf = pd.read_csv(args.population)\nsum = df[\"population\"].sum()\n\nprint(f\"Total population: {sum}\")\n\ndf = pd.read_csv(args.speakers)\ndf[\"percentage\"] = df[\"speakers\"] / sum * 100\n\ndf.to_csv(\"results.csv\")\nprint(df.head(10))",
+                  "entryname": "calculation.py"
+                }
+              ]
+            },
+            {
+              "class": "DockerRequirement",
+              "dockerPull": "pandas/pandas:pip-all"
+            }
+          ]
+        },
+        {
+          "baseCommand": [
+            "python",
+            "plot.py"
+          ],
+          "class": "CommandLineTool",
+          "id": "#plot/plot.cwl",
+          "inputs": [
+            {
+              "default": {
+                "class": "File",
+                "location": "file:///mnt/c/Users/user/Documents/M4_4/hello_world/results.csv"
+              },
+              "id": "#calculation/calculation.cwl/results",
+              "inputBinding": {
+                "prefix": "--results"
+              },
+              "type": "File"
+            }
+          ],
+          "label": null,
+          "outputs": [
+            {
+              "id": "#plot/plot.cwl/results",
+              "outputBinding": {
+                "glob": "results.svg"
+              },
+              "type": "File"
+            }
+          ],
+          "requirements": [
+            {
+              "class": "InitialWorkDirRequirement",
+              "listing": [
+                {
+                  "entry": "import matplotlib\nfrom matplotlib import pyplot as plt\nimport pandas as pd\nimport argparse\nimport scienceplots\nassert scienceplots, 'scienceplots needed'\nplt.style.use(['science', 'no-latex'])\n\nparser = argparse.ArgumentParser(prog=\"python plot.py\", description=\"Plots the percentage of speakers for each language\")\nparser.add_argument(\"-r\", \"--results\", required=True, help=\"Path to the results.csv File\")\nargs = parser.parse_args()\n\ndf = pd.read_csv(args.results)\ncolors = matplotlib.colormaps['tab10'](range(len(df)))\n\nax = df.plot.bar(x='language', y='percentage', legend=False, title='Language Popularity', color=colors) \nax.yaxis.set_label_text('Percentage (%)')\nax.xaxis.set_label_text('')\n\nplt.savefig('results.svg')",
+                  "entryname": "plot.py"
+                }
+              ]
+            },
+            {
+              "class": "DockerRequirement",
+              "dockerPull": "user12398/pytest:v1.0.0"
+            }
+          ]
+        }
+      ],
+      "cwlVersion": "v1.2"
+    },
+    "type": "cwl"
+  }
+}

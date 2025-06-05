@@ -5,11 +5,13 @@ use cwl::{
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use remote_execution::{
-    api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files},
+    api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files, get_workflow_logs},
     parser::generate_workflow_json_from_cwl,
+    rocrate::create_ro_crate_metadata_json
 };
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
+use std::io::Write;
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -59,6 +61,8 @@ pub struct RemoteExecuteArgs {
     pub file: PathBuf,
     #[arg(short = 'i', long = "input", help = "Input yaml file")]
     pub input_file: Option<String>,
+    #[arg(long = "rocrate", help = "Create Provenance Run Crate")]
+    pub rocrate: bool,
 }
 
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
@@ -102,6 +106,19 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
                     "finished" => {
                         println!("✅ Workflow finished successfully.");
                         download_files(reana_instance, reana_token, workflow_name, &workflow_json)?;
+                         if args.rocrate {
+                            let logs = get_workflow_logs(reana_instance, reana_token, workflow_name)?;
+                            let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize JSON logs");
+                            let conforms_to = [
+                                "https://w3id.org/ro/wfrun/process/0.5",
+                                "https://w3id.org/ro/wfrun/workflow/0.5",
+                                "https://w3id.org/ro/wfrun/provenance/0.5",
+                                "https://w3id.org/workflowhub/workflow-ro-crate/1.0",
+                            ];
+                            let ro_crate_metadata_json = create_ro_crate_metadata_json(&workflow_json, &logs_str, &conforms_to)?;
+                            let json_str = serde_json::to_string_pretty(&ro_crate_metadata_json)?;
+                            std::fs::File::create("ro-crate-metadata.json")?.write_all(json_str.as_bytes())?;
+                         }
                     }
                     "failed" => {
                         eprintln!("❌ Workflow execution failed.");
