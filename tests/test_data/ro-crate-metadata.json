@@ -296,7 +296,7 @@
         }
       ],
       "datePublished": "2025-06-04T07:57:40.694686135+00:00",
-      "description": "calculates the number of speakers per language",
+      "description": "some test workflow",
       "hasPart": [
         {
           "@id": "population.csv"
@@ -321,7 +321,7 @@
       "mentions": {
         "@id": "#63d1502b-ebac-43b9-94b0-3e8177f9c440"
       },
-      "name": "execution of main.cwl"
+      "name": "hello_s4n"
     },
     {
       "@id": "#63d1502b-ebac-43b9-94b0-3e8177f9c440",

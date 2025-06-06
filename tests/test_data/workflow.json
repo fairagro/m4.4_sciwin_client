@@ -120,7 +120,6 @@
               "type": "File"
             }
           ],
-          "label": null,
           "outputs": [
             {
               "id": "#calculation/calculation.cwl/results",
@@ -166,7 +165,6 @@
               "type": "File"
             }
           ],
-          "label": null,
           "outputs": [
             {
               "id": "#plot/plot.cwl/results",

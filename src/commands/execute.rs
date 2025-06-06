@@ -1,3 +1,4 @@
+use crate::config::Config;
 use clap::{Args, Subcommand};
 use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
@@ -5,13 +6,15 @@ use cwl::{
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use remote_execution::{
-    api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files, get_workflow_logs},
+    api::{
+        create_workflow, download_files, get_workflow_logs, get_workflow_status, get_workflow_workspace, ping_reana, start_workflow, upload_files,
+    },
     parser::generate_workflow_json_from_cwl,
-    rocrate::create_ro_crate_metadata_json
+    rocrate::create_ro_crate,
 };
 use serde_yaml::{Number, Value};
-use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 use std::io::Write;
+use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -53,10 +56,6 @@ pub struct LocalExecuteArgs {
 
 #[derive(Args, Debug, Default)]
 pub struct RemoteExecuteArgs {
-    #[arg(short = 'r', long = "instance", help = "Reana instance")]
-    pub instance: String,
-    #[arg(short = 't', long = "token", help = "Your reana token")]
-    pub token: String,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
     #[arg(short = 'i', long = "input", help = "Input yaml file")]
@@ -81,60 +80,109 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
-    let reana_instance = &args.instance;
-    let reana_token = &args.token;
+    let ro_crate_dir = "rocrate";
     let file = &args.file;
     let input_file = &args.input_file;
+    let toml_content = std::fs::read_to_string("workflow.toml").map_err(|e| format!("❌ Failed to read workflow.toml: {e}"))?;
+    let mut config: Config = toml::from_str(&toml_content).map_err(|e| format!("❌ Failed to parse workflow.toml: {e}"))?;
+    let reana_instance = match config.reana.instance.as_deref() {
+        Some(url) => url.to_string(),
+        None => {
+            print!("Enter REANA instance URL: ");
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let value = input.trim().to_string();
+            config.reana.instance = Some(value.clone());
+            value
+        }
+    };
+    let reana_token = match config.reana.token.as_deref() {
+        Some(token) => token.to_string(),
+        None => {
+            print!("Enter REANA access token: ");
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let value = input.trim().to_string();
+            config.reana.token = Some(value.clone());
+            value
+        }
+    };
+    // Save updated config back to workflow.toml
+    let updated_toml = config.to_toml().map_err(|e| format!("❌ Failed to serialize updated config: {e}"))?;
+    fs::write("workflow.toml", &updated_toml).map_err(|e| format!("❌ Failed to write updated config to workflow.toml: {e}"))?;
 
     let workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
-
-    let ping_status = ping_reana(reana_instance)?;
+    let ping_status = ping_reana(&reana_instance)?;
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
-        eprintln!("Unexpected response from Reana server: {ping_status:?}");
+        eprintln!("Unexpected status response from Reana server: {ping_status:?}");
         return Ok(());
     }
-    let create_response = create_workflow(reana_instance, reana_token, &workflow_json)?;
+    let create_response = create_workflow(&reana_instance, &reana_token, &workflow_json)?;
     if let Some(workflow_name) = create_response["workflow_name"].as_str() {
-        upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)?;
+        upload_files(&reana_instance, &reana_token, input_file, file, workflow_name, &workflow_json)?;
         let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
-        start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)?;
+        start_workflow(&reana_instance, &reana_token, workflow_name, None, None, false, converted_yaml)?;
         loop {
-            let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)?;
+            let status_response = get_workflow_status(&reana_instance, &reana_token, workflow_name)?;
             let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
             if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {
                     "finished" => {
                         println!("✅ Workflow finished successfully.");
-                        download_files(reana_instance, reana_token, workflow_name, &workflow_json)?;
-                         if args.rocrate {
-                            let logs = get_workflow_logs(reana_instance, reana_token, workflow_name)?;
-                            let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize JSON logs");
+                        let output_files = workflow_json
+                            .get("outputs")
+                            .and_then(|outputs| outputs.get("files"))
+                            .and_then(|files| files.as_array())
+                            .map(|arr| {
+                                arr.iter()
+                                    .filter_map(|v| v.as_str())
+                                    .map(|filename| format!("outputs/{filename}"))
+                                    .collect::<Vec<String>>()
+                            })
+                            .unwrap_or_default();
+                        download_files(&reana_instance, &reana_token, workflow_name, &output_files, Some(ro_crate_dir))?;
+                        if args.rocrate {
+                            let logs = get_workflow_logs(&reana_instance, &reana_token, workflow_name)?;
+                            let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize reana JSON logs");
                             let conforms_to = [
                                 "https://w3id.org/ro/wfrun/process/0.5",
                                 "https://w3id.org/ro/wfrun/workflow/0.5",
                                 "https://w3id.org/ro/wfrun/provenance/0.5",
                                 "https://w3id.org/workflowhub/workflow-ro-crate/1.0",
                             ];
-                            let ro_crate_metadata_json = create_ro_crate_metadata_json(&workflow_json, &logs_str, &conforms_to)?;
-                            let json_str = serde_json::to_string_pretty(&ro_crate_metadata_json)?;
-                            std::fs::File::create("ro-crate-metadata.json")?.write_all(json_str.as_bytes())?;
-                         }
+                            let workspace_response = get_workflow_workspace(&reana_instance, &reana_token, workflow_name)?;
+                            let workspace_files: Vec<String> = workspace_response
+                                .get("items")
+                                .and_then(|items| items.as_array())
+                                .map(|array| array.iter().filter_map(|item| item.get("name")?.as_str().map(String::from)).collect())
+                                .unwrap_or_default();
+                            create_ro_crate(
+                                &workflow_json,
+                                &logs_str,
+                                &conforms_to,
+                                Some(ro_crate_dir.to_string()),
+                                &workspace_files,
+                                workflow_name,
+                                &updated_toml,
+                            )?;
+                        }
                     }
                     "failed" => {
-                        eprintln!("❌ Workflow execution failed.");
+                        eprintln!("❌ Reana Workflow execution failed.");
                     }
                     "deleted" => {
-                        eprintln!("⚠️ Workflow was deleted before completion.");
+                        eprintln!("⚠️ Reana Workflow was deleted before completion.");
                     }
                     _ => {}
                 }
                 break;
             }
-
             thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
         }
     } else {
-        eprintln!("Workflow creation failed {create_response:?}");
+        eprintln!("Reana workflow creation failed {create_response:?}");
     }
 
     Ok(())

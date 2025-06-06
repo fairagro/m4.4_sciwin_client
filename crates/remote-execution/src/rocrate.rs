@@ -1,8 +1,10 @@
+use crate::api::download_files;
 use chrono::Utc;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
+use toml_edit::{value, DocumentMut, Item, Table};
 use uuid::Uuid;
 
 type ScriptStep = (String, Vec<(String, String)>, Vec<(String, String)>, Option<String>);
@@ -224,11 +226,7 @@ fn create_cwl_entity(id: &str, type_str: &str, alt_name: &str, identifier: &str,
     })
 }
 //create entities for each file
-pub fn create_files(
-    connections: &[(String, String, String)],
-    parts: &[String],
-    graph: &[Value],
-) -> Vec<Value> {
+pub fn create_files(connections: &[(String, String, String)], parts: &[String], graph: &[Value]) -> Vec<Value> {
     let mut file_entities = Vec::new();
     for (source_id, target_id, fallback_uuid) in connections {
         let name = target_id.rsplit(&['/', '#']).next().unwrap_or(target_id);
@@ -322,36 +320,102 @@ fn create_ro_crate_metadata(id: &str, about_id: Option<&str>, conforms_to_ids: &
 fn generate_id_with_hash() -> String {
     format!("#{}", Uuid::new_v4())
 }
-
-//check if there is a name, description and license or ask the user to provide them
-pub fn extract_or_prompt_metadata(graph: &[Value]) -> (String, String, String) {
-    fn prompt_or_default(prompt_msg: &str, default: &str) -> String {
-        let input = prompt(prompt_msg);
-        if input.trim().is_empty() {
-            default.to_string()
-        } else {
-            input
-        }
+/*
+pub fn extract_or_prompt_metadata(graph: &[Value], toml_str: &str) -> (String, String, String) {
+    // Parse the TOML string or create a minimal valid document with [workflow] table
+    let mut doc: DocumentMut = toml_str
+        .parse()
+        .unwrap_or_else(|_| "[workflow]".parse().unwrap());
+    // Ensure [workflow] table exists
+    if !doc.contains_key("workflow") {
+        doc["workflow"] = Item::Table(Table::new());
     }
-    let workflow = graph.iter().find(|item| item.get("class").and_then(Value::as_str) == Some("Workflow"));
-    let name = workflow
-        .and_then(|w| w.get("name").and_then(Value::as_str))
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .unwrap_or_else(|| prompt_or_default("Enter workflow name: ", "run of workflow.json"));
-    let description = workflow
-        .and_then(|w| w.get("description").and_then(Value::as_str))
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .unwrap_or_else(|| prompt_or_default("Enter workflow description: ", "run of workflow.json"));
-    let license = workflow
-        .and_then(|w| w.get("license").and_then(Value::as_str))
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .unwrap_or_else(|| prompt_or_default("Enter workflow license: ", "notspecified"));
+    let workflow = doc["workflow"].as_table_mut().unwrap();
+    let mut updated = false;
+    // Helper to prompt and insert value if missing
+    let mut get_or_prompt = |key: &str, fallback: &str| -> String {
+        if let Some(val) = workflow.get(key).and_then(Item::as_str) {
+            val.to_string()
+        } else {
+            let val = prompt(&format!("Enter workflow {key} : "));
+            let final_val = if val.is_empty() { fallback.to_string() } else { val };
+            workflow[key] = value(&final_val);
+            updated = true;
+            final_val
+        }
+    };
+
+    // Get default values from graph if present
+    let wf_data = graph.iter().find(|item| item.get("class").and_then(Value::as_str) == Some("Workflow"));
+
+    let name = get_or_prompt("name", wf_data.and_then(|w| w.get("name").and_then(Value::as_str)).unwrap_or("run of workflow.json"));
+    let description = get_or_prompt("description", wf_data.and_then(|w| w.get("description").and_then(Value::as_str)).unwrap_or("run of workflow.json"));
+    let license = get_or_prompt("license", wf_data.and_then(|w| w.get("license").and_then(Value::as_str)).unwrap_or("notspecified"));
+
+    // Write back to file if anything changed
+    if updated {
+        std::fs::write("workflow.toml", doc.to_string()).expect("❌ Failed to write updated workflow.toml");
+    }
+
+    (name, description, license)
+}
+*/
+
+pub fn extract_or_prompt_metadata(graph: &[Value], toml_str: &str) -> (String, String, String) {
+    let mut doc: DocumentMut = toml_str.parse().unwrap_or_else(|_| "[workflow]".parse().unwrap());
+
+    let workflow_table = doc
+        .as_table_mut()
+        .entry("workflow")
+        .or_insert(Item::Table(Table::new()))
+        .as_table_mut()
+        .unwrap();
+
+    let wf_data = graph
+        .iter()
+        .find(|item| item.get("class").and_then(Value::as_str) == Some("Workflow") && item.get("id").and_then(Value::as_str) == Some("#main"));
+
+    let mut updated = false;
+
+    let mut get_or_prompt = |key: &str, fallback: &str| -> String {
+        if let Some(val) = workflow_table.get(key).and_then(Item::as_str) {
+            val.to_string()
+        } else {
+            let prompt_val = prompt(&format!("Enter workflow {key}: "));
+            let final_val = if prompt_val.trim().is_empty() {
+                fallback.to_string()
+            } else {
+                prompt_val
+            };
+            workflow_table[key] = value(&final_val);
+            updated = true;
+            final_val
+        }
+    };
+
+    let name = get_or_prompt(
+        "name",
+        wf_data
+            .and_then(|w| w.get("name").and_then(Value::as_str))
+            .unwrap_or("run of workflow.json"),
+    );
+    let description = get_or_prompt(
+        "description",
+        wf_data
+            .and_then(|w| w.get("description").and_then(Value::as_str))
+            .unwrap_or("run of workflow.json"),
+    );
+    let license = get_or_prompt(
+        "license",
+        wf_data.and_then(|w| w.get("license").and_then(Value::as_str)).unwrap_or("notspecified"),
+    );
+    println!("name {name}");
+    println!("description {description}");
+    println!("license {license}");
+    println!("updated {updated}");
+    if updated {
+        std::fs::write("workflow.toml", doc.to_string()).expect("❌ Failed to write updated workflow.toml");
+    }
 
     (name, description, license)
 }
@@ -589,7 +653,94 @@ fn generate_connections(script_structure: &[ScriptStep]) -> Vec<(String, String,
     conns
 }
 
-pub fn create_ro_crate_metadata_json(json_data: &serde_json::Value, logs: &str, conforms_to: &[&str]) -> Result<Value, Box<dyn std::error::Error>> {
+//create rocrate folder with ro-crate-metadata.json and other input, output and intermediate result files
+pub fn create_ro_crate(
+    workflow_json: &serde_json::Value,
+    logs_str: &str,
+    conforms_to: &[&str],
+    rocrate_dir: Option<String>,
+    workspace_files: &[String],
+    workflow_name: &str,
+    workflow_toml: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let folder_name = rocrate_dir.unwrap_or_else(|| "rocrate".to_string());
+    std::fs::create_dir_all(&folder_name)?;
+
+    // generate RO-Crate metadata
+    let mut ro_crate_metadata_json = create_ro_crate_metadata_json(workflow_json, logs_str, conforms_to, workflow_toml)?;
+
+    // get file paths of input files
+    if let Some(graph) = ro_crate_metadata_json.get_mut("@graph").and_then(|g| g.as_array_mut()) {
+        for entity in graph {
+            if let Some(default_value) = entity.get_mut("defaultValue") {
+                if let Some(path_str) = default_value.as_str() {
+                    if let Some(stripped) = path_str.strip_prefix("file://") {
+                        let path = std::path::Path::new(stripped);
+                        if path.exists() {
+                            if let Some(file_name) = path.file_name().and_then(|f| f.to_str()) {
+                                let target_path = std::path::Path::new(&folder_name).join(file_name);
+                                std::fs::copy(path, &target_path)?;
+                                *default_value = Value::String(file_name.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Write ro-create-metadata.json
+    let metadata_path = std::path::Path::new(&folder_name).join("ro-crate-metadata.json");
+    let mut file = std::fs::File::create(&metadata_path)?;
+    let metadata_str = serde_json::to_string_pretty(&ro_crate_metadata_json)?;
+    file.write_all(metadata_str.as_bytes())?;
+
+    // Collect parts
+    let mut found_paths = Vec::new();
+    if let Some(graph) = ro_crate_metadata_json.get("@graph").and_then(|g| g.as_array()) {
+        if let Some(main_entity) = graph.iter().find(|e| e.get("@id") == Some(&Value::String("./".to_string()))) {
+            if let Some(parts) = main_entity.get("hasPart").and_then(|p| p.as_array()) {
+                for entry in parts {
+                    if let Some(path_value) = entry.get("@id") {
+                        if let Some(path_str) = path_value.as_str() {
+                            let local_path = std::path::PathBuf::from(&folder_name).join(path_str);
+                            //already in rocrate folder, skip
+                            if local_path.exists() {
+                                continue;
+                            //check if there is a file in the workspace that has the same ending
+                            } else if let Some(matching_file) = workspace_files
+                                .iter()
+                                .find(|wf| std::path::Path::new(wf).file_name().is_some_and(|f| f == path_str))
+                            {
+                                found_paths.push(matching_file.clone());
+                            } else {
+                                println!("⚠️ File not found: {path_str}");
+                            }
+                        }
+                    } else {
+                        eprintln!("⚠️ No 'hasPart' field found in entry: {entry}");
+                    }
+                }
+            }
+        }
+    }
+    let mut doc: DocumentMut = workflow_toml.parse().unwrap_or_else(|_| "[workflow]\n[reana]".parse().unwrap());
+    let reana = doc["reana"].or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
+    let reana_instance = reana.get("instance").and_then(Item::as_str).map(str::to_string).unwrap();
+    let reana_token = reana.get("token").and_then(Item::as_str).map(str::to_string).unwrap();
+
+    //download intermediate outputs that were found
+    download_files(&reana_instance, &reana_token, workflow_name, &found_paths, Some(&folder_name))?;
+
+    Ok(())
+}
+
+//create ro_crate_metadata.json file
+pub fn create_ro_crate_metadata_json(
+    json_data: &serde_json::Value,
+    logs: &str,
+    conforms_to: &[&str],
+    workflow_toml: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
     let graph_json = json_data
         .get("workflow")
         .and_then(|w| w.get("specification"))
@@ -597,15 +748,13 @@ pub fn create_ro_crate_metadata_json(json_data: &serde_json::Value, logs: &str, 
         .ok_or("Missing '$graph' field in workflow specification")?
         .as_array()
         .ok_or("'$graph' must be an array")?;
-
-    // if $graph is empty, return minimal valid RO-Crate
+    // if $graph is empty
     if graph_json.is_empty() {
         return Ok(json!({
             "@context": "https://w3id.org/ro/crate/1.1/context",
             "@graph": []
         }));
     }
-
     // extract connections, steps, parts, etc
     let steps = extract_workflow_steps(json_data);
     let step_ids: Vec<&str> = steps.iter().map(|(_, step)| step.as_str()).collect();
@@ -615,7 +764,7 @@ pub fn create_ro_crate_metadata_json(json_data: &serde_json::Value, logs: &str, 
     let connections = generate_connections(&script_structure);
     let connections_slice: &[(String, String, String)] = connections.as_slice();
     let parts_ref: Vec<&str> = parts.iter().map(String::as_str).collect();
-    let (name, description, license) = extract_or_prompt_metadata(graph_json);
+    let (name, description, license) = extract_or_prompt_metadata(graph_json, workflow_toml);
 
     // create main rocrate metadata and CWL entity
     let ro_crate_metadata = create_ro_crate_metadata(
@@ -823,6 +972,7 @@ pub fn create_ro_crate_metadata_json(json_data: &serde_json::Value, logs: &str, 
     let instrument_id = generate_id_with_hash();
     if let Some(caps) = re.captures(logs) {
         let version = format!("cwltool {}", &caps[1]);
+        //add instrument
         let instrument = create_instruments(&instrument_id, "SoftwareApplication", &version);
         graph.push(instrument.clone());
         //OrganizeAction
@@ -855,7 +1005,6 @@ pub fn create_ro_crate_metadata_json(json_data: &serde_json::Value, logs: &str, 
 mod tests {
     use super::*;
     use serde_json::Value;
-    use std::fs;
 
     //uuids and datePublished differ: remove datePublished and replace uuid by other id that keeps track of ordering
     fn normalize_uuids_and_strip_date_published(
@@ -896,12 +1045,10 @@ mod tests {
 
     #[test]
     fn test_workflow_structure_similarity() -> Result<(), Box<dyn std::error::Error>> {
-        let workflow_json_str = fs::read_to_string("../../tests/test_data/workflow.json").unwrap();
+        let workflow_json_str = std::fs::read_to_string("../../tests/test_data/workflow.json").unwrap();
         let workflow_json: Value = serde_json::from_str(&workflow_json_str).unwrap();
         let logs_str = std::fs::read_to_string("../../tests/test_data/reana_logs.txt").unwrap();
-
-        // Read expected output json
-        let expected_str = fs::read_to_string("../../tests/test_data/ro-crate-metadata.json").unwrap();
+        let expected_str = std::fs::read_to_string("../../tests/test_data/ro-crate-metadata.json").unwrap();
         let expected_json: Value = serde_json::from_str(&expected_str)?;
 
         let conforms_to = [
@@ -910,9 +1057,15 @@ mod tests {
             "https://w3id.org/ro/wfrun/provenance/0.5",
             "https://w3id.org/workflowhub/workflow-ro-crate/1.0",
         ];
-
+        let workflow_toml = r#"[workflow]
+                            name = "hello_s4n"
+                            version = "0.1.0"
+                            description = "some test workflow"
+                            license = "https://spdx.org/licenses/CC-BY-4.0.html"
+                            [reana]
+                            "#;
         // generate rocrate
-        let result = create_ro_crate_metadata_json(&workflow_json, &logs_str, &conforms_to).expect("Function should return Ok");
+        let result = create_ro_crate_metadata_json(&workflow_json, &logs_str, &conforms_to, workflow_toml).expect("Function should return Ok");
         let generated_json: Value = serde_json::to_value(result)?;
 
         let uuid_re = Regex::new(r"#?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}").unwrap();
@@ -924,6 +1077,7 @@ mod tests {
         let mut uuid_map2 = HashMap::new();
         let mut counter2 = 0;
         let normalized_generated = normalize_uuids_and_strip_date_published(&generated_json, &mut uuid_map2, &uuid_re, &mut counter2);
+
         //compare expected and generated json files with replaced uuids
         assert_eq!(normalized_expected, normalized_generated, "structures do not match");
         Ok(())
@@ -941,8 +1095,12 @@ mod tests {
 
         let logs = "";
         let conforms_to = &[];
-
-        let result = create_ro_crate_metadata_json(&input_json, logs, conforms_to);
+        let workflow_toml = r#"[workflow]
+                                    name = "hello_s4n"
+                                    version = "0.1.0"
+                                    [reana]
+                                    "#;
+        let result = create_ro_crate_metadata_json(&input_json, logs, conforms_to, workflow_toml);
 
         assert!(result.is_ok(), "Function should succeed even with empty $graph");
 

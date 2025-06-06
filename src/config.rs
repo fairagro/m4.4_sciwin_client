@@ -6,6 +6,7 @@ use toml_edit::{Item, Value};
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Config {
     pub workflow: WorkflowConfig,
+    pub reana: ReanaConfig
 }
 
 #[derive(Serialize, Deserialize, Debug, SmartDefault, PartialEq)]
@@ -28,6 +29,12 @@ pub struct WorkflowConfig {
     pub keywords: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, SmartDefault, PartialEq)]
+pub struct ReanaConfig {
+    pub instance: Option<String>,
+    pub token: Option<String>,
 }
 
 impl Config {
@@ -116,6 +123,7 @@ mod tests {
         let toml = r#"[workflow]
 name = "hello_s4n"
 version = "0.1.0"
+[reana]
 "#;
         let _: Config = toml::from_str(toml).unwrap();
     }
@@ -133,6 +141,10 @@ version = "0.1.0"
                 }]),
                 ..Default::default()
             },
+            reana: ReanaConfig {
+                instance: Some("https://reana-fairagro.de/".to_string()),
+                token: Some("123456789".to_string())
+            }
         };
 
         let str = toml::to_string(&config).unwrap();
@@ -150,7 +162,11 @@ description = "a workflow that does ... things!"
 version = "0.1.0"
 authors = ["Derp Derpson", "Dudette Derpson"]
 license = "MIT"
-keywords = ["workflow"]        
+keywords = ["workflow"]
+
+[reana]
+instance = "https://reana-fairagro.de/"
+token = "123456789"
 "#;
 
         let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
@@ -186,6 +202,10 @@ authors = [
     "Dudette Derpson",
 ]
 keywords = ["workflow"]
+
+[reana]
+instance = "https://reana-fairagro.de/"
+token = "123456789"
 "#;
         let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
         let toml = toml::to_string_pretty(&parsed).unwrap();
@@ -206,6 +226,8 @@ orcid = "0000-0001-6242-5846"
 [[workflow.authors]]
 name = "Dudette"
 email = "mail@example.dude"
+
+[reana]
 "#;
 
         let parsed: Config = toml::from_str(workflow_toml).expect("Failed to parse toml");
