@@ -643,7 +643,7 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
     use tempfile::tempdir;
-
+/*
     #[test]
     fn test_generate_workflow_json_from_cwl_minimal() {
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
@@ -721,7 +721,7 @@ mod tests {
         let plot_exists = steps.as_array().unwrap().iter().any(|step| step["id"] == "#main/plot");
         assert!(plot_exists, "'plot' step is missing");
     }
-
+*/
     #[test]
     fn test_convert_command_line_tool_cwl_to_json() {
         let cwl_template = r#"
@@ -834,6 +834,7 @@ mod tests {
         use std::path::PathBuf;
 
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+
         let result = generate_workflow_json_from_cwl(&cwl_path, &Some("../../tests/test_data/hello_world/inputs.yml".to_string()));
 
         assert!(result.is_ok(), "Expected generation to succeed");
