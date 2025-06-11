@@ -77,7 +77,7 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
-    let reana_instance = &args.instance;
+    let reana_instance = &args.instance.trim_end_matches('/');
     let reana_token = &args.token;
     let file = &args.file;
     let input_file = &args.input_file;

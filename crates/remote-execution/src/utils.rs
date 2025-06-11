@@ -25,9 +25,7 @@ pub fn sanitize_path(path: &str) -> String {
             }
         }
     }
-    sanitized_path
-        .to_string_lossy()
-        .replace("\\", std::path::MAIN_SEPARATOR_STR)
+    sanitized_path.to_string_lossy().replace("\\", std::path::MAIN_SEPARATOR_STR)
 }
 
 pub fn get_location(base_path: &str, cwl_file_path: &Path) -> Result<String, Box<dyn Error>> {
@@ -51,10 +49,7 @@ pub fn get_location(base_path: &str, cwl_file_path: &Path) -> Result<String, Box
 }
 
 pub fn find_common_directory(paths: &BTreeSet<PathBuf>) -> Result<PathBuf, Box<dyn Error>> {
-    let components: Vec<_> = paths
-        .iter()
-        .map(|p| p.components().collect::<Vec<_>>())
-        .collect();
+    let components: Vec<_> = paths.iter().map(|p| p.components().collect::<Vec<_>>()).collect();
 
     if components.is_empty() {
         return Err("No paths provided".into());
@@ -75,10 +70,7 @@ pub fn find_common_directory(paths: &BTreeSet<PathBuf>) -> Result<PathBuf, Box<d
     Ok(common_path)
 }
 
-pub fn remove_files_contained_in_directories(
-    files: &mut HashSet<String>,
-    directories: &HashSet<String>,
-) {
+pub fn remove_files_contained_in_directories(files: &mut HashSet<String>, directories: &HashSet<String>) {
     let mut to_remove = Vec::new();
 
     for file in files.iter() {
@@ -103,10 +95,7 @@ pub fn file_matches(requested_file: &str, candidate_path: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn collect_files_recursive(
-    dir: &Path,
-    files: &mut HashSet<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn collect_files_recursive(dir: &Path, files: &mut HashSet<String>) -> Result<(), Box<dyn std::error::Error>> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let file_path = entry.path();
@@ -176,16 +165,12 @@ pub fn read_file_content(file_path: &str) -> Result<String, io::Error> {
     Ok(content)
 }
 
-pub fn build_inputs_yaml(
-    cwl_input_path: &str,
-    input_yaml_path: &str,
-) -> Result<Mapping, Box<dyn Error>> {
+pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<Mapping, Box<dyn Error>> {
     let input_yaml = fs::read_to_string(input_yaml_path)?;
     let input_value: Value = serde_yaml::from_str(&input_yaml)?;
 
     let cwl_content = fs::read_to_string(cwl_input_path)?;
     let cwl_value: Value = serde_yaml::from_str(&cwl_content)?;
-
     let mut files: HashSet<String> = HashSet::new();
     let mut directories: HashSet<String> = HashSet::new();
 
@@ -210,17 +195,10 @@ pub fn build_inputs_yaml(
 
                     if let (Some(class), Some(location)) = (class, location) {
                         let sanitized_location = sanitize_path(location);
-
                         if sub_mapping.contains_key(Value::String("location".to_string())) {
-                            sub_mapping.insert(
-                                Value::String("location".to_string()),
-                                Value::String(sanitized_location.clone()),
-                            );
+                            sub_mapping.insert(Value::String("location".to_string()), Value::String(sanitized_location.clone()));
                         } else if sub_mapping.contains_key(Value::String("path".to_string())) {
-                            sub_mapping.insert(
-                                Value::String("path".to_string()),
-                                Value::String(sanitized_location.clone()),
-                            );
+                            sub_mapping.insert(Value::String("path".to_string()), Value::String(sanitized_location.clone()));
                         }
 
                         match class.as_str() {
@@ -254,10 +232,8 @@ pub fn build_inputs_yaml(
     referenced_paths.insert(fs::canonicalize(main_cwl_path)?);
 
     if !referenced_paths.is_empty() {
-        let common_root =
-            find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
-        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?)
-            .unwrap_or(common_root.clone());
+        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
+        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?).unwrap_or(common_root.clone());
 
         let relative_str = relative_root.to_string_lossy().to_string();
         if !relative_str.is_empty() {
@@ -269,26 +245,17 @@ pub fn build_inputs_yaml(
                 let path = entry.path();
 
                 if path.is_dir() {
-                    if let Some(str_path) = path
-                        .strip_prefix(&current_dir)
-                        .ok()
-                        .and_then(|p| p.to_str())
-                    {
+                    if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                         directories.insert(str_path.to_string());
                     }
                 } else if path.is_file() {
-                    if let Some(str_path) = path
-                        .strip_prefix(&current_dir)
-                        .ok()
-                        .and_then(|p| p.to_str())
-                    {
+                    if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                         files.insert(str_path.to_string());
                     }
                 }
             }
         }
     }
-
     remove_files_contained_in_directories(&mut files, &directories);
     let mut inputs_mapping = Mapping::new();
     inputs_mapping.insert(
@@ -301,21 +268,13 @@ pub fn build_inputs_yaml(
     );
     inputs_mapping.insert(
         Value::String("parameters".to_string()),
-        Value::Mapping(
-            parameters
-                .into_iter()
-                .map(|(k, v)| (Value::String(k), v))
-                .collect(),
-        ),
+        Value::Mapping(parameters.into_iter().map(|(k, v)| (Value::String(k), v)).collect()),
     );
 
     Ok(inputs_mapping)
 }
 
-pub fn build_inputs_cwl(
-    cwl_input_path: &str,
-    inputs_yaml: Option<&String>,
-) -> Result<Mapping, Box<dyn Error>> {
+pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> Result<Mapping, Box<dyn Error>> {
     let cwl_content = fs::read_to_string(cwl_input_path)?;
     let cwl_value: Value = serde_yaml::from_str(&cwl_content)?;
 
@@ -330,21 +289,16 @@ pub fn build_inputs_cwl(
         for input in inputs {
             if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
                 if let Some(input_type_val) = input.get("type") {
-                    let input_type = input_type_val.as_str().unwrap_or_else(|| {
-                        input_type_val
-                            .get("type")
-                            .and_then(|t| t.as_str())
-                            .unwrap_or("")
-                    });
+                    let input_type = input_type_val
+                        .as_str()
+                        .unwrap_or_else(|| input_type_val.get("type").and_then(|t| t.as_str()).unwrap_or(""));
 
                     if input_type == "File" || input_type == "Directory" {
                         if let Some(default) = input.get("default") {
                             if let Value::Mapping(default_map) = default {
                                 let mut sanitized_map = default_map.clone();
 
-                                if let Some(location_val) =
-                                    sanitized_map.get_mut(Value::String("location".to_string()))
-                                {
+                                if let Some(location_val) = sanitized_map.get_mut(Value::String("location".to_string())) {
                                     if let Some(location) = location_val.as_str() {
                                         let sanitized_location = sanitize_path(location);
                                         *location_val = Value::String(sanitized_location.clone());
@@ -375,20 +329,11 @@ pub fn build_inputs_cwl(
                                 };
 
                                 let mut param_map = Mapping::new();
-                                param_map.insert(
-                                    Value::String("class".to_string()),
-                                    Value::String(input_type.to_string()),
-                                );
+                                param_map.insert(Value::String("class".to_string()), Value::String(input_type.to_string()));
                                 if input_type == "Directory" {
-                                    param_map.insert(
-                                        Value::String("location".to_string()),
-                                        Value::String(sanitized_location),
-                                    );
+                                    param_map.insert(Value::String("location".to_string()), Value::String(sanitized_location));
                                 } else {
-                                    param_map.insert(
-                                        Value::String("path".to_string()),
-                                        Value::String(sanitized_location),
-                                    );
+                                    param_map.insert(Value::String("path".to_string()), Value::String(sanitized_location));
                                 }
                                 parameters.insert(id.to_string(), Value::Mapping(param_map));
                             }
@@ -413,10 +358,8 @@ pub fn build_inputs_cwl(
     referenced_paths.insert(fs::canonicalize(main_cwl_path)?);
 
     if !referenced_paths.is_empty() {
-        let common_root =
-            find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
-        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?)
-            .unwrap_or(common_root.clone());
+        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
+        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?).unwrap_or(common_root.clone());
 
         let relative_str = relative_root.to_string_lossy().to_string();
         if !relative_str.is_empty() {
@@ -428,21 +371,12 @@ pub fn build_inputs_cwl(
         for entry in fs::read_dir(&current_dir)? {
             let entry = entry?;
             let path = entry.path();
-
             if path.is_dir() {
-                if let Some(str_path) = path
-                    .strip_prefix(&current_dir)
-                    .ok()
-                    .and_then(|p| p.to_str())
-                {
+                if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                     directories.insert(str_path.to_string());
                 }
             } else if path.is_file() {
-                if let Some(str_path) = path
-                    .strip_prefix(&current_dir)
-                    .ok()
-                    .and_then(|p| p.to_str())
-                {
+                if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                     files.insert(str_path.to_string());
                 }
             }
@@ -450,10 +384,7 @@ pub fn build_inputs_cwl(
     }
 
     if let Some(yaml_path) = inputs_yaml {
-        parameters.insert(
-            "inputs.yaml".to_string(),
-            Value::String(yaml_path.to_string()),
-        );
+        parameters.insert("inputs.yaml".to_string(), Value::String(yaml_path.to_string()));
     }
 
     let mut inputs_mapping = Mapping::new();
@@ -475,10 +406,7 @@ pub fn build_inputs_cwl(
         if let Some(class) = value.get("class") {
             let mut param_map = Mapping::new();
             if let Some(class_str) = class.as_str() {
-                param_map.insert(
-                    Value::String("class".to_string()),
-                    Value::String(class_str.to_string()),
-                );
+                param_map.insert(Value::String("class".to_string()), Value::String(class_str.to_string()));
             }
             if let Some(location) = value.get("location") {
                 param_map.insert(Value::String("location".to_string()), location.clone());
@@ -491,10 +419,7 @@ pub fn build_inputs_cwl(
             parameter_mapping.insert(Value::String(key), value);
         }
     }
-    inputs_mapping.insert(
-        Value::String("parameters".to_string()),
-        Value::Mapping(parameter_mapping),
-    );
+    inputs_mapping.insert(Value::String("parameters".to_string()), Value::Mapping(parameter_mapping));
 
     Ok(inputs_mapping)
 }
@@ -524,9 +449,7 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
 
         let parts: Vec<&str> = output_source.split('/').collect();
         if parts.len() != 2 {
-            return Err(
-                format!("Invalid outputSource format for output: {output_source}").into(),
-            );
+            return Err(format!("Invalid outputSource format for output: {output_source}").into());
         }
         let step_id = parts[0];
         let output_id = parts[1];
@@ -535,17 +458,12 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
         for step in steps_section {
             if let Some(id) = step.get("id").and_then(|v| v.as_str()) {
                 if id == step_id {
-                    run_file_path = step
-                        .get("run")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
+                    run_file_path = step.get("run").and_then(|v| v.as_str()).map(|s| s.to_string());
                     break;
                 }
             }
         }
-        let run_file_path = run_file_path.ok_or(format!(
-            "Step with id {step_id} not found or missing 'run'"
-        ))?;
+        let run_file_path = run_file_path.ok_or(format!("Step with id {step_id} not found or missing 'run'"))?;
         let main_workflow_path = std::path::Path::new(main_workflow_path);
         let main_workflow_dir = main_workflow_path
             .parent()
@@ -555,13 +473,9 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
         let tool_yaml: Value = serde_yaml::from_str(&tool_yaml_str)?;
         let tool_outputs = tool_yaml
             .get("outputs")
-            .ok_or(format!(
-                "No 'outputs' section in tool file {run_file_path}"
-            ))?
+            .ok_or(format!("No 'outputs' section in tool file {run_file_path}"))?
             .as_sequence()
-            .ok_or(format!(
-                "'outputs' section in tool file {run_file_path} is not a sequence"
-            ))?;
+            .ok_or(format!("'outputs' section in tool file {run_file_path} is not a sequence"))?;
         let mut glob_value = None;
         for tool_output in tool_outputs {
             if let Some(tid) = tool_output.get("id").and_then(|v| v.as_str()) {
@@ -575,19 +489,14 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
                 }
             }
         }
-        let glob_value = glob_value.ok_or(format!(
-            "Output {output_id} not found in tool file {run_file_path} or missing glob"
-        ))?;
+        let glob_value = glob_value.ok_or(format!("Output {output_id} not found in tool file {run_file_path} or missing glob"))?;
 
         results.push((output_id.to_string(), glob_value));
     }
     Ok(results)
 }
 
-pub fn find_input_location(
-    cwl_file_path: &str,
-    id: &str,
-) -> Result<Option<String>, Box<dyn Error>> {
+pub fn find_input_location(cwl_file_path: &str, id: &str) -> Result<Option<String>, Box<dyn Error>> {
     let mut main_file = std::fs::File::open(cwl_file_path)?;
     let mut main_file_content = String::new();
     main_file.read_to_string(&mut main_file_content)?;
@@ -606,9 +515,7 @@ pub fn find_input_location(
                                 if let Some(input_id) = input["id"].as_str() {
                                     if input_id == id {
                                         if let Some(default) = input["default"].as_mapping() {
-                                            if let Some(location) =
-                                                default.get("location").and_then(|v| v.as_str())
-                                            {
+                                            if let Some(location) = default.get("location").and_then(|v| v.as_str()) {
                                                 return Ok(Some(location.to_string()));
                                             }
                                         }
@@ -624,11 +531,7 @@ pub fn find_input_location(
     Ok(None)
 }
 
-pub fn resolve_input_file_path(
-    requested_file: &str,
-    input_yaml: Option<&Value>,
-    cwl_value: Option<&Value>,
-) -> Option<String> {
+pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>, cwl_value: Option<&Value>) -> Option<String> {
     let requested_path = Path::new(requested_file);
     if requested_path.exists() {
         return Some(requested_file.to_string());
@@ -639,9 +542,7 @@ pub fn resolve_input_file_path(
         for (_key, value) in mapping {
             if let Value::Mapping(file_entry) = value {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(path_str)) =
-                        file_entry.get(Value::String(field.to_string()))
-                    {
+                    if let Some(Value::String(path_str)) = file_entry.get(Value::String(field.to_string())) {
                         if file_matches(requested_file, path_str) {
                             return Some(path_str.to_string());
                         }
@@ -657,9 +558,7 @@ pub fn resolve_input_file_path(
             for input in inputs {
                 if let Some(Value::Mapping(default_map)) = input.get("default") {
                     for field in &["location", "path"] {
-                        if let Some(Value::String(loc)) =
-                            default_map.get(Value::String(field.to_string()))
-                        {
+                        if let Some(Value::String(loc)) = default_map.get(Value::String(field.to_string())) {
                             if file_matches(requested_file, loc) {
                                 return Some(loc.to_string());
                             }
@@ -683,26 +582,9 @@ mod tests {
     use tempfile::tempdir;
 
     fn normalize_path(path: &str) -> String {
-        Path::new(path)
-            .to_str()
-            .unwrap_or_default()
-            .replace("\\", "/")
+        Path::new(path).to_str().unwrap_or_default().replace("\\", "/")
     }
 
-/*
-    #[test]
-    fn test_get_location() {
-        let result = get_location(
-            "tests/test_data/hello_world/workflows/main/main.cwl",
-            Path::new("../plot/plot.cwl"),
-        );
-        assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            "tests/test_data/hello_world/workflows/plot/plot.cwl"
-        );
-    }
-*/
     #[test]
     fn test_load_cwl_file_resolves_relative_path() {
         use std::fs::{create_dir_all, File};
@@ -727,22 +609,12 @@ mod tests {
         let mut file = File::create(&cwl_file_path).unwrap();
         write!(file, "{cwl_content}").unwrap();
 
-        let result = load_cwl_file(
-            cwl_file_path.to_str().unwrap(),
-            Path::new("../sub/tool.cwl"),
-        );
+        let result = load_cwl_file(cwl_file_path.to_str().unwrap(), Path::new("../sub/tool.cwl"));
 
-        assert!(
-            result.is_ok(),
-            "load_cwl_file failed with error: {:?}",
-            result.err()
-        );
+        assert!(result.is_ok(), "load_cwl_file failed with error: {:?}", result.err());
 
         let value = result.unwrap();
-        assert_eq!(
-            value["class"],
-            serde_yaml::Value::String("CommandLineTool".to_string())
-        );
+        assert_eq!(value["class"], serde_yaml::Value::String("CommandLineTool".to_string()));
     }
 
     #[test]
@@ -791,38 +663,20 @@ mod tests {
         use std::collections::HashSet;
 
         let input_yaml_path = "../../tests/test_data/hello_world/inputs.yml";
-        assert!(
-            std::path::Path::new(input_yaml_path).exists(),
-            "Test input file does not exist"
-        );
+        assert!(std::path::Path::new(input_yaml_path).exists(), "Test input file does not exist");
 
         let cwl_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
-        assert!(
-            std::path::Path::new(input_yaml_path).exists(),
-            "Test input file does not exist"
-        );
+        assert!(std::path::Path::new(input_yaml_path).exists(), "Test input file does not exist");
 
         let result = build_inputs_yaml(cwl_path, input_yaml_path);
         assert!(result.is_ok(), "build_inputs_yaml failed: {result:?}");
         let mapping = result.unwrap();
 
-        let files = mapping
-            .get(Value::String("files".to_string()))
-            .expect("Missing 'files'");
+        let files = mapping.get(Value::String("files".to_string())).expect("Missing 'files'");
         if let Value::Sequence(file_list) = files {
-            let file_set: HashSet<_> = file_list
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(normalize_path)
-            .collect();
-            assert!(
-                file_set.contains("data/population.csv"),
-                "Missing population.csv"
-            );
-            assert!(
-                file_set.contains("data/speakers_revised.csv"),
-                "Missing speakers_revised.csv"
-            );
+            let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).map(normalize_path).collect();
+            assert!(file_set.contains("data/population.csv"), "Missing population.csv");
+            assert!(file_set.contains("data/speakers_revised.csv"), "Missing speakers_revised.csv");
         } else {
             panic!("Expected 'files' to be a sequence");
         }
@@ -843,30 +697,21 @@ mod tests {
     fn test_sanitize_path_with_parent_dir() {
         let path = "folder/../file.txt";
         let sanitized = sanitize_path(path);
-        assert_eq!(
-            sanitized, "file.txt",
-            "The parent directory should be removed from the path."
-        );
+        assert_eq!(sanitized, "file.txt", "The parent directory should be removed from the path.");
     }
 
     #[test]
     fn test_sanitize_path_with_multiple_parent_dirs() {
         let path = "folder/../other_folder/../file.txt";
         let sanitized = sanitize_path(path);
-        assert_eq!(
-            sanitized, "file.txt",
-            "Multiple parent directories should be removed."
-        );
+        assert_eq!(sanitized, "file.txt", "Multiple parent directories should be removed.");
     }
 
     #[test]
     fn test_sanitize_empty_path() {
         let path = "";
         let sanitized = sanitize_path(path);
-        assert_eq!(
-            sanitized, "",
-            "An empty path should return an empty string."
-        );
+        assert_eq!(sanitized, "", "An empty path should return an empty string.");
     }
 
     #[test]
@@ -1240,36 +1085,20 @@ mod tests {
         use std::collections::HashSet;
 
         let cwl_input_path = "../../tests/test_data/hello_world/workflows/main/main.cwl";
-        assert!(
-            std::path::Path::new(cwl_input_path).exists(),
-            "Test CWL file does not exist"
-        );
+        assert!(std::path::Path::new(cwl_input_path).exists(), "Test CWL file does not exist");
 
         let result = build_inputs_cwl(cwl_input_path, None);
         assert!(result.is_ok(), "build_inputs_cwl failed: {result:?}");
         let mapping = result.unwrap();
 
-        let files = mapping
-            .get(Value::String("files".to_string()))
-            .expect("Missing 'files'");
+        let files = mapping.get(Value::String("files".to_string())).expect("Missing 'files'");
         if let Value::Sequence(file_list) = files {
-            let file_set: HashSet<_> = file_list
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(normalize_path)
-            .collect();
-            assert!(
-                file_set.contains("data/population.csv"),
-                "Missing population.csv"
-            );
-            assert!(
-                file_set.contains("data/speakers_revised.csv"),
-                "Missing speakers_revised.csv"
-            );
+            let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).map(normalize_path).collect();
+            assert!(file_set.contains("data/population.csv"), "Missing population.csv");
+            assert!(file_set.contains("data/speakers_revised.csv"), "Missing speakers_revised.csv");
         } else {
             panic!("Expected 'files' to be a sequence");
         }
-
     }
 
     #[test]
@@ -1289,19 +1118,10 @@ mod tests {
 
         let mapping = result.unwrap();
 
-        let files = mapping
-            .get(Value::String("files".to_string()))
-            .expect("Missing 'files' section");
+        let files = mapping.get(Value::String("files".to_string())).expect("Missing 'files' section");
         if let Value::Sequence(file_list) = files {
-            let file_set: HashSet<_> = file_list
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(normalize_path)
-            .collect();
-            assert!(
-                file_set.contains("data/population.csv"),
-                "Missing expected file: population.csv"
-            );
+            let file_set: HashSet<_> = file_list.iter().filter_map(|v| v.as_str()).map(normalize_path).collect();
+            assert!(file_set.contains("data/population.csv"), "Missing expected file: population.csv");
             assert!(
                 file_set.contains("data/speakers_revised.csv"),
                 "Missing expected file: speakers_revised.csv"
@@ -1343,9 +1163,6 @@ mod tests {
         assert!(result.is_ok());
         let outputs = result.unwrap();
         assert_eq!(outputs.len(), 1);
-        assert_eq!(
-            outputs[0],
-            ("results".to_string(), "results.svg".to_string())
-        );
+        assert_eq!(outputs[0], ("results".to_string(), "results.svg".to_string()));
     }
 }
