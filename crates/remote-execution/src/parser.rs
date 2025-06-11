@@ -236,8 +236,8 @@ fn make_relative_path(path: &Path, base: &Path) -> Option<std::path::PathBuf> {
 }
 
 pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<serde_json::Value, Box<dyn Error>> {
-    let cwl_path = file.to_str().ok_or("Failed to convert CWL path to string")?;
 
+    let cwl_path = file.to_str().ok_or_else(|| format!("Invalid UTF-8 in CWL file path: {:?}", file))?;
     let base_dir = env::current_dir()?;
     let base_dir_str = base_dir.to_string_lossy().to_string();
 
@@ -794,11 +794,7 @@ mod tests {
 
         // Write CWL file
         let cwl_path = temp_dir.path().join("tool.cwl");
-        fs::write(
-            &cwl_path,
-            cwl_template.replace("code/download_election_data.py", "code/download_election_data.py"),
-        )
-        .expect("failed to write cwl");
+        fs::write(&cwl_path,cwl_template).expect("failed to write cwl");
 
         // Save and change current dir
         let old_dir = env::current_dir().expect("could not get current dir");
@@ -841,7 +837,7 @@ mod tests {
         let result = generate_workflow_json_from_cwl(&cwl_path, &Some("../../tests/test_data/hello_world/inputs.yml".to_string()));
 
         assert!(result.is_ok(), "Expected generation to succeed");
-        let json = result.unwrap();
+        let json = result.expect("Failed to generate workflow JSON");
 
         assert_eq!(json["version"], "0.9.4");
         assert_eq!(json["workflow"]["type"], "cwl");
