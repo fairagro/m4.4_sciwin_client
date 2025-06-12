@@ -237,7 +237,7 @@ fn make_relative_path(path: &Path, base: &Path) -> Option<std::path::PathBuf> {
 
 pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<serde_json::Value, Box<dyn Error>> {
 
-    let cwl_path = file.to_str().ok_or_else(|| format!("Invalid UTF-8 in CWL file path: {:?}", file))?;
+    let cwl_path = file.to_str().ok_or_else(|| format!("Invalid UTF-8 in CWL file path: {file:?}"))?;
     let base_dir = env::current_dir()?;
     let base_dir_str = base_dir.to_string_lossy().to_string();
 
@@ -641,7 +641,7 @@ fn parse_requirements(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    //use std::path::PathBuf;
     use tempfile::tempdir;
 /*
     #[test]
