@@ -641,7 +641,7 @@ fn parse_requirements(
 #[cfg(test)]
 mod tests {
     use super::*;
-    //use std::path::PathBuf;
+    use std::path::PathBuf;
     use tempfile::tempdir;
 /*
     #[test]
@@ -831,11 +831,14 @@ mod tests {
 
     #[test]
     fn test_generate_workflow_json_from_cwl_with_inputs_yaml() {
-        use std::path::PathBuf;
 
         let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let inputs_yaml_path = PathBuf::from("../../tests/test_data/hello_world/inputs.yml");
 
-        let result = generate_workflow_json_from_cwl(&cwl_path, &Some("../../tests/test_data/hello_world/inputs.yml".to_string()));
+        assert!(cwl_path.exists(), "CWL file not found at {:?}", cwl_path);
+        assert!(inputs_yaml_path.exists(), "Inputs YAML file not found at {:?}", inputs_yaml_path);
+
+        let result = generate_workflow_json_from_cwl(&cwl_path, &Some(inputs_yaml_path.to_string_lossy().to_string()));
 
         assert!(result.is_ok(), "Expected generation to succeed");
         let json = result.expect("Failed to generate workflow JSON");
