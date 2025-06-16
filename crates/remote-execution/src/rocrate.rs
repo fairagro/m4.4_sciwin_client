@@ -1005,6 +1005,7 @@ pub fn create_ro_crate_metadata_json(
 mod tests {
     use super::*;
     use serde_json::Value;
+    use std::path::PathBuf;
 
     //uuids and datePublished differ: remove datePublished and replace uuid by other id that keeps track of ordering
     fn normalize_uuids_and_strip_date_published(
@@ -1045,10 +1046,17 @@ mod tests {
 
     #[test]
     fn test_workflow_structure_similarity() -> Result<(), Box<dyn std::error::Error>> {
-        let workflow_json_str = std::fs::read_to_string("../../tests/test_data/workflow.json").unwrap();
+        let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let workflow_path = base_dir.join("tests/test_data/workflow.json");
+        let logs_path = base_dir.join("tests/test_data/reana_logs.txt");
+        let expected_json_path = base_dir.join("tests/test_data/ro-crate-metadata.json");
+        assert!(workflow_path.exists());
+        assert!(logs_path.exists());
+        assert!(expected_json_path.exists());
+        let workflow_json_str = std::fs::read_to_string(&workflow_path).unwrap();
         let workflow_json: Value = serde_json::from_str(&workflow_json_str).unwrap();
-        let logs_str = std::fs::read_to_string("../../tests/test_data/reana_logs.txt").unwrap();
-        let expected_str = std::fs::read_to_string("../../tests/test_data/ro-crate-metadata.json").unwrap();
+        let logs_str = std::fs::read_to_string(&logs_path).unwrap();
+        let expected_str = std::fs::read_to_string(&expected_json_path).unwrap();
         let expected_json: Value = serde_json::from_str(&expected_str)?;
 
         let conforms_to = [
