@@ -776,7 +776,6 @@ mod tests {
 
         // Check 'files'
         assert!(inputs["files"].is_array(), "files should be an array");
-        let files = inputs["files"].as_array().unwrap();
 
         // Check parameters
         let parameters = &inputs["parameters"];
