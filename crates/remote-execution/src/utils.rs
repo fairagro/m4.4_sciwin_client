@@ -2,14 +2,13 @@ use serde_yaml::Mapping;
 use serde_yaml::Value;
 use std::collections::BTreeSet;
 use std::collections::HashSet;
-use std::path::Path;
 use std::{
     collections::HashMap,
-    error::Error,
-    fs,
-    io::{self, Read},
-    path::PathBuf,
+    fs::{self, File},
+    io::{Read},
+    path::{PathBuf, Path, Component},
 };
+use anyhow::{Context, Result, anyhow};
 
 pub fn sanitize_path(path: &str) -> String {
     let path = Path::new(path.trim());
@@ -28,43 +27,61 @@ pub fn sanitize_path(path: &str) -> String {
     sanitized_path.to_string_lossy().replace("\\", std::path::MAIN_SEPARATOR_STR)
 }
 
-pub fn get_location(base_path: &str, cwl_file_path: &Path) -> Result<String, Box<dyn Error>> {
+pub fn get_location(base_path: &str, cwl_file_path: &Path) -> Result<String> {
     let base_path = Path::new(base_path);
-    let base_path = base_path.parent().unwrap_or(base_path);
-    let mut combined_path = base_path.to_path_buf();
+    let base_dir = base_path
+        .parent()
+        .unwrap_or(base_path);
+
+    let mut combined_path = base_dir.to_path_buf();
+
     for component in cwl_file_path.components() {
         match component {
-            std::path::Component::Normal(name) => {
+            Component::Normal(name) => {
                 combined_path.push(name);
             }
-            std::path::Component::ParentDir => {
-                if let Some(parent) = combined_path.parent() {
-                    combined_path = parent.to_path_buf();
-                }
+            Component::ParentDir => {
+                combined_path = combined_path
+                    .parent()
+                    .map(PathBuf::from)
+                    .with_context(|| format!("Cannot navigate above root from path: {}", combined_path.display()))?;
             }
-            _ => {}
+            _ => {
+            }
         }
     }
-    Ok(combined_path.to_string_lossy().to_string())
+    combined_path
+        .to_str()
+        .map(|s| s.to_string())
+        .with_context(|| format!("Failed to convert path to string: {}", combined_path.display()))
 }
 
-pub fn find_common_directory(paths: &BTreeSet<PathBuf>) -> Result<PathBuf, Box<dyn Error>> {
-    let components: Vec<_> = paths.iter().map(|p| p.components().collect::<Vec<_>>()).collect();
-
-    if components.is_empty() {
-        return Err("No paths provided".into());
+pub fn find_common_directory(paths: &BTreeSet<PathBuf>) -> Result<PathBuf> {
+    if paths.is_empty() {
+        return Err(anyhow!("No paths provided to compute common directory."));
     }
 
-    let mut common_path = PathBuf::new();
-    let first = &components[0];
+    let components: Vec<Vec<Component>> = paths
+        .iter()
+        .map(|p| p.components().collect())
+        .collect();
 
-    for i in 0..first.len() {
-        let part = &first[i];
-        if components.iter().all(|c| c.len() > i && &c[i] == part) {
+    let first = &components[0];
+    let mut common_path = PathBuf::new();
+
+    for (i, part) in first.iter().enumerate() {
+        let all_match = components.iter().all(|c| c.get(i) == Some(part));
+
+        if all_match {
             common_path.push(part.as_os_str());
         } else {
             break;
         }
+    }
+    if common_path.as_os_str().is_empty() {
+        return Err(anyhow!(
+            "Could not determine a common directory among the given paths."
+        ));
     }
 
     Ok(common_path)
@@ -95,51 +112,62 @@ pub fn file_matches(requested_file: &str, candidate_path: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn collect_files_recursive(dir: &Path, files: &mut HashSet<String>) -> Result<(), Box<dyn std::error::Error>> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
+pub fn collect_files_recursive(dir: &Path, files: &mut HashSet<String>) -> Result<()> {
+    let entries = fs::read_dir(dir)
+        .with_context(|| format!("Failed to read directory: {}", dir.display()))?;
+
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read entry in directory: {}", dir.display()))?;
         let file_path = entry.path();
 
         if file_path.is_dir() {
-            collect_files_recursive(&file_path, files)?;
+            collect_files_recursive(&file_path, files)
+                .with_context(|| format!("Failed to collect files recursively from: {}", file_path.display()))?;
         } else if file_path.is_file() {
-            if let Some(file_str) = file_path.to_str() {
-                files.insert(file_str.to_string());
-            }
+            let file_str = file_path
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in file path: {}", file_path.display()))?;
+            files.insert(file_str.to_string());
         }
     }
+
     Ok(())
 }
 
-pub fn load_cwl_yaml(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
-    let full_path = if cwl_file_path.is_absolute() {
+pub fn load_cwl_yaml(base_path: &str, cwl_file_path: &Path) -> Result<Value> {
+    let full_path: PathBuf = if cwl_file_path.is_absolute() {
         cwl_file_path.to_path_buf()
     } else {
         Path::new(base_path).join(cwl_file_path)
     };
 
-    let contents = fs::read_to_string(full_path)?;
-    let yaml: Value = serde_yaml::from_str(&contents)?;
+    let contents = fs::read_to_string(&full_path)
+        .with_context(|| format!("Failed to read CWL file at path: {}", full_path.display()))?;
+
+    let yaml: Value = serde_yaml::from_str(&contents)
+        .with_context(|| format!("Failed to parse CWL YAML at path: {}", full_path.display()))?;
+
     Ok(yaml)
 }
 
-pub fn load_yaml_file(path: &Path) -> Result<Value, Box<dyn Error>> {
-    let contents = fs::read_to_string(path)?;
-    let yaml: Value = serde_yaml::from_str(&contents)?;
+pub fn load_yaml_file(path: &Path) -> Result<Value> {
+    let contents = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read YAML file at path: {}", path.display()))?;
+
+    let yaml: Value = serde_yaml::from_str(&contents)
+        .with_context(|| format!("Failed to parse YAML content at path: {}", path.display()))?;
+
     Ok(yaml)
 }
 
-pub fn load_cwl_file(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
+pub fn load_cwl_file(base_path: &str, cwl_file_path: &Path) -> Result<Value> {
     let base_path = Path::new(base_path);
     let base_path = base_path.parent().unwrap_or(base_path);
 
     let mut combined_path = base_path.to_path_buf();
-
     for component in cwl_file_path.components() {
         match component {
-            std::path::Component::Normal(name) => {
-                combined_path.push(name);
-            }
+            std::path::Component::Normal(name) => combined_path.push(name),
             std::path::Component::ParentDir => {
                 if let Some(parent) = combined_path.parent() {
                     combined_path = parent.to_path_buf();
@@ -148,37 +176,53 @@ pub fn load_cwl_file(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box
             _ => {}
         }
     }
+
     if !combined_path.exists() {
-        return Err(format!("CWL file not found: {}", combined_path.display()).into());
+        anyhow::bail!("CWL file not found: {}", combined_path.display());
     }
+
     let mut file_content = String::new();
-    let mut file = std::fs::File::open(&combined_path)?;
-    file.read_to_string(&mut file_content)?;
-    let cwl: Value = serde_yaml::from_str(&file_content)?;
+    File::open(&combined_path)
+        .with_context(|| format!("Failed to open CWL file at: {}", combined_path.display()))?
+        .read_to_string(&mut file_content)
+        .with_context(|| format!("Failed to read CWL file: {}", combined_path.display()))?;
+
+    let cwl: Value = serde_yaml::from_str(&file_content)
+        .with_context(|| format!("Failed to parse CWL YAML at: {}", combined_path.display()))?;
+
     Ok(cwl)
 }
 
-pub fn read_file_content(file_path: &str) -> Result<String, io::Error> {
-    let mut file = std::fs::File::open(file_path)?;
+pub fn read_file_content(file_path: &str) -> Result<String> {
+    let mut file = File::open(file_path)
+        .with_context(|| format!("Failed to open file: {file_path}"))?;
+
     let mut content = String::new();
-    file.read_to_string(&mut content)?;
+    file.read_to_string(&mut content)
+        .with_context(|| format!("Failed to read contents of file: {file_path}"))?;
+
     Ok(content)
 }
 
-pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<Mapping, Box<dyn Error>> {
-    let input_yaml = fs::read_to_string(input_yaml_path)?;
-    let input_value: Value = serde_yaml::from_str(&input_yaml)?;
+pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<Mapping> {
+    let input_yaml = fs::read_to_string(input_yaml_path)
+        .with_context(|| format!("Failed to read input YAML file at '{input_yaml_path}'"))?;
+    let input_value: Value = serde_yaml::from_str(&input_yaml)
+        .with_context(|| format!("Failed to parse input YAML at '{input_yaml_path}'"))?;
 
-    let cwl_content = fs::read_to_string(cwl_input_path)?;
-    let cwl_value: Value = serde_yaml::from_str(&cwl_content)?;
-    let mut files: HashSet<String> = HashSet::new();
-    let mut directories: HashSet<String> = HashSet::new();
+    let cwl_content = fs::read_to_string(cwl_input_path)
+        .with_context(|| format!("Failed to read CWL input file at '{cwl_input_path}'"))?;
+    let cwl_value: Value = serde_yaml::from_str(&cwl_content)
+        .with_context(|| format!("Failed to parse CWL file at '{cwl_input_path}'"))?;
 
-    let mut parameters: HashMap<String, Value> = HashMap::new();
+    let mut files = HashSet::new();
+    let mut directories = HashSet::new();
+    let mut parameters = HashMap::new();
 
     let main_cwl_path = Path::new(cwl_input_path);
     let main_dir = main_cwl_path.parent().unwrap_or_else(|| Path::new("."));
-    let mut referenced_paths: HashSet<PathBuf> = HashSet::new();
+    let mut referenced_paths = HashSet::new();
+
     if let Value::Mapping(mapping) = input_value {
         for (key, value) in mapping {
             if let Value::String(key_str) = key {
@@ -195,23 +239,27 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
 
                     if let (Some(class), Some(location)) = (class, location) {
                         let sanitized_location = sanitize_path(location);
-                        if sub_mapping.contains_key(Value::String("location".to_string())) {
-                            sub_mapping.insert(Value::String("location".to_string()), Value::String(sanitized_location.clone()));
-                        } else if sub_mapping.contains_key(Value::String("path".to_string())) {
-                            sub_mapping.insert(Value::String("path".to_string()), Value::String(sanitized_location.clone()));
-                        }
+                        let key_to_update = if sub_mapping.contains_key(Value::String("location".to_string())) {
+                            "location"
+                        } else {
+                            "path"
+                        };
+                        sub_mapping.insert(
+                            Value::String(key_to_update.to_string()),
+                            Value::String(sanitized_location.clone()),
+                        );
 
                         match class.as_str() {
                             "File" => {
                                 files.insert(sanitized_location);
-                                parameters.insert(key_str, Value::Mapping(sub_mapping));
                             }
                             "Directory" => {
                                 directories.insert(sanitized_location);
-                                parameters.insert(key_str, Value::Mapping(sub_mapping));
                             }
                             _ => {}
                         }
+
+                        parameters.insert(key_str, Value::Mapping(sub_mapping));
                     } else {
                         parameters.insert(key_str, Value::Mapping(sub_mapping));
                     }
@@ -221,27 +269,37 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
             }
         }
     }
+
     if let Some(steps) = cwl_value.get("steps").and_then(|v| v.as_sequence()) {
         for step in steps {
             if let Some(run_path_str) = step.get("run").and_then(|v| v.as_str()) {
-                let full_path = main_dir.join(run_path_str).canonicalize()?;
+                let full_path = main_dir
+                    .join(run_path_str)
+                    .canonicalize()
+                    .with_context(|| format!("Failed to resolve step run path '{run_path_str}'"))?;
                 referenced_paths.insert(full_path);
             }
         }
     }
-    referenced_paths.insert(fs::canonicalize(main_cwl_path)?);
+
+    let main_canonical = fs::canonicalize(main_cwl_path)
+        .with_context(|| format!("Failed to canonicalize CWL file path '{cwl_input_path}'"))?;
+    referenced_paths.insert(main_canonical);
 
     if !referenced_paths.is_empty() {
-        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
-        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?).unwrap_or(common_root.clone());
+        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())
+            .context("Failed to determine common directory for referenced CWL paths")?;
+
+        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?)
+            .unwrap_or(common_root.clone());
 
         let relative_str = relative_root.to_string_lossy().to_string();
         if !relative_str.is_empty() {
             directories.insert(relative_str);
         } else {
-            let current_dir = std::env::current_dir()?;
-            for entry in fs::read_dir(&current_dir)? {
-                let entry = entry?;
+            let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+            for entry in fs::read_dir(&current_dir).context("Failed to read current directory")? {
+                let entry = entry.context("Failed to read entry in current directory")?;
                 let path = entry.path();
 
                 if path.is_dir() {
@@ -256,7 +314,9 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
             }
         }
     }
+
     remove_files_contained_in_directories(&mut files, &directories);
+
     let mut inputs_mapping = Mapping::new();
     inputs_mapping.insert(
         Value::String("files".to_string()),
@@ -274,9 +334,11 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
     Ok(inputs_mapping)
 }
 
-pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> Result<Mapping, Box<dyn Error>> {
-    let cwl_content = fs::read_to_string(cwl_input_path)?;
-    let cwl_value: Value = serde_yaml::from_str(&cwl_content)?;
+pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> Result<Mapping> {
+    let cwl_content = fs::read_to_string(cwl_input_path)
+        .with_context(|| format!("Failed to read CWL input file at '{cwl_input_path}'"))?;
+    let cwl_value: Value = serde_yaml::from_str(&cwl_content)
+        .with_context(|| format!("Failed to parse CWL file at '{cwl_input_path}'"))?;
 
     let mut files: HashSet<String> = HashSet::new();
     let mut directories: HashSet<String> = HashSet::new();
@@ -285,63 +347,70 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
 
     let main_cwl_path = Path::new(cwl_input_path);
     let main_dir = main_cwl_path.parent().unwrap_or_else(|| Path::new("."));
+
     if let Some(inputs) = cwl_value.get("inputs").and_then(|v| v.as_sequence()) {
         for input in inputs {
-            if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                if let Some(input_type_val) = input.get("type") {
-                    let input_type = input_type_val
-                        .as_str()
-                        .unwrap_or_else(|| input_type_val.get("type").and_then(|t| t.as_str()).unwrap_or(""));
+            let id = input
+                .get("id")
+                .and_then(|v| v.as_str())
+                .with_context(|| "Missing 'id' field in CWL input")?;
 
-                    if input_type == "File" || input_type == "Directory" {
-                        if let Some(default) = input.get("default") {
-                            if let Value::Mapping(default_map) = default {
-                                let mut sanitized_map = default_map.clone();
+            let input_type_val = input.get("type")
+                .with_context(|| format!("Missing 'type' for input id '{id}'"))?;
 
-                                if let Some(location_val) = sanitized_map.get_mut(Value::String("location".to_string())) {
-                                    if let Some(location) = location_val.as_str() {
-                                        let sanitized_location = sanitize_path(location);
-                                        *location_val = Value::String(sanitized_location.clone());
+            let input_type = input_type_val
+                .as_str()
+                .or_else(|| input_type_val.get("type").and_then(|t| t.as_str()))
+                .unwrap_or("");
 
-                                        match input_type {
-                                            "File" => {
-                                                files.insert(sanitized_location);
-                                            }
-                                            "Directory" => {
-                                                directories.insert(sanitized_location);
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                }
-                                parameters.insert(id.to_string(), Value::Mapping(sanitized_map));
-                            } else {
-                                parameters.insert(id.to_string(), default.clone());
-                            }
-                        } else {
-                            let location = find_input_location(cwl_input_path, id)?;
-                            if let Some(location) = location {
-                                let sanitized_location = sanitize_path(&location);
+            if input_type == "File" || input_type == "Directory" {
+                if let Some(default) = input.get("default") {
+                    if let Value::Mapping(default_map) = default {
+                        let mut sanitized_map = default_map.clone();
+
+                        if let Some(location_val) = sanitized_map.get_mut(Value::String("location".to_string())) {
+                            if let Some(location) = location_val.as_str() {
+                                let sanitized_location = sanitize_path(location);
+                                *location_val = Value::String(sanitized_location.clone());
+
                                 match input_type {
-                                    "File" => files.insert(sanitized_location.clone()),
-                                    "Directory" => directories.insert(sanitized_location.clone()),
-                                    _ => None::<Value>.is_some(),
-                                };
-
-                                let mut param_map = Mapping::new();
-                                param_map.insert(Value::String("class".to_string()), Value::String(input_type.to_string()));
-                                if input_type == "Directory" {
-                                    param_map.insert(Value::String("location".to_string()), Value::String(sanitized_location));
-                                } else {
-                                    param_map.insert(Value::String("path".to_string()), Value::String(sanitized_location));
+                                    "File" => {
+                                        files.insert(sanitized_location);
+                                    }
+                                    "Directory" => {
+                                        directories.insert(sanitized_location);
+                                    }
+                                    _ => {}
                                 }
-                                parameters.insert(id.to_string(), Value::Mapping(param_map));
                             }
                         }
-                    } else if let Some(default) = input.get("default") {
+                        parameters.insert(id.to_string(), Value::Mapping(sanitized_map));
+                    } else {
                         parameters.insert(id.to_string(), default.clone());
                     }
+                } else {
+                    let location = find_input_location(cwl_input_path, id)
+                        .with_context(|| format!("Failed to find location for input id '{id}'"))?;
+                    if let Some(location) = location {
+                        let sanitized_location = sanitize_path(&location);
+                        match input_type {
+                            "File" => { files.insert(sanitized_location.clone()); }
+                            "Directory" => { directories.insert(sanitized_location.clone()); }
+                            _ => {}
+                        };
+
+                        let mut param_map = Mapping::new();
+                        param_map.insert(Value::String("class".to_string()), Value::String(input_type.to_string()));
+                        if input_type == "Directory" {
+                            param_map.insert(Value::String("location".to_string()), Value::String(sanitized_location));
+                        } else {
+                            param_map.insert(Value::String("path".to_string()), Value::String(sanitized_location));
+                        }
+                        parameters.insert(id.to_string(), Value::Mapping(param_map));
+                    }
                 }
+            } else if let Some(default) = input.get("default") {
+                parameters.insert(id.to_string(), default.clone());
             }
         }
     }
@@ -349,28 +418,37 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
     if let Some(steps) = cwl_value.get("steps").and_then(|v| v.as_sequence()) {
         for step in steps {
             if let Some(run_path_str) = step.get("run").and_then(|v| v.as_str()) {
-                let full_path = main_dir.join(run_path_str).canonicalize()?;
+                let full_path = main_dir.join(run_path_str)
+                    .canonicalize()
+                    .with_context(|| format!("Failed to canonicalize step run path '{run_path_str}'"))?;
                 referenced_paths.insert(full_path);
             }
         }
     }
 
-    referenced_paths.insert(fs::canonicalize(main_cwl_path)?);
+    let main_canonical = fs::canonicalize(main_cwl_path)
+        .with_context(|| format!("Failed to canonicalize main CWL file path '{cwl_input_path}'"))?;
+    referenced_paths.insert(main_canonical);
 
     if !referenced_paths.is_empty() {
-        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())?;
-        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?).unwrap_or(common_root.clone());
+        let common_root = find_common_directory(&referenced_paths.iter().cloned().collect::<BTreeSet<_>>())
+            .context("Failed to find common directory for referenced paths")?;
+
+        let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?)
+            .unwrap_or(common_root.clone());
 
         let relative_str = relative_root.to_string_lossy().to_string();
         if !relative_str.is_empty() {
             directories.insert(relative_str);
         }
     }
+
     if directories.is_empty() {
-        let current_dir = std::env::current_dir()?;
-        for entry in fs::read_dir(&current_dir)? {
-            let entry = entry?;
+        let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+        for entry in fs::read_dir(&current_dir).context("Failed to read current directory")? {
+            let entry = entry.context("Failed to read entry in current directory")?;
             let path = entry.path();
+
             if path.is_dir() {
                 if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                     directories.insert(str_path.to_string());
@@ -387,9 +465,9 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
         parameters.insert("inputs.yaml".to_string(), Value::String(yaml_path.to_string()));
     }
 
-    let mut inputs_mapping = Mapping::new();
     remove_files_contained_in_directories(&mut files, &directories);
 
+    let mut inputs_mapping = Mapping::new();
     inputs_mapping.insert(
         Value::String("files".to_string()),
         Value::Sequence(files.into_iter().map(Value::String).collect()),
@@ -400,7 +478,7 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
         Value::Sequence(directories.into_iter().map(Value::String).collect()),
     );
 
-    let mut parameter_mapping = serde_yaml::Mapping::new();
+    let mut parameter_mapping = Mapping::new();
 
     for (key, value) in parameters {
         if let Some(class) = value.get("class") {
@@ -424,103 +502,132 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
     Ok(inputs_mapping)
 }
 
-pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>, Box<dyn Error>> {
-    let main_yaml_str = fs::read_to_string(main_workflow_path)?;
-    let main_yaml: Value = serde_yaml::from_str(&main_yaml_str)?;
+pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>> {
+    let main_yaml_str = fs::read_to_string(main_workflow_path)
+        .with_context(|| format!("Failed to read main workflow file '{main_workflow_path}'"))?;
+    let main_yaml: Value = serde_yaml::from_str(&main_yaml_str)
+        .with_context(|| format!("Failed to parse YAML from main workflow file '{main_workflow_path}'"))?;
 
     let outputs_section = main_yaml
         .get("outputs")
-        .ok_or("No 'outputs' section in main workflow")?
+        .with_context(|| "No 'outputs' section in main workflow")?
         .as_sequence()
-        .ok_or("'outputs' section is not a sequence")?;
+        .with_context(|| "'outputs' section is not a sequence")?;
 
     let steps_section = main_yaml
         .get("steps")
-        .ok_or("No 'steps' section in main workflow")?
+        .with_context(|| "No 'steps' section in main workflow")?
         .as_sequence()
-        .ok_or("'steps' section is not a sequence")?;
+        .with_context(|| "'steps' section is not a sequence")?;
+
+    let main_workflow_path = Path::new(main_workflow_path);
+    let main_workflow_dir = main_workflow_path
+        .parent()
+        .with_context(|| "Failed to get parent directory of main workflow file")?;
 
     let mut results = Vec::new();
+
     for output in outputs_section {
         let output_source = output
             .get("outputSource")
             .and_then(|v| v.as_str())
-            .ok_or("Output missing 'outputSource' field or not a string")?;
+            .with_context(|| "Output missing 'outputSource' field or it's not a string")?;
 
         let parts: Vec<&str> = output_source.split('/').collect();
         if parts.len() != 2 {
-            return Err(format!("Invalid outputSource format for output: {output_source}").into());
+            anyhow::bail!("Invalid 'outputSource' format for output: '{}'. Expected format 'step_id/output_id'", output_source);
         }
         let step_id = parts[0];
         let output_id = parts[1];
 
-        let mut run_file_path = None;
-        for step in steps_section {
-            if let Some(id) = step.get("id").and_then(|v| v.as_str()) {
+        let run_file_path = steps_section
+            .iter()
+            .find_map(|step| {
+                let id = step.get("id").and_then(|v| v.as_str())?;
                 if id == step_id {
-                    run_file_path = step.get("run").and_then(|v| v.as_str()).map(|s| s.to_string());
-                    break;
+                    step.get("run").and_then(|v| v.as_str()).map(|s| s.to_string())
+                } else {
+                    None
                 }
-            }
-        }
-        let run_file_path = run_file_path.ok_or(format!("Step with id {step_id} not found or missing 'run'"))?;
-        let main_workflow_path = std::path::Path::new(main_workflow_path);
-        let main_workflow_dir = main_workflow_path
-            .parent()
-            .ok_or("Failed to get parent directory of main workflow file")?;
-        let full_run_file_path = main_workflow_dir.join(&run_file_path).canonicalize()?;
-        let tool_yaml_str = fs::read_to_string(&full_run_file_path)?;
-        let tool_yaml: Value = serde_yaml::from_str(&tool_yaml_str)?;
+            })
+            .with_context(|| format!("Step with id '{step_id}' not found or missing 'run' field in main workflow"))?;
+
+        let full_run_file_path = main_workflow_dir.join(&run_file_path)
+            .canonicalize()
+            .with_context(|| format!("Failed to canonicalize run file path '{run_file_path}' for step '{step_id}'"))?;
+
+        let tool_yaml_str = fs::read_to_string(&full_run_file_path)
+            .with_context(|| format!("Failed to read tool file '{}'", full_run_file_path.display()))?;
+        let tool_yaml: Value = serde_yaml::from_str(&tool_yaml_str)
+            .with_context(|| format!("Failed to parse YAML from tool file '{}'", full_run_file_path.display()))?;
+
         let tool_outputs = tool_yaml
             .get("outputs")
-            .ok_or(format!("No 'outputs' section in tool file {run_file_path}"))?
+            .with_context(|| format!("No 'outputs' section in tool file '{run_file_path}'"))?
             .as_sequence()
-            .ok_or(format!("'outputs' section in tool file {run_file_path} is not a sequence"))?;
-        let mut glob_value = None;
-        for tool_output in tool_outputs {
-            if let Some(tid) = tool_output.get("id").and_then(|v| v.as_str()) {
+            .with_context(|| format!("'outputs' section in tool file '{run_file_path}' is not a sequence"))?;
+
+        let glob_value = tool_outputs.iter()
+            .find_map(|tool_output| {
+                let tid = tool_output.get("id").and_then(|v| v.as_str())?;
                 if tid == output_id {
-                    if let Some(binding) = tool_output.get("outputBinding") {
-                        if let Some(glob) = binding.get("glob").and_then(|v| v.as_str()) {
-                            glob_value = Some(glob.to_string());
-                            break;
-                        }
-                    }
+                    tool_output.get("outputBinding")
+                        .and_then(|binding| binding.get("glob"))
+                        .and_then(|glob| glob.as_str())
+                        .map(|s| s.to_string())
+                } else {
+                    None
                 }
-            }
-        }
-        let glob_value = glob_value.ok_or(format!("Output {output_id} not found in tool file {run_file_path} or missing glob"))?;
+            })
+            .with_context(|| format!("Output '{output_id}' not found in tool file '{run_file_path}' or missing 'glob' field"))?;
 
         results.push((output_id.to_string(), glob_value));
     }
     Ok(results)
 }
 
-pub fn find_input_location(cwl_file_path: &str, id: &str) -> Result<Option<String>, Box<dyn Error>> {
-    let mut main_file = std::fs::File::open(cwl_file_path)?;
+pub fn find_input_location(cwl_file_path: &str, id: &str) -> Result<Option<String>> {
+    let mut main_file = File::open(cwl_file_path)
+        .with_context(|| format!("Failed to open CWL file '{cwl_file_path}'"))?;
     let mut main_file_content = String::new();
-    main_file.read_to_string(&mut main_file_content)?;
+    main_file.read_to_string(&mut main_file_content)
+        .with_context(|| format!("Failed to read contents of CWL file '{cwl_file_path}'"))?;
 
-    let main_cwl: Value = serde_yaml::from_str(&main_file_content)?;
+    let main_cwl: Value = serde_yaml::from_str(&main_file_content)
+        .with_context(|| format!("Failed to parse YAML from CWL file '{cwl_file_path}'"))?;
 
-    if let Some(steps) = main_cwl["steps"].as_sequence() {
-        for step in steps {
-            if let Some(inputs) = step["in"].as_mapping() {
-                if inputs.contains_key(id) {
-                    if let Some(run) = step["run"].as_str() {
-                        let run_path = Path::new(run);
-                        let run_file = load_cwl_file(cwl_file_path, run_path)?;
-                        if let Some(inputs_section) = run_file["inputs"].as_sequence() {
-                            for input in inputs_section {
-                                if let Some(input_id) = input["id"].as_str() {
-                                    if input_id == id {
-                                        if let Some(default) = input["default"].as_mapping() {
-                                            if let Some(location) = default.get("location").and_then(|v| v.as_str()) {
-                                                return Ok(Some(location.to_string()));
-                                            }
-                                        }
-                                    }
-                                }
+    let steps = main_cwl.get("steps")
+        .and_then(|v| v.as_sequence())
+        .with_context(|| format!("Missing or invalid 'steps' section in CWL file '{cwl_file_path}'"))?;
+
+    for step in steps {
+        let inputs = step.get("in")
+            .and_then(|v| v.as_mapping())
+            .with_context(|| "Invalid or missing 'in' mapping in a step")?;
+
+        if inputs.contains_key(Value::String(id.to_string())) {
+            let run_path_str = step.get("run")
+                .and_then(|v| v.as_str())
+                .with_context(|| format!("Step with input '{id}' missing 'run' field or it is not a string"))?;
+
+            let run_path = Path::new(run_path_str);
+            let run_file = load_cwl_file(cwl_file_path, run_path)
+                .with_context(|| format!("Failed to load referenced CWL file '{}' from step", run_path.display()))?;
+
+            let inputs_section = run_file.get("inputs")
+                .and_then(|v| v.as_sequence())
+                .with_context(|| format!("Missing or invalid 'inputs' section in referenced CWL file '{}'", run_path.display()))?;
+
+            for input in inputs_section {
+                let input_id = input.get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+
+                if input_id == id {
+                    if let Some(default) = input.get("default").and_then(|v| v.as_mapping()) {
+                        if let Some(location_val) = default.get(Value::String("location".to_string())) {
+                            if let Some(location) = location_val.as_str() {
+                                return Ok(Some(location.to_string()));
                             }
                         }
                     }
@@ -528,13 +635,19 @@ pub fn find_input_location(cwl_file_path: &str, id: &str) -> Result<Option<Strin
             }
         }
     }
+
     Ok(None)
 }
 
-pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>, cwl_value: Option<&Value>) -> Option<String> {
+pub fn resolve_input_file_path(
+    requested_file: &str,
+    input_yaml: Option<&Value>,
+    cwl_value: Option<&Value>,
+) -> Result<Option<String>> {
     let requested_path = Path::new(requested_file);
+
     if requested_path.exists() {
-        return Some(requested_file.to_string());
+        return Ok(Some(requested_file.to_string()));
     }
 
     // Search in input_yaml
@@ -544,7 +657,7 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
                 for field in &["location", "path"] {
                     if let Some(Value::String(path_str)) = file_entry.get(Value::String(field.to_string())) {
                         if file_matches(requested_file, path_str) {
-                            return Some(path_str.to_string());
+                            return Ok(Some(path_str.to_string()));
                         }
                     }
                 }
@@ -554,14 +667,17 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
 
     // Search in cwl inputs
     if let Some(cwl) = cwl_value {
-        if let Some(inputs) = cwl.get("inputs").and_then(|v| v.as_sequence()) {
-            for input in inputs {
-                if let Some(Value::Mapping(default_map)) = input.get("default") {
-                    for field in &["location", "path"] {
-                        if let Some(Value::String(loc)) = default_map.get(Value::String(field.to_string())) {
-                            if file_matches(requested_file, loc) {
-                                return Some(loc.to_string());
-                            }
+        let inputs = cwl.get("inputs")
+            .with_context(|| "Missing 'inputs' section in CWL value")?
+            .as_sequence()
+            .with_context(|| "'inputs' section in CWL value is not a sequence")?;
+
+        for input in inputs {
+            if let Some(Value::Mapping(default_map)) = input.get("default") {
+                for field in &["location", "path"] {
+                    if let Some(Value::String(loc)) = default_map.get(Value::String(field.to_string())) {
+                        if file_matches(requested_file, loc) {
+                            return Ok(Some(loc.to_string()));
                         }
                     }
                 }
@@ -569,13 +685,13 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
         }
     }
 
-    None
+    Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
+    use serde_yaml::Value;
     use std::fs::{self, File, create_dir_all};
     use std::io::Write;
     use std::path::PathBuf;
@@ -887,7 +1003,7 @@ mod tests {
         assert_eq!(files.len(), 1);
         assert!(files.iter().any(|f| f.ends_with("nested.txt")));
     }
-
+/*
     pub fn load_cwl_yaml(base_path: &str, cwl_file_path: &Path) -> Result<Value, Box<dyn Error>> {
         let full_path = if cwl_file_path.is_absolute() {
             cwl_file_path.to_path_buf()
@@ -899,7 +1015,7 @@ mod tests {
         let yaml: Value = serde_yaml::from_str(&contents)?;
         Ok(yaml)
     }
-
+*/
     #[test]
     fn test_load_cwl_yaml_valid() {
         let temp_dir = tempdir().expect("Failed to create temp dir");

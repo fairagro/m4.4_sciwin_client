@@ -77,47 +77,73 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
-    let reana_instance = &args.instance.trim_end_matches('/');
+
+    let reana_instance = args.instance.trim_end_matches('/');
     let reana_token = &args.token;
     let file = &args.file;
     let input_file = &args.input_file;
 
-    let workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
+    let workflow_json = generate_workflow_json_from_cwl(file, input_file)
+        .map_err(|e| format!("Failed to generate workflow JSON from CWL: {}", e))?;
 
-    let ping_status = ping_reana(reana_instance)?;
+    let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())
+        .map_err(|e| format!("Failed to convert workflow JSON to YAML: {}", e))?;
+
+    println!("✅ Created workflow JSON");
+
+    let ping_status = ping_reana(reana_instance)
+        .map_err(|e| format!("Failed to ping Reana server: {}", e))?;
+
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
-        eprintln!("Unexpected response from Reana server: {ping_status:?}");
+        eprintln!("⚠️ Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
     }
-    let create_response = create_workflow(reana_instance, reana_token, &workflow_json)?;
-    if let Some(workflow_name) = create_response["workflow_name"].as_str() {
-        upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)?;
-        let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
-        start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)?;
-        loop {
-            let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)?;
-            let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
-            if TERMINAL_STATUSES.contains(&workflow_status) {
-                match workflow_status {
-                    "finished" => {
-                        println!("✅ Workflow finished successfully.");
-                        download_files(reana_instance, reana_token, workflow_name, &workflow_json)?;
-                    }
-                    "failed" => {
-                        eprintln!("❌ Workflow execution failed.");
-                    }
-                    "deleted" => {
-                        eprintln!("⚠️ Workflow was deleted before completion.");
-                    }
-                    _ => {}
-                }
-                break;
-            }
 
-            thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
+    let create_response = create_workflow(reana_instance, reana_token, &workflow_json)
+        .map_err(|e| format!("Failed to create workflow on Reana: {}", e))?;
+
+    let Some(workflow_name) = create_response["workflow_name"].as_str() else {
+        return Err("Missing 'workflow_name' in workflow creation response".into());
+    };
+
+    upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)
+        .map_err(|e| format!("Failed to upload files to Reana: {}", e))?;
+
+    start_workflow(
+        reana_instance,
+        reana_token,
+        workflow_name,
+        None,
+        None,
+        false,
+        converted_yaml,
+    ).map_err(|e| format!("Failed to start workflow: {}", e))?;
+
+    loop {
+        let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)
+            .map_err(|e| format!("Failed to fetch workflow status: {}", e))?;
+
+        let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
+
+        if TERMINAL_STATUSES.contains(&workflow_status) {
+            match workflow_status {
+                "finished" => {
+                    println!("✅ Workflow finished successfully.");
+                    download_files(reana_instance, reana_token, workflow_name, &workflow_json)
+                        .map_err(|e| format!("Failed to download output files: {}", e))?;
+                }
+                "failed" => {
+                    eprintln!("❌ Workflow execution failed.");
+                }
+                "deleted" => {
+                    eprintln!("⚠️ Workflow was deleted before completion.");
+                }
+                _ => {}
+            }
+            break;
         }
-    } else {
-        eprintln!("Workflow creation failed {create_response:?}");
+
+        thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
     }
 
     Ok(())
