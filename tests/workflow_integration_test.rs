@@ -110,6 +110,20 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
         assert!(result.is_ok());
     }
 
+    //connect to another dummy workflow to check subworkflows work
+    create_workflow(&CreateWorkflowArgs {
+        name: "dummy".to_string(),
+        force: false,
+    })?;
+
+    let dummy_connect_args = ConnectWorkflowArgs {
+        name: "dummy".to_string(),
+        from: "@inputs/speakers".to_string(),
+        to: "test/speakers".to_string(),
+    };
+    let result = connect_workflow_nodes(&dummy_connect_args);
+    assert!(result.is_ok());
+
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
 
     let mut cmd = Command::cargo_bin("s4n")?;
