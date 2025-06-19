@@ -1,7 +1,7 @@
 mod common;
 use assert_cmd::Command;
 use common::check_git_user;
-use cwl::load_workflow;
+use cwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
 use s4n::commands::{
@@ -123,6 +123,9 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     };
     let result = connect_workflow_nodes(&dummy_connect_args);
     assert!(result.is_ok());
+
+    let wf = load_workflow("workflows/dummy/dummy.cwl").unwrap();
+    assert!(wf.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement)));
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
 

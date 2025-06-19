@@ -75,6 +75,12 @@ impl Connectable for Workflow {
             self.steps.push(workflow_step);
 
             info!("➕ Added step {name} to workflow");
+
+            if let CWLDocument::Workflow(_) = doc {
+                if !self.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement)) {
+                    self.requirements.push(Requirement::SubworkflowFeatureRequirement);
+                }
+            }
         }
     }
 

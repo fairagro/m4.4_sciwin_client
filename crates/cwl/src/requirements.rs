@@ -17,12 +17,12 @@ pub enum Requirement {
     ToolTimeLimit(ToolTimeLimit),
     NetworkAccess(NetworkAccess),
     InlineJavascriptRequirement(InlineJavascriptRequirement),
+    SubworkflowFeatureRequirement,
     //as dummys, not used at this point
     SoftwareRequirement,
     SchemaDefRequirement,
     ScatterFeatureRequirement,
     MultipleInputFeatureRequirement,
-    SubworkflowFeatureRequirement,
     StepInputExpressionRequirement,
     LoadListingRequirement,
     InplaceUpdateRequirement,
