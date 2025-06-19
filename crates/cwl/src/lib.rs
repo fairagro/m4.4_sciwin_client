@@ -102,6 +102,26 @@ impl<'de> Deserialize<'de> for CWLDocument {
     }
 }
 
+impl CWLDocument {
+    /// Returns the List of CommandOutputParameter.id of the `CWLDocument`.
+    pub fn get_output_ids(&self) -> Vec<String> {
+        match self {
+            CWLDocument::CommandLineTool(clt) => clt.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>(),
+            CWLDocument::Workflow(wf) => wf.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>(),
+            CWLDocument::ExpressionTool(et) => et.outputs.iter().map(|o| o.id.clone()).collect::<Vec<_>>(),
+        }
+    }
+
+    /// Returns the type of a specific output by its ID.
+    pub fn get_output_type(&self, output_id: &str) -> Option<CWLType> {
+        match self {
+            CWLDocument::CommandLineTool(clt) => clt.outputs.iter().find(|o| o.id == output_id).map(|o| o.type_.clone()),
+            CWLDocument::Workflow(wf) => wf.outputs.iter().find(|o| o.id == output_id).map(|o| o.type_.clone()),
+            CWLDocument::ExpressionTool(et) => et.outputs.iter().find(|o| o.id == output_id).map(|o| o.type_.clone()),
+        }
+    }
+}
+
 /// Base struct used by all CWL Documents (CommandLineTool, ExpressionTool and Workflow) defining common fields.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -148,6 +168,8 @@ pub enum StringOrNumber {
 
 use std::fmt;
 
+use crate::types::CWLType;
+
 impl fmt::Display for StringOrNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -156,6 +178,35 @@ impl fmt::Display for StringOrNumber {
             StringOrNumber::Decimal(d) => write!(f, "{}", d),
         }
     }
+}
+
+/// Loads a CWL Document from a YAML file on disk.
+///
+/// This function reads the specified file, parses its contents as YAML, and attempts to deserialize it into a `CWLDocument` object.
+///
+/// # Arguments
+/// * `filename` - A path to the YAML file containing the CWL Docu definition.
+///
+/// # Returns
+/// * `Ok(CWLDocument)` if the file is successfully read and parsed.
+/// * `Err` if the file does not exist or cannot be parsed.
+///
+/// # Examples
+/// ```
+/// use cwl::load_doc;
+///
+/// let tool = load_doc("../../tests/test_data/default.cwl");
+/// assert!(tool.is_ok());
+/// ```
+pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<dyn Error>> {
+    let path = filename.as_ref();
+    if !path.exists() {
+        return Err(format!("❌ File {:?} does not exist.", filename).into());
+    }
+    let contents = fs::read_to_string(path)?;
+    let doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CWL {:?}: {}", filename, e))?;
+
+    Ok(doc)
 }
 
 /// Loads a CWL CommandLineTool from a YAML file on disk.

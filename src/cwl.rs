@@ -2,11 +2,12 @@ use crate::io::{get_workflows_folder, resolve_path};
 use cwl::{
     clt::CommandLineTool,
     inputs::{CommandInputParameter, WorkflowStepInputParameter},
-    load_tool,
+    load_doc,
     outputs::WorkflowOutputParameter,
     requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, PathItem},
     wf::{StringOrDocument, Workflow, WorkflowStep},
+    CWLDocument,
 };
 use log::{info, warn};
 use std::error::Error;
@@ -23,7 +24,7 @@ pub trait Connectable {
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
     fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;
-    fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool);
+    fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CWLDocument);
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
 }
 
@@ -63,12 +64,12 @@ impl Saveable for CommandLineTool {
 }
 
 impl Connectable for Workflow {
-    fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CommandLineTool) {
+    fn add_new_step_if_not_exists(&mut self, name: &str, doc: &CWLDocument) {
         if !self.has_step(name) {
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
                 run: StringOrDocument::String(format!("../{name}/{name}.cwl")),
-                out: tool.get_output_ids(),
+                out: doc.get_output_ids(),
                 ..Default::default()
             };
             self.steps.push(workflow_step);
@@ -82,8 +83,8 @@ impl Connectable for Workflow {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
         let to_filename = resolve_filename(to_parts[0]);
-        let to_tool: CommandLineTool = load_tool(&to_filename)?;
-        let to_slot = to_tool.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slot");
+        let to_cwl = load_doc(&to_filename)?;
+        let to_slot = to_cwl.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slot");
 
         //register input
         if !self.has_input(from_input) {
@@ -91,7 +92,7 @@ impl Connectable for Workflow {
                 .push(CommandInputParameter::default().with_id(from_input).with_type(to_slot.type_.clone()));
         }
 
-        self.add_new_step_if_not_exists(to_parts[0], &to_tool);
+        self.add_new_step_if_not_exists(to_parts[0], &to_cwl);
         //add input in step
         self.steps
             .iter_mut()
@@ -114,15 +115,15 @@ impl Connectable for Workflow {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
         let from_filename = resolve_filename(from_parts[0]);
-        let from_tool: CommandLineTool = load_tool(&from_filename)?;
-        let from_slot = from_tool.outputs.iter().find(|i| i.id == from_parts[1]).expect("No slot");
+        let from_cwl = load_doc(&from_filename)?;
+        let from_type = from_cwl.get_output_type(from_parts[1]).expect("No slot");
 
         if !self.has_output(to_output) {
             self.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());
         }
 
         let output = self.outputs.iter_mut().find(|o| o.id == to_output).unwrap();
-        output.type_.clone_from(&from_slot.type_);
+        output.type_ = from_type;
         output.output_source.clone_from(&from.to_string());
 
         info!("➕ Added or updated connection from {from} to outputs.{to_output} in workflow!");
@@ -139,8 +140,8 @@ impl Connectable for Workflow {
             info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
         } else {
             let from_filename = resolve_filename(from_parts[0]);
-            let from_tool: CommandLineTool = load_tool(&from_filename)?;
-            let from_outputs = from_tool.get_output_ids();
+            let from_cwl = load_doc(&from_filename)?;
+            let from_outputs = from_cwl.get_output_ids();
             if !from_outputs.contains(&from_parts[1].to_string()) {
                 return Err(format!(
                     "Tool {} does not have output `{}`. Cannot not create node from {} in Workflow!",
@@ -150,7 +151,7 @@ impl Connectable for Workflow {
             }
 
             //create step
-            self.add_new_step_if_not_exists(from_parts[0], &from_tool);
+            self.add_new_step_if_not_exists(from_parts[0], &from_cwl);
         }
 
         //handle to
@@ -158,9 +159,9 @@ impl Connectable for Workflow {
         //check if step exists
         if !self.has_step(to_parts[0]) {
             let to_filename = resolve_filename(to_parts[0]);
-            let to_tool: CommandLineTool = load_tool(&to_filename)?;
+            let to_cwl = load_doc(&to_filename)?;
 
-            self.add_new_step_if_not_exists(to_parts[0], &to_tool);
+            self.add_new_step_if_not_exists(to_parts[0], &to_cwl);
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
