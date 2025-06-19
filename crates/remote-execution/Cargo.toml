@@ -15,4 +15,4 @@ anyhow = "1.0.98"
 
 [dev-dependencies]
 mockito = "1.7.0"
-httpmock = "0.6"
+httpmock = "0.7.0"
