@@ -1,18 +1,17 @@
 use crate::utils::{build_inputs_cwl, build_inputs_yaml, get_all_outputs, get_location, load_cwl_yaml, read_file_content, sanitize_path};
+use anyhow::{Context, Result};
 use serde::Deserializer;
 use serde::{de, Deserialize, Serialize};
-use serde_yaml::{Value, Mapping};
 use serde_json::json;
+use serde_yaml::{Mapping, Value};
 use std::path::Path;
 use std::path::MAIN_SEPARATOR;
 use std::{
     collections::{HashMap, HashSet},
-    env,
-    fs,
+    env, fs,
 };
-use anyhow::{Context, Result};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct WorkflowOutputs {
     files: Vec<String>,
 }
@@ -29,6 +28,7 @@ struct WorkflowJson {
 struct WorkflowSpec {
     file: String,
     specification: CWLGraph,
+    #[serde(rename = "type")]
     r#type: String,
 }
 
@@ -51,9 +51,37 @@ struct CWLWorkflow {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct CWLFile {
+#[serde(rename_all = "camelCase")]
+struct CWLCommandLineTool {
+    cwl_version: String,
     class: String,
-    location: String,
+    base_command: BaseCommand,
+    inputs: Vec<CWLInput>,
+    outputs: Vec<CWLOutput>,
+    requirements: Option<Vec<CWLRequirement>>,
+    label: Option<String>,
+    stdout: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CWLInput {
+    id: String,
+    #[serde(rename = "type")]
+    input_type: String,
+    default: Option<serde_yaml::Value>,
+    input_binding: Option<CWLInputBinding>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CWLOutput {
+    id: String,
+    #[serde(rename = "type")]
+    output_type: Option<String>,
+    #[serde(rename = "outputSource")]
+    output_source: Option<serde_yaml::Value>,
+    output_binding: Option<CWLOutputBinding>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,6 +96,13 @@ struct CWLStep {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
+enum CWLStepInputs {
+    Map(HashMap<String, CWLStepInputSource>),
+    List(Vec<CWLStepInput>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 enum CWLStepInputSource {
     Simple(String),
     Detailed {
@@ -75,12 +110,6 @@ enum CWLStepInputSource {
         value_from: Option<String>,
         default: Option<serde_yaml::Value>,
     },
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum CWLStepInputs {
-    Map(HashMap<String, CWLStepInputSource>),
-    List(Vec<CWLStepInput>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,31 +136,46 @@ impl CWLStepOutput {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct CWLInput {
-    id: String,
-    r#type: String,
-    default: Option<serde_yaml::Value>,
-    input_binding: Option<CWLInputBinding>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CWLOutput {
-    id: String,
-    #[serde(rename = "outputSource")]
-    output_source: Option<serde_yaml::Value>,
-    r#type: Option<String>,
-    output_binding: Option<CWLOutputBinding>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct CWLInputBinding {
-    prefix: String,
+    prefix: Option<String>,
+    position: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CWLOutputBinding {
     glob: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CWLRequirement {
+    class: String,
+    docker_pull: Option<String>,
+    listing: Option<Vec<CWLListing>>,
+    network_access: Option<bool>,
+    expression_lib: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CWLListing {
+    entryname: Option<String>,
+    entry: Option<serde_yaml::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum BaseCommand {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Debug, Serialize)]
+struct CWLGraph {
+    #[serde(rename = "$graph")]
+    graph: Vec<serde_json::Value>,
+    #[serde(rename = "cwlVersion")]
+    cwl_version: String,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -173,95 +217,25 @@ pub enum ParameterValue {
     Scalar(String),
 }
 
-#[derive(Debug, Serialize)]
-struct CWLGraph {
-    #[serde(rename = "$graph")]
-    graph: Vec<serde_json::Value>,
-    #[serde(rename = "cwlVersion")]
-    cwl_version: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CWLCommandLineTool {
-    cwl_version: String,
-    class: String,
-    base_command: Vec<String>,
-    inputs: Vec<CWLInput>,
-    outputs: Vec<CWLOutput>,
-    requirements: Option<Vec<CWLRequirement>>,
-    label: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CWLRequirement {
-    class: String,
-    docker_pull: Option<String>,
-    listing: Option<Vec<CWLListing>>,
-    network_access: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CWLListing {
-    entryname: String,
-    entry: CWLEntry,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CWLListingEntry {
-    entryname: String,
-    entry: CWLEntry,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum CWLEntry {
-    Include {
-        #[serde(rename = "$include")]
-        include: String,
-    },
-    Expression(String),
-}
-
-fn make_relative_path(path: &Path, base: &Path) -> Option<std::path::PathBuf> {
-    if let Ok(relative) = path.strip_prefix(base) {
-        return Some(relative.to_path_buf());
-    }
-
-    let joined = base.join(path);
-    if joined.exists() {
-        return Some(path.to_path_buf());
-    }
-    None
-}
-
-pub fn generate_workflow_json_from_cwl(
-    file: &Path,
-    input_file: &Option<String>,
-) -> Result<serde_json::Value> {
-    let cwl_path = file
-        .to_str()
-        .with_context(|| format!("Invalid UTF-8 in CWL file path: {file:?}"))?;
+pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<serde_json::Value> {
+    let mut params = HashMap::new();
+    let cwl_path = file.to_str().with_context(|| format!("Invalid UTF-8 in CWL file path: {file:?}"))?;
 
     let base_dir = env::current_dir().context("Failed to get current working directory")?;
     let base_dir_str = base_dir.to_string_lossy();
 
-    // Load inputs YAML, either from YAML file or from CWL defaults
     let inputs_yaml_data = match input_file {
-        Some(yaml_file) => build_inputs_yaml(cwl_path, yaml_file)
-            .with_context(|| format!("Failed to build inputs YAML from file '{yaml_file}'"))?,
-        None => build_inputs_cwl(cwl_path, None)
-            .with_context(|| format!("Failed to build inputs from CWL file '{cwl_path}'"))?,
+        Some(yaml_file) => build_inputs_yaml(cwl_path, yaml_file).with_context(|| format!("Failed to build inputs YAML from file '{yaml_file}'"))?,
+        None => build_inputs_cwl(cwl_path, None).with_context(|| format!("Failed to build inputs from CWL file '{cwl_path}'"))?,
     };
 
-    let workflow_spec_json = convert_cwl_to_json(cwl_path, &inputs_yaml_data)
-        .with_context(|| format!("Failed to convert CWL '{cwl_path}' and inputs to JSON"))?;
+    let workflow_spec_json =
+        convert_cwl_to_json(cwl_path, &inputs_yaml_data).with_context(|| format!("Failed to convert CWL '{cwl_path}' and inputs to JSON"))?;
 
-    let cwl_yaml = load_cwl_yaml(&base_dir_str, file)
-        .with_context(|| format!("Failed to load CWL YAML from '{}'", file.display()))?;
+    let cwl_yaml = load_cwl_yaml(&base_dir_str, file).with_context(|| format!("Failed to load CWL YAML from '{}'", file.display()))?;
 
     let mut files: Vec<String> = Vec::new();
+    let mut tool_output_files: HashSet<String> = HashSet::new();
 
     let cwl_version = workflow_spec_json
         .get("cwlVersion")
@@ -271,74 +245,42 @@ pub fn generate_workflow_json_from_cwl(
 
     let mut graph = vec![workflow_spec_json];
 
-    // Process steps
     if let serde_json::Value::Object(_) = &graph[0] {
         if let Some(steps) = cwl_yaml.get("steps").and_then(|v| v.as_sequence()) {
             for step in steps {
                 if let Some(run_val) = step.get("run").and_then(|v| v.as_str()) {
                     let run_path = Path::new(run_val.trim_start_matches('#'));
-                    let resolved_path = get_location(cwl_path, run_path)
-                        .with_context(|| format!("Failed to resolve 'run' path '{run_val}' in CWL"))?;
+                    let resolved_path =
+                        get_location(cwl_path, run_path).with_context(|| format!("Failed to resolve 'run' path '{run_val}' in CWL"))?;
 
-                    let (tool_json, tool_files) = convert_command_line_tool_cwl_to_json(&resolved_path, &inputs_yaml_data)
+                    let (tool_json, tool_files) = convert_command_line_tool_cwl_to_json(&resolved_path, &inputs_yaml_data, &mut params)
                         .with_context(|| format!("Failed to convert command line tool CWL at '{}'", Path::new(&resolved_path).display()))?;
 
                     files.extend(tool_files);
+
+                    // Collect output globs from the CommandLineTool
+                    if let Some(outputs) = tool_json.get("outputs").and_then(|v| v.as_array()) {
+                        for output in outputs {
+                            if let Some(glob) = output.get("outputBinding").and_then(|b| b.get("glob")) {
+                                if let Some(glob_str) = glob.as_str() {
+                                    tool_output_files.insert(glob_str.to_string());
+                                }
+                            }
+                        }
+                    }
+
                     graph.push(tool_json);
                 }
             }
         }
     }
 
-    // Deserialize inputs YAML to WorkflowInputs struct
     let mut inputs_value = serde_yaml::from_value::<WorkflowInputs>(Value::Mapping(inputs_yaml_data.clone()))
         .context("Failed to deserialize inputs YAML into WorkflowInputs")?;
 
-    // Convert absolute file paths to relative
-    let mut relative_files = Vec::new();
-    let mut seen_paths = HashSet::new();
-    for abs in &files {
-        let abs_path = Path::new(abs);
-        match make_relative_path(abs_path, &base_dir) {
-            Some(rel_path) => {
-                let rel_str = rel_path.to_string_lossy().to_string();
-                if seen_paths.insert(rel_str.clone()) {
-                    relative_files.push(rel_str);
-                }
-            }
-            None => eprintln!("⚠️ Warning: Could not make path {abs_path:?} relative to {base_dir:?}"),
-        }
+    if !params.is_empty() {
+        inputs_value.parameters = serde_yaml::to_value(&params)?;
     }
-
-    let parameter_locations: HashSet<String> = match &inputs_value.parameters {
-        Value::Mapping(map) => map
-            .values()
-            .filter_map(|val| {
-                val.get("location")
-                    .and_then(|loc| loc.as_str())
-                    .map(|s| s.to_string())
-            })
-            .collect(),
-        _ => HashSet::new(),
-    };
-
-    let directory_set: HashSet<String> = inputs_value.directories.iter().cloned().collect();
-
-    // Filter files
-    let cleaned_files: Vec<String> = relative_files
-        .into_iter()
-        .filter(|f| {
-            // File must exist
-            let exists = Path::new(f).exists();
-            exists &&
-            // Not already part of parameters
-            !parameter_locations.iter().any(|p| f.ends_with(p)) &&
-            // Not already covered by a directory
-            !directory_set.iter().any(|d| f.starts_with(d))
-        })
-        .collect();
-
-    inputs_value.files = cleaned_files;
 
     let output_files: Vec<String> = get_all_outputs(cwl_path)
         .with_context(|| format!("Failed to get all outputs from CWL file '{cwl_path}'"))?
@@ -348,7 +290,6 @@ pub fn generate_workflow_json_from_cwl(
 
     let outputs = WorkflowOutputs { files: output_files };
 
-    // Build workflow JSON structure
     let workflow_json = WorkflowJson {
         inputs: inputs_value,
         outputs,
@@ -366,15 +307,13 @@ pub fn generate_workflow_json_from_cwl(
 }
 
 fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_json::Value> {
-    let cwl_content = fs::read_to_string(cwl_path)
-        .with_context(|| format!("Failed to read CWL file from path: {cwl_path}"))?;
+    let cwl_content = fs::read_to_string(cwl_path).with_context(|| format!("Failed to read CWL file from path: {cwl_path}"))?;
 
     let full_cwl_path = env::current_dir()
         .with_context(|| "Failed to get current working directory")?
         .join(cwl_path);
 
-    let workflow: CWLWorkflow = serde_yaml::from_str(&cwl_content)
-        .with_context(|| format!("Failed to parse CWL YAML at {full_cwl_path:?}"))?;
+    let workflow: CWLWorkflow = serde_yaml::from_str(&cwl_content).with_context(|| format!("Failed to parse CWL YAML at {full_cwl_path:?}"))?;
 
     // Prepare inputs
     let formatted_inputs: Vec<_> = workflow
@@ -383,16 +322,14 @@ fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_js
         .map(|input| {
             let default_value = input.default.clone().or_else(|| {
                 inputs_yaml.get("parameters").and_then(|params| match params {
-                    Value::Mapping(map) => {
-                        map.get(Value::String(input.id.clone())).cloned()
-                    }
+                    Value::Mapping(map) => map.get(Value::String(input.id.clone())).cloned(),
                     _ => None,
                 })
             });
 
             json!({
                 "id": format!("#main/{}", input.id),
-                "type": input.r#type,
+                "type": input.input_type,
                 "default": default_value
             })
         })
@@ -410,7 +347,7 @@ fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_js
                 json!({
                     "id": format!("#main/{}", output.id),
                     "outputSource": full_src,
-                    "type": output.r#type
+                    "type": output.output_type
                 })
             })
         })
@@ -433,10 +370,7 @@ fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_js
                         CWLStepInputSource::Detailed { source, .. } => {
                             let sources: Vec<String> = match source {
                                 Some(Value::String(s)) => vec![s.clone()],
-                                Some(Value::Sequence(seq)) => seq
-                                    .iter()
-                                    .filter_map(|v| v.as_str().map(String::from))
-                                    .collect(),
+                                Some(Value::Sequence(seq)) => seq.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
                                 _ => vec![],
                             };
                             sources
@@ -480,10 +414,7 @@ fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_js
 
             // Step run path
             let run_str = sanitize_path(&step.run);
-            let run_file = run_str
-                .rsplit(MAIN_SEPARATOR)
-                .next()
-                .unwrap_or(&run_str);
+            let run_file = run_str.rsplit(MAIN_SEPARATOR).next().unwrap_or(&run_str);
 
             json!({
                 "id": format!("#main/{}", step.id),
@@ -507,60 +438,65 @@ fn convert_cwl_to_json(cwl_path: &str, inputs_yaml: &Mapping) -> Result<serde_js
 fn convert_command_line_tool_cwl_to_json(
     cwl_path: &str,
     inputs_yaml: &serde_yaml::Mapping,
+    parameters: &mut HashMap<String, String>,
 ) -> Result<(serde_json::Value, Vec<String>)> {
-    let cwl_content = fs::read_to_string(cwl_path)
-        .with_context(|| format!("Failed to read CommandLineTool CWL file at path: {cwl_path}"))?;
+    let cwl_content = fs::read_to_string(cwl_path).with_context(|| format!("Failed to read CommandLineTool CWL file at path: {cwl_path}"))?;
 
-    let current_dir = env::current_dir()
-        .context("Failed to get current working directory")?;
+    let current_dir = env::current_dir().context("Failed to get current working directory")?;
     let full_cwl_path = current_dir.join(cwl_path);
 
-    let tool_name = Path::new(cwl_path)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(cwl_path);
+    let tool_name = Path::new(cwl_path).file_name().and_then(|s| s.to_str()).unwrap_or(cwl_path);
 
-    let command_line_tool: CWLCommandLineTool = serde_yaml::from_str(&cwl_content)
-        .with_context(|| format!("Failed to parse CommandLineTool YAML at {full_cwl_path:?}"))?;
+    let command_line_tool: CWLCommandLineTool =
+        serde_yaml::from_str(&cwl_content).with_context(|| format!("Failed to parse CommandLineTool YAML at {full_cwl_path:?}"))?;
 
     let mut files = Vec::new();
     let mut replaced_entrynames = HashMap::new();
 
-    let formatted_inputs = parse_inputs(
-        &command_line_tool.inputs,
-        tool_name,
-        inputs_yaml,
-        &full_cwl_path,
-        &mut files,
-    ).with_context(|| format!("Failed to parse inputs for tool: {tool_name}"))?;
+    let formatted_inputs = parse_inputs(&command_line_tool.inputs, tool_name, inputs_yaml, &full_cwl_path, &mut files)
+        .with_context(|| format!("Failed to parse inputs for tool: {tool_name}"))?;
 
-    let formatted_outputs = parse_outputs(&command_line_tool.outputs, tool_name);
+    // Only insert parameters that are not already in the HashMap
+    for input in &command_line_tool.inputs {
+        let id = input.id.trim_start_matches('#').to_string();
+        if parameters.contains_key(&id) {
+            continue;
+        }
 
-    let formatted_requirements = parse_requirements(
-        &command_line_tool.requirements,
-        &full_cwl_path,
-        &mut replaced_entrynames,
-        &mut files,
-    ).with_context(|| format!("Failed to parse requirements for tool: {tool_name}"))?;
+        // Skip File or Directory types
+        let input_type_str = input.input_type.to_string().to_lowercase();
+        if input_type_str.contains("file") || input_type_str.contains("directory") {
+            continue;
+        }
 
-    let base_command: Vec<String> = command_line_tool
-        .base_command
-        .iter()
-        .map(|cmd| {
-            replaced_entrynames
-                .get(cmd)
-                .map(|opt| opt.as_deref().unwrap_or(cmd))
-                .unwrap_or(cmd)
-                .to_string()
-        })
-        .collect();
-
-    for cmd in &command_line_tool.base_command {
-        let path = Path::new(cmd);
-        if path.is_file() && !files.contains(cmd) {
-            files.push(cmd.clone());
+        if let Some(default_value) = &input.default {
+            let value_str = match default_value {
+                serde_yaml::Value::String(s) => s.clone(),
+                serde_yaml::Value::Number(n) => n.to_string(),
+                serde_yaml::Value::Bool(b) => b.to_string(),
+                _ => "unsupported".to_string(),
+            };
+            parameters.insert(id, value_str);
         }
     }
+    let formatted_outputs = parse_outputs(&command_line_tool.outputs, tool_name);
+
+    let formatted_requirements = parse_requirements(&command_line_tool.requirements, &full_cwl_path, &mut replaced_entrynames, &mut files)
+        .with_context(|| format!("Failed to parse requirements for tool: {tool_name}"))?;
+
+    let base_command: Vec<String> = match &command_line_tool.base_command {
+        BaseCommand::Single(cmd) => vec![cmd.clone()],
+        BaseCommand::Multiple(cmds) => cmds
+            .iter()
+            .map(|cmd| {
+                replaced_entrynames
+                    .get(cmd)
+                    .map(|opt| opt.as_deref().unwrap_or(cmd))
+                    .unwrap_or(cmd)
+                    .to_string()
+            })
+            .collect(),
+    };
 
     let tool_json = serde_json::json!({
         "class": "CommandLineTool",
@@ -569,12 +505,12 @@ fn convert_command_line_tool_cwl_to_json(
         "inputs": formatted_inputs,
         "outputs": formatted_outputs,
         "requirements": formatted_requirements,
+        "stdout": command_line_tool.stdout,
         "label": command_line_tool.label,
     });
 
     Ok((tool_json, files))
 }
-
 
 fn parse_inputs(
     inputs: &[CWLInput],
@@ -585,7 +521,8 @@ fn parse_inputs(
 ) -> Result<Vec<serde_json::Value>> {
     inputs
         .iter()
-        .map(|input| {
+        .enumerate()
+        .map(|(index, input)| {
             let input_id = format!("#{}/{}", tool_name, input.id);
 
             let default_value = input.default.clone().or_else(|| {
@@ -600,35 +537,41 @@ fn parse_inputs(
 
             let mut input_json = serde_json::json!({
                 "id": input_id,
-                "type": input.r#type,
+                "type": input.input_type,
                 "default": default_value
             });
 
             if let Some(default_file) = &input.default {
                 if let Some(location_str) = default_file.get("location").and_then(|v| v.as_str()) {
                     let location_path = Path::new(location_str);
-                    let resolved_location = get_location(
-                        &full_cwl_path.to_string_lossy(),
-                        location_path,
-                    )
-                    .with_context(|| {
-                        format!(
-                            "Failed to resolve location '{}' relative to '{}'",
-                            location_str,
-                            full_cwl_path.display()
-                        )
-                    })?;
+                    let resolved_location = get_location(&full_cwl_path.to_string_lossy(), location_path)
+                        .with_context(|| format!("Failed to resolve location '{}' relative to '{}'", location_str, full_cwl_path.display()))?;
 
-                    files.push(resolved_location.clone());
                     input_json["default"] = serde_json::json!({
                         "class": "File",
                         "location": format!("file://{}", resolved_location)
                     });
+                    files.push(resolved_location);
                 }
             }
 
+            // Add inputBinding
             if let Some(binding) = &input.input_binding {
-                input_json["inputBinding"] = serde_json::json!({ "prefix": binding.prefix });
+                let mut input_binding_json = serde_json::Map::new();
+
+                if let Some(prefix) = &binding.prefix {
+                    input_binding_json.insert("prefix".to_string(), serde_json::json!(prefix));
+                }
+                if let Some(position) = binding.position {
+                    input_binding_json.insert("position".to_string(), serde_json::json!(position));
+                }
+                if input_binding_json.is_empty() {
+                    input_binding_json.insert("position".to_string(), serde_json::json!(index as i64));
+                }
+
+                input_json["inputBinding"] = serde_json::Value::Object(input_binding_json);
+            } else {
+                input_json["inputBinding"] = serde_json::json!({ "position": index as i64 });
             }
 
             Ok(input_json)
@@ -647,12 +590,11 @@ fn parse_outputs(outputs: &[CWLOutput], tool_name: &str) -> Vec<serde_json::Valu
                         .as_ref()
                         .map_or("".to_string(), |binding| binding.glob.clone())
                 },
-                "type": output.r#type
+                "type": output.output_type
             })
         })
         .collect()
 }
-
 
 fn parse_requirements(
     requirements: &Option<Vec<CWLRequirement>>,
@@ -669,21 +611,27 @@ fn parse_requirements(
 
     for req in reqs {
         let json_req = match req.class.as_str() {
-            "DockerRequirement" => serde_json::json!({
+            "DockerRequirement" => json!({
                 "class": "DockerRequirement",
                 "dockerPull": req.docker_pull
             }),
-
-            "NetworkAccess" => serde_json::json!({
+            "NetworkAccess" => json!({
                 "class": "NetworkAccess",
                 "networkAccess": req.network_access.unwrap_or(false)
             }),
-
+            "InlineJavascriptRequirement" => {
+                let mut map = serde_json::Map::new();
+                map.insert("class".to_string(), serde_json::json!("InlineJavascriptRequirement"));
+                if let Some(lib) = &req.expression_lib {
+                    map.insert("expressionLib".to_string(), serde_json::json!(lib));
+                }
+                serde_json::Value::Object(map)
+            }
             "InitialWorkDirRequirement" => {
                 let listing = match &req.listing {
                     Some(l) => l,
                     None => {
-                        parsed.push(serde_json::json!({ "class": "InitialWorkDirRequirement" }));
+                        parsed.push(json!({ "class": "InitialWorkDirRequirement" }));
                         continue;
                     }
                 };
@@ -692,64 +640,71 @@ fn parse_requirements(
 
                 for entry in listing {
                     match &entry.entry {
-                        CWLEntry::Include { include } => {
-                            let entry_path = Path::new(include);
-                            let original = entry.entryname.clone();
-                            let new_name = Path::new(&original)
-                                .file_name()
-                                .and_then(|s| s.to_str())
-                                .map(|s| s.to_string());
+                        Some(serde_yaml::Value::Mapping(map)) => {
+                            if let Some(include) = map.get(serde_yaml::Value::String("$include".into())) {
+                                if let Some(include_path) = include.as_str() {
+                                    let entryname = entry.entryname.clone().unwrap_or_else(|| {
+                                        Path::new(include_path)
+                                            .file_name()
+                                            .and_then(|s| s.to_str())
+                                            .unwrap_or("unknown")
+                                            .to_string()
+                                    });
 
-                            if let Some(new_name) = &new_name {
-                                if &original != new_name {
-                                    replaced_entrynames.insert(original.clone(), Some(new_name.clone()));
+                                    let new_name = Path::new(&entryname).file_name().and_then(|s| s.to_str()).map(|s| s.to_string());
+
+                                    if let Some(new_name) = &new_name {
+                                        if &entryname != new_name {
+                                            replaced_entrynames.insert(entryname.clone(), Some(new_name.clone()));
+                                        }
+                                    }
+
+                                    let loc = get_location(&full_cwl_path.to_string_lossy(), Path::new(include_path))
+                                        .with_context(|| format!("Failed to resolve location for include '{include_path}'"))?;
+
+                                    let content = read_file_content(&loc).with_context(|| format!("Failed to read included file '{loc}'"))?;
+                                    files.push(loc);
+
+                                    formatted_listing.push(json!({
+                                        "entry": content,
+                                        "entryname": new_name
+                                    }));
                                 }
+                            } else {
+                                // treat as inline YAML
+                                formatted_listing.push(json!({
+                                    "entry": entry.entry.clone(),
+                                    "entryname": entry.entryname
+                                }));
                             }
-
-                            let loc = get_location(&full_cwl_path.to_string_lossy(), entry_path)
-                                .with_context(|| format!("Failed to resolve location for include '{include}'"))?;
-
-                            let content = read_file_content(&loc)
-                                .with_context(|| format!("Failed to read included file '{loc}'"))?;
-
-                            files.push(loc);
-
-                            formatted_listing.push(serde_json::json!({
-                                "entry": content,
-                                "entryname": new_name
-                            }));
                         }
-
-                        CWLEntry::Expression(expr) => {
-                            formatted_listing.push(serde_json::json!({
-                                "entry": expr,
+                        Some(_) | None => {
+                            formatted_listing.push(json!({
+                                "entry": entry.entry.clone(),
                                 "entryname": entry.entryname
                             }));
                         }
                     }
                 }
 
-                serde_json::json!({
+                json!({
                     "class": "InitialWorkDirRequirement",
                     "listing": formatted_listing
                 })
             }
 
-            _ => {
-                continue; // optionally log or warn about unknown requirement class
-            }
+            _ => continue,
         };
 
         parsed.push(json_req);
     }
-
     Ok(parsed)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{PathBuf, Path};
+    use std::path::{Path, PathBuf};
     use tempfile::tempdir;
 
     #[test]
@@ -859,23 +814,12 @@ mod tests {
             - code/download_election_data.py
         "#;
         let inputs_yaml_data = r#"
-            inputs:
-              directories:
-                - workflows
-                - data/braunschweig
-              files:
-                - code/download_election_data.py
-                - data.csv
-                - code/get_feature_info.py
-                - features.json
-                - code/plot_election.py
-              parameters:
-                shapes:
-                  class: Directory
-                  location: data/braunschweig
-                feature: F3
-                ags: "03101000"
-                election: Bundestagswahl 2025
+            election: Bundestagswahl 2025
+            ags: 03101000
+            shapes:
+              class: Directory
+              location: data/braunschweig
+            feature: F3
         "#;
         let inputs_yaml_value: Value = serde_yaml::from_str(inputs_yaml_data).expect("Failed to parse YAML");
 
@@ -892,16 +836,15 @@ mod tests {
 
         // Write CWL file
         let cwl_path = temp_dir.path().join("tool.cwl");
-        fs::write(&cwl_path,cwl_template).expect("failed to write cwl");
+        fs::write(&cwl_path, cwl_template).expect("failed to write cwl");
 
         // Save and change current dir
         let old_dir = env::current_dir().expect("could not get current dir");
         env::set_current_dir(temp_dir.path()).expect("could not change to temp dir");
-
+        let mut params = HashMap::new();
         // Run the function
-        let (json_output, files) = convert_command_line_tool_cwl_to_json("tool.cwl", inputs_yaml_mapping).expect("Conversion failed");
-        println!("json_ouput {:?}", json_output);
-        println!("files {:?}", files);
+        let (json_output, files) = convert_command_line_tool_cwl_to_json("tool.cwl", inputs_yaml_mapping, &mut params).expect("Conversion failed");
+
         // Restore the original working directory
         env::set_current_dir(old_dir).expect("could not reset current dir");
 
