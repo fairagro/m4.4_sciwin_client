@@ -136,7 +136,6 @@ pub fn upload_files(
     if let Some(inputs) = workflow_json.get("inputs") {
         if let Some(Value::Array(file_list)) = inputs.get("files") {
             for f in file_list.iter().filter_map(|v| v.as_str()) {
-                println!("f.to_str {:?}", f.to_string());
                 files.insert(f.to_string());
             }
         }
