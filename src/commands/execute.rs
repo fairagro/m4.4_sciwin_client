@@ -1,3 +1,4 @@
+use crate::config;
 use clap::{Args, Subcommand};
 use cwl::{
     types::{CWLType, DefaultValue, Directory, File},
@@ -83,23 +84,39 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     let file = &args.file;
     let input_file = &args.input_file;
 
-    let workflow_json = generate_workflow_json_from_cwl(file, input_file)
-        .map_err(|e| format!("Failed to generate workflow JSON from CWL: {}", e))?;
+    let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {}", e))?;
 
-    let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())
-        .map_err(|e| format!("Failed to convert workflow JSON to YAML: {}", e))?;
+    let converted_yaml: serde_yaml::Value =
+        serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {}", e))?;
 
     println!("✅ Created workflow JSON");
 
-    let ping_status = ping_reana(reana_instance)
-        .map_err(|e| format!("Failed to ping Reana server: {}", e))?;
+    let ping_status = ping_reana(reana_instance).map_err(|e| format!("Failed to ping Reana server: {}", e))?;
 
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
         eprintln!("⚠️ Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
     }
 
-    let create_response = create_workflow(reana_instance, reana_token, &workflow_json)
+    //try getting the workflow name from the toml
+    let config_path = PathBuf::from("workflow.toml");
+    let workflow_name = if config_path.exists() {
+        let config = fs::read_to_string(config_path)?;
+        let config: config::Config = toml::from_str(&config)?;
+        Some(config.workflow.name)
+    } else {
+        None
+    };
+    //append filename or just use it
+    let file_str = file.file_stem().unwrap_or_default().to_string_lossy();
+    let workflow_name = Some(
+        workflow_name
+            .as_ref()
+            .map(|name| format!("{name} - {file_str}"))
+            .unwrap_or_else(|| file_str.to_string()),
+    );
+
+    let create_response = create_workflow(reana_instance, reana_token, &workflow_json, workflow_name.as_deref())
         .map_err(|e| format!("Failed to create workflow on Reana: {}", e))?;
 
     let Some(workflow_name) = create_response["workflow_name"].as_str() else {
@@ -109,19 +126,12 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)
         .map_err(|e| format!("Failed to upload files to Reana: {}", e))?;
 
-    start_workflow(
-        reana_instance,
-        reana_token,
-        workflow_name,
-        None,
-        None,
-        false,
-        converted_yaml,
-    ).map_err(|e| format!("Failed to start workflow: {}", e))?;
+    start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)
+        .map_err(|e| format!("Failed to start workflow: {}", e))?;
 
     loop {
-        let status_response = get_workflow_status(reana_instance, reana_token, workflow_name)
-            .map_err(|e| format!("Failed to fetch workflow status: {}", e))?;
+        let status_response =
+            get_workflow_status(reana_instance, reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {}", e))?;
 
         let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
 

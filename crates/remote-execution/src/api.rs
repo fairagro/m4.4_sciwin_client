@@ -15,13 +15,16 @@ use std::{
     path::PathBuf,
 };
 
-pub fn create_workflow(reana_server: &str, reana_token: &str, workflow: &serde_json::Value) -> Result<Value, Box<dyn Error>> {
+pub fn create_workflow(reana_server: &str, reana_token: &str, workflow: &serde_json::Value, workflow_name: Option<&str>) -> Result<Value, Box<dyn Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/json".parse()?);
 
     let client = Client::builder().default_headers(headers).danger_accept_invalid_certs(true).build()?;
 
-    let url = format!("{reana_server}/api/workflows?access_token={reana_token}");
+    let mut url = format!("{reana_server}/api/workflows?access_token={reana_token}");
+    if let Some(name) = workflow_name {
+        url.push_str(&format!("&workflow_name={name}"));
+    }
 
     let response = client.post(&url).json(workflow).send()?.error_for_status()?;
 
@@ -467,7 +470,7 @@ mod tests {
             }));
         });
 
-        let result = create_workflow(&server.base_url(), "test-token", &workflow_payload);
+        let result = create_workflow(&server.base_url(), "test-token", &workflow_payload, None);
 
         assert!(result.is_ok());
         let json_response = result.unwrap();
@@ -494,7 +497,7 @@ mod tests {
             then.status(401).json_body(json!({ "message": "Unauthorized" }));
         });
 
-        let result = create_workflow(&server.base_url(), "invalid_token", &workflow_payload);
+        let result = create_workflow(&server.base_url(), "invalid_token", &workflow_payload, None);
 
         assert!(result.is_err());
     }
