@@ -561,7 +561,9 @@ mod tests {
 
     #[test]
     fn test_generate_workflow_json_from_cwl_minimal() {
-        let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        assert!(Path::new(&cwl_path).exists(), "Test cwl file does not exists");
         let result = generate_workflow_json_from_cwl(&cwl_path, &None);
     
         assert!(result.is_ok(), "Expected generation to succeed");
@@ -793,9 +795,13 @@ mod tests {
     
     #[test]
     fn test_generate_workflow_json_from_cwl_with_inputs_yaml() {
-        use std::path::PathBuf;
+        let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let inputs_yaml_path = base_dir.join("tests/test_data/hello_world/inputs.yml");
 
-        let cwl_path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+        assert!(cwl_path.exists(), "CWL file not found at {:?}", cwl_path);
+        assert!(inputs_yaml_path.exists(), "Inputs YAML file not found at {:?}", inputs_yaml_path);
+
         let result = generate_workflow_json_from_cwl(
             &cwl_path,
             &Some("../../tests/test_data/hello_world/inputs.yml".to_string()),
