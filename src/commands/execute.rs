@@ -6,10 +6,14 @@ use cwl::{
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use remote_execution::{
-    api::{create_workflow, download_files, get_workflow_status, ping_reana, start_workflow, upload_files},
+    api::{
+        create_workflow, download_files, get_workflow_logs, get_workflow_status, get_workflow_workspace, ping_reana, start_workflow, upload_files,
+    },
     parser::generate_workflow_json_from_cwl,
+    rocrate::create_ro_crate,
 };
 use serde_yaml::{Number, Value};
+use std::io::Write;
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
@@ -52,14 +56,12 @@ pub struct LocalExecuteArgs {
 
 #[derive(Args, Debug, Default)]
 pub struct RemoteExecuteArgs {
-    #[arg(short = 'r', long = "instance", help = "Reana instance")]
-    pub instance: String,
-    #[arg(short = 't', long = "token", help = "Your reana token")]
-    pub token: String,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
     #[arg(short = 'i', long = "input", help = "Input yaml file")]
     pub input_file: Option<String>,
+    #[arg(long = "rocrate", help = "Create Provenance Run Crate")]
+    pub rocrate: bool,
 }
 
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
@@ -78,60 +80,96 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
-
-    let reana_instance = args.instance.trim_end_matches('/');
-    let reana_token = &args.token;
+    let ro_crate_dir = "rocrate";
     let file = &args.file;
     let input_file = &args.input_file;
 
-    let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {}", e))?;
+    //try getting the workflow name from the toml
+    let config_path = PathBuf::from("workflow.toml");
+
+    let mut config: Option<config::Config> = if config_path.exists() {
+        let content = fs::read_to_string(&config_path)?;
+        Some(toml::from_str(&content).map_err(|e| format!("❌ Failed to parse workflow.toml: {e}"))?)
+    } else {
+        None
+    };
+    // Get workflow name
+    let file_str = file.file_stem().unwrap_or_default().to_string_lossy();
+    let workflow_name = Some(
+        config
+            .as_ref()
+            .map(|c| c.workflow.name.as_str())
+            .map(|name| format!("{name} - {file_str}"))
+            .unwrap_or_else(|| file_str.to_string()),
+    );
+    // Get or prompt REANA instance
+    let reana_instance = match config.as_mut().and_then(|c| c.reana.instance.clone()) {
+        Some(url) => url,
+        None => {
+            print!("Enter REANA instance URL: ");
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let value = input.trim().to_string();
+            if let Some(cfg) = config.as_mut() {
+                cfg.reana.instance = Some(value.clone());
+            }
+            value
+        }
+    };
+    // Get or prompt REANA token
+    let reana_token = match config.as_mut().and_then(|c| c.reana.token.clone()) {
+        Some(token) => token,
+        None => {
+            print!("Enter REANA access token: ");
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let value = input.trim().to_string();
+            if let Some(cfg) = config.as_mut() {
+                cfg.reana.token = Some(value.clone());
+            }
+            value
+        }
+    };
+    // Save any new config values
+    if let Some(cfg) = config {
+        let updated_toml = cfg.to_toml().map_err(|e| format!("❌ Failed to serialize updated config: {e}"))?;
+        fs::write(&config_path, updated_toml).map_err(|e| format!("❌ Failed to write updated config to workflow.toml: {e}"))?;
+    }
+    let config_str = fs::read_to_string(&config_path).map_err(|e| format!("❌ Failed to read workflow.toml after update: {e}"))?;
+
+    let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {e}"))?;
+    println!("workflow_json {:?}", workflow_json);
 
     let converted_yaml: serde_yaml::Value =
-        serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {}", e))?;
+        serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {e}"))?;
 
     println!("✅ Created workflow JSON");
 
-    let ping_status = ping_reana(reana_instance).map_err(|e| format!("Failed to ping Reana server: {}", e))?;
+    let ping_status = ping_reana(&reana_instance).map_err(|e| format!("Failed to ping Reana server: {e}"))?;
 
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
         eprintln!("⚠️ Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
     }
 
-    //try getting the workflow name from the toml
-    let config_path = PathBuf::from("workflow.toml");
-    let workflow_name = if config_path.exists() {
-        let config = fs::read_to_string(config_path)?;
-        let config: config::Config = toml::from_str(&config)?;
-        Some(config.workflow.name)
-    } else {
-        None
-    };
-    //append filename or just use it
-    let file_str = file.file_stem().unwrap_or_default().to_string_lossy();
-    let workflow_name = Some(
-        workflow_name
-            .as_ref()
-            .map(|name| format!("{name} - {file_str}"))
-            .unwrap_or_else(|| file_str.to_string()),
-    );
-
-    let create_response = create_workflow(reana_instance, reana_token, &workflow_json, workflow_name.as_deref())
-        .map_err(|e| format!("Failed to create workflow on Reana: {}", e))?;
+    let create_response = create_workflow(&reana_instance, &reana_token, &workflow_json, workflow_name.as_deref())
+        .map_err(|e| format!("Failed to create workflow on Reana: {e}"))?;
 
     let Some(workflow_name) = create_response["workflow_name"].as_str() else {
         return Err("Missing 'workflow_name' in workflow creation response".into());
     };
 
-    upload_files(reana_instance, reana_token, input_file, file, workflow_name, &workflow_json)
-        .map_err(|e| format!("Failed to upload files to Reana: {}", e))?;
+    upload_files(&reana_instance, &reana_token, input_file, file, workflow_name, &workflow_json)
+        .map_err(|e| format!("Failed to upload files to Reana: {e}"))?;
 
-    start_workflow(reana_instance, reana_token, workflow_name, None, None, false, converted_yaml)
-        .map_err(|e| format!("Failed to start workflow: {}", e))?;
+    start_workflow(&reana_instance, &reana_token, workflow_name, None, None, false, converted_yaml)
+        .map_err(|e| format!("Failed to start workflow: {e}"))?;
 
     loop {
         let status_response =
-            get_workflow_status(reana_instance, reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {}", e))?;
+            get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
 
         let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
 
@@ -139,8 +177,43 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
             match workflow_status {
                 "finished" => {
                     println!("✅ Workflow finished successfully.");
-                    download_files(reana_instance, reana_token, workflow_name, &workflow_json)
-                        .map_err(|e| format!("Failed to download output files: {}", e))?;
+                    let output_files = workflow_json
+                        .get("outputs")
+                        .and_then(|outputs| outputs.get("files"))
+                        .and_then(|files| files.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str())
+                                .map(|filename| format!("outputs/{filename}"))
+                                .collect::<Vec<String>>()
+                        })
+                        .unwrap_or_default();
+                    download_files(&reana_instance, &reana_token, workflow_name, &output_files, Some(ro_crate_dir))?;
+                    if args.rocrate {
+                        let logs = get_workflow_logs(&reana_instance, &reana_token, workflow_name)?;
+                        let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize reana JSON logs");
+                        let conforms_to = [
+                            "https://w3id.org/ro/wfrun/process/0.5",
+                            "https://w3id.org/ro/wfrun/workflow/0.5",
+                            "https://w3id.org/ro/wfrun/provenance/0.5",
+                            "https://w3id.org/workflowhub/workflow-ro-crate/1.0",
+                        ];
+                        let workspace_response = get_workflow_workspace(&reana_instance, &reana_token, workflow_name)?;
+                        let workspace_files: Vec<String> = workspace_response
+                            .get("items")
+                            .and_then(|items| items.as_array())
+                            .map(|array| array.iter().filter_map(|item| item.get("name")?.as_str().map(String::from)).collect())
+                            .unwrap_or_default();
+                        create_ro_crate(
+                            &workflow_json,
+                            &logs_str,
+                            &conforms_to,
+                            Some(ro_crate_dir.to_string()),
+                            &workspace_files,
+                            workflow_name,
+                            &config_str,
+                        )?;
+                    }
                 }
                 "failed" => {
                     eprintln!("❌ Workflow execution failed.");
@@ -155,7 +228,6 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
 
         thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
     }
-
     Ok(())
 }
 

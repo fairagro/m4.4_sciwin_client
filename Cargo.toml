@@ -37,6 +37,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tempfile = { workspace = true }
+toml = { workspace = true }
+toml_edit = { workspace = true }
 rustyscript = "0.11.0"
 clap = { version = "4.5.40", features = ["derive", "wrap_help"] }
 clap_complete = "4.5.54"
@@ -55,10 +57,8 @@ syntect = { version = "5.2.0", default-features = false, features = [
 ] }
 tokio = { version = "1.45.1", features = ["macros"] }
 walkdir = "2.5.0"
-toml = "0.8.23"
 semver = { version = "1.0.26", features = ["serde"] }
 smart-default = "0.7.1"
-toml_edit = "0.22.27"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
@@ -83,7 +83,9 @@ serde_json = "1.0.140"
 serde_yaml = "0.9.34-deprecated"
 rand = "0.9.1"
 reqwest = { version = "0.12.20", features = ["json", "blocking"] }
-tempfile = "3.20.0"
+toml = "0.8.23"
+toml_edit = "0.22.27"
+tempfile = "3.19.1"
 
 # Dist Settings
 [profile.dist]

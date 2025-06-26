@@ -15,7 +15,12 @@ use std::{
     path::PathBuf,
 };
 
-pub fn create_workflow(reana_server: &str, reana_token: &str, workflow: &serde_json::Value, workflow_name: Option<&str>) -> Result<Value, Box<dyn Error>> {
+pub fn create_workflow(
+    reana_server: &str,
+    reana_token: &str,
+    workflow: &serde_json::Value,
+    workflow_name: Option<&str>,
+) -> Result<Value, Box<dyn Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/json".parse()?);
 
@@ -85,6 +90,17 @@ pub fn start_workflow(
         .with_context(|| format!("Server returned error status for POST to {url}"))?;
 
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow start request")?;
+
+    Ok(json_response)
+}
+
+pub fn get_workflow_logs(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value, Box<dyn Error>> {
+    let url = format!("{}/api/workflows/{}/logs?access_token={}", &reana_server, workflow_id, reana_token);
+
+    let client = Client::builder().danger_accept_invalid_certs(true).build()?;
+
+    let response = client.get(&url).send()?;
+    let json_response: Value = response.json()?;
 
     Ok(json_response)
 }
@@ -256,58 +272,70 @@ pub fn upload_files(
     Ok(())
 }
 
-pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str, workflow_json: &Value) -> Result<()> {
-    let files = workflow_json
-        .get("outputs")
-        .and_then(|outputs| outputs.get("files"))
-        .and_then(|files| files.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<String>>())
-        .unwrap_or_default();
-
+pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str, files: &[String], folder: Option<&str>) -> Result<()> {
     if files.is_empty() {
-        println!("ℹ️  No files to download found in workflow.json.");
+        println!("ℹ️ No files to download.");
         return Ok(());
     }
 
     let client = ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .build()
-        .context("Failed to build HTTP client")?;
+        .context("❌ Failed to build HTTP client")?;
+
+    if let Some(ref dir) = folder {
+        fs::create_dir_all(dir).with_context(|| format!("❌ Failed to create folder: {dir}"))?;
+    }
 
     for file_name in files {
-        let url = format!("{reana_server}/api/workflows/{workflow_name}/workspace/outputs/{file_name}?access_token={reana_token}");
+        let url = format!("{reana_server}/api/workflows/{workflow_name}/workspace/{file_name}?access_token={reana_token}");
 
         let response = client
             .get(&url)
             .send()
-            .with_context(|| format!("Failed to send GET request for file '{file_name}'"))?;
+            .with_context(|| format!("❌ HTTP request failed for URL: {url}"))?;
 
         if response.status().is_success() {
-            let file_path = Path::new(&file_name)
+            let file_path_name = Path::new(file_name)
                 .file_name()
-                .ok_or_else(|| anyhow::anyhow!("Failed to extract file name from path '{}'", file_name))?
-                .to_str()
-                .ok_or_else(|| anyhow::anyhow!("File name '{}' is not valid UTF-8", file_name))?
+                .and_then(|f| f.to_str())
+                .context("❌ Invalid or missing UTF-8 file name")?
                 .to_string();
 
-            let mut file = File::create(&file_path).with_context(|| format!("Failed to create local file '{file_path}'"))?;
+            let output_path = match folder {
+                Some(dir) => Path::new(dir).join(&file_path_name),
+                None => PathBuf::from(&file_path_name),
+            };
 
-            let content = response
-                .bytes()
-                .with_context(|| format!("Failed to read response body for file '{file_name}'"))?;
+            let content = response.bytes().context("❌ Failed to read response bytes")?;
 
+            let mut file = File::create(&output_path).with_context(|| format!("❌ Failed to create file: {}", output_path.display()))?;
             file.write_all(&content)
-                .with_context(|| format!("Failed to write content to '{file_path}'"))?;
+                .with_context(|| format!("❌ Failed to write to file: {}", output_path.display()))?;
 
-            println!("✅ Downloaded: {file_path}");
+            println!("✅ Downloaded: {}", output_path.display());
         } else {
-            let status = response.status();
-            let body = response.text().unwrap_or_else(|_| "<unreadable response body>".into());
-            println!("❌ Failed to download '{file_name}'. Status: {status}. Response: {body}");
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            println!("❌ Failed to download {file_name}. Response: {error_text}");
         }
     }
 
     Ok(())
+}
+
+pub fn get_workflow_workspace(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
+    let url = format!("{reana_server}/api/workflows/{workflow_id}/workspace?access_token={reana_token}");
+
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .context("❌ Failed to build HTTP client")?;
+
+    let response = client.get(&url).send().with_context(|| format!("❌ Failed to send request to {url}"))?;
+
+    let json_response: Value = response.json().context("❌ Failed to parse JSON response")?;
+
+    Ok(json_response)
 }
 
 #[cfg(test)]
@@ -619,18 +647,13 @@ mod tests {
 
     #[test]
     fn test_download_files_no_files() {
-        use serde_json::json;
         let server = MockServer::start();
         let reana_token = "test-token";
         let workflow_name = "my_workflow";
 
-        let workflow_json = json!({
-            "outputs": {
-                "files": []
-            }
-        });
+        let files = vec![];
 
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &workflow_json);
+        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
 
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
     }
@@ -638,7 +661,6 @@ mod tests {
     #[test]
     fn test_download_files_success() {
         use httpmock::MockServer;
-        use serde_json::json;
         use std::env;
         use std::fs;
         use tempfile::tempdir;
@@ -651,23 +673,17 @@ mod tests {
 
         let _mock = server.mock(|when, then| {
             when.method("GET")
-                .path(format!("/api/workflows/{workflow_name}/workspace/outputs/{test_filename}"))
+                .path(format!("/api/workflows/{workflow_name}/workspace/{test_filename}"))
                 .query_param("access_token", reana_token);
             then.status(200).header("content-type", "image/svg+xml").body(test_content);
         });
-
-        let workflow_json = json!({
-            "outputs": {
-                "files": [ test_filename ]
-            }
-        });
-
         let original_dir = env::current_dir().expect("Failed to get current dir");
 
         let temp_dir = tempdir().expect("Failed to create temp dir");
         env::set_current_dir(&temp_dir).expect("Failed to set current dir");
+        let files = vec!["results.svg".to_string()];
 
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &workflow_json);
+        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
 
         env::set_current_dir(&original_dir).expect("Failed to restore original dir");
 
@@ -689,19 +705,15 @@ mod tests {
 
         let _mock = server.mock(|when, then| {
             when.method("GET")
-                .path(format!("/api/workflows/{workflow_name}/workspace/outputs/{test_filename}"))
+                .path(format!("/api/workflows/{workflow_name}/workspace/{test_filename}"))
                 .query_param("access_token", reana_token);
             then.status(404)
                 .header("content-type", "application/json")
                 .body(r#"{"error": "File not found"}"#);
         });
-        let workflow_json = json!({
-            "outputs": {
-                "files": [ test_filename ]
-            }
-        });
 
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &workflow_json);
+        let files = vec![test_filename.to_string()];
+        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
 
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
         _mock.assert_hits(1);
