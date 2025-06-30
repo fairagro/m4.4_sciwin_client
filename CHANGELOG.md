@@ -1,4 +1,13 @@
 # Unreleased
+## 🚀 Features
+- Remote Execution using Reana #108 
+    - FAIRagro Reana Instance will be provided later, see #42
+    - Credentials stored in keyring #118
+    - Provenance RO-Crate can be created from remote execution 46808afdd219b68c69562fedce00e164b4fb0081
+- Possibility to connect all CWL Documents in `s4n workflow connect` #95
+
+## 🐛 Bugfixes
+- Inputs and Outputs can not have same IDs #113
 
 # v0.6.1
 ## 🚀 Features
