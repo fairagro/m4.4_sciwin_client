@@ -5,6 +5,7 @@ use cwl::{
     CWLDocument,
 };
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
+use keyring::Entry;
 use remote_execution::{
     api::{
         create_workflow, download_files, get_workflow_logs, get_workflow_status, get_workflow_workspace, ping_reana, start_workflow, upload_files,
@@ -62,6 +63,8 @@ pub struct RemoteExecuteArgs {
     pub input_file: Option<String>,
     #[arg(long = "rocrate", help = "Create Provenance Run Crate")]
     pub rocrate: bool,
+    #[arg(long = "logout", help = "Delete reana information from credential storage (a.k.a logout)")]
+    pub logout: bool,
 }
 
 pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
@@ -87,7 +90,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     //try getting the workflow name from the toml
     let config_path = PathBuf::from("workflow.toml");
 
-    let mut config: Option<config::Config> = if config_path.exists() {
+    let config: Option<config::Config> = if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
         Some(toml::from_str(&content).map_err(|e| format!("❌ Failed to parse workflow.toml: {e}"))?)
     } else {
@@ -102,45 +105,50 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
             .map(|name| format!("{name} - {file_str}"))
             .unwrap_or_else(|| file_str.to_string()),
     );
+    if args.logout {
+        // Delete reana credentials
+        let entry = Entry::new("reana", "instance")?;
+        entry.delete_credential()?;
+        let entry = Entry::new("reana", "token")?;
+        entry.delete_credential()?;
+        println!("✅ Successfully logged out from previous REANA instances.");
+    }
+
     // Get or prompt REANA instance
-    let reana_instance = match config.as_mut().and_then(|c| c.reana.instance.clone()) {
-        Some(url) => url,
-        None => {
+    let entry = Entry::new("reana", "instance")?;
+    let reana_instance = match entry.get_password() {
+        Ok(url) => url,
+        Err(keyring::Error::NoEntry) => {
             print!("Enter REANA instance URL: ");
             std::io::stdout().flush()?;
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
             let value = input.trim().to_string();
-            if let Some(cfg) = config.as_mut() {
-                cfg.reana.instance = Some(value.clone());
-            }
+            entry.set_password(&value)?;
             value
         }
+        _ => entry.get_password().map_err(|e| format!("❌ Failed to get REANA instance URL: {e}"))?,
     };
     // Get or prompt REANA token
-    let reana_token = match config.as_mut().and_then(|c| c.reana.token.clone()) {
-        Some(token) => token,
-        None => {
+    let entry = Entry::new("reana", "token")?;
+    let reana_token = match entry.get_password() {
+        Ok(token) => token,
+        Err(keyring::Error::NoEntry) => {
             print!("Enter REANA access token: ");
             std::io::stdout().flush()?;
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
             let value = input.trim().to_string();
-            if let Some(cfg) = config.as_mut() {
-                cfg.reana.token = Some(value.clone());
-            }
+            entry.set_password(&value)?;
             value
         }
+        _ => entry.get_password().map_err(|e| format!("❌ Failed to get REANA token: {e}"))?,
     };
-    // Save any new config values
-    if let Some(cfg) = config {
-        let updated_toml = cfg.to_toml().map_err(|e| format!("❌ Failed to serialize updated config: {e}"))?;
-        fs::write(&config_path, updated_toml).map_err(|e| format!("❌ Failed to write updated config to workflow.toml: {e}"))?;
-    }
-    let config_str = fs::read_to_string(&config_path).map_err(|e| format!("❌ Failed to read workflow.toml after update: {e}"))?;
+
+    let config_str = fs::read_to_string(&config_path).map_err(|e| format!("❌ Failed to read workflow.toml: {e}"))?;
 
     let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {e}"))?;
-    println!("workflow_json {workflow_json:?}");
+    // println!("workflow_json {workflow_json:?}"); why though??
 
     let converted_yaml: serde_yaml::Value =
         serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {e}"))?;

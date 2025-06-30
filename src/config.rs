@@ -6,7 +6,6 @@ use toml_edit::{Item, Value};
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Config {
     pub workflow: WorkflowConfig,
-    pub reana: ReanaConfig
 }
 
 #[derive(Serialize, Deserialize, Debug, SmartDefault, PartialEq)]
@@ -29,12 +28,6 @@ pub struct WorkflowConfig {
     pub keywords: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, SmartDefault, PartialEq)]
-pub struct ReanaConfig {
-    pub instance: Option<String>,
-    pub token: Option<String>,
 }
 
 impl Config {
@@ -141,10 +134,6 @@ version = "0.1.0"
                 }]),
                 ..Default::default()
             },
-            reana: ReanaConfig {
-                instance: Some("https://reana-fairagro.de/".to_string()),
-                token: Some("123456789".to_string())
-            }
         };
 
         let str = toml::to_string(&config).unwrap();
