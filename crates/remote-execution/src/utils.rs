@@ -1244,7 +1244,7 @@ mod tests {
     fn test_get_all_outputs_with_existing_file() {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let workflow_file_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
-        assert!(workflow_file_path.exists(), "CWL file not found at: {:?}", workflow_file_path);
+        assert!(workflow_file_path.exists(), "CWL file not found at: {workflow_file_path:?}");
         let result = get_all_outputs(&workflow_file_path.to_string_lossy());
         assert!(result.is_ok());
         let outputs = result.unwrap();

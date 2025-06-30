@@ -87,27 +87,27 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
                             if fs::exists(src).unwrap_or(false) {
                                 let src = Path::new(src); //is safer ;)
                                 if src.is_file() {
-                                    copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {:?} to {}: {}", src, path_str, e))?;
+                                    copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {src:?} to {path_str}: {e}"))?;
                                 } else {
-                                    copy_dir(src, &into_path).map_err(|e| format!("Failed to copy dir from {:?} to {}: {}", src, path_str, e))?;
+                                    copy_dir(src, &into_path).map_err(|e| format!("Failed to copy dir from {src:?} to {path_str}: {e}"))?;
                                 }
                             } else {
-                                create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {:?}: {}", into_path, e))?;
+                                create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {into_path:?}: {e}"))?;
                             }
                         }
                         Entry::Include(include) => {
                             let path = get_iwdr_src(tool_path, &include.include)?;
-                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", path, into_path, e))?;
+                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
                         }
                     },
                     WorkDirItem::FileOrDirectory(val) => match &**val {
                         DefaultValue::File(file) => {
                             let path = get_iwdr_src(tool_path, file.location.as_ref().unwrap())?;
-                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", path, into_path, e))?;
+                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
                         }
                         DefaultValue::Directory(directory) => {
                             let path = get_iwdr_src(tool_path, directory.location.as_ref().unwrap())?;
-                            copy_dir(&path, &into_path).map_err(|e| format!("Failed to copy dir from {:?} to {:?}: {}", path, into_path, e))?;
+                            copy_dir(&path, &into_path).map_err(|e| format!("Failed to copy dir from {path:?} to {into_path:?}: {e}"))?;
                         }
                         _ => unreachable!(),
                     },
@@ -236,12 +236,12 @@ fn stage_input_files(
         runtime.inputs.insert(input.id.clone(), staged_data);
 
         if input.type_ == CWLType::File {
-            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", data_path, staged_path, e))?;
+            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {data_path:?} to {staged_path:?}: {e}"))?;
             staged_files.push(staged_path_str.clone());
             staged_files.extend(stage_secondary_files(&data, path)?);
             staged_files.extend(stage_secondary_inputs(&data, path, input)?);
         } else if input.type_ == CWLType::Directory {
-            copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {:?} to {:?}: {}", data_path, staged_path, e))?;
+            copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {data_path:?} to {staged_path:?}: {e}"))?;
             staged_files.push(staged_path_str.clone());
         }
     }
@@ -270,7 +270,7 @@ fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &Com
             for res in glob(pattern)? {
                 let res = res?;
                 let dest = path.join(&res);
-                copy_file(&res, &dest).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", res, dest, e))?;
+                copy_file(&res, &dest).map_err(|e| format!("Failed to copy file from {res:?} to {dest:?}: {e}"))?;
                 staged_files.push(dest.to_string_lossy().into_owned());
                 matched = true;
             }
@@ -303,12 +303,12 @@ fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Ve
                 match value {
                     DefaultValue::File(_) => {
                         copy_file(&incoming_file, &into_path)
-                            .map_err(|e| format!("Failed to copy file from {} to {:?}: {}", incoming_file, into_path, e))?;
+                            .map_err(|e| format!("Failed to copy file from {incoming_file} to {into_path:?}: {e}"))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     DefaultValue::Directory(_) => {
                         copy_dir(&incoming_file, &into_path)
-                            .map_err(|e| format!("Failed to copy directory from {} to {:?}: {}", incoming_file, into_path, e))?;
+                            .map_err(|e| format!("Failed to copy directory from {incoming_file} to {into_path:?}: {e}"))?;
                         staged_files.push(path_str.clone().into_owned());
                     }
                     _ => {}

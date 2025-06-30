@@ -173,9 +173,9 @@ use crate::types::CWLType;
 impl fmt::Display for StringOrNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StringOrNumber::String(s) => write!(f, "{}", s),
-            StringOrNumber::Integer(i) => write!(f, "{}", i),
-            StringOrNumber::Decimal(d) => write!(f, "{}", d),
+            StringOrNumber::String(s) => write!(f, "{s}"),
+            StringOrNumber::Integer(i) => write!(f, "{i}"),
+            StringOrNumber::Decimal(d) => write!(f, "{d}"),
         }
     }
 }
@@ -201,10 +201,10 @@ impl fmt::Display for StringOrNumber {
 pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
-        return Err(format!("❌ File {:?} does not exist.", filename).into());
+        return Err(format!("❌ File {filename:?} does not exist.").into());
     }
     let contents = fs::read_to_string(path)?;
-    let doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CWL {:?}: {}", filename, e))?;
+    let doc: CWLDocument = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CWL {filename:?}: {e}"))?;
 
     Ok(doc)
 }
@@ -230,10 +230,10 @@ pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<
 pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
-        return Err(format!("❌ Tool {:?} does not exist.", filename).into());
+        return Err(format!("❌ Tool {filename:?} does not exist.").into());
     }
     let contents = fs::read_to_string(path)?;
-    let tool: CommandLineTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CommandLineTool {:?}: {}", filename, e))?;
+    let tool: CommandLineTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read CommandLineTool {filename:?}: {e}"))?;
 
     Ok(tool)
 }
@@ -259,10 +259,10 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
 pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<ExpressionTool, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
-        return Err(format!("❌ ExpressionTool {:?} does not exist.", filename).into());
+        return Err(format!("❌ ExpressionTool {filename:?} does not exist.").into());
     }
     let contents = fs::read_to_string(path)?;
-    let tool: ExpressionTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read ExpressionTool {:?}: {}", filename, e))?;
+    let tool: ExpressionTool = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read ExpressionTool {filename:?}: {e}"))?;
 
     Ok(tool)
 }
@@ -288,10 +288,10 @@ pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<Expre
 pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Box<dyn Error>> {
     let path = filename.as_ref();
     if !path.exists() {
-        return Err(format!("❌ Workflow {:?} does not exist, yet!", filename).into());
+        return Err(format!("❌ Workflow {filename:?} does not exist, yet!").into());
     }
     let contents = fs::read_to_string(path)?;
-    let workflow: Workflow = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read Workflow {:?}: {}", filename, e))?;
+    let workflow: Workflow = serde_yaml::from_str(&contents).map_err(|e| format!("❌ Could not read Workflow {filename:?}: {e}"))?;
     Ok(workflow)
 }
 

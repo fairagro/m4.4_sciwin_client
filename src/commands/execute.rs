@@ -140,7 +140,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     let config_str = fs::read_to_string(&config_path).map_err(|e| format!("❌ Failed to read workflow.toml after update: {e}"))?;
 
     let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {e}"))?;
-    println!("workflow_json {:?}", workflow_json);
+    println!("workflow_json {workflow_json:?}");
 
     let converted_yaml: serde_yaml::Value =
         serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {e}"))?;

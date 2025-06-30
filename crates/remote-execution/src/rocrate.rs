@@ -985,7 +985,7 @@ mod tests {
             Value::String(s) => {
                 if uuid_re.is_match(s) {
                     let entry = uuid_map.entry(s.clone()).or_insert_with(|| {
-                        let label = format!("UUID-{}", counter);
+                        let label = format!("UUID-{counter}");
                         *counter += 1;
                         label
                     });

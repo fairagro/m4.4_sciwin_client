@@ -147,7 +147,7 @@ fn evaluate_output_impl(
                         let entry = &entry?;
                         outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
                     } else {
-                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                        Err(format!("Could not evaluate glob: {glob_}"))?;
                     }
                 }
             } else {
@@ -166,7 +166,7 @@ fn evaluate_output_impl(
                 };
                 let path = &initial_dir.join(filename);
                 fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
-                eprintln!("📜 Wrote output file: {:?}", path);
+                eprintln!("📜 Wrote output file: {path:?}");
                 outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             }
         }
@@ -196,7 +196,7 @@ fn evaluate_output_impl(
                         let entry = &entry?;
                         outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
                     } else {
-                        Err(format!("Could not evaluate glob: {}", glob_))?;
+                        Err(format!("Could not evaluate glob: {glob_}"))?;
                     }
                 }
             }

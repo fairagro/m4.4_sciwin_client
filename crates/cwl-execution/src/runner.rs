@@ -131,7 +131,7 @@ pub fn run_workflow(
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
         } else {
-            return Err(format!("Could not find step {}", step_id).into());
+            return Err(format!("Could not find step {step_id}").into());
         }
     }
 
@@ -143,7 +143,7 @@ pub fn run_workflow(
         copy_file(&path, &new_loc)?;
         let mut file = file.clone();
         file.path = Some(new_loc.to_string());
-        file.location = Some(format!("file://{}", new_loc));
+        file.location = Some(format!("file://{new_loc}"));
         Ok(file)
     }
 
@@ -153,7 +153,7 @@ pub fn run_workflow(
         copy_dir(&path, &new_loc)?;
         let mut dir = dir.clone();
         dir.path = Some(new_loc.to_string());
-        dir.location = Some(format!("file://{}", new_loc));
+        dir.location = Some(format!("file://{new_loc}"));
         Ok(dir)
     }
 
@@ -185,7 +185,7 @@ pub fn run_workflow(
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
-                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {}: {}", dest, e))?;
+                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {dest}: {e}"))?;
                     DefaultValue::File(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
                 DefaultValue::Directory(directory) => DefaultValue::Directory(
@@ -193,7 +193,7 @@ pub fn run_workflow(
                         workflow_folder.join(directory.get_location()),
                         format!("{}/{}", &output_directory, &directory.get_location()),
                     )
-                    .map_err(|e| format!("Could not provide output directory: {}", e))?,
+                    .map_err(|e| format!("Could not provide output directory: {e}"))?,
                 ),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
                 DefaultValue::Array(inner) => DefaultValue::Array(inner.clone()),
@@ -215,7 +215,7 @@ pub fn run_tool(
     //measure performance
     let clock = Instant::now();
     if !print_output() {
-        info!("🚲 Executing Tool {:?} ...", cwl_path);
+        info!("🚲 Executing Tool {cwl_path:?} ...");
     }
     //create staging directory
     let dir = tempdir()?;
@@ -266,7 +266,7 @@ pub fn run_tool(
     let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
         run_command(clt, &mut runtime).map_err(|e| CommandError {
-            message: format!("Error in Tool execution: {}", e),
+            message: format!("Error in Tool execution: {e}"),
             exit_code: clt.get_error_code(),
         })?;
     } else if let CWLDocument::ExpressionTool(et) = tool {
@@ -338,7 +338,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
         } else if !output.stdout.is_empty() {
-            eprintln!("{}", out);
+            eprintln!("{out}");
         }
     }
     //handle redirection of stderr
@@ -355,7 +355,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
         } else if !output.stderr.is_empty() {
-            eprintln!("❌ {}", out);
+            eprintln!("❌ {out}");
         }
     }
 
@@ -370,7 +370,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
             if tool.get_sucess_code() == status_code {
                 Ok(()) //fails expectedly
             } else {
-                Err(format!("command returned with code {:?}", status_code).into())
+                Err(format!("command returned with code {status_code:?}").into())
             }
         }
     }
@@ -506,7 +506,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             if tool.has_shell_command_requirement() {
                 if let Some(shellquote) = input.shell_quote {
                     if shellquote {
-                        args.push(format!("\"{}\"", value));
+                        args.push(format!("\"{value}\""));
                     } else {
                         args.push(value.to_string())
                     }

@@ -122,7 +122,7 @@ impl Connectable for Workflow {
 
         let from_filename = resolve_filename(from_parts[0]);
         let from_cwl = load_doc(&from_filename)?;
-        let from_type = from_cwl.get_output_type(from_parts[1]).expect("No slot");
+        let from_type = from_cwl.get_output_type(from_parts[1]).ok_or("No slot!")?;
 
         if !self.has_output(to_output) {
             self.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());

@@ -859,8 +859,7 @@ mod tests {
 
         assert!(
             files.iter().any(|f| f.ends_with("download_election_data.py")),
-            "Expected download_election_data.py to be in files list, got: {:?}",
-            files
+            "Expected download_election_data.py to be in files list, got: {files:?}"
         );
 
         temp_dir.close().expect("failed to clean up temp dir");
@@ -876,8 +875,8 @@ mod tests {
         let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
         let inputs_yaml_path = base_dir.join("tests/test_data/hello_world/inputs.yml");
 
-        assert!(cwl_path.exists(), "CWL file not found at {:?}", cwl_path);
-        assert!(inputs_yaml_path.exists(), "Inputs YAML file not found at {:?}", inputs_yaml_path);
+        assert!(cwl_path.exists(), "CWL file not found at {cwl_path:?}");
+        assert!(inputs_yaml_path.exists(), "Inputs YAML file not found at {inputs_yaml_path:?}");
 
         let result = generate_workflow_json_from_cwl(&cwl_path, &Some(inputs_yaml_path.to_string_lossy().to_string()));
 

@@ -574,7 +574,7 @@ mod tests {
         assert!(result.is_err());
 
         let err = result.unwrap_err();
-        let err_msg = format!("{:?}", err);
+        let err_msg = format!("{err:?}");
         assert!(err_msg.contains("404"));
         assert!(err_msg.contains("workflow not found"));
     }
