@@ -243,6 +243,7 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 pub fn post_process_cwl(tool: &mut CommandLineTool) {
     detect_array_inputs(tool);
     post_process_variables(tool);
+    post_process_ids(tool);
 }
 
 /// Transforms duplicate key and type entries into an array type input
@@ -344,6 +345,15 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     if processed_once {
         tool.requirements
             .push(Requirement::InlineJavascriptRequirement(InlineJavascriptRequirement::default()));
+    }
+}
+
+fn post_process_ids(tool: &mut CommandLineTool) {
+    let input_ids = tool.inputs.iter().map(|i| i.id.clone()).collect::<HashSet<_>>();
+    for output in &mut tool.outputs{
+        if input_ids.contains(&output.id) {
+            output.id = format!("o_{}", output.id);
+        }
     }
 }
 

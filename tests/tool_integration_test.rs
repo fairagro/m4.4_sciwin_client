@@ -465,3 +465,24 @@ pub fn tool_create_test_network() {
 
     assert!(tool.get_requirement::<NetworkAccess>().is_some());
 }
+
+#[fstest(repo = true)]
+pub fn tool_create_same_inout() {
+    let tool_create_args = CreateToolArgs {
+        command: vec!["echo".to_string(), "message".to_string(), ">".to_string(), "message".to_string()],
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+
+    let tool_path = Path::new("workflows/echo/echo.cwl");
+    let tool = load_tool(tool_path).unwrap();
+
+    assert!(tool.inputs.iter().any(|i| i.id == "message"));
+    //is not allowed to also have same id!
+    assert!(!tool.outputs.iter().any(|i| i.id == "message"));
+    
+    //decided to just prefix the output with "o_"
+    //inputs are used by name, so we do not change them
+    assert!(tool.outputs.iter().any(|i| i.id == "o_message"));
+}
