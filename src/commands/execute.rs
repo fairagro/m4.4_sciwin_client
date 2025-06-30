@@ -148,7 +148,6 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
     let config_str = fs::read_to_string(&config_path).map_err(|e| format!("❌ Failed to read workflow.toml: {e}"))?;
 
     let workflow_json = generate_workflow_json_from_cwl(file, input_file).map_err(|e| format!("Failed to generate workflow JSON from CWL: {e}"))?;
-    // println!("workflow_json {workflow_json:?}"); why though??
 
     let converted_yaml: serde_yaml::Value =
         serde_json::from_value(workflow_json.clone()).map_err(|e| format!("Failed to convert workflow JSON to YAML: {e}"))?;
@@ -224,7 +223,34 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
                     }
                 }
                 "failed" => {
-                    eprintln!("❌ Workflow execution failed.");
+                    if let Some(logs_str) = status_response["logs"].as_str() {
+                        let logs: serde_json::Value = serde_json::from_str(logs_str).expect("Invalid logs JSON");
+                        let mut found_failure = false;
+                        for (_job_id, job_info) in logs.as_object().unwrap() {
+                            let status = job_info["status"].as_str().unwrap_or("unknown");
+                            let job_name = job_info["job_name"].as_str().unwrap_or("unknown");
+                            let logs_text = job_info["logs"].as_str().unwrap_or("");
+                            if status == "failed" {
+                                println!("❌ Workflow execution failed at step {job_name}:");
+                                println!("Logs:\n{logs_text}\n");
+                                found_failure = true;
+                            }
+                        }
+                        // sometimes a workflow step fails but it is marked as finished, search for errors and suggest as failed step
+                        if !found_failure {
+                            for (_job_id, job_info) in logs.as_object().unwrap() {
+                                let job_name = job_info["job_name"].as_str().unwrap_or("unknown");
+                                let logs_text = job_info["logs"].as_str().unwrap_or("");
+                                //search for error etc in logs of steps
+                                if logs_text.contains("Error") || logs_text.contains("Exception")
+                                    || logs_text.contains("Traceback") || logs_text.to_lowercase().contains("failed")
+                                {
+                                    println!("❌ Workflow execution failed. Workflow step {job_name} may have encountered an error:");
+                                    println!("Logs:\n{}\n", logs_text);
+                                }
+                            }
+                        }
+                    }
                 }
                 "deleted" => {
                     eprintln!("⚠️ Workflow was deleted before completion.");
