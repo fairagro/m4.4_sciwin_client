@@ -246,7 +246,7 @@ pub fn execute_remote(args: &RemoteExecuteArgs) -> Result<(), Box<dyn Error>> {
                                     || logs_text.contains("Traceback") || logs_text.to_lowercase().contains("failed")
                                 {
                                     println!("❌ Workflow execution failed. Workflow step {job_name} may have encountered an error:");
-                                    println!("Logs:\n{}\n", logs_text);
+                                    println!("Logs:\n{logs_text}\n");
                                 }
                             }
                         }
