@@ -505,7 +505,7 @@ pub fn test_example_project() {
     //connect second step
     connect_workflow_nodes(&ConnectWorkflowArgs {
         name: name.clone(),
-        from: "calculation/o_results".to_string(),
+        from: "calculation/results".to_string(),
         to: "plot/results".to_string(),
     })
     .expect("Could not add input to plot/results");
@@ -531,7 +531,7 @@ pub fn test_example_project() {
     assert!(workflow.has_step("plot"));
     assert!(workflow.has_step_input("speakers"));
     assert!(workflow.has_step_input("population"));
-    assert!(workflow.has_step_input("calculation/o_results"));
+    assert!(workflow.has_step_input("calculation/results"));
     assert!(workflow.has_step_output("calculation/results"));
     assert!(workflow.has_step_output("plot/o_results"));
 
