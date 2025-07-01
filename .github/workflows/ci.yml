@@ -21,11 +21,13 @@ jobs:
     name: 📎 Clippy
     permissions:
       contents: read
-      security-events: write
       actions: read
     uses: ./.github/workflows/clippy.yml
   build:
     name: 🏗️ Build and Test
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/build.yml
   coverage:
     name: 🦺 Coverage
