@@ -1,4 +1,6 @@
 name: 📎 Clippy
+permissions:
+      contents: read
 on:
   workflow_call:
 
