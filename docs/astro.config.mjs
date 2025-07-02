@@ -48,9 +48,9 @@ export default defineConfig({
             link: 'https://github.com/JensKrumsieck/PorphyStruct/releases/latest/',
           },
           {
-            label: 'Web Application',
-            icon: 'cloud-download',
-            link: 'https://app.porphystruct.org/',
+            label: 'Report Issue',
+            icon: 'add-document',
+            link: 'https://github.com/fairagro/m4.4_sciwin_client/issues/new',
           },
         ]),
       ]
