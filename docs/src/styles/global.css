@@ -64,7 +64,7 @@
   background-color: var(--color-accent-800);
 
   .title>span,
-  .body>a {
+  .body>a,.body>p {
     color: black;
     text-decoration: none;
   }
