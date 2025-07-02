@@ -9,7 +9,7 @@ import starlightSidebarTopics from 'starlight-sidebar-topics'
 export default defineConfig({
   output: 'static',
   site: 'https://fairagro.github.io',
-  base: 'm4.4_sciwin_client',
+  base: '/m4.4_sciwin_client/',
   integrations: [
     starlight({
       title: 'SciWIn Client',
