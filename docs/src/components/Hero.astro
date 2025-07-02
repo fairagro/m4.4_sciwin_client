@@ -5,6 +5,8 @@ import s4n_cmd from "/src/assets/s4n.txt?raw";
 
 const { data } = Astro.locals.starlightRoute.entry;
 const { title = data.title, tagline, image, actions = [] } = data.hero || {};
+
+const isHome = Astro.url.pathname === "/";
 ---
 
 <div class="hero">
@@ -42,7 +44,7 @@ const { title = data.title, tagline, image, actions = [] } = data.hero || {};
             )
         }
     </div>
-    <Code code={s4n_cmd} frame="terminal" wrap={true} lang="ansi"/>
+    {isHome &&  <Code code={s4n_cmd} frame="terminal" wrap={true} lang="ansi"/>  }
 </div>
 
 <style>
