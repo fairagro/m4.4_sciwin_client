@@ -1,0 +1,93 @@
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+:root {
+  --sl-font: 'Fira Sans', 'ui-sans-serif', 'system-ui', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+@theme {
+  --color-accent-200: #e1f2df;
+  --color-accent-950: #fff;
+  --color-accent-900: #c3e5be;
+  --color-accent-800: #e1f2df;
+  --color-accent-600: #6abf5c;
+  --color-accent-200: #6abf5c;
+
+  --color-gray-100: #f6f6f6;
+  --color-gray-200: #eeeeee;
+  --color-gray-300: #c2c2c2;
+  --color-gray-400: #8b8b8b;
+  --color-gray-500: #585858;
+  --color-gray-700: #383838;
+  --color-gray-800: #272727;
+  --color-gray-900: #181818;
+}
+
+.hero .expressive-code {
+  width: 100%;
+
+  .is-terminal {
+    background: var(--code-background);
+    border: var(--ec-brdWd) solid var(--ec-brdCol);
+    border-radius: calc(var(--ec-brdRad) + var(--ec-brdWd));
+
+    .header {
+      border: none;
+    }
+  }
+
+  pre {
+    width: fit-content;
+    margin: auto;
+    border: none;
+
+    .ec-line {
+      line-height: normal;
+    }
+  }
+
+  .copy {
+    display: none;
+  }
+}
+
+@media (max-width: 50rem) {
+  .expressive-code pre>* {
+    font-size: .65rem;
+
+  }
+}
+
+.card {
+  background-color: var(--color-accent-800);
+
+  .title>span,
+  .body>a {
+    color: black;
+    text-decoration: none;
+  }
+}
+
+.button {
+  background-color: var(--color-accent-200);
+  padding: .5em;
+  border-radius: 0.25em;
+  display: inline-flex;
+  gap: 0.5em;
+  align-items: center;
+  font-size: .85rem;
+  color: #000;
+  text-decoration: none;
+  margin: 1em 0;
+
+  >* {
+    margin: 0;
+  }
+}
+
+.button:hover {
+  background-color: var(--color-accent-950);
+}
