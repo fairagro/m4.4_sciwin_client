@@ -11,6 +11,10 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'SciWIn Client',
+      favicon: '/favicon.png',
+      logo: {
+        src: './src/assets/logo.png'
+      },
       customCss: [
         '@fontsource/fira-sans/400.css',
         '@fontsource/fira-sans/700.css',
