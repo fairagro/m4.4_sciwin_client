@@ -36,12 +36,12 @@ export default defineConfig({
           {
             label: 'Home',
             icon: 'puzzle',
-            link: '/',
+            link: "/m4.4_sciwin_client/"
           },
           {
             label: 'Documentation',
             icon: 'open-book',
-            link: '/docs/getting-started',
+            link: 'getting-started',
             items: [
               { label: 'Getting Started', autogenerate: { directory: 'getting-started' } },
               { label: 'Examples', autogenerate: { directory: 'examples' } },
