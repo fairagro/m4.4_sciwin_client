@@ -567,6 +567,13 @@ impl Directory {
         }
     }
 
+    pub fn from_path(location: impl AsRef<Path>) -> Self {
+        Directory {
+            location: Some(location.as_ref().to_string_lossy().into_owned()),
+            ..Default::default()
+        }
+    }
+
     pub fn load(&mut self, relative_to: impl AsRef<Path>) {
         if let Some(loc) = &self.location {
             let mut path = PathBuf::from(&loc);

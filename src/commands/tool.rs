@@ -9,7 +9,8 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use cwl::{
     format::format_cwl,
-    requirements::{DockerRequirement, NetworkAccess, Requirement},
+    requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
+    types::Directory,
 };
 use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
 use git2::Repository;
@@ -76,6 +77,13 @@ pub struct CreateToolArgs {
         value_delimiter = ' '
     )]
     pub outputs: Option<Vec<String>>,
+    #[arg(
+        short = 'm',
+        long = "mount",
+        help = "Mounts a directory into the working directory",
+        value_delimiter = ' '
+    )]
+    pub mount: Option<Vec<PathBuf>>,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
 }
@@ -193,6 +201,28 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     if args.enable_network {
         cwl = cwl.append_requirement(Requirement::NetworkAccess(NetworkAccess { network_access: true }));
+    }
+
+    if let Some(mounts) = &args.mount {
+        let entries = mounts.iter().filter_map(|m| {
+            if !m.is_dir() {
+                eprintln!("{} is not a directory and has been skipped!", m.display());
+                None
+            } else {
+                Some(WorkDirItem::FileOrDirectory(Box::new(cwl::types::DefaultValue::Directory(
+                    Directory::from_path(m),
+                ))))
+            }
+        });
+
+        if let Some(iwdr) = cwl.get_requirement_mut::<InitialWorkDirRequirement>() {
+            iwdr.listing.extend(entries);
+        } else {
+            let iwdr = InitialWorkDirRequirement { listing: entries.collect() };
+            if !iwdr.listing.is_empty() {
+                cwl = cwl.append_requirement(Requirement::InitialWorkDirRequirement(iwdr));
+            }
+        }
     }
 
     if args.no_defaults {

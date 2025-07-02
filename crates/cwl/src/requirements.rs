@@ -31,6 +31,7 @@ pub enum Requirement {
 
 pub trait FromRequirement<T> {
     fn get(req: &Requirement) -> Option<&T>;
+    fn get_mut(req: &mut Requirement) -> Option<&mut T>;
 }
 
 macro_rules! impl_from_requirement {
@@ -38,6 +39,14 @@ macro_rules! impl_from_requirement {
         impl FromRequirement<$t> for Requirement {
             fn get(req: &Requirement) -> Option<&$t> {
                 if let Requirement::$i(ref v) = req {
+                    Some(v)
+                } else {
+                    None
+                }
+            }
+
+            fn get_mut(req: &mut Requirement) -> Option<&mut $t> {
+                if let Requirement::$i(ref mut v) = req {
                     Some(v)
                 } else {
                     None

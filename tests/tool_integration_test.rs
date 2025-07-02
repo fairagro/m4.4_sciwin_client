@@ -3,14 +3,15 @@ use common::os_path;
 use cwl::{
     clt::{Argument, CommandLineTool},
     load_tool,
-    requirements::{NetworkAccess, Requirement, WorkDirItem},
+    requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
     types::{CWLType, Entry},
 };
+use cwl_execution::io::copy_dir;
 use fstest::fstest;
 use git2::Repository;
 use s4n::{
     commands::tool::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
-    repo::{get_modified_files, stage_all},
+    repo::{commit, get_modified_files, stage_all},
 };
 use std::{
     env,
@@ -481,8 +482,32 @@ pub fn tool_create_same_inout() {
     assert!(tool.inputs.iter().any(|i| i.id == "message"));
     //is not allowed to also have same id!
     assert!(!tool.outputs.iter().any(|i| i.id == "message"));
-    
+
     //decided to just prefix the output with "o_"
     //inputs are used by name, so we do not change them
     assert!(tool.outputs.iter().any(|i| i.id == "o_message"));
+}
+
+#[fstest(repo = true)]
+pub fn tool_create_mount() {
+    //copy a dir we can mount to the working directory
+    copy_dir(format!("{}/tests/test_data/test_dir", env!("CARGO_MANIFEST_DIR")), "test_dir").unwrap();
+    let repo = Repository::open(".").unwrap();
+    stage_all(&repo).unwrap();
+    commit(&repo, "message").unwrap();
+
+    let tool_create_args = CreateToolArgs {
+        command: vec!["ls".to_string(), ".".to_string(), ">".to_string(), "folder-list.txt".to_string()],
+        mount: Some(vec!["test_dir".into()]),
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+
+    let tool_path = Path::new("workflows/ls/ls.cwl");
+    let tool = load_tool(tool_path).unwrap();
+
+    let iwdr = tool.get_requirement::<InitialWorkDirRequirement>();
+    assert!(iwdr.is_some());
+    assert!(iwdr.unwrap().listing.len() == 1);
 }

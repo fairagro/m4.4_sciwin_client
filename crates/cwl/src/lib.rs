@@ -156,6 +156,14 @@ impl DocumentBase {
     {
         self.requirements.iter().chain(self.hints.iter()).find_map(|req| Requirement::get(req))
     }
+
+    /// Checks whether Document has a specific Requirement attached and returns an option to a mutable version of it
+    pub fn get_requirement_mut<T>(&mut self) -> Option<&mut T>
+    where
+        Requirement: FromRequirement<T>,
+    {
+        self.requirements.iter_mut().chain(self.hints.iter_mut()).find_map(|req| Requirement::get_mut(req))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
