@@ -129,6 +129,29 @@ pub fn get_workflow_status(reana_server: &str, reana_token: &str, workflow_id: &
     }
 }
 
+pub fn get_workflow_specification(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
+    let url = format!("{reana_server}/api/workflows/{workflow_id}/specification?access_token={reana_token}");
+
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .context("Failed to build HTTP client")?;
+
+    let response = client
+        .get(&url)
+        .send()
+        .with_context(|| format!("Failed to send GET request to '{url}'"))?;
+
+    let status = response.status();
+    let json_response: Value = response.json().context("Failed to parse JSON response from workflow status request")?;
+
+    if status.is_success() {
+        Ok(json_response)
+    } else {
+        anyhow::bail!("Error trying to get workflow specification. Server returned status {status}: {json_response}");
+    }
+}
+
 pub fn upload_files(
     reana_server: &str,
     reana_token: &str,
