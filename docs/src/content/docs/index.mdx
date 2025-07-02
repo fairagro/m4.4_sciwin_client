@@ -1,36 +1,50 @@
 ---
-title: Welcome to Starlight
+title: SciWIn-Client
 description: Get started building your docs site with Starlight.
 template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: SciWI-Client helps scientists build, run, and publish complex computational workflows — making research more reproducible, scalable, and collaborative. 
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/s4n_screenshot.png
   actions:
-    - text: Example Guide
+    - text: Installation
       link: /guides/example/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
+    - text: Documentation
+      link: /getting-started
+      icon: open-book
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkButton, Icon } from '@astrojs/starlight/components';
+import { Image } from 'astro:assets'
+import workflow_simple from "../../assets/simple_workflow.svg"
 
-## Next steps
+## Examples
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
+<CardGrid>
+	<Card title="Getting started example" icon="rocket">
+		<a href="/getting-started/example">
+			<Image src={workflow_simple} alt="simple workflow" height={350} style="margin:auto;"/>
+			The Guide that get's you started with SciWIn-Client. If you just installed the software it is recommended to start here.
+		</a>
+		<a class="button" href="/getting-started/example">
+			<Icon name="rocket"/>
+			Getting started example
+		</a>
 	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+
+	<Card title="Real world example" icon="magnifier">
+		<a href="/examples/advanced-example">
+			<img src="https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_final.svg" alt="advanced example"  style="margin:auto;" height="350px" />
+			A real world example based on real data of election results containing several steps and making use of containerization.
+		</a>		
+		<a class="button" href="/examples/advanced-example">
+			<Icon name="magnifier"/>
+			Real world example
+		</a>
+	</Card>	
 </CardGrid>
+<Card title="Read the documentation" icon="open-book">
+	You can find more examples describing in the [SciWIn-Client Documentation](/examples).
+</Card>
