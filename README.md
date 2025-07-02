@@ -1,6 +1,6 @@
 <a name="top"></a>
 <p align="center">
-  <img src="docs/assets/logo.svg" alt="icon" height="100"/> 
+  <img src="docs/src/assets/logo.svg" alt="icon" height="100"/> 
 </p>
 
 # SciWIn Client - Scientific Workflow Infrastructure<!-- omit from toc -->
