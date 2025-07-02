@@ -348,6 +348,7 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     }
 }
 
+/// Post-processes output IDs to ensure they do not conflict with input IDs
 fn post_process_ids(tool: &mut CommandLineTool) {
     let input_ids = tool.inputs.iter().map(|i| i.id.clone()).collect::<HashSet<_>>();
     for output in &mut tool.outputs{
