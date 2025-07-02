@@ -1,3 +1,7 @@
+--- 
+title: Workflow creation examples
+---
+
 # Tool Commands
 `s4n`s tool commands are designed to facilitate the interoperability with CWL CommandLineTools. The tool command itself has three subcommands for basic CR~~U~~D operations: `create`, `list` and `remove`.
 

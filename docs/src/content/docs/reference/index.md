@@ -1,3 +1,7 @@
+--- 
+title: Workflow creation examples
+---
+
 # Reference
 SciWIn client provides commands for project initialization ([`s4n init`](init.md)), working with CWL CommandLineTools ([`s4n tool`](tool.md)) and CWL Workflows ([`s4n workflow`](workflow.md)), metadata annotation ([`s4n annotate`](annotate.md)), the execution of CWL ([`s4n execute`](execute.md)) and synchronization with a remote sever ([`s4n sync`](sync.md)).
 

@@ -1,3 +1,7 @@
+--- 
+title: Workflow creation examples
+---
+
 # Example Project
 This example is a sample use case for building a small project with `s4n`. It features the creation of two commandline scripts and the combination of those into a workflow as well as the execution of this workflow using the internal CWL runner. For detailed examples for the used `s4n` commands visit the [examples](../examples/index.md) page.
 
@@ -347,7 +351,7 @@ Use the save command to commit the workflow
 s4n workflow save main
 ```
 
-![Workflow](../assets/simple_workflow.svg)
+![Workflow](../../../assets/simple_workflow.svg)
 /// caption
 Graph representation of the created workflow
 ///

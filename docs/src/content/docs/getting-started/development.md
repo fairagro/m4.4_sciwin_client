@@ -1,3 +1,7 @@
+--- 
+title: Workflow creation examples
+---
+
 # Development
 If you want to be part of the SciWIn Client development feel free to checkout our Repository: [SciWIn Client](https://github.com/fairagro/m4.4_sciwin_client).
 

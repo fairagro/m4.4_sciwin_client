@@ -1,3 +1,7 @@
+--- 
+title: Tool creation examples
+---
+
 # Tool Creation
 
 CWL command line tools can be created easily using `s4n`. The simplest approach is to just add the `s4n tool create` or `s4n run` as prefix to the command.

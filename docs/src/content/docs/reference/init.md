@@ -1,3 +1,7 @@
+--- 
+title: Workflow creation examples
+---
+
 # Project initialization
 
 The `s4n init` command is used to initialize a SciWIn project. It will create a minimum folder structure and a `git` repository if there is none already. A project name can be specified using `--project` which will create a new folder for the project. If this option is left out the current working directory will be used. The `--arc` flag can be used to create an empty [annotated research context (ARC)](https://arc-rdm.org/). If this flag is not set only a `workflows` folder will be created which can be seen as a subset of an ARC.

@@ -1,7 +1,11 @@
+--- 
+title: Workflow creation examples
+---
+
 # Workflow Creation
 Workflows are a key part of SciWIn as they are even part of the name (Scientific Workflow Infrastructure). SciWin Client facilitates the creation of CWL workflows from exisiting CWL CommandLineTools. Workflows in `s4n` are created piece by piece using a command for each edge of the directed acyclic graph (DAG) that represents the workflow.
 
-![Workflow](../assets/simple_workflow.svg)
+![Workflow](../../../assets/simple_workflow.svg)
 /// caption
 Simple Workflow 
 ///
@@ -115,7 +119,7 @@ Workflow visualizations can be achieved using `s4n workflow visualize`
 s4n workflow visualize -r dot workflows/echo-cat/echo-cat.cwl | dot -Tsvg > workflow.svg
 ```
 
-![created workflow](../assets/workflow_01.svg)
+![created workflow](../../../assets/workflow_01.svg)
 /// caption
 The created `echo-cat` workflow as DAG representation.
 ///
