@@ -1,11 +1,12 @@
 --- 
-title: Workflow creation examples
+title: Execute command reference
+sidebar:
+  order: 5
 ---
 
-# Workflow and Tool Execution
 The `execute` command provides tools to execute CWL documents locally or on a remote server (soonish™).
-!!! abstract "Usage"
-    ```
+
+    ```txt frame="terminal" title="Usage"
     Execution of CWL Files locally or on remote servers
 
     Usage: s4n execute <COMMAND>
@@ -20,8 +21,7 @@ The `execute` command provides tools to execute CWL documents locally or on a re
     ```
 
 ## `execute local`
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Runs CWL files locally
 
     Usage: s4n execute local [OPTIONS] <FILE> [ARGS]...
@@ -43,8 +43,8 @@ Not yet implemented
 
 ## `execute make-template`
 `s4n execute make-template` is able to create a dummy CWL job file (e.g. inputs.yaml) that can be used as a template for an upoming execution of CWL.
-!!! abstract "Usage"
-    ```
+
+    ```txt frame="terminal" title="Usage"
     Creates job file template for execution (e.g. inputs.yaml)
     
     Usage: s4n execute make-template <CWL>

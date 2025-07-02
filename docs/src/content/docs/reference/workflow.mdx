@@ -1,12 +1,12 @@
 --- 
-title: Workflow creation examples
+title: Workflow command reference
+sidebar:
+  order: 4
 ---
 
-# Workflow Commands
 The workflow commands provide easy ways to perform operations on CWL Workflow files. This features basic CR~~U~~D operations and the possibility to connect and disconnect steps.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Provides commands to create and work with CWL Workflows
 
     Usage: s4n workflow <COMMAND>
@@ -29,8 +29,7 @@ The workflow commands provide easy ways to perform operations on CWL Workflow fi
 ## `workflow create`
 The `s4n workflow create` command creates an empty CWL workflow definition with the given name. An exisiting workflow can be overwritten using the `--force` flag.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Creates a blank workflow
 
     Usage: s4n workflow create [OPTIONS] <NAME>
@@ -43,8 +42,8 @@ The `s4n workflow create` command creates an empty CWL workflow definition with 
       -h, --help   Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
     s4n workflow create my-workflow
     ```
     will create an empty workflow file in the workflows folder.
@@ -58,12 +57,11 @@ The `s4n workflow create` command creates an empty CWL workflow definition with 
     outputs: []
     steps: []
     ```
-
+:::
 ## `workflow connect` and `workflow disconnect`
 The `workflow connect` and `workflow disconnect` commands can be used to connect CWL CommandLineTools, workflow inputs and workflow outputs forming a directed acyclic graph. The connect command establishes a connection and adds in-, outputs and steps if they are not present in the current workflow. The names of the steps slots can be copied from the output of `s4n tool ls`. For connections to in- or outputs a `@` has to be used es prefix e.g. `@inputs/my-file`. The name of the node is constructed by using the tool's name and the name of the tool's node separated by a forward slash: `mytool/my-input`. Connections are made using the `--from` and `--to` arguments together with the name of the workflow.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Connects a workflow node
 
     Usage: s4n workflow connect --from <FROM> --to <TO> <NAME>
@@ -77,8 +75,8 @@ The `workflow connect` and `workflow disconnect` commands can be used to connect
       -h, --help         Print help
     ```
 
-!!! example "Example: Connect to input socket"
-    ```
+:::tip[Example: Connect to input socket]
+    ```bash
     s4n workflow connect my-workflow --from @inputs/population --to calculation/population
     ```
     Will add a new input socket `population` and adds the `calculation` step if it is not present in the workflow already. The step's input `population` will be mapped to the workflow's input.
@@ -102,9 +100,10 @@ The `workflow connect` and `workflow disconnect` commands can be used to connect
       - results
     ```
     Connecting to workflow outputs works analogues.
+:::
 
-!!! example "Example: Connecting Tools"
-    ```
+:::tip[Example: Connecting Tools]
+    ```bash
     s4n workflow connect my-workflow --from calculation/results --to plot/results
     ```
     Will add a connection between two CWL CommandLineTools mapping the `results` output of the `calculation` tool to the `results` input of the `plot` tool.
@@ -129,10 +128,9 @@ The `workflow connect` and `workflow disconnect` commands can be used to connect
       out:
       - results
     ```
-
+:::
 The same logic applies for the disconnect command.
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Disconnects a workflow node
 
     Usage: s4n workflow disconnect --from <FROM> --to <TO> <NAME>
@@ -149,8 +147,7 @@ The same logic applies for the disconnect command.
 ## `workflow save`
 The save command simply commits the changes made to a workflow using git.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Saves a workflow
 
     Usage: s4n workflow save [OPTIONS] <NAME>
@@ -165,7 +162,7 @@ The save command simply commits the changes made to a workflow using git.
 
 ## `workflow status`
 The `workflow status` command shows the current connection status of a workflow. Successfully connected sockets are marked in green, a gray icon shows the usage of a tool's default value and the red cross shows unconnected sockets.
-!!! example
+:::tip[Example]
     ```bash
     s4n workflow status main
     # Status report for Workflow workflows/main/main.cwl
@@ -181,9 +178,9 @@ The `workflow status` command shows the current connection status of a workflow.
     # +--------------------------------+------------------+---------------+
     # ✅ : connected - 🔘 : tool default - ❌ : no connection
     ```
+:::
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Shows socket status of workflow
 
     Usage: s4n workflow status [OPTIONS] <NAME>
@@ -199,8 +196,7 @@ The `workflow status` command shows the current connection status of a workflow.
 ## `workflow list`
 `s4n workflow list` lists all workflows of the current project. Using the `--all` flag more information about steps and in- and outputs can be shown.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     List all workflows
 
     Usage: s4n workflow list [OPTIONS]
@@ -213,8 +209,7 @@ The `workflow status` command shows the current connection status of a workflow.
 ## `workflow remove`
 `s4n workflow remove` can be used to delete a workflow from the project.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Remove a workflow
 
     Usage: s4n workflow remove [RM_WORKFLOW]...
@@ -229,8 +224,7 @@ The `workflow status` command shows the current connection status of a workflow.
 ## `workflow visualize`
 Enables to publishing visual representation of workflows using either the GraphViz (dot) or mermaid format.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Creates a visual representation of a workflow
 
     Usage: s4n workflow visualize [OPTIONS] <FILENME>

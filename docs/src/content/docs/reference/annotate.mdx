@@ -1,13 +1,10 @@
 --- 
-title: Workflow creation examples
+title: Annotate command reference
 ---
-
-# Workflow and Tool Metadata Annotation
 
 The `s4n annotate` command is used to annotate CWL files with metadata (see [CWL documentation: Metadata and Authorship](https://www.commonwl.org/user_guide/topics/metadata-and-authorship.html) and [ARC CWL Metadata](https://nfdi4plants.github.io/nfdi4plants.knowledgebase/cwl/cwl-metadata/)). It is recommended to annotate CWL files with minimal information.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotate CWL files
 
     Usage: s4n annotate [TOOL_NAME] [COMMAND]
@@ -34,8 +31,7 @@ The `s4n annotate` command is used to annotate CWL files with metadata (see [CWL
 
 The `s4n annotate name` command annotates a CWL file with a label.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates name of a tool or workflow
 
     Usage: s4n annotate name --name <NAME> <CWL_NAME>
@@ -48,8 +44,8 @@ The `s4n annotate name` command annotates a CWL file with a label.
       -h, --help         Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate name main -n "An example tool demonstrating metadata."
     ```
     The command will annotate a main.cwl with label "An example tool demonstrating metadata.".
@@ -61,13 +57,13 @@ The `s4n annotate name` command annotates a CWL file with a label.
 
     label: An example tool demonstrating metadata.
     ```  
+:::
 
 ## `annotate description`
 
 The `s4n annotate description` command annotates a CWL file with a description.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates description of a tool or workflow
 
     Usage: s4n annotate description --description <DESCRIPTION> <CWL_NAME>
@@ -80,8 +76,8 @@ The `s4n annotate description` command annotates a CWL file with a description.
       -h, --help                       Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate description main -d "A description for my example tool"
     ```
     The command will annotate main.cwl with doc "A description for my example tool".
@@ -93,13 +89,12 @@ The `s4n annotate description` command annotates a CWL file with a description.
 
     doc: A description for my example tool
     ```  
-
+:::
 ## `annotate license`
 
 The `s4n annotate license` command annotates a CWL file with a license.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates license of a tool or workflow
 
     Usage: s4n annotate license --license <LICENSE> <CWL_NAME>
@@ -112,8 +107,8 @@ The `s4n annotate license` command annotates a CWL file with a license.
       -h, --help               Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate license main -l "MIT"
     ```
     The command will annotate main.cwl with the MIT license.
@@ -131,14 +126,13 @@ The `s4n annotate license` command annotates a CWL file with a license.
     $schemas:
       - https://schema.org/version/latest/schemaorg-current-https.rdf
     ```  
-
+:::
 
 ## `annotate schema`
 
 The `s4n annotate schema` command annotates a CWL file with a schema.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates schema of a tool or workflow
 
     Usage: s4n annotate schema --schema <SCHEMA> <CWL_NAME>
@@ -151,8 +145,8 @@ The `s4n annotate schema` command annotates a CWL file with a schema.
       -h, --help             Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate schema main -s "https://schema.org/version/latest/schemaorg-current-https.rdf"
     ```
     The command will annotate main.cwl with the schema.org schema.
@@ -165,14 +159,13 @@ The `s4n annotate schema` command annotates a CWL file with a schema.
     $schemas:
       - https://schema.org/version/latest/schemaorg-current-https.rdf
     ```  
-
+:::
    
 ## `annotate namespace`
 
 The `s4n annotate namespace` command annotates a CWL file with a namespace.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates schema of a tool or workflow
 
     Usage: s4n annotate namespace [OPTIONS] --namespace <NAMESPACE> <CWL_NAME>
@@ -186,8 +179,8 @@ The `s4n annotate namespace` command annotates a CWL file with a namespace.
       -h, --help                   Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate namespace main -n "http://edamontology.org/" -s "edam"
     ```
     The command will annotate main.cwl with the edam namespace.
@@ -200,14 +193,13 @@ The `s4n annotate namespace` command annotates a CWL file with a namespace.
     $namespaces:
       edam: http://edamontology.org/
     ``` 
-
+:::
 
 ## `annotate author`
 
 The `s4n annotate author` command annotates a CWL file with author information (based on schema.org). The minimum requirement is providing a name for the author, the other fields are optional. If the schema.org namespace and schema are not yet present, they are added to the CWL file.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates author of a tool or workflow (schema.org)
 
     Usage: s4n annotate author [OPTIONS] --name <NAME> <CWL_NAME>
@@ -222,8 +214,8 @@ The `s4n annotate author` command annotates a CWL file with author information (
       -h, --help         Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate author main -n "Jane Doe" -m "doe@mail.de" -i "https://orcid.org/0000-0000-0000-0000"
     ```
     The command will annotate main.cwl with author Jane Doe.
@@ -245,14 +237,13 @@ The `s4n annotate author` command annotates a CWL file with author information (
     $schemas:
       - https://schema.org/version/latest/schemaorg-current-https.rdf
     ``` 
-
+:::
 
 ## `annotate contributor`
 
 The `s4n annotate contributor` command annotates a CWL file with contributor information (based on schema.org). The fields are similar to the author fields. If the schema.org namespace and schema are not yet present, they are added to the CWL file.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates author of a tool or workflow (schema.org)
 
     Usage: s4n annotate contributor [OPTIONS] --name <NAME> <CWL_NAME>
@@ -267,7 +258,7 @@ The `s4n annotate contributor` command annotates a CWL file with contributor inf
       -h, --help         Print help
     ```
 
-!!! example
+:::tip[Example]
     ```bash
      s4n annotate contributor main -n "John Doe" -m "jdoe@mail.de" -i "http://orcid.org/0000-0000-0000-0001"
     ```
@@ -290,13 +281,12 @@ The `s4n annotate contributor` command annotates a CWL file with contributor inf
     $schemas:
       - https://schema.org/version/latest/schemaorg-current-https.rdf
     ``` 
-
+:::
 ## `annotate performer`
 
 The `s4n annotate performer` command annotates a CWL file with performer information (based on ARC schema). A performer can be an individual or team behind the development or execution of the workflow. The minimum requirement is providing a first and a last name for the performer, the other fields are optional. The role field can be annotated with an ontology. If the ARC namespace and schema are not yet present, they are added to the CWL file.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates performer of a tool or workflow (arc ontology)
 
     Usage: s4n annotate performer [OPTIONS] --first_name <FIRST_NAME> --last_name <LAST_NAME> <CWL_NAME>
@@ -313,8 +303,8 @@ The `s4n annotate performer` command annotates a CWL file with performer informa
       -h, --help                       Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate performer main -f "John" -l "Doe" -m "jdoe@mail.de" -a "Institution1" -r "data scientist"
     ```
     The command will annotate main.cwl with performer John Doe.
@@ -341,14 +331,13 @@ The `s4n annotate performer` command annotates a CWL file with performer informa
     $schemas:
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     ``` 
-
+:::
 
 ## `annotate process`
 
 The `s4n annotate process` command annotates a CWL file with a process sequence (based on [ARC CWL Metadata](https://nfdi4plants.github.io/nfdi4plants.knowledgebase/cwl/cwl-metadata/)). The parameter and value field can be annotated with an ontology. The minimum requirement is providing a name for the process sequence, the other fields are optional. If the ARC namespace and schema are not yet present, they are added to the CWL file.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates a process sequence (arc ontolology)
 
     Usage: s4n annotate process [OPTIONS] --name <NAME> <CWL_NAME>
@@ -365,8 +354,8 @@ The `s4n annotate process` command annotates a CWL file with a process sequence 
       -h, --help                   Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate process main -n "script.py" -i "data/input.txt" -o "results/output.txt" -p "Data transformation" -v "Addition"
     ```
     The command will annotate main.cwl with process sequence "script.py" with provided inputs, outputs, parameter and value.
@@ -406,14 +395,13 @@ The `s4n annotate process` command annotates a CWL file with a process sequence 
     $schemas:
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     ``` 
-
+:::
 
 ## `annotate container`
 
 The `s4n annotate container` command annotates a CWL file with container information.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates container information of a tool or workflow
 
     Usage: s4n annotate container --container <CONTAINER> <CWL_NAME>
@@ -426,8 +414,8 @@ The `s4n annotate container` command annotates a CWL file with container informa
       -h, --help                   Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate container main -c "Docker container" 
     ```
     The command will annotate main.cwl with the container annotation "Docker container".
@@ -447,15 +435,14 @@ The `s4n annotate container` command annotates a CWL file with container informa
     $schemas:
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     ``` 
-
+:::
 
 
 ## `annotate custom`
 
 The `s4n annotate custom` command annotates a CWL file with a custom field and value.
 
-!!! abstract "Usage"
-    ```
+    ```txt frame="terminal" title="Usage"
     Annotates a CWL file with an custom field and value
 
     Usage: s4n annotate custom <CWL_NAME> <FIELD> <VALUE>
@@ -469,8 +456,8 @@ The `s4n annotate custom` command annotates a CWL file with a custom field and v
       -h, --help  Print help
     ```
 
-!!! example
-    ```
+:::tip[Example]
+    ```bash
      s4n annotate custom main "s:programmingLanguage" "python"
     ```
     The command will annotate main.cwl with programmingLanguage python.
@@ -482,5 +469,4 @@ The `s4n annotate custom` command annotates a CWL file with a custom field and v
 
     s:programmingLanguage: python
     ``` 
-
-
+:::
