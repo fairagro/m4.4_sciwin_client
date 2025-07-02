@@ -1,11 +1,13 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
-
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
+import starlightSidebarTopics from 'starlight-sidebar-topics'
 
 // https://astro.build/config
 export default defineConfig({
+  output: 'static',
   integrations: [
     starlight({
       title: 'SciWIn Client',
@@ -21,8 +23,39 @@ export default defineConfig({
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/sciwin_client' }],
       components: {
         Hero: './src/components/Hero.astro',
-      }
+        Footer: './src/components/Footer.astro',
+      },
+      plugins: [
+        starlightSidebarTopics([
+          {
+            label: 'Home',
+            icon: 'puzzle',
+            link: '/',
+          },
+          {
+            label: 'Documentation',
+            icon: 'open-book',
+            link: '/docs/getting-started',
+            items: [
+              { label: 'Getting Started', autogenerate: { directory: 'getting-started' } },
+              { label: 'Examples', autogenerate: { directory: 'examples' } },
+              { label: 'Reference', autogenerate: { directory: 'reference' } },
+            ]
+          },
+          {
+            label: 'Download for Windows',
+            icon: 'seti:windows',
+            link: 'https://github.com/JensKrumsieck/PorphyStruct/releases/latest/',
+          },
+          {
+            label: 'Web Application',
+            icon: 'cloud-download',
+            link: 'https://app.porphystruct.org/',
+          },
+        ]),
+      ]
     }),
+    sitemap(),
   ],
 
   vite: {

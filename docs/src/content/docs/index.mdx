@@ -16,7 +16,7 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkButton, Icon } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkButton, Icon, Steps } from '@astrojs/starlight/components';
 import { Image } from 'astro:assets'
 import workflow_simple from "../../assets/simple_workflow.svg"
 
@@ -24,11 +24,11 @@ import workflow_simple from "../../assets/simple_workflow.svg"
 
 <CardGrid>
 	<Card title="Getting started example" icon="rocket">
-		<a href="/getting-started/example">
+		<a href="/examples/getting-started">
 			<Image src={workflow_simple} alt="simple workflow" height={350} style="margin:auto;"/>
 			The Guide that get's you started with SciWIn-Client. If you just installed the software it is recommended to start here.
 		</a>
-		<a class="button" href="/getting-started/example">
+		<a class="button" href="/examples/getting-started">
 			<Icon name="rocket"/>
 			Getting started example
 		</a>
@@ -48,3 +48,27 @@ import workflow_simple from "../../assets/simple_workflow.svg"
 <Card title="Read the documentation" icon="open-book">
 	You can find more examples describing in the [SciWIn-Client Documentation](/examples).
 </Card>
+
+## Get started
+<Steps>
+1. ### Install SciWIn-Client
+	The easiest way to install `s4n` is to use the installer scripts.
+	<h4 class="flex items-center gap-2"><Icon name="linux" label="Linux"/> Linux</h4>
+	```bash 
+	curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+	```
+	<h4 class="flex items-center gap-2"><Icon name="seti:windows" label="Windows"/> Windows</h4>
+	```powershell
+	powershell -ExecutionPolicy Bypass -c "irm https://fairagro.github.io/m4.4_sciwin_client/get_s4n.ps1 | iex"
+	```
+2. ### Initialize Project
+	Initialize a SciWIn Project in your code repository
+	```bash
+	s4n init
+	```
+3. ### Start creating Workflows
+	Using the `s4n tool` and `s4n workflow` commands you can stepwise built your reusable data pipelines.
+	```bash
+	s4n tool create echo "Hello World"
+	```
+</Steps>
