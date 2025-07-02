@@ -43,9 +43,9 @@ export default defineConfig({
             ]
           },
           {
-            label: 'Download for Windows',
-            icon: 'seti:windows',
-            link: 'https://github.com/JensKrumsieck/PorphyStruct/releases/latest/',
+            label: 'Download Latest Release',
+            icon: 'download',
+            link: 'https://github.com/fairagro/m4.4_sciwin_client/releases/latest/',
           },
           {
             label: 'Report Issue',
