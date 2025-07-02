@@ -26,7 +26,7 @@ export default defineConfig({
         '@fontsource/fira-sans/900-italic.css',
         './src/styles/global.css'
       ],
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/sciwin_client' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/m4.4_sciwin_client' }],
       components: {
         Hero: './src/components/Hero.astro',
         Footer: './src/components/Footer.astro',
