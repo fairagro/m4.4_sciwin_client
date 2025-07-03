@@ -12,7 +12,7 @@ const commands = [
     "s4n tool create python calculation.py --population population.csv --speakers speakers.csv",
     "s4n run python plot.py --results results.csv",
     "s4n workflow create main",
-    "s4n workflow connect demo --from @inputs/speakers --to calculation/speakers",
+    "s4n workflow connect main --from @inputs/speakers --to calculation/speakers",
     "s4n execute local workflows/main/main.cwl inputs.yml"
 ];
 
