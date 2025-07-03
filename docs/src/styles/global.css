@@ -26,6 +26,8 @@
   --color-gray-900: #181818;
 }
 
+body {overflow-y: hidden;}
+
 .hero .expressive-code {
   width: 100%;
 
