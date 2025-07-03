@@ -1,0 +1,125 @@
+---
+import { AnsiUp } from "ansi_up";
+import help from "../assets/s4n_help.txt?raw";
+import create from "../assets/s4n_create.txt?raw";
+
+const commands = [
+    "s4n --help",
+    "s4n tool create python code/plot.py --data data.csv",
+];
+
+const ansi_up = new AnsiUp();
+const codeFiles = [ansi_up.ansi_to_html(help), ansi_up.ansi_to_html(create)];
+---
+
+<div class="code-rotation">
+    <div class="command-wrapper">
+    {
+        commands.map(cmd => (
+            <div class="command-slide font-bold" >
+                <!--noformat-->
+                <pre><span class="text-accent-200">$</span> {cmd}</pre>
+                <!--noformat-->
+            </div>
+        ))
+    }
+    </div>
+    <div class="expressive-code">
+        <figure class="frame is-terminal not-content">
+            <figcaption class="header">
+                <span class="title"></span>
+                <span class="sr-only">Terminal Window</span>
+            </figcaption>
+            <div class="code-body code-wrapper">
+                {
+                    commands.map((_, i) => {
+                        const lines = codeFiles[i].split(/\r?\n/);
+                        return (
+                            <div class="code-slide">
+                                <!--noformat-->
+                                <pre><code><div class="ec-line"class={`command-${i}`}><div class="code font-bold"><span class="text-accent-200"> $ </span>{commands[i]}</div></div></code></pre>
+                                <pre><code>{lines.map((line, lx) => (<div class="ec-line"><div class="code" set:html={line}/></div>))}</code></pre>
+                                <!--noformat-->
+                            </div>
+                        );
+                    })
+                }
+            </div>
+        </figure>
+    </div>
+</div>
+
+<script is:inline>
+    let index = 0;
+    const command_slides = document.querySelectorAll(".command-slide");
+    const code_slides = document.querySelectorAll(".code-slide");
+    slideshow(index);
+
+    function slideshow(slideIndex) {
+        command_slides.forEach((item, i) =>{ 
+            item.style.opacity = slideIndex != i ? 0 : 1;
+            item.style.zIndex = slideIndex != i ? -1 : 1;
+            if (slideIndex == i) 
+            {
+                pre = item.children[0];
+                pre.style.animation = "none";
+                pre.style.animation = `typing 1.5s steps(${pre.innerText.length + 1}, end)`;
+            }
+        });
+         
+        setTimeout(() => {
+            code_slides.forEach((item, i) => item.style.opacity = slideIndex != i ? 0 : 1);
+        }, 1500); //get typing duration
+        index++;
+        if (index >= code_slides.length) {
+            index = 0;
+        }
+    }
+
+    setInterval(() => slideshow(index), 5000);
+</script>
+
+<style>
+    .code-rotation {
+        width: 100%;
+        position: relative;
+        .expressive-code .frame {
+            min-height: 30vh;
+        };
+    }
+    .code-body,
+    .command-slide {
+        margin: auto;
+        width: fit-content;
+    }
+    .command-wrapper {
+        height: 3rem;
+        position: relative;
+    }
+    .command-slide {
+        transition: opacity 1s ease-out;
+        position: absolute;
+        transform: translateX(-50%);
+        left: 50%;
+        pre {
+            overflow: hidden;
+        }
+    }
+
+    @keyframes typing {
+        from { width: 0 }
+        to { width: 100% }
+    }
+    .code-wrapper {
+        height: max-content;
+        width: 100%;
+        position: relative;
+    }
+    .code-slide {
+        transition: opacity 1s ease-out;
+        position: absolute;        
+        transform: translateX(-50%);
+        left: 50%;
+        width: 82ch;
+    }
+</style>

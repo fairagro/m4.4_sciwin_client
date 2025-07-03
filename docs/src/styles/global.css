@@ -39,9 +39,7 @@
     }
   }
 
-  pre {
-    width: fit-content;
-    margin: auto;
+  pre {    
     border: none;
 
     .ec-line {
