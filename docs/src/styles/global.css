@@ -56,7 +56,7 @@ body {overflow-y: hidden;}
 
 @media (max-width: 50rem) {
   .hero pre, .hero pre > * {
-    font-size: .47rem;
+    font-size: .45rem;
   }
 }
 
