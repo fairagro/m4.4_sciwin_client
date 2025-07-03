@@ -1,0 +1,3 @@
+➕ Added step calculation to workflow
+➕ Added or updated connection from inputs.speakers to calculation/speakers in workflow
+✔️  Updated Workflow workflows/main/main.cwl!

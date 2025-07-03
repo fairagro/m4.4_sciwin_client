@@ -53,7 +53,7 @@
 }
 
 @media (max-width: 50rem) {
-  .hero .expressive-code pre>* {
+  .hero pre, .hero pre > * {
     font-size: .5rem;
   }
 }

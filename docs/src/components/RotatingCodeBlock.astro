@@ -1,15 +1,30 @@
 ---
 import { AnsiUp } from "ansi_up";
-import help from "../assets/s4n_help.txt?raw";
-import create from "../assets/s4n_create.txt?raw";
+import help from "../assets/commands/s4n_help.txt?raw";
+import create_calc from "../assets/commands/s4n_create_calc.txt?raw";
+import create_plot from "../assets/commands/s4n_create_plot.txt?raw";
+import create_wf from "../assets/commands/s4n_workflow_create.txt?raw";
+import connect_wf from "../assets/commands/s4n_workflow_connect.txt?raw";
+import execute from "../assets/commands/s4n_ex.txt?raw";
 
 const commands = [
     "s4n --help",
-    "s4n tool create python code/plot.py --data data.csv",
+    "s4n tool create python calculation.py --population population.csv --speakers speakers.csv",
+    "s4n run python plot.py --results results.csv",
+    "s4n workflow create main",
+    "s4n workflow connect demo --from @inputs/speakers --to calculation/speakers",
+    "s4n execute local workflows/main/main.cwl inputs.yml"
 ];
 
 const ansi_up = new AnsiUp();
-const codeFiles = [ansi_up.ansi_to_html(help), ansi_up.ansi_to_html(create)];
+const codeFiles = [
+    ansi_up.ansi_to_html(help), 
+    ansi_up.ansi_to_html(create_calc), 
+    ansi_up.ansi_to_html(create_plot), 
+    ansi_up.ansi_to_html(create_wf), 
+    ansi_up.ansi_to_html(connect_wf),
+    ansi_up.ansi_to_html(execute)
+];
 ---
 
 <div class="code-rotation">
@@ -97,6 +112,7 @@ const codeFiles = [ansi_up.ansi_to_html(help), ansi_up.ansi_to_html(create)];
         position: relative;
     }
     .command-slide {
+        opacity: 0;
         transition: opacity 1s ease-out;
         position: absolute;
         transform: translateX(-50%);
@@ -111,15 +127,33 @@ const codeFiles = [ansi_up.ansi_to_html(help), ansi_up.ansi_to_html(create)];
         to { width: 100% }
     }
     .code-wrapper {
-        height: max-content;
         width: 100%;
+        height: 55ch;
         position: relative;
     }
     .code-slide {
+        opacity: 0;
         transition: opacity 1s ease-out;
         position: absolute;        
         transform: translateX(-50%);
         left: 50%;
-        width: 82ch;
+        width: 45ch;
+        pre {
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     }
+
+@media (max-width: 50rem) {
+    
+}
+@media (min-width: 50rem) {
+    .code-slide { 
+        width: 82ch
+    }
+    .code-wrapper {        
+        height: 94ch;
+    }
+}
 </style>
