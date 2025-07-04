@@ -88,9 +88,9 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     }
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
+    info!("📄 Created new Workflow file: {filename}");
     print_diff("", &yaml);
     
-    info!("📄 Created new Workflow file: {filename}");
     Ok(())
 }
 
