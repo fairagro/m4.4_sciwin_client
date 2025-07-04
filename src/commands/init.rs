@@ -123,7 +123,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
 
     //append .s4n folder to .gitignore, whatever it may contains
     let mut gitignore = fs::OpenOptions::new().append(true).open(gitignore_path)?;
-    writeln!(gitignore, "\n.s4n\nworkflow.toml")?;
+    writeln!(gitignore, "\n.s4n")?;
 
     Ok(repo)
 }
