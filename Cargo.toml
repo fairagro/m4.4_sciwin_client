@@ -60,6 +60,7 @@ walkdir = "2.5.0"
 semver = { version = "1.0.26", features = ["serde"] }
 smart-default = "0.7.1"
 keyring = { version = "3.6.2", features = ["apple-native", "linux-native", "windows-native"] }
+similar = "2.7.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"

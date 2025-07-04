@@ -1,7 +1,5 @@
 use crate::{
-    cwl::Connectable,
-    io::get_workflows_folder,
-    repo::{commit, stage_file},
+    cwl::Connectable, io::get_workflows_folder, print_diff, repo::{commit, stage_file}
 };
 use clap::{Args, Subcommand, ValueEnum};
 use colored::Colorize;
@@ -90,8 +88,9 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
     }
 
     create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
+    print_diff("", &yaml);
+    
     info!("📄 Created new Workflow file: {filename}");
-
     Ok(())
 }
 
@@ -123,9 +122,11 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     //save workflow
     let mut yaml = serde_yaml::to_string(&workflow)?;
     yaml = format_cwl(&yaml)?;
+    let old = fs::read_to_string(&filename)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
     info!("✔️  Updated Workflow {filename}!");
+    print_diff(&old,  &yaml);
 
     Ok(())
 }
@@ -149,9 +150,11 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     // save workflow
     let mut yaml = serde_yaml::to_string(&workflow)?;
     yaml = format_cwl(&yaml)?;
+    let old = fs::read_to_string(&filename)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
     info!("✔️  Updated Workflow {filename}!");
+    print_diff(&old,  &yaml);
 
     Ok(())
 }

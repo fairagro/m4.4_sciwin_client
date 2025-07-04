@@ -3984,6 +3984,7 @@ dependencies = [
  "serde_yaml",
  "serial_test",
  "shlex",
+ "similar",
  "slugify",
  "smart-default",
  "syntect",
