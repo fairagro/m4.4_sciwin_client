@@ -210,7 +210,7 @@ fn get_flag(current: &str) -> CommandInputParameter {
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
 
-    let (current, cwl_type) = parse_input(current);
+    let (next, cwl_type) = parse_input(next);
     let default_value = parse_default_value(next, &cwl_type);
 
     CommandInputParameter::default()
