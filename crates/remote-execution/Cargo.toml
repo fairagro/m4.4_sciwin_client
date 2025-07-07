@@ -4,7 +4,7 @@ version = "0.6.1"
 edition = "2021"
 
 [dependencies]
-reqwest = { version = "0.12.21", features = ["blocking", "json", "cookies"] }
+reqwest = { version = "0.12.22", features = ["blocking", "json", "cookies"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
