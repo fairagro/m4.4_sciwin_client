@@ -6,6 +6,7 @@
     - Provenance RO-Crate can be created from remote execution 46808afdd219b68c69562fedce00e164b4fb0081
 - Possibility to connect all CWL Documents in `s4n workflow connect` #95
 - added `--mount` to `s4n tool create` to mount directories into working dir #103bon 
+- added type hints in `s4n tool create`. Inputs prefixed like s:/mnt/ are then enforced to be of type string.
 
 ## 🐛 Bugfixes
 - Inputs and Outputs can not have same IDs #113

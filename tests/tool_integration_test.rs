@@ -511,3 +511,19 @@ pub fn tool_create_mount() {
     assert!(iwdr.is_some());
     assert!(iwdr.unwrap().listing.len() == 1);
 }
+
+#[fstest(repo = true)]
+pub fn tool_create_typehint() {
+    let tool_create_args = CreateToolArgs {
+        command: vec!["ls".to_string(), "s:.".to_string()], //. would normally be a directory type. we enforce string here
+        ..Default::default()
+    };
+    let cmd = ToolCommands::Create(tool_create_args);
+    assert!(handle_tool_commands(&cmd).is_ok());
+
+    let tool_path = Path::new("workflows/ls/ls.cwl");
+    let tool = load_tool(tool_path).unwrap();
+
+    let input = &tool.inputs[0];
+    assert_eq!(input.type_, CWLType::String);
+}

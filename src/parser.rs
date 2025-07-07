@@ -69,9 +69,31 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     tool
 }
 
+fn parse_input(input: &str) -> (&str, CWLType) {
+    if let Some((hint, name)) = input.split_once(':') {
+        if hint.len() == 1 {
+            let type_ = match hint {
+                "f" => CWLType::File,
+                "d" => CWLType::Directory,
+                "s" => CWLType::String,
+                "r" => CWLType::Float,
+                "i" => CWLType::Int,
+                "l" => CWLType::Long,
+                "b" => CWLType::Boolean,
+                _ => CWLType::Any, //whatever
+            };
+            (name, type_)
+        } else {
+            (input, guess_type(input))
+        }
+    } else {
+        (input, guess_type(input))
+    }
+}
+
 pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     for input in inputs {
-        let type_ = guess_type(input);
+        let (input, type_) = parse_input(input);
 
         //todo: add requiement for directory also or add new --mount param and remove block from here
         if matches!(type_, CWLType::File) {
@@ -159,7 +181,7 @@ pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
 }
 
 fn get_positional(current: &str, index: isize) -> CommandInputParameter {
-    let cwl_type = guess_type(current);
+    let (current, cwl_type) = parse_input(current);
     let default_value = parse_default_value(current, &cwl_type);
 
     //check id for bad words
@@ -171,7 +193,7 @@ fn get_positional(current: &str, index: isize) -> CommandInputParameter {
 
     CommandInputParameter::default()
         .with_id(&id)
-        .with_type(guess_type(current))
+        .with_type(cwl_type)
         .with_default_value(default_value)
         .with_binding(CommandLineBinding::default().with_position(index))
 }
@@ -187,7 +209,8 @@ fn get_flag(current: &str) -> CommandInputParameter {
 
 fn get_option(current: &str, next: &str) -> CommandInputParameter {
     let id = current.replace('-', "");
-    let cwl_type = guess_type(next);
+
+    let (current, cwl_type) = parse_input(current);
     let default_value = parse_default_value(next, &cwl_type);
 
     CommandInputParameter::default()
@@ -351,7 +374,7 @@ fn post_process_variables(tool: &mut CommandLineTool) {
 /// Post-processes output IDs to ensure they do not conflict with input IDs
 fn post_process_ids(tool: &mut CommandLineTool) {
     let input_ids = tool.inputs.iter().map(|i| i.id.clone()).collect::<HashSet<_>>();
-    for output in &mut tool.outputs{
+    for output in &mut tool.outputs {
         if input_ids.contains(&output.id) {
             output.id = format!("o_{}", output.id);
         }
