@@ -12,7 +12,7 @@
 [![GitHub Downloads](https://img.shields.io/github/downloads/fairagro/m4.4_sciwin_client/total)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
 
 
-⭐ Star us on GitHub to say "Thank you!" ⭐
+⭐ **Star this Repo** to say "Thank you!" ⭐
 
 [![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/fairagro/m4.4_sciwin_client)
 [![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/fairagro/m4.4_sciwin_client)
@@ -50,15 +50,19 @@ To run the tests use `cargo test` or `cargo test -- --nocapture` to output logs.
 ```bash
 # Clone the repository
 git clone https://github.com/fairagro/m4.4_sciwin_client
-
-# Navigate to the project directory
 cd m4.4_sciwin_client
 
-# Use cargo build (or run) to build (or run) s4n
+# Build the project
 cargo build
 
-# Run the unit and integration tests
-cargo test
+# Run the project
+cargo run
+```
+
+To run tests (unit and integration)
+```bash
+cargo test --workspace           # Run all tests
+cargo test -- --nocapture  # Show log output during tests
 ```
 
 ## 🎯 Installation
@@ -156,5 +160,9 @@ You can choose between one of them if you use this work.
 <!--section images-->
 [rust-image]: https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white
 
+## 🏁 Quick Links
+- [📄 Docs](https://fairagro.github.io/m4.4_sciwin_client/)
+- [🛠️ Releases](https://github.com/fairagro/m4.4_sciwin_client/releases)
+- [🌐 FAIRagro](https://fairagro.net/)
 
 [🔼 Back to Top](#top)
