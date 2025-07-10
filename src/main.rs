@@ -12,6 +12,7 @@ use s4n::{
         tool::{create_tool, handle_tool_commands},
         workflow::handle_workflow_commands,
     },
+    gui,
     log::LOGGER,
 };
 use std::{error::Error, process::exit};
@@ -43,5 +44,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Execute { command } => handle_execute_commands(command),
         Commands::Sync => handle_sync(),
         Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
+        Commands::Gui => Ok(gui::main()?),
     }
 }
