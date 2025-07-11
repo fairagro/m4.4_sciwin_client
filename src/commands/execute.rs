@@ -8,37 +8,33 @@ use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use keyring::Entry;
 use remote_execution::{
     api::{
-        create_workflow, download_files, get_workflow_logs, get_workflow_status, get_workflow_workspace,
-         ping_reana, start_workflow, upload_files, get_workflow_specification
+        create_workflow, download_files, get_workflow_logs, get_workflow_specification, get_workflow_status, get_workflow_workspace, ping_reana,
+        start_workflow, upload_files,
     },
     parser::generate_workflow_json_from_cwl,
     rocrate::create_ro_crate,
 };
 use serde_yaml::{Number, Value};
-use std::io::Write;
-use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 use std::fs::OpenOptions;
-use std::io::{BufReader, BufRead};
+use std::io::Write;
+use std::io::{BufRead, BufReader};
+use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
         ExecuteCommands::Local(args) => execute_local(args),
         ExecuteCommands::Remote(remote_args) => match &remote_args.command {
-            RemoteSubcommands::Start { file, input_file, rocrate, watch, logout } => {
-                execute_remote_start(file, input_file, *rocrate, *watch, *logout)
-            }
-            RemoteSubcommands::Status { workflow_name } => {
-                check_remote_status(workflow_name)
-            }
-            RemoteSubcommands::Download { workflow_name, output_dir } => {
-                download_remote_results(workflow_name, output_dir)
-            }
-            RemoteSubcommands::Rocrate { workflow_name, output_dir } => {
-                export_rocrate(workflow_name, output_dir)
-            }
-            RemoteSubcommands::Logout => {
-                logout_reana()
-            }
+            RemoteSubcommands::Start {
+                file,
+                input_file,
+                rocrate,
+                watch,
+                logout,
+            } => execute_remote_start(file, input_file, *rocrate, *watch, *logout),
+            RemoteSubcommands::Status { workflow_name } => check_remote_status(workflow_name),
+            RemoteSubcommands::Download { workflow_name, output_dir } => download_remote_results(workflow_name, output_dir),
+            RemoteSubcommands::Rocrate { workflow_name, output_dir } => export_rocrate(workflow_name, output_dir),
+            RemoteSubcommands::Logout => logout_reana(),
         },
         ExecuteCommands::MakeTemplate(args) => make_template(&args.cwl),
     }
@@ -104,12 +100,17 @@ pub enum RemoteSubcommands {
         #[arg(short = 'd', long = "output_dir", help = "Optional output directory to save downloaded files")]
         output_dir: Option<String>,
     },
-   Rocrate {
+    Rocrate {
         #[arg(help = "Workflow name to create a Provenance Run RO-Crate for")]
         workflow_name: String,
-        #[arg(short = 'd', long = "rocrate_dir", default_value = "rocrate", help = "Optional directory to save RO-Crate to, default rocrate")]
+        #[arg(
+            short = 'd',
+            long = "rocrate_dir",
+            default_value = "rocrate",
+            help = "Optional directory to save RO-Crate to, default rocrate"
+        )]
         output_dir: Option<String>,
-   },
+    },
     #[command(about = "Delete reana information from credential storage (a.k.a logout)")]
     Logout,
 }
@@ -132,19 +133,18 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
     if let Some(name) = workflow_name {
-        let status_response = get_workflow_status(&reana_instance, &reana_token, name)
-            .map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+        let status_response =
+            get_workflow_status(&reana_instance, &reana_token, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
         let status = status_response["status"].as_str().unwrap_or("unknown");
         let created = status_response["created"].as_str().unwrap_or("unknown");
         println!("{name} {status} created at {created}");
         //if single workflow failed, get step name and logs
-        if status == "failed"{
+        if status == "failed" {
             if let Some(logs_str) = status_response["logs"].as_str() {
                 analyze_workflow_logs(logs_str);
             }
         }
-    }
-    else {
+    } else {
         let file_path = status_file_path();
         if !file_path.exists() {
             return Err(format!("Workflow status file not found at path: {file_path:?}").into());
@@ -154,8 +154,8 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
         for line in reader.lines().map_while(Result::ok) {
             let trimmed = line.trim();
             if !trimmed.is_empty() {
-                let status_response = get_workflow_status(&reana_instance, &reana_token, trimmed)
-                    .map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+                let status_response =
+                    get_workflow_status(&reana_instance, &reana_token, trimmed).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
                 let status = status_response["status"].as_str().unwrap_or("unknown");
                 let created = status_response["created"].as_str().unwrap_or("unknown");
                 println!("{trimmed} {status} created at {created}");
@@ -165,11 +165,11 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
     Ok(())
 }
 
-pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)-> Result<(), Box<dyn Error>> {
+pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
-    let status_response = get_workflow_status(&reana_instance, &reana_token, workflow_name)
-        .map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+    let status_response =
+        get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
     let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
     // Get workflow status, only download if finished?
     match workflow_status {
@@ -189,7 +189,7 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
                 .unwrap_or_default();
             download_files(&reana_instance, &reana_token, workflow_name, &output_files, output_dir.as_deref())?;
         }
-         "failed" => {
+        "failed" => {
             if let Some(logs_str) = status_response["logs"].as_str() {
                 analyze_workflow_logs(logs_str);
             }
@@ -209,15 +209,16 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Res
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
     // Get workflow status, only export if finished?
-    let status_response = get_workflow_status(&reana_instance, &reana_token, workflow_name)
-        .map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+    let status_response =
+        get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
     let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
     match workflow_status {
         "finished" => {
             let workflow_json = get_workflow_specification(&reana_instance, &reana_token, workflow_name)?;
             let config_path = PathBuf::from("workflow.toml");
             let config_str = fs::read_to_string(&config_path)?;
-            let specification = workflow_json.get("specification")
+            let specification = workflow_json
+                .get("specification")
                 .ok_or("❌ 'specification' field missing in workflow JSON")?;
             let logs = get_workflow_logs(&reana_instance, &reana_token, workflow_name)?;
             let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize REANA JSON logs");
@@ -231,12 +232,7 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Res
             let workspace_files: Vec<String> = workspace_response
                 .get("items")
                 .and_then(|items| items.as_array())
-                .map(|array| {
-                    array
-                        .iter()
-                        .filter_map(|item| item.get("name")?.as_str().map(String::from))
-                        .collect()
-                })
+                .map(|array| array.iter().filter_map(|item| item.get("name")?.as_str().map(String::from)).collect())
                 .unwrap_or_default();
             create_ro_crate(
                 specification,
@@ -271,10 +267,7 @@ fn status_file_path() -> PathBuf {
 
 fn save_workflow_name(name: &str) -> std::io::Result<()> {
     let file_path = status_file_path();
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&file_path)?;
+    let mut file = OpenOptions::new().create(true).append(true).open(&file_path)?;
     writeln!(file, "{name}")?;
     Ok(())
 }
@@ -330,8 +323,10 @@ pub fn analyze_workflow_logs(logs_str: &str) {
             let job_name = job_info["job_name"].as_str().unwrap_or("unknown");
             let logs_text = job_info["logs"].as_str().unwrap_or("");
             //search for error etc in logs of steps
-            if logs_text.contains("Error") || logs_text.contains("Exception")
-                || logs_text.contains("Traceback") || logs_text.to_lowercase().contains("failed")
+            if logs_text.contains("Error")
+                || logs_text.contains("Exception")
+                || logs_text.contains("Traceback")
+                || logs_text.to_lowercase().contains("failed")
             {
                 println!("❌ Workflow execution failed. Workflow step {job_name} may have encountered an error:");
                 println!("Logs:\n{logs_text}\n");
@@ -340,8 +335,7 @@ pub fn analyze_workflow_logs(logs_str: &str) {
     }
 }
 
-pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>,
-    rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
+pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
     let config_path = PathBuf::from("workflow.toml");
@@ -364,7 +358,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>,
     let workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
     let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
     // Create workflow
-    let create_response = create_workflow(&reana_instance,&reana_token,&workflow_json, Some(&workflow_name))?;
+    let create_response = create_workflow(&reana_instance, &reana_token, &workflow_json, Some(&workflow_name))?;
     let Some(workflow_name) = create_response["workflow_name"].as_str() else {
         return Err("Missing workflow_name in response".into());
     };
@@ -376,14 +370,14 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>,
             let status_response =
                 get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
             let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
-            if TERMINAL_STATUSES.contains(&workflow_status){
+            if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {
                     "finished" => {
                         println!("✅ Workflow finished successfully.");
                         if let Err(e) = download_remote_results(workflow_name, &None) {
                             eprintln!("Error downloading remote results: {e}");
                         }
-                        if rocrate{
+                        if rocrate {
                             if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string())) {
                                 eprintln!("Error trying to create a Provenance RO-Crate: {e}");
                             }
@@ -401,12 +395,12 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>,
                 }
                 break;
             }
-         thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
+            thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
         }
     } else {
         save_workflow_name(workflow_name)?;
     }
-    if logout{
+    if logout {
         if let Err(e) = logout_reana() {
             eprintln!("Error logging out of reana instance: {e}");
         }
@@ -453,5 +447,33 @@ fn defaults(cwltype: &CWLType) -> Value {
         CWLType::String => Value::String("Hello World".into()),
         CWLType::Any => Value::String("Any Value".into()),
         _ => Value::Null,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_defaults_type() {
+        assert_eq!(defaults(&CWLType::Int), Value::Number(Number::from(42)));
+        assert_eq!(defaults(&CWLType::Boolean), Value::Bool(true));
+        assert_eq!(defaults(&CWLType::Long), Value::Number(Number::from(42)));
+        assert_eq!(defaults(&CWLType::Float), Value::Number(Number::from(69.42)));
+        assert_eq!(defaults(&CWLType::String), Value::String("Hello World".into()));
+        assert_eq!(defaults(&CWLType::Any), Value::String("Any Value".into()));
+    }
+
+    #[test]
+    fn test_default_values() {
+        assert_eq!(
+            default_values(&CWLType::File),
+            DefaultValue::File(File::from_location("./path/to/file.txt"))
+        );
+        assert_eq!(
+            default_values(&CWLType::Directory),
+            DefaultValue::Directory(Directory::from_location("./path/to/dir"))
+        );
+        assert_eq!(default_values(&CWLType::String), DefaultValue::Any(Value::String("Hello World".into())));
     }
 }
