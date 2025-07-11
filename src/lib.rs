@@ -6,6 +6,7 @@ pub mod io;
 pub mod log;
 pub mod parser;
 pub mod repo;
+pub mod gui;
 
 use ::log::info;
 use colored::Colorize;

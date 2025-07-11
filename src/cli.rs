@@ -64,6 +64,8 @@ pub enum Commands {
         #[arg()]
         shell: Shell,
     },
+    #[command(about = "Start da f'ing gui")]
+    Gui,
 }
 
 pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> Result<(), Box<dyn Error>> {
