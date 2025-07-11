@@ -62,6 +62,7 @@ smart-default = "0.7.1"
 keyring = { version = "3.6.2", features = ["apple-native", "linux-native", "windows-native"] }
 similar = "2.7.0"
 eframe = "0.31.1"
+catppuccin-egui = { version = "5.5.0", default-features = false, features = ["egui31"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
