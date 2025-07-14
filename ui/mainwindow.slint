@@ -1,5 +1,5 @@
 
-import { Sidebar } from "sidebar.slint";
+import { SideBar } from "sidebar.slint";
 export component MainWindow inherits Window {
     in-out property <[string]> file_list: [];
 
@@ -8,8 +8,9 @@ export component MainWindow inherits Window {
     icon: @image-url("logo.png");
 
     HorizontalLayout {
-        Sidebar {
-            file_list: root.file_list;
+        sidebar := SideBar {
+            title: @tr("Slint Test");
+            model: root.file_list;
         }
 
         Rectangle {
