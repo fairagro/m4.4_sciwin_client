@@ -59,10 +59,13 @@ tokio = { version = "1.46.1", features = ["macros"] }
 walkdir = "2.5.0"
 semver = { version = "1.0.26", features = ["serde"] }
 smart-default = "0.7.1"
-keyring = { version = "3.6.2", features = ["apple-native", "linux-native", "windows-native"] }
+keyring = { version = "3.6.2", features = [
+    "apple-native",
+    "linux-native",
+    "windows-native",
+] }
 similar = "2.7.0"
-eframe = "0.31.1"
-catppuccin-egui = { version = "5.5.0", default-features = false, features = ["egui31"] }
+slint = "1.12.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
@@ -74,6 +77,9 @@ serial_test = "3.1.1"
 whoami = "1.6.0"
 mockito = "1.7.0"
 httpmock = "0.7.0"
+
+[build-dependencies]
+slint-build = "1.12.1"
 
 # Workspace settings
 [workspace]
