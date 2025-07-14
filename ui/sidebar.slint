@@ -1,0 +1,24 @@
+import {ListView} from "std-widgets.slint";
+
+export component Sidebar inherits Rectangle {
+    in-out property <length> sidebar_width: 200px;
+    in property <[string]> file_list;
+
+    background: #ff8686;
+    width: sidebar_width;
+
+    HorizontalLayout {
+        ListView {
+            for file in root.file_list: TouchArea {
+                Rectangle {
+                    background: parent.has-hover ? #fff : transparent;
+                    padding: 8px;
+                    Text {
+                        text: file;
+                        font-size: 14px;
+                    }
+                }
+            }
+        }
+    }
+}

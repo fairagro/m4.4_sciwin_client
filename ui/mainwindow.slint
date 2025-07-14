@@ -1,0 +1,24 @@
+
+import { Sidebar } from "sidebar.slint";
+export component MainWindow inherits Window {
+    in-out property <[string]> file_list: [];
+
+    preferred-height: 600px;
+    preferred-width: 1000px;
+
+    HorizontalLayout {
+        Sidebar {
+            file_list: root.file_list;
+        }
+
+        Rectangle {
+            background: #d0f0c0;
+            Text {
+                text: "Main Content Area";
+                font-size: 20px;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}

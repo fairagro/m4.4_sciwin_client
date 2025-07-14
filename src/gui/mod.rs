@@ -1,19 +1,14 @@
-use std::error::Error;
+use std::{error::Error, rc::Rc};
 
-use slint::ComponentHandle;
+use slint::{ComponentHandle, ModelRc, VecModel};
 
 slint::include_modules!();
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     let ui = MainWindow::new()?;
-
-    ui.on_request_value_increment({
-        let ui_handle = ui.as_weak();
-        move || {
-            let ui = ui_handle.unwrap();
-            ui.set_counter(ui.get_counter() + 1);
-        }
-    });
+    
+    let files = Rc::new(VecModel::from(vec!["tool.cwl".into(), "workflows/main.cwl".into()]));
+    ui.set_file_list(ModelRc::from(files));
 
     ui.run()?;
 
