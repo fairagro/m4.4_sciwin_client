@@ -14,6 +14,7 @@ anyhow = "1.0.98"
 
 toml = { workspace = true }
 toml_edit = { workspace = true }
+keyring = { workspace = true }
 uuid = { version = "1.17.0", features = ["v4"] }
 chrono = { version = "0.4.41"}
 regex = { version = "1.11.1"}

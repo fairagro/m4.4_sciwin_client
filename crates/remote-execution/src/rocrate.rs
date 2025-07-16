@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use toml_edit::{value, DocumentMut, Item, Table};
 use uuid::Uuid;
+use keyring::Entry;
 
 type ScriptStep = (String, Vec<(String, String)>, Vec<(String, String)>, Option<String>);
 type StepTimestamp = HashMap<String, (Option<String>, Option<String>)>;
@@ -679,6 +680,20 @@ fn classify_and_prefix_params(id: &str, inputs: &[(String, String)], outputs: &[
         .collect()
 }
 
+fn get_or_prompt_credential(service: &str, key: &str, prompt_msg: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let entry = Entry::new(service, key)?;
+    
+    match entry.get_password() {
+        Ok(val) => Ok(val),
+        Err(keyring::Error::NoEntry) => {
+            let value = prompt(prompt_msg);
+            entry.set_password(&value)?;
+            Ok(value)
+        }
+        Err(e) => Err(Box::new(e)),
+    }
+}
+
 //create rocrate folder with ro-crate-metadata.json and other input, output and intermediate result files
 pub fn create_ro_crate(
     workflow_json: &serde_json::Value,
@@ -733,8 +748,6 @@ pub fn create_ro_crate(
                                 .find(|wf| std::path::Path::new(wf).file_name().is_some_and(|f| f == path_str))
                             {
                                 found_paths.push(matching_file.clone());
-                            } else {
-                                println!("⚠️ File not found: {path_str}");
                             }
                         }
                     } else {
@@ -744,11 +757,8 @@ pub fn create_ro_crate(
             }
         }
     }
-    let mut doc: DocumentMut = workflow_toml.parse().unwrap_or_else(|_| "[workflow]\n[reana]".parse().unwrap());
-    let reana = doc["reana"].or_insert(Item::Table(Table::new())).as_table_mut().unwrap();
-    let reana_instance = reana.get("instance").and_then(Item::as_str).map(str::to_string).unwrap();
-    let reana_token = reana.get("token").and_then(Item::as_str).map(str::to_string).unwrap();
-
+    let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
+    let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
     //download intermediate outputs that were found
     download_files(&reana_instance, &reana_token, workflow_name, &found_paths, Some(&folder_name))?;
 

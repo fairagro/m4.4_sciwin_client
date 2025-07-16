@@ -3707,6 +3707,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "httpmock",
+ "keyring",
  "mockito",
  "pathdiff",
  "regex",
