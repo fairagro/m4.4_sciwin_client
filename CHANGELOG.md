@@ -1,4 +1,6 @@
 # Unreleased
+
+# v0.7.0
 ## 🚀 Features
 - Remote Execution using Reana #108 
     - FAIRagro Reana Instance will be provided later, see #42
