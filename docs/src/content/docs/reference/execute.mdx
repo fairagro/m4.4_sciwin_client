@@ -6,19 +6,20 @@ sidebar:
 
 The `execute` command provides tools to execute CWL documents locally or on a remote server.
 
-    ```txt frame="terminal" title="Usage"
-    Execution of CWL Files locally or on remote servers
+```txt frame="terminal" title="Usage"
+Execution of CWL Files locally or on remote servers
 
-    Usage: s4n execute <COMMAND>
+Usage: s4n execute <COMMAND>
 
-    Commands:
-      local  Runs CWL files locally [aliases: l]      
-      make-template  Creates job file template for execution (e.g. inputs.yaml)
-      help   Print this message or the help of the given subcommand(s)
+Commands:
+  local          Runs CWL files locally [aliases: l]
+  remote         Runs CWL files remotely using reana [aliases: r]
+  make-template  Creates job file template for execution (e.g. inputs.yaml)
+  help           Print this message or the help of the given subcommand(s)
 
-    Options:
-      -h, --help  Print help
-    ```
+Options:
+  -h, --help  Print help
+```
 
 ## `execute local`
 This command executes a given CWL File on the local machine (without the need of CWLTool).
