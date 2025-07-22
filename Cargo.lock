@@ -1033,7 +1033,7 @@ dependencies = [
 
 [[package]]
 name = "cwl"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "rstest",
  "serde",
@@ -1043,7 +1043,7 @@ dependencies = [
 
 [[package]]
 name = "cwl-execution"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "cwl",
  "fancy-regex 0.15.0",
@@ -3702,7 +3702,7 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "remote-execution"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3977,7 +3977,7 @@ checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
 
 [[package]]
 name = "s4n"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "assert_cmd",
  "calamine",
