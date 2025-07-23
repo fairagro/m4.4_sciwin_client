@@ -12,8 +12,14 @@ use git2::Repository;
 use log::{error, info};
 use prettytable::{row, Cell, Row, Table};
 use serde_yaml::Value;
-use std::path::PathBuf;
-use std::{env, error::Error, fs, io::Write, path::Path, vec};
+use std::{
+    env,
+    error::Error,
+    fs,
+    io::Write,
+    path::{Path, PathBuf},
+    vec,
+};
 use walkdir::WalkDir;
 
 pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
