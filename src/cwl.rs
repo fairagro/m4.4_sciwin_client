@@ -281,7 +281,15 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     if path.exists() {
         candidates.push(path.to_path_buf());
     }
-    let repo = Repository::open(".")?;
+
+    //let else = hell yeah!
+    let Ok(repo) = Repository::open(".") else {
+        if !candidates.is_empty() {
+            return Ok(candidates[0].to_string_lossy().into_owned());
+        }
+        return Err("No candidates available".into());
+    };
+
     for module_path in get_submodule_paths(&repo)? {
         let sub_path = module_path.join(path);
         if sub_path.exists() {

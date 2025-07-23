@@ -69,6 +69,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let current = env::current_dir().unwrap();
 
     env::set_current_dir(dir.path()).unwrap();
+    initialize_project(None, false).unwrap();
 
     create_and_write_file("workflows/calculation/calculation.cwl", CALCULATION_FILE).unwrap();
     create_and_write_file("workflows/plot/plot.cwl", PLOT_FILE).unwrap();
@@ -104,6 +105,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     ];
     for c in &connect_args {
         let result = connect_workflow_nodes(c);
+        eprintln!("{result:?}");
         assert!(result.is_ok());
     }
 
