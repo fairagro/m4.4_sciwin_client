@@ -6,9 +6,13 @@ use commonwl::{
     requirements::{Requirement, WorkDirItem},
     CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, StringOrDocument, Workflow, WorkflowStep,
 };
+use dialoguer::{theme::ColorfulTheme, Select};
 use git2::Repository;
 use log::{info, warn};
-use std::{error::Error, path::Path};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -22,7 +26,7 @@ pub trait Connectable {
     fn add_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
     fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>>;
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>>;
-    fn add_new_step_if_not_exists(&mut self, name: &str, tool: &CWLDocument);
+    fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument);
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
 }
 
@@ -62,9 +66,8 @@ impl Saveable for CommandLineTool {
 }
 
 impl Connectable for Workflow {
-    fn add_new_step_if_not_exists(&mut self, name: &str, doc: &CWLDocument) {
+    fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument) {
         if !self.has_step(name) {
-            let path = resolve_filename(name).expect("Could not find CWL file");
             let path = if path.starts_with("workflows") {
                 path.replace("workflows", "..")
             } else {
@@ -92,8 +95,8 @@ impl Connectable for Workflow {
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
-        let to_filename = resolve_filename(to_parts[0]);
-        let to_cwl = load_doc(&to_filename?)?;
+        let to_filename = resolve_filename(to_parts[0])?;
+        let to_cwl = load_doc(&to_filename)?;
         let to_slot = to_cwl.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slot");
 
         //register input
@@ -102,7 +105,7 @@ impl Connectable for Workflow {
                 .push(CommandInputParameter::default().with_id(from_input).with_type(to_slot.type_.clone()));
         }
 
-        self.add_new_step_if_not_exists(to_parts[0], &to_cwl);
+        self.add_new_step_if_not_exists(to_parts[0], &to_filename, &to_cwl);
         //add input in step
         self.steps
             .iter_mut()
@@ -124,10 +127,10 @@ impl Connectable for Workflow {
     fn add_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
-        let from_filename = resolve_filename(from_parts[0]);
-        let from_cwl = load_doc(&from_filename?)?;
+        let from_filename = resolve_filename(from_parts[0])?;
+        let from_cwl = load_doc(&from_filename)?;
         let from_type = from_cwl.get_output_type(from_parts[1]).ok_or("No slot!")?;
-        self.add_new_step_if_not_exists(from_parts[0], &from_cwl);
+        self.add_new_step_if_not_exists(from_parts[0], &from_filename, &from_cwl);
 
         if !self.has_output(to_output) {
             self.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());
@@ -163,17 +166,17 @@ impl Connectable for Workflow {
             }
 
             //create step
-            self.add_new_step_if_not_exists(from_parts[0], &from_cwl);
+            self.add_new_step_if_not_exists(from_parts[0], &from_filename, &from_cwl);
         }
 
         //handle to
         let to_parts = to.split('/').collect::<Vec<_>>();
         //check if step exists
         if !self.has_step(to_parts[0]) {
-            let to_filename = resolve_filename(to_parts[0]);
-            let to_cwl = load_doc(&to_filename?)?;
+            let to_filename = resolve_filename(to_parts[0])?;
+            let to_cwl = load_doc(&to_filename)?;
 
-            self.add_new_step_if_not_exists(to_parts[0], &to_cwl);
+            self.add_new_step_if_not_exists(to_parts[0], &to_filename, &to_cwl);
         }
 
         let step = self.steps.iter_mut().find(|s| s.id == to_parts[0]).unwrap(); //safe here!
@@ -270,20 +273,35 @@ impl Connectable for Workflow {
 
 /// Locates CWL File by name
 pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
+    let mut candidates: Vec<PathBuf> = vec![];
+
     //check if exists in workflows folder
     let path = format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename);
-    if Path::new(&path).exists() {
-        Ok(path)
-    } else {
-        let repo = Repository::open(".")?;
-        for module_path in get_submodule_paths(&repo)? {
-            println!("{module_path:?}");
-            let sub_path = module_path.join(&path);
-            if sub_path.exists() {
-                return Ok(sub_path.to_string_lossy().into_owned());
-            }
+    let path = Path::new(&path);
+    if path.exists() {
+        candidates.push(path.to_path_buf());
+    }
+    let repo = Repository::open(".")?;
+    for module_path in get_submodule_paths(&repo)? {
+        let sub_path = module_path.join(path);
+        if sub_path.exists() {
+            candidates.push(sub_path);
         }
-        Err("Could not resolve filename".into())
+    }
+
+    match candidates.len() {
+        1 => Ok(candidates[0].to_string_lossy().into_owned()),
+        0 => Err("Could not resolve filename".into()),
+        _ => {
+            let items: Vec<String> = candidates.iter().map(|p| p.to_string_lossy().into_owned()).collect();
+            let selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Multiple candidates are found. Select the CWL File to use")
+                .items(&items)
+                .default(0)
+                .report(true)
+                .interact()?;
+            Ok(items[selection].clone())
+        }
     }
 }
 
