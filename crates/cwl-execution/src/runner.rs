@@ -17,12 +17,10 @@ use crate::{
     CommandError, InputObject,
 };
 use cwl::{
-    clt::{Argument, Command, CommandLineTool},
     inputs::CommandLineBinding,
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
-    wf::{StringOrDocument, Workflow},
-    CWLDocument, StringOrNumber,
+    Argument, CWLDocument, Command, CommandLineTool, StringOrDocument, StringOrNumber, Workflow,
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};

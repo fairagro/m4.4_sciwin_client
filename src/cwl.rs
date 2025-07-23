@@ -1,13 +1,11 @@
 use crate::util::{get_workflows_folder, resolve_path};
 use cwl::{
-    clt::CommandLineTool,
     inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_doc,
     outputs::WorkflowOutputParameter,
     requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, PathItem},
-    wf::{StringOrDocument, Workflow, WorkflowStep},
-    CWLDocument,
+    CWLDocument, CommandLineTool, StringOrDocument, Workflow, WorkflowStep,
 };
 use log::{info, warn};
 use std::error::Error;
@@ -285,10 +283,10 @@ pub fn highlight_cwl(yaml: &str) {
 mod tests {
     use super::*;
     use cwl::{
-        clt::Command,
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
         types::{CWLType, Dirent, File},
+        Command,
     };
     use serde_yaml::Value;
     use std::path::Path;

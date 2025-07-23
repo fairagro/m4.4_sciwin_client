@@ -3,11 +3,10 @@ use crate::{
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
 use cwl::{
-    clt::CommandLineTool,
-    et::ExpressionTool,
     inputs::CommandInputParameter,
     outputs::CommandOutputParameter,
     types::{CWLType, DefaultValue, Directory, File},
+    CommandLineTool, ExpressionTool,
 };
 use glob::glob;
 use log::info;
@@ -288,7 +287,7 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
     dir.listing = Some(vec![]);
-    
+
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();

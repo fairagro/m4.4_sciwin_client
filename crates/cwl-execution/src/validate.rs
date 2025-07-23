@@ -1,10 +1,9 @@
 use crate::{environment::RuntimeEnvironment, io::get_file_property, InputObject};
 use cwl::{
-    clt::{Argument, Command, CommandLineTool},
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
     types::{DefaultValue, Entry, EnviromentDefs, PathItem},
-    CWLDocument,
+    Argument, CWLDocument, Command, CommandLineTool,
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;

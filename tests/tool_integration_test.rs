@@ -1,10 +1,10 @@
 mod common;
 use common::os_path;
 use cwl::{
-    clt::{Argument, CommandLineTool},
     load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
     types::{CWLType, Entry},
+    Argument, CommandLineTool,
 };
 use cwl_execution::io::copy_dir;
 use fstest::fstest;

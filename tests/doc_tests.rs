@@ -2,7 +2,7 @@
 mod common;
 use common::{check_git_user, setup_python};
 use cwl::{
-    clt::Command,
+    Command,
     load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
     types::Entry,

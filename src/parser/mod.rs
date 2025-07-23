@@ -1,8 +1,8 @@
 use crate::split_vec_at;
 use cwl::{
-    clt::{Argument, Command, CommandLineTool},
     inputs::{CommandInputParameter, CommandLineBinding},
     requirements::{InitialWorkDirRequirement, Requirement},
+    Argument, Command, CommandLineTool,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;

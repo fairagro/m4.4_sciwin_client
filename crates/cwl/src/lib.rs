@@ -1,5 +1,3 @@
-use clt::CommandLineTool;
-use et::ExpressionTool;
 use inputs::{deserialize_inputs, CommandInputParameter};
 use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
 use serde::{Deserialize, Serialize};
@@ -11,17 +9,20 @@ use std::{
     ops::{Deref, DerefMut},
     path::Path,
 };
-use wf::Workflow;
 
-pub mod clt;
 pub mod deserialize;
-pub mod et;
 pub mod format;
 pub mod inputs;
 pub mod outputs;
 pub mod requirements;
 pub mod types;
-pub mod wf;
+
+mod clt;
+mod et;
+mod wf;
+pub use clt::*;
+pub use et::*;
+pub use wf::*;
 
 /// Represents a CWL (Common Workflow Language) document, which can be one of the following types:
 /// - `CommandLineTool`: A CWL CommandLineTool document.
@@ -162,7 +163,10 @@ impl DocumentBase {
     where
         Requirement: FromRequirement<T>,
     {
-        self.requirements.iter_mut().chain(self.hints.iter_mut()).find_map(|req| Requirement::get_mut(req))
+        self.requirements
+            .iter_mut()
+            .chain(self.hints.iter_mut())
+            .find_map(|req| Requirement::get_mut(req))
     }
 }
 

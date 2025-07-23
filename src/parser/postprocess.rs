@@ -1,8 +1,8 @@
 use cwl::{
-    clt::{Argument, CommandLineTool},
     inputs::CommandInputParameter,
     requirements::{InlineJavascriptRequirement, Requirement},
     types::{CWLType, DefaultValue},
+    Argument, CommandLineTool,
 };
 use std::collections::HashSet;
 
