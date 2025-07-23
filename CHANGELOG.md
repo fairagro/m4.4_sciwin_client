@@ -1,4 +1,6 @@
 # Unreleased
+## 🚜 Refactor
+- Code restructuring
 
 # v0.7.0
 ## 🚀 Features
