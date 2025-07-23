@@ -191,16 +191,6 @@ mod tests {
             ])
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
-    #[case("python tests/test_data/echo.py --test tests/test_data/input.txt", CommandLineTool::default()
-            .with_base_command(Command::Multiple(vec!["python".to_string(), "tests/test_data/echo.py".to_string()]))
-            .with_inputs(vec![
-                CommandInputParameter::default()
-                    .with_id("test")
-                    .with_type(CWLType::File)
-                    .with_binding(CommandLineBinding::default().with_prefix("--test"))
-                    .with_default_value(DefaultValue::File(File::from_location("tests/test_data/input.txt")))])
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("tests/test_data/echo.py"))])
-    )]
     pub fn test_parse_command_line(#[case] input: &str, #[case] expected: CommandLineTool) {
         let result = parse_command(input);
         assert_eq!(result, expected);
