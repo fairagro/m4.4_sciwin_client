@@ -1,5 +1,8 @@
 use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
-use std::{iter, path::Path};
+use std::{
+    iter,
+    path::{Path, PathBuf},
+};
 
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
@@ -52,4 +55,10 @@ fn commit_impl(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Res
     let author = repo.signature()?;
     repo.commit(Some("HEAD"), &author, &author, message, &new_tree, parents)?;
     Ok(())
+}
+
+pub fn get_submodule_paths(repo: &Repository) -> Result<Vec<PathBuf>, Error> {
+    let submodules = repo.submodules()?;
+    let paths = submodules.iter().map(|s| s.path().to_path_buf()).collect();
+    Ok(paths)
 }

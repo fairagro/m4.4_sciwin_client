@@ -1,4 +1,4 @@
-use crate::util::{get_workflows_folder, resolve_path};
+use crate::util::{get_workflows_folder, repo::get_submodule_paths, resolve_path};
 use commonwl::{
     inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_doc,
@@ -6,8 +6,9 @@ use commonwl::{
     requirements::{Requirement, WorkDirItem},
     CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, StringOrDocument, Workflow, WorkflowStep,
 };
+use git2::Repository;
 use log::{info, warn};
-use std::error::Error;
+use std::{error::Error, path::Path};
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -86,7 +87,7 @@ impl Connectable for Workflow {
         let to_parts = to.split('/').collect::<Vec<_>>();
 
         let to_filename = resolve_filename(to_parts[0]);
-        let to_cwl = load_doc(&to_filename)?;
+        let to_cwl = load_doc(&to_filename?)?;
         let to_slot = to_cwl.inputs.iter().find(|i| i.id == to_parts[1]).expect("No slot");
 
         //register input
@@ -118,7 +119,7 @@ impl Connectable for Workflow {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
         let from_filename = resolve_filename(from_parts[0]);
-        let from_cwl = load_doc(&from_filename)?;
+        let from_cwl = load_doc(&from_filename?)?;
         let from_type = from_cwl.get_output_type(from_parts[1]).ok_or("No slot!")?;
 
         if !self.has_output(to_output) {
@@ -143,6 +144,7 @@ impl Connectable for Workflow {
             info!("🔗 Found step {} in workflow. Not changing that!", from_parts[0]);
         } else {
             let from_filename = resolve_filename(from_parts[0]);
+            let from_filename = from_filename?;
             let from_cwl = load_doc(&from_filename)?;
             let from_outputs = from_cwl.get_output_ids();
             if !from_outputs.contains(&from_parts[1].to_string()) {
@@ -162,7 +164,7 @@ impl Connectable for Workflow {
         //check if step exists
         if !self.has_step(to_parts[0]) {
             let to_filename = resolve_filename(to_parts[0]);
-            let to_cwl = load_doc(&to_filename)?;
+            let to_cwl = load_doc(&to_filename?)?;
 
             self.add_new_step_if_not_exists(to_parts[0], &to_cwl);
         }
@@ -260,8 +262,21 @@ impl Connectable for Workflow {
 }
 
 /// Locates CWL File by name
-pub fn resolve_filename(cwl_filename: &str) -> String {
-    format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename)
+pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
+    //check if exists in workflows folder
+    let path = format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename);
+    if Path::new(&path).exists() {
+        Ok(path)
+    } else {
+        let repo = Repository::open(".")?;
+        for module_path in get_submodule_paths(&repo)? {
+            let sub_path = module_path.join(&path);
+            if sub_path.exists() {
+                return Ok(sub_path.to_string_lossy().into_owned());
+            }
+        }
+        Err("Could not resolve filename".into())
+    }
 }
 
 pub fn highlight_cwl(yaml: &str) {
@@ -280,12 +295,15 @@ pub fn highlight_cwl(yaml: &str) {
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::{create_tool, CreateToolArgs};
+
     use super::*;
     use commonwl::{
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
         CWLType, Command, Dirent, File,
     };
+    use fstest::fstest;
     use serde_yaml::Value;
     use std::path::Path;
 
@@ -297,11 +315,43 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
     fn test_resolve_filename() {
-        let name = "my-tool";
-        let filename = resolve_filename(name);
-        assert_eq!(filename, "workflows/my-tool/my-tool.cwl".to_string());
+        create_tool(&CreateToolArgs {
+            command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+            ..Default::default()
+        })
+        .unwrap();
+
+        let name = "echo";
+        let path = resolve_filename(name).unwrap();
+        assert_eq!(path, format!("{}{name}/{name}.cwl", get_workflows_folder()));
+    }
+
+    #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+    fn test_resolve_filename_in_submodule() {
+        let repo = Repository::open(".").unwrap();
+        let mut module = repo
+            .submodule("https://github.com/fairagro/M4.4_UC6_ARC", Path::new("uc6"), false)
+            .unwrap();
+        module.init(false).unwrap();
+        let subrepo = module.open().unwrap();
+
+        subrepo
+            .find_remote("origin")
+            .unwrap()
+            .fetch(&["refs/heads/*:refs/remotes/origin/*"], None, None)
+            .unwrap();
+        subrepo.set_head("refs/remotes/origin/main").unwrap();
+        subrepo.checkout_head(None).unwrap();
+        module.add_finalize().unwrap();
+
+        let name = "get_soil_data";
+        let path = resolve_filename(name).unwrap();
+        assert_eq!(
+            path,
+            format!("{}/{}{name}/{name}.cwl", module.path().to_string_lossy(), get_workflows_folder())
+        );
     }
 
     #[test]
