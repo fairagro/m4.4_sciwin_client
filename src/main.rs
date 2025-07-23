@@ -11,7 +11,7 @@ use s4n::{
         tool::{create_tool, handle_tool_commands},
         workflow::handle_workflow_commands,
     },
-    log::LOGGER,
+    util::LOGGER,
 };
 use std::{error::Error, process::exit};
 
