@@ -58,7 +58,6 @@ pub enum Commands {
         #[command(subcommand)]
         command: ExecuteCommands,
     },
-    Sync,
     #[command(about = "Generate shell completions")]
     Completions {
         #[arg()]

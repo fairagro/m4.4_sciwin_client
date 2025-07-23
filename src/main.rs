@@ -8,7 +8,6 @@ use s4n::{
         check_git_config,
         execute::handle_execute_commands,
         init::handle_init_command,
-        sync::handle_sync,
         tool::{create_tool, handle_tool_commands},
         workflow::handle_workflow_commands,
     },
@@ -41,7 +40,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Workflow { command } => handle_workflow_commands(command),
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Execute { command } => handle_execute_commands(command),
-        Commands::Sync => handle_sync(),
         Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
     }
 }
