@@ -295,9 +295,8 @@ pub fn highlight_cwl(yaml: &str) {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::{create_tool, CreateToolArgs};
-
     use super::*;
+    use crate::commands::{create_tool, CreateToolArgs};
     use commonwl::{
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
@@ -305,7 +304,10 @@ mod tests {
     };
     use fstest::fstest;
     use serde_yaml::Value;
-    use std::{env, path::Path};
+    use std::{
+        env,
+        path::{Path, MAIN_SEPARATOR},
+    };
 
     pub fn os_path(path: &str) -> String {
         if cfg!(target_os = "windows") {
@@ -350,7 +352,11 @@ mod tests {
         let path = resolve_filename(name).unwrap();
         assert_eq!(
             path,
-            format!("{}/{}{name}/{name}.cwl", module.path().to_string_lossy(), get_workflows_folder())
+            format!(
+                "{}{MAIN_SEPARATOR}{}{name}/{name}.cwl",
+                module.path().to_string_lossy(),
+                get_workflows_folder()
+            )
         );
     }
 
