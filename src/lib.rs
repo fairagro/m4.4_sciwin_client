@@ -5,8 +5,8 @@ pub mod cwl;
 pub mod parser;
 pub mod util;
 
-use ::log::info;
 use colored::Colorize;
+use log::info;
 use similar::{ChangeTag, TextDiff};
 use std::fmt;
 
