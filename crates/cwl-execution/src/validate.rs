@@ -1,5 +1,5 @@
 use crate::{environment::RuntimeEnvironment, io::get_file_property, InputObject};
-use cwl::{
+use commonwl::{
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
     Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem,
@@ -202,7 +202,7 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
 mod tests {
     use super::*;
     use crate::io::get_file_size;
-    use cwl::{CWLType, File, StringOrNumber};
+    use commonwl::{CWLType, File, StringOrNumber};
     use serde_yaml::Value;
 
     #[test]

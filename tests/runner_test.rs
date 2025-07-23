@@ -1,6 +1,6 @@
 mod common;
 use common::with_temp_repository;
-use cwl::{load_tool, CWLDocument, CommandLineTool, DefaultValue};
+use commonwl::{load_tool, CWLDocument, CommandLineTool, DefaultValue};
 use cwl_execution::{
     environment::RuntimeEnvironment,
     runner::{run_command, run_tool},

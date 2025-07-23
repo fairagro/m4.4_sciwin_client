@@ -6,7 +6,7 @@ pub mod staging;
 pub mod util;
 pub mod validate;
 
-use cwl::{
+use commonwl::{
     guess_type,
     requirements::{FromRequirement, Requirement},
     CWLDocument, CWLType, DefaultValue, Directory, File, PathItem,
@@ -308,7 +308,7 @@ pub fn container_engine() -> ContainerEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{requirements::EnvVarRequirement, EnviromentDefs};
+    use commonwl::{requirements::EnvVarRequirement, EnviromentDefs};
 
     #[test]
     fn test_add_requirement() {

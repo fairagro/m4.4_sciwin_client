@@ -1,5 +1,5 @@
 use super::BAD_WORDS;
-use cwl::{
+use commonwl::{
     guess_type,
     inputs::{CommandInputParameter, CommandLineBinding},
     requirements::Requirement,

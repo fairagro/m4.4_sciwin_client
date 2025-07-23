@@ -1,6 +1,6 @@
 mod common;
 use common::os_path;
-use cwl::{
+use commonwl::{
     load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
     Argument, CWLType, CommandLineTool, Entry,

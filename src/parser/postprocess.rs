@@ -1,4 +1,4 @@
-use cwl::{
+use commonwl::{
     inputs::CommandInputParameter,
     requirements::{InlineJavascriptRequirement, Requirement},
     Argument, CWLType, CommandLineTool, DefaultValue,

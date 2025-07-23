@@ -1,5 +1,5 @@
 use crate::util::get_filename_without_extension;
-use cwl::{
+use commonwl::{
     outputs::{CommandOutputBinding, CommandOutputParameter},
     CWLType,
 };

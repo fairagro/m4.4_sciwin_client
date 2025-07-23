@@ -2,7 +2,7 @@ use crate::{
     expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
-use cwl::{inputs::CommandInputParameter, outputs::CommandOutputParameter, CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File};
+use commonwl::{inputs::CommandInputParameter, outputs::CommandOutputParameter, CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File};
 use glob::glob;
 use log::info;
 use serde_yaml::{Mapping, Value};
@@ -393,7 +393,7 @@ mod tests {
 
     use super::*;
     use crate::io::copy_dir;
-    use cwl::{
+    use commonwl::{
         inputs::CommandLineBinding,
         outputs::{CommandOutputBinding, CommandOutputParameter},
     };

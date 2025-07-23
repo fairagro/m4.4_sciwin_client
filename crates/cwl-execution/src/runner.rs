@@ -16,7 +16,7 @@ use crate::{
     validate::set_placeholder_values,
     CommandError, InputObject,
 };
-use cwl::{
+use commonwl::{
     inputs::CommandLineBinding,
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, Entry, File, PathItem, StringOrDocument, StringOrNumber,
@@ -656,7 +656,7 @@ fn get_user_flag() -> String {
 mod tests {
     use super::*;
     use crate::set_container_engine;
-    use cwl::load_tool;
+    use commonwl::load_tool;
 
     #[test]
     fn test_build_command() {

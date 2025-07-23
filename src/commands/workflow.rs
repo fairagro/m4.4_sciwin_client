@@ -6,7 +6,7 @@ use crate::{
 };
 use clap::{Args, Subcommand, ValueEnum};
 use colored::Colorize;
-use cwl::{format::format_cwl, load_tool, load_workflow, CWLDocument, StringOrDocument, Workflow, WorkflowStep};
+use commonwl::{format::format_cwl, load_tool, load_workflow, CWLDocument, StringOrDocument, Workflow, WorkflowStep};
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;
 use log::{error, info};

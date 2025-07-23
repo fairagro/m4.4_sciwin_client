@@ -7,10 +7,10 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use cwl::{
+use commonwl::{
     format::format_cwl,
     requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
-    Directory,
+    DefaultValue, Directory,
 };
 use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
 use git2::Repository;
@@ -209,9 +209,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                 eprintln!("{} is not a directory and has been skipped!", m.display());
                 None
             } else {
-                Some(WorkDirItem::FileOrDirectory(Box::new(cwl::DefaultValue::Directory(
-                    Directory::from_path(m),
-                ))))
+                Some(WorkDirItem::FileOrDirectory(Box::new(DefaultValue::Directory(Directory::from_path(m)))))
             }
         });
 

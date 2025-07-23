@@ -1,6 +1,6 @@
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use cwl::format::format_cwl;
+use commonwl::format::format_cwl;
 use dialoguer::Select;
 use log::error;
 use serde_yaml::{Mapping, Value};

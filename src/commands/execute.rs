@@ -1,6 +1,6 @@
 use crate::config;
 use clap::{Args, Subcommand};
-use cwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
+use commonwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use keyring::Entry;
 use remote_execution::{

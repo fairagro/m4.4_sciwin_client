@@ -1,5 +1,5 @@
 use crate::util::{get_workflows_folder, resolve_path};
-use cwl::{
+use commonwl::{
     inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_doc,
     outputs::WorkflowOutputParameter,
@@ -281,7 +281,7 @@ pub fn highlight_cwl(yaml: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{
+    use commonwl::{
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
         CWLType, Command, Dirent, File,

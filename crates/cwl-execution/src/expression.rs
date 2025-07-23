@@ -1,5 +1,5 @@
 use crate::{environment::RuntimeEnvironment, split_ranges, InputObject};
-use cwl::{
+use commonwl::{
     requirements::{Requirement, WorkDirItem},
     Argument, CWLDocument, Command, DefaultValue, Entry, Expression, ExpressionType,
 };
@@ -280,7 +280,7 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::StringOrNumber;
+    use commonwl::StringOrNumber;
 
     #[test]
     fn test_expression() {

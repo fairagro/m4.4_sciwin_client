@@ -834,6 +834,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "commonwl"
+version = "0.7.0"
+dependencies = [
+ "rstest",
+ "serde",
+ "serde_yaml",
+ "sha1",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1032,20 +1042,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "cwl"
-version = "0.7.0"
-dependencies = [
- "rstest",
- "serde",
- "serde_yaml",
- "sha1",
-]
-
-[[package]]
 name = "cwl-execution"
 version = "0.7.0"
 dependencies = [
- "cwl",
+ "commonwl",
  "fancy-regex 0.15.0",
  "glob",
  "log",
@@ -3984,7 +3984,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "colored",
- "cwl",
+ "commonwl",
  "cwl-execution",
  "dialoguer",
  "fstest",
