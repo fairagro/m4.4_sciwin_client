@@ -1,10 +1,4 @@
-use crate::commands::{
-    annotate::AnnotateCommands,
-    execute::ExecuteCommands,
-    init::InitArgs,
-    tool::{CreateToolArgs, ToolCommands},
-    workflow::WorkflowCommands,
-};
+use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, ToolCommands, WorkflowCommands};
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use std::{error::Error, io};

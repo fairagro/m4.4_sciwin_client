@@ -5,11 +5,8 @@ use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
 use s4n::commands::{
-    init::initialize_project,
-    workflow::{
-        connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, list_workflows, remove_workflow, ConnectWorkflowArgs, CreateWorkflowArgs,
-        ListWorkflowArgs, RemoveWorkflowArgs,
-    },
+    connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, initialize_project, list_workflows, remove_workflow, ConnectWorkflowArgs,
+    CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
 };
 use serial_test::serial;
 use std::{env, fs, path::Path};

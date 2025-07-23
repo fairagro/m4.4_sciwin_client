@@ -1,4 +1,4 @@
-use s4n::commands::annotate::{
+use s4n::commands::{
     annotate, annotate_container, annotate_default, annotate_field, annotate_performer, annotate_person, annotate_process_step,
     contains_docker_requirement, get_filename, handle_annotate_commands, parse_cwl, AnnotateCommands, AnnotateProcessArgs, PerformerArgs, PersonArgs,
 };
@@ -57,7 +57,6 @@ const CWL_CONTENT_ANNOTATED: &str = r#"
       - https://schema.org/version/latest/schemaorg-current-https.rdf
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     "#;
-
 
 const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
 const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf";
@@ -651,9 +650,9 @@ async fn test_annotate_process() {
 #[test]
 #[serial]
 fn test_get_filename() {
-    use tempfile::tempdir;
-    use std::fs;
     use std::env;
+    use std::fs;
+    use tempfile::tempdir;
 
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
@@ -982,12 +981,9 @@ fn test_annotate_default() {
         "Expected annotations for schemaorg to be added, but got: {updated_content}"
     );
     assert!(
-        updated_content.contains("arc:")
-            && updated_content.contains(ARC_SCHEMA)
-            && updated_content.contains(ARC_NAMESPACE),
+        updated_content.contains("arc:") && updated_content.contains(ARC_SCHEMA) && updated_content.contains(ARC_NAMESPACE),
         "Expected annotations for arc to be added, but got: {updated_content}"
     );
-
 
     env::set_current_dir(current).unwrap();
 }
@@ -1035,8 +1031,6 @@ fn test_parse_cwl_valid_relative_path() {
     std::env::set_current_dir(current).unwrap();
 }
 
-
-
 #[test]
 #[serial]
 fn test_parse_cwl_file_not_found() {
@@ -1051,9 +1045,6 @@ fn test_parse_cwl_file_not_found() {
 
     std::env::set_current_dir(current).unwrap();
 }
-
-
-
 
 #[test]
 #[serial]
@@ -1074,7 +1065,6 @@ fn test_parse_cwl_invalid_yaml() {
 
     std::env::set_current_dir(current).unwrap();
 }
-
 
 #[test]
 #[serial]

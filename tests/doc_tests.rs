@@ -8,10 +8,8 @@ use commonwl::{
 };
 use cwl_execution::io::copy_dir;
 use s4n::commands::{
-    execute::{execute_local, LocalExecuteArgs},
-    init::initialize_project,
-    tool::{create_tool, list_tools, CreateToolArgs},
-    workflow::{connect_workflow_nodes, create_workflow, get_workflow_status, save_workflow, ConnectWorkflowArgs, CreateWorkflowArgs},
+    connect_workflow_nodes, create_tool, create_workflow, execute_local, get_workflow_status, initialize_project, list_tools, save_workflow,
+    ConnectWorkflowArgs, CreateToolArgs, CreateWorkflowArgs, LocalExecuteArgs,
 };
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};

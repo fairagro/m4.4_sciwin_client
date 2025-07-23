@@ -4,12 +4,8 @@ use log::{error, LevelFilter};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
-        annotate::handle_annotation_command,
-        check_git_config,
-        execute::handle_execute_commands,
-        init::handle_init_command,
-        tool::{create_tool, handle_tool_commands},
-        workflow::handle_workflow_commands,
+        check_git_config, create_tool, handle_annotation_command, handle_execute_commands, handle_init_command, handle_tool_commands,
+        handle_workflow_commands,
     },
     util::LOGGER,
 };

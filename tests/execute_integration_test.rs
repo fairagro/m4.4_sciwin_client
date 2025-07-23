@@ -1,5 +1,5 @@
 use cwl_execution::io::copy_dir;
-use s4n::commands::execute::{execute_local, LocalExecuteArgs};
+use s4n::commands::{execute_local, LocalExecuteArgs};
 use serial_test::serial;
 use std::{
     env,

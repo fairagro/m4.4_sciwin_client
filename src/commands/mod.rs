@@ -6,11 +6,17 @@ use std::{
     io::{self, stdin, stdout, Write},
 };
 
-pub mod annotate;
-pub mod execute;
-pub mod init;
-pub mod tool;
-pub mod workflow;
+mod annotate;
+mod execute;
+mod init;
+mod tool;
+mod workflow;
+
+pub use annotate::*;
+pub use execute::*;
+pub use init::*;
+pub use tool::*;
+pub use workflow::*;
 
 pub fn check_git_config() -> Result<(), Box<dyn Error>> {
     let mut config = Config::open_default()?;
