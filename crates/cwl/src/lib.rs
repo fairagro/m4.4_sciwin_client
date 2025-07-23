@@ -2,6 +2,7 @@ use inputs::{deserialize_inputs, CommandInputParameter};
 use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+use std::fmt;
 use std::{
     error::Error,
     fmt::Debug,
@@ -15,13 +16,14 @@ pub mod format;
 pub mod inputs;
 pub mod outputs;
 pub mod requirements;
-pub mod types;
 
 mod clt;
 mod et;
+mod types;
 mod wf;
 pub use clt::*;
 pub use et::*;
+pub use types::*;
 pub use wf::*;
 
 /// Represents a CWL (Common Workflow Language) document, which can be one of the following types:
@@ -177,11 +179,6 @@ pub enum StringOrNumber {
     Integer(u64),
     Decimal(f64),
 }
-
-use std::fmt;
-
-use crate::types::CWLType;
-
 impl fmt::Display for StringOrNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -1,7 +1,7 @@
 use crate::util::get_filename_without_extension;
 use cwl::{
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    types::CWLType,
+    CWLType,
 };
 use std::path::Path;
 
@@ -29,7 +29,7 @@ pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     pub fn test_get_outputs() {
         let files = vec!["my-file.txt".to_string(), "archive.tar.gz".to_string()];

@@ -1,13 +1,17 @@
 mod common;
 use common::with_temp_repository;
-use cwl::{CommandLineTool, load_tool, types::DefaultValue, CWLDocument};
+use cwl::{load_tool, CWLDocument, CommandLineTool, DefaultValue};
 use cwl_execution::{
     environment::RuntimeEnvironment,
     runner::{run_command, run_tool},
 };
 use s4n::parser::parse_command_line;
 use serial_test::serial;
-use std::{collections::HashMap, fs, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 use tempfile::tempdir;
 
 #[test]
@@ -203,6 +207,11 @@ baseCommand:
 pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
     let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
-    let result = run_tool(&mut tool, &Default::default(), &PathBuf::default(), Some(dir.path().to_string_lossy().into_owned()));
+    let result = run_tool(
+        &mut tool,
+        &Default::default(),
+        &PathBuf::default(),
+        Some(dir.path().to_string_lossy().into_owned()),
+    );
     assert!(result.is_ok(), "{result:?}");
 }

@@ -2,10 +2,9 @@
 mod common;
 use common::{check_git_user, setup_python};
 use cwl::{
-    Command,
     load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
-    types::Entry,
+    Command, Entry,
 };
 use cwl_execution::io::copy_dir;
 use s4n::commands::{

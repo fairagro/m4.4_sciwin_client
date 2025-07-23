@@ -4,8 +4,7 @@ use cwl::{
     load_doc,
     outputs::WorkflowOutputParameter,
     requirements::{Requirement, WorkDirItem},
-    types::{DefaultValue, Entry, PathItem},
-    CWLDocument, CommandLineTool, StringOrDocument, Workflow, WorkflowStep,
+    CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, StringOrDocument, Workflow, WorkflowStep,
 };
 use log::{info, warn};
 use std::error::Error;
@@ -285,8 +284,7 @@ mod tests {
     use cwl::{
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
-        types::{CWLType, Dirent, File},
-        Command,
+        CWLType, Command, Dirent, File,
     };
     use serde_yaml::Value;
     use std::path::Path;

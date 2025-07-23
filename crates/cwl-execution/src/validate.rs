@@ -2,8 +2,7 @@ use crate::{environment::RuntimeEnvironment, io::get_file_property, InputObject}
 use cwl::{
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
-    types::{DefaultValue, Entry, EnviromentDefs, PathItem},
-    Argument, CWLDocument, Command, CommandLineTool,
+    Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem,
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
@@ -203,10 +202,7 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
 mod tests {
     use super::*;
     use crate::io::get_file_size;
-    use cwl::{
-        types::{CWLType, File},
-        StringOrNumber,
-    };
+    use cwl::{CWLType, File, StringOrNumber};
     use serde_yaml::Value;
 
     #[test]

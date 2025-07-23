@@ -6,8 +6,7 @@ use crate::{
 use cwl::{
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
-    types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
-    CWLDocument,
+    CWLDocument, CWLType, DefaultValue, Directory, Entry, File, PathItem,
 };
 use glob::glob;
 use pathdiff::diff_paths;
@@ -342,11 +341,7 @@ fn handle_filename(value: &DefaultValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{
-        requirements::InitialWorkDirRequirement,
-        types::{Directory, File},
-        StringOrNumber,
-    };
+    use cwl::{requirements::InitialWorkDirRequirement, Directory, File, StringOrNumber};
     use serial_test::serial;
     use std::{collections::HashMap, path::PathBuf, vec};
     use tempfile::tempdir;

@@ -1,9 +1,6 @@
 use crate::config;
 use clap::{Args, Subcommand};
-use cwl::{
-    types::{CWLType, DefaultValue, Directory, File},
-    CWLDocument,
-};
+use cwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
 use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
 use keyring::Entry;
 use remote_execution::{
@@ -78,7 +75,7 @@ pub struct RemoteExecuteArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum RemoteSubcommands {
-    #[command(about="Schedules Execution on REANA")]
+    #[command(about = "Schedules Execution on REANA")]
     Start {
         #[arg(help = "CWL File to execute")]
         file: PathBuf,
@@ -91,19 +88,19 @@ pub enum RemoteSubcommands {
         #[arg(long = "watch", help = "Wait for workflow execution to finish and download result")]
         watch: bool,
     },
-    #[command(about="Get the status of Execution on REANA")]
+    #[command(about = "Get the status of Execution on REANA")]
     Status {
         #[arg(help = "Workflow name to check (if omitted, checks all)")]
         workflow_name: Option<String>,
     },
-    #[command(about="Downloads finished Workflow from REANA")]
+    #[command(about = "Downloads finished Workflow from REANA")]
     Download {
         #[arg(help = "Workflow name to download results for")]
         workflow_name: String,
         #[arg(short = 'd', long = "output_dir", help = "Optional output directory to save downloaded files")]
         output_dir: Option<String>,
     },
-    #[command(about="Downloads finished Workflow Run RO-Crate from REANA")]
+    #[command(about = "Downloads finished Workflow Run RO-Crate from REANA")]
     Rocrate {
         #[arg(help = "Workflow name to create a Provenance Run Crate for")]
         workflow_name: String,

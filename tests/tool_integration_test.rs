@@ -3,8 +3,7 @@ use common::os_path;
 use cwl::{
     load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
-    types::{CWLType, Entry},
-    Argument, CommandLineTool,
+    Argument, CWLType, CommandLineTool, Entry,
 };
 use cwl_execution::io::copy_dir;
 use fstest::fstest;

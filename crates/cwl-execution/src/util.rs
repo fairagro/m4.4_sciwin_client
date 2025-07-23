@@ -2,12 +2,7 @@ use crate::{
     expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
-use cwl::{
-    inputs::CommandInputParameter,
-    outputs::CommandOutputParameter,
-    types::{CWLType, DefaultValue, Directory, File},
-    CommandLineTool, ExpressionTool,
-};
+use cwl::{inputs::CommandInputParameter, outputs::CommandOutputParameter, CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File};
 use glob::glob;
 use log::info;
 use serde_yaml::{Mapping, Value};

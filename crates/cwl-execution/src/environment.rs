@@ -4,8 +4,7 @@ use crate::{
 use cwl::{
     inputs::CommandInputParameter,
     requirements::{EnvVarRequirement, NetworkAccess, ResourceRequirement, ToolTimeLimit},
-    types::{DefaultValue, EnviromentDefs},
-    CWLDocument, StringOrNumber,
+    CWLDocument, DefaultValue, EnviromentDefs, StringOrNumber,
 };
 use serde::Serialize;
 use std::{

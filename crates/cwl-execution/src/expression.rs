@@ -1,8 +1,7 @@
 use crate::{environment::RuntimeEnvironment, split_ranges, InputObject};
 use cwl::{
     requirements::{Requirement, WorkDirItem},
-    types::{DefaultValue, Entry},
-    Argument, CWLDocument, Command, Expression, ExpressionType,
+    Argument, CWLDocument, Command, DefaultValue, Entry, Expression, ExpressionType,
 };
 use rustyscript::static_runtime;
 use serde::{de::DeserializeOwned, Serialize};

@@ -6,9 +6,11 @@ pub mod staging;
 pub mod util;
 pub mod validate;
 
-use cwl::requirements::{FromRequirement, Requirement};
-use cwl::types::{guess_type, CWLType, DefaultValue, Directory, File, PathItem};
-use cwl::CWLDocument;
+use cwl::{
+    guess_type,
+    requirements::{FromRequirement, Requirement},
+    CWLDocument, CWLType, DefaultValue, Directory, File, PathItem,
+};
 use io::preprocess_path_join;
 use runner::{run_tool, run_workflow};
 use serde::{Deserialize, Serialize};
@@ -306,7 +308,7 @@ pub fn container_engine() -> ContainerEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cwl::{requirements::EnvVarRequirement, types::EnviromentDefs};
+    use cwl::{requirements::EnvVarRequirement, EnviromentDefs};
 
     #[test]
     fn test_add_requirement() {

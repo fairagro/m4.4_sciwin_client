@@ -1,9 +1,9 @@
 use super::BAD_WORDS;
 use cwl::{
+    guess_type,
     inputs::{CommandInputParameter, CommandLineBinding},
     requirements::Requirement,
-    types::{guess_type, CWLType, DefaultValue, Directory, File},
-    CommandLineTool,
+    CWLType, CommandLineTool, DefaultValue, Directory, File,
 };
 use rand::{distr::Alphanumeric, Rng};
 use serde_yaml::Value;

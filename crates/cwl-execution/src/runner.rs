@@ -19,8 +19,8 @@ use crate::{
 use cwl::{
     inputs::CommandLineBinding,
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
-    types::{CWLType, DefaultValue, Directory, Entry, File, PathItem},
-    Argument, CWLDocument, Command, CommandLineTool, StringOrDocument, StringOrNumber, Workflow,
+    Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, Entry, File, PathItem, StringOrDocument, StringOrNumber,
+    Workflow,
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
