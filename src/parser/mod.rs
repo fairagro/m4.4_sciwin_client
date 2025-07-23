@@ -125,7 +125,7 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::{CWLType, DefaultValue, File};
+    use commonwl::{CWLType, DefaultValue};
     use cwl_execution::{environment::RuntimeEnvironment, runner::run_command};
     use rstest::rstest;
     use serde_yaml::Value;
