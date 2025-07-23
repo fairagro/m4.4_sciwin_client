@@ -1,4 +1,4 @@
-# CWL
+# CommonWL
 This crate provides support for working with [Common Workflow Language](https://www.commonwl.org/v1.2/) (CWL) files.
 It includes modules for handling [CommandLineTools](https://www.commonwl.org/v1.2/CommandLineTool.html), [Workflows](https://www.commonwl.org/v1.2/Workflow.html), [ExpressionTools](https://www.commonwl.org/v1.2/Workflow.html#ExpressionTool), and their associated metadata.
 
@@ -15,10 +15,10 @@ It includes modules for handling [CommandLineTools](https://www.commonwl.org/v1.
 
 ## Example
 ```rust
-use cwl;
-let clt = cwl::load_tool("example-tool.cwl")?;
-let et = cwl::load_expression_tool("example-expr.cwl")?;
-let wf = cwl::load_workflow("example-wf.cwl")?;
+use commonwl;
+let clt = commonwl::load_tool("example-tool.cwl")?;
+let et = commonwl::load_expression_tool("example-expr.cwl")?;
+let wf = commonwl::load_workflow("example-wf.cwl")?;
 ```
 
 ## Installation
@@ -32,5 +32,5 @@ cargo add cwl
 Or add the following line to your Cargo.toml:
 ```toml
 [dependencies]
-cwl = "0.3.0"
+commonwl = "0.3.0"
 ```
