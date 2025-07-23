@@ -64,9 +64,15 @@ impl Saveable for CommandLineTool {
 impl Connectable for Workflow {
     fn add_new_step_if_not_exists(&mut self, name: &str, doc: &CWLDocument) {
         if !self.has_step(name) {
+            let path = resolve_filename(name).expect("Could not find CWL file");
+            let path = if path.starts_with("workflows") {
+                path.replace("workflows", "..")
+            } else {
+                format!("../../{path}")
+            };
             let workflow_step = WorkflowStep {
                 id: name.to_string(),
-                run: StringOrDocument::String(format!("../{name}/{name}.cwl")),
+                run: StringOrDocument::String(path),
                 out: doc.get_output_ids(),
                 ..Default::default()
             };
@@ -121,6 +127,7 @@ impl Connectable for Workflow {
         let from_filename = resolve_filename(from_parts[0]);
         let from_cwl = load_doc(&from_filename?)?;
         let from_type = from_cwl.get_output_type(from_parts[1]).ok_or("No slot!")?;
+        self.add_new_step_if_not_exists(from_parts[0], &from_cwl);
 
         if !self.has_output(to_output) {
             self.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());
@@ -270,6 +277,7 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     } else {
         let repo = Repository::open(".")?;
         for module_path in get_submodule_paths(&repo)? {
+            println!("{module_path:?}");
             let sub_path = module_path.join(&path);
             if sub_path.exists() {
                 return Ok(sub_path.to_string_lossy().into_owned());
