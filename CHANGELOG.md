@@ -1,4 +1,7 @@
 # Unreleased
+## 🚀 Features
+- Support Workflows in git submodules #137
+
 ## 🚜 Refactor
 - Code restructuring
 
