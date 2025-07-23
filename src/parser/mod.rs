@@ -129,7 +129,6 @@ mod tests {
     use cwl_execution::{environment::RuntimeEnvironment, runner::run_command};
     use rstest::rstest;
     use serde_yaml::Value;
-    use serial_test::serial;
 
     fn parse_command(command: &str) -> CommandLineTool {
         let cmd = shlex::split(command).unwrap();
@@ -137,7 +136,6 @@ mod tests {
     }
 
     #[rstest]
-    #[serial]
     #[case("python script.py --arg1 hello", Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))]
     #[case("echo 'Hello World!'", Command::Single("echo".to_string()))]
     #[case("Rscript lol.R", Command::Multiple(vec!["Rscript".to_string(), "lol.R".to_string()]))]
@@ -151,7 +149,6 @@ mod tests {
     }
 
     #[rstest]
-    #[serial]
     #[case("python script.py", CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
             .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])

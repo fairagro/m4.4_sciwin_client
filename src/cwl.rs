@@ -305,7 +305,7 @@ mod tests {
     };
     use fstest::fstest;
     use serde_yaml::Value;
-    use std::path::Path;
+    use std::{env, path::Path};
 
     pub fn os_path(path: &str) -> String {
         if cfg!(target_os = "windows") {
@@ -330,7 +330,7 @@ mod tests {
 
     #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
     fn test_resolve_filename_in_submodule() {
-        let repo = Repository::open(".").unwrap();
+        let repo = Repository::open(env::current_dir().unwrap()).unwrap();
         let mut module = repo
             .submodule("https://github.com/fairagro/M4.4_UC6_ARC", Path::new("uc6"), false)
             .unwrap();
