@@ -1,14 +1,7 @@
-use colored::{ColoredString, Colorize};
-use dialoguer::{
-    theme::{ColorfulTheme, Theme},
-    Input,
-};
+use dialoguer::Input;
 use git2::Config;
 use log::warn;
-use std::{
-    error::Error,
-    io::{self, stdin, stdout, Write},
-};
+use std::error::Error;
 
 mod annotate;
 mod execute;
