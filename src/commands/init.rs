@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    repo::{commit, get_modified_files, initial_commit, stage_all},
+    util::repo::{commit, get_modified_files, initial_commit, stage_all},
 };
 use clap::Args;
 use git2::Repository;

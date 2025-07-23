@@ -1,9 +1,9 @@
 use crate::{
     cwl::{highlight_cwl, Saveable},
-    io::get_qualified_filename,
     parser::{self, post_process_cwl},
     print_list,
-    repo::{commit, get_modified_files, stage_file},
+    util::get_qualified_filename,
+    util::repo::{commit, get_modified_files, stage_file},
 };
 use clap::{Args, Subcommand};
 use colored::Colorize;

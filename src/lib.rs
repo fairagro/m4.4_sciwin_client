@@ -2,10 +2,9 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod cwl;
-pub mod io;
 pub mod log;
 pub mod parser;
-pub mod repo;
+pub mod util;
 
 use ::log::info;
 use colored::Colorize;

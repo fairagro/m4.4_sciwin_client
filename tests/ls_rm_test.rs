@@ -3,7 +3,7 @@ use cwl_execution::io::create_and_write_file;
 use git2::Repository;
 use predicates::prelude::*;
 use s4n::commands::tool::{handle_tool_commands, remove_tool, CreateToolArgs, RemoveToolArgs, ToolCommands};
-use s4n::repo::get_modified_files;
+use s4n::util::repo::get_modified_files;
 use serial_test::serial;
 use std::env;
 use std::{fs, vec};

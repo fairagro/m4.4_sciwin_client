@@ -1,4 +1,4 @@
-use crate::io::{get_workflows_folder, resolve_path};
+use crate::util::{get_workflows_folder, resolve_path};
 use cwl::{
     clt::CommandLineTool,
     inputs::{CommandInputParameter, WorkflowStepInputParameter},

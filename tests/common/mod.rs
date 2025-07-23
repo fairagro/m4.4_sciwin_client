@@ -1,6 +1,6 @@
-use git2::{Config, Repository};
-use s4n::repo::{initial_commit, stage_all};
 use core::panic;
+use git2::{Config, Repository};
+use s4n::util::repo::{initial_commit, stage_all};
 use std::{
     env::{self},
     fs::{copy, create_dir_all},
@@ -17,7 +17,12 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
     let venv_scripts = if cfg!(target_os = "windows") { "Scripts" } else { "bin" };
 
     //set up python venv
-    let output = Command::new("python").arg("-m").arg("venv").arg(".venv").output().expect("Could not create venv");
+    let output = Command::new("python")
+        .arg("-m")
+        .arg("venv")
+        .arg(".venv")
+        .output()
+        .expect("Could not create venv");
     eprintln!("{}", String::from_utf8_lossy(&output.stdout));
     eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
@@ -27,7 +32,12 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
 
     //install packages
     let req_path = format!("{dir_str}/requirements.txt");
-    let output = Command::new(python_path + "/pip" + ext).arg("install").arg("-r").arg(req_path).output().expect("Could not find pip");
+    let output = Command::new(python_path + "/pip" + ext)
+        .arg("install")
+        .arg("-r")
+        .arg(req_path)
+        .output()
+        .expect("Could not find pip");
     eprintln!("{}", String::from_utf8_lossy(&output.stdout));
     eprintln!("{}", String::from_utf8_lossy(&output.stderr));
 
@@ -99,7 +109,8 @@ fn set_up_repository() -> TempDir {
 /// You *must* specify `#[serial]` for those tests
 #[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
-where F: FnOnce(&TempDir) + panic::UnwindSafe,
+where
+    F: FnOnce(&TempDir) + panic::UnwindSafe,
 {
     let dir = set_up_repository();
     let current_dir = env::current_dir().expect("Could not get current working directory");
