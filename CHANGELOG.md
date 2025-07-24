@@ -1,6 +1,7 @@
 # Unreleased
 ## 🚀 Features
 - Support Workflows in git submodules #137
+- Added `s4n install` and `s4n uninstall` commands #138
 
 ## 🚜 Refactor
 - Code restructuring
