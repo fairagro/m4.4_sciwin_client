@@ -114,3 +114,27 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
     commit(&repo, &format!("📦 Removed Package {}", name.strip_prefix("packages/").unwrap_or(name)))?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::initialize_project;
+    use fstest::fstest;
+
+    #[fstest(repo = true)]
+    fn test_add_remove_submodule() {
+        initialize_project(None, false).unwrap();
+
+        let result = add_submodule("https://github.com/JensKrumsieck/PorphyStruct", &Some("docs".to_string()), Path::new("ps"));
+        assert!(result.is_ok());
+
+        //check whether a file is present
+        assert!(fs::exists("ps/LICENSE").unwrap());
+
+        let result = remove_submodule("ps");
+        assert!(result.is_ok());
+
+        //check whether a file is absent
+        assert!(!fs::exists("ps/LICENSE").unwrap());
+    }
+}
