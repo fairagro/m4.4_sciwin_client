@@ -1,10 +1,10 @@
 use crate::{
     cwl::Connectable,
     print_diff,
-    render::{render, DotRenderer, MermaidRenderer},
     util::{
-        get_workflows_folder,
+        get_workflows_folder, render,
         repo::{commit, stage_file},
+        DotRenderer, MermaidRenderer,
     },
 };
 use clap::{Args, Subcommand, ValueEnum};
