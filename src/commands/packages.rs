@@ -1,9 +1,7 @@
-use clap::Args;
-use git2::Repository;
-use reqwest::Url;
-use std::{env, error::Error, path::Path};
-
 use crate::util::repo::add_submodule;
+use clap::Args;
+use reqwest::Url;
+use std::{error::Error, path::Path};
 
 #[derive(Args, Debug)]
 pub struct InstallPackageArgs {
