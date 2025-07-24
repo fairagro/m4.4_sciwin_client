@@ -1,4 +1,4 @@
-use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, ToolCommands, WorkflowCommands};
+use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, InstallPackageArgs, PackageArgs, ToolCommands, WorkflowCommands};
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use std::{error::Error, io};
@@ -38,6 +38,15 @@ pub enum Commands {
         #[command(subcommand)]
         command: WorkflowCommands,
     },
+    #[command(about = "Installs a workflow as submodule", visible_alias = "i")]
+    Install(InstallPackageArgs),
+    #[command(about = "Removes an installed workflow")]
+    Uninstall(PackageArgs),
+    #[command(about = "Execution of CWL Files locally or on remote servers", visible_alias = "ex")]
+    Execute {
+        #[command(subcommand)]
+        command: ExecuteCommands,
+    },
     #[command(about = "Annotate CWL files")]
     Annotate {
         #[command(subcommand)]
@@ -45,12 +54,6 @@ pub enum Commands {
         /// Name of the tool or workflow to annotate
         #[arg(value_name = "TOOL_NAME", required = false)]
         tool_name: Option<String>,
-    },
-
-    #[command(about = "Execution of CWL Files locally or on remote servers", visible_alias = "ex")]
-    Execute {
-        #[command(subcommand)]
-        command: ExecuteCommands,
     },
     #[command(about = "Generate shell completions")]
     Completions {

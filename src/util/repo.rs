@@ -1,6 +1,6 @@
-use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
+use git2::{build::RepoBuilder, Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
 use std::{
-    iter,
+    env, iter,
     path::{Path, PathBuf},
 };
 
@@ -61,4 +61,25 @@ pub fn get_submodule_paths(repo: &Repository) -> Result<Vec<PathBuf>, Error> {
     let submodules = repo.submodules()?;
     let paths = submodules.iter().map(|s| s.path().to_path_buf()).collect();
     Ok(paths)
+}
+
+pub fn add_submodule(url: &str, branch: &Option<String>, path: &Path) -> Result<(), Error> {
+    let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
+    let branch: &str = if let Some(branch) = branch { branch } else { "HEAD" };
+
+    let repo = Repository::open(&current_dir)?;
+
+    //clone and initialize submodule
+    RepoBuilder::new().branch(branch).clone(url, path)?;
+    let mut module = repo.submodule(url, path, false)?;
+
+    //set correct branch to submodule
+    let mut repo = Repository::open(&current_dir)?;
+    repo.submodule_set_branch(module.name().unwrap(), branch)?;
+    module.sync()?;
+
+    //commit
+    module.add_finalize()?;
+    commit(&repo, &format!("Installed Package {}", module.name().unwrap_or("")))?;
+    Ok(())
 }

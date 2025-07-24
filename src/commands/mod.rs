@@ -6,12 +6,14 @@ use std::error::Error;
 mod annotate;
 mod execute;
 mod init;
+mod packages;
 mod tool;
 mod workflow;
 
 pub use annotate::*;
 pub use execute::*;
 pub use init::*;
+pub use packages::*;
 pub use tool::*;
 pub use workflow::*;
 

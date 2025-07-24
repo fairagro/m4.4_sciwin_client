@@ -5,7 +5,7 @@ use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
         check_git_config, create_tool, handle_annotation_command, handle_execute_commands, handle_init_command, handle_tool_commands,
-        handle_workflow_commands,
+        handle_workflow_commands, install_package, remove_package,
     },
     util::LOGGER,
 };
@@ -34,8 +34,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Tool { command } => handle_tool_commands(command),
         Commands::Run(args) => create_tool(args),
         Commands::Workflow { command } => handle_workflow_commands(command),
-        Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Execute { command } => handle_execute_commands(command),
+        Commands::Install(args) => install_package(&args.identifier, &args.branch),
+        Commands::Uninstall(args) => remove_package(&args.identifier),
+        Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
     }
 }
