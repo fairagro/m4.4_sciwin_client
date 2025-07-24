@@ -1,8 +1,12 @@
+use colored::Colorize;
 use git2::{build::RepoBuilder, Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
+use log::info;
 use std::{
-    env, iter,
+    env, fs, iter,
     path::{Path, PathBuf},
 };
+
+use crate::util::remove_ini_section;
 
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
@@ -65,21 +69,48 @@ pub fn get_submodule_paths(repo: &Repository) -> Result<Vec<PathBuf>, Error> {
 
 pub fn add_submodule(url: &str, branch: &Option<String>, path: &Path) -> Result<(), Error> {
     let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
-    let branch: &str = if let Some(branch) = branch { branch } else { "HEAD" };
 
     let repo = Repository::open(&current_dir)?;
-
     //clone and initialize submodule
-    RepoBuilder::new().branch(branch).clone(url, path)?;
+    info!("Downloading files from {}...", url.italic());
+    if let Some(branch) = branch {
+        RepoBuilder::new().branch(branch).clone(url, path)?;
+    } else {
+        RepoBuilder::new().clone(url, path)?;
+    }
     let mut module = repo.submodule(url, path, false)?;
 
     //set correct branch to submodule
-    let mut repo = Repository::open(&current_dir)?;
-    repo.submodule_set_branch(module.name().unwrap(), branch)?;
-    module.sync()?;
+    if let Some(branch) = branch {
+        let mut repo = Repository::open(&current_dir)?;
+        repo.submodule_set_branch(module.name().unwrap(), branch)?;
+        module.sync()?;
+    }
 
     //commit
     module.add_finalize()?;
-    commit(&repo, &format!("Installed Package {}", module.name().unwrap_or("")))?;
+    let name = module.name().unwrap_or("");
+    commit(&repo, &format!("📦 Installed Package {}", name.strip_prefix("packages/").unwrap_or(name)))?;
+    Ok(())
+}
+
+pub fn remove_submodule(name: &str) -> Result<(), Error> {
+    let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
+    let repo = Repository::open(&current_dir)?;
+
+    let module = repo.find_submodule(name)?;
+    let path = module.path();
+
+    info!("Removing files from {}...", path.to_string_lossy().italic());
+    fs::remove_dir_all(path).ok();
+
+    //remove ksubmodule config
+    let prefix = format!("submodule \"{name}\"");
+    remove_ini_section(current_dir.join(".git/config"), &prefix).map_err(|_| git2::Error::from_str("Could not delete config entry"))?;
+    remove_ini_section(current_dir.join(".gitmodules"), &prefix).map_err(|_| git2::Error::from_str("Could not delete .gitmodulesg entry"))?;
+
+    //stage and commit
+    stage_all(&repo)?;
+    commit(&repo, &format!("📦 Removed Package {}", name.strip_prefix("packages/").unwrap_or(name)))?;
     Ok(())
 }

@@ -1,5 +1,7 @@
-use crate::util::repo::add_submodule;
+use crate::util::repo::{add_submodule, remove_submodule};
 use clap::Args;
+use colored::Colorize;
+use log::info;
 use reqwest::Url;
 use std::{error::Error, path::Path};
 
@@ -31,9 +33,14 @@ pub fn install_package(url: &str, branch: &Option<String>) -> Result<(), Box<dyn
     let repo_name = url_obj.path().strip_prefix("/").unwrap();
     add_submodule(url, branch, &package_dir.join(repo_name))?;
 
+    info!("📦 Installed Package {}", repo_name.bold().green());
+
     Ok(())
 }
 
-pub fn remove_package(_package_id: &str) -> Result<(), Box<dyn Error>> {
+pub fn remove_package(package_id: &str) -> Result<(), Box<dyn Error>> {
+    remove_submodule(&format!("packages/{package_id}"))?;
+
+    info!("📦 Removed Package {}", package_id.bold().red());
     Ok(())
 }
