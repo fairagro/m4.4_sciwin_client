@@ -42,7 +42,29 @@ pub fn gather_jobs(
             }
             Ok(jobs)
         }
-        ScatterMethod::NestedCrossProduct => todo!(),
+        ScatterMethod::NestedCrossProduct => {
+            fn nest(
+                keys: &[String],
+                values: &[Vec<DefaultValue>],
+                index: usize,
+                current: &mut HashMap<String, DefaultValue>,
+                jobs: &mut Vec<HashMap<String, DefaultValue>>,
+            ) {
+                if index == keys.len() {
+                    jobs.push(current.clone());
+                } else {
+                    for v in &values[index] {
+                        current.insert(keys[index].clone(), v.clone());
+                        nest(keys, values, index + 1, current, jobs);
+                    }
+                }
+            }
+
+            let mut jobs = vec![];
+            let mut current = HashMap::new();
+            nest(scatter_keys, scatter_inputs, 0, &mut current, &mut jobs);
+            Ok(jobs)
+        }
     }
 }
 
