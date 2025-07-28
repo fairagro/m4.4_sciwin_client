@@ -78,6 +78,7 @@ httpmock = "0.7.0"
 members = ["crates/*", "."]
 
 [workspace.dependencies]
+anyhow = "1.0.98"
 fancy-regex = "0.15.0"
 keyring = { version = "3.6.3", features = [
     "apple-native",
