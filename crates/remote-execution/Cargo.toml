@@ -4,20 +4,20 @@ version = "0.7.0"
 edition = "2021"
 
 [dependencies]
+fancy-regex = { workspace = true }
 reqwest = { version = "0.12.22", features = ["blocking", "json", "cookies"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tempfile = { workspace = true }
 pathdiff = { workspace = true }
-anyhow = "1.0.98"
-
 toml = { workspace = true }
 toml_edit = { workspace = true }
 keyring = { workspace = true }
+
+anyhow = "1.0.98"
 uuid = { version = "1.17.0", features = ["v4"] }
 chrono = { version = "0.4.41"}
-regex = { version = "1.11.1"}
 
 [dev-dependencies]
 mockito = "1.7.0"

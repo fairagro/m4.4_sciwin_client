@@ -1,12 +1,12 @@
 use crate::api::download_files;
 use chrono::Utc;
-use regex::Regex;
+use fancy_regex::Regex;
+use keyring::Entry;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use toml_edit::{value, DocumentMut, Item, Table};
 use uuid::Uuid;
-use keyring::Entry;
 
 type ScriptStep = (String, Vec<(String, String)>, Vec<(String, String)>, Option<String>);
 type StepTimestamp = HashMap<String, (Option<String>, Option<String>)>;
@@ -452,27 +452,27 @@ fn extract_times_from_logs(contents: &str) -> Result<StepTimestamp, Box<dyn std:
     let mut workflow_end = None;
     let mut steps: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
     for line in contents.lines() {
-        if let Some(cap) = re_timestamp.captures(line) {
+        if let Some(cap) = re_timestamp.captures(line)? {
             let timestamp = cap["timestamp"].to_string();
-            if re_workflow_start.is_match(line) {
+            if re_workflow_start.is_match(line)? {
                 workflow_start = Some(timestamp.clone());
             }
-            if re_workflow_end.is_match(line) {
+            if re_workflow_end.is_match(line)? {
                 workflow_end = Some(timestamp.clone());
             }
-            if let Some(cap_step) = re_step_start.captures(line) {
+            if let Some(cap_step) = re_step_start.captures(line)? {
                 let step = cap_step["step"].to_string();
                 steps.entry(step).or_insert((None, None)).0 = Some(timestamp.clone());
             }
-            if let Some(cap_step) = re_step_start2.captures(line) {
+            if let Some(cap_step) = re_step_start2.captures(line)? {
                 let step = cap_step["step"].to_string();
                 steps.entry(step).or_insert((None, None)).0 = Some(timestamp.clone());
             }
-            if let Some(cap_step) = re_step_end.captures(line) {
+            if let Some(cap_step) = re_step_end.captures(line)? {
                 let step = cap_step["step"].to_string();
                 steps.entry(step).or_insert((None, None)).1 = Some(timestamp.clone());
             }
-            if let Some(cap_step) = re_step_end2.captures(line) {
+            if let Some(cap_step) = re_step_end2.captures(line)? {
                 let step = cap_step["step"].to_string();
                 steps.entry(step).or_insert((None, None)).1 = Some(timestamp.clone());
             }
@@ -682,7 +682,7 @@ fn classify_and_prefix_params(id: &str, inputs: &[(String, String)], outputs: &[
 
 fn get_or_prompt_credential(service: &str, key: &str, prompt_msg: &str) -> Result<String, Box<dyn std::error::Error>> {
     let entry = Entry::new(service, key)?;
-    
+
     match entry.get_password() {
         Ok(val) => Ok(val),
         Err(keyring::Error::NoEntry) => {
@@ -947,7 +947,7 @@ pub fn create_ro_crate_metadata_json(
     // Extract instrument version from logs
     let re = Regex::new(r"cwltool (\d+\.\d+\.\d+)")?;
     let instrument_id = generate_id_with_hash();
-    if let Some(caps) = re.captures(logs) {
+    if let Some(caps) = re.captures(logs)? {
         let version = format!("cwltool {}", &caps[1].split_whitespace().next().unwrap_or(&caps[1]));
         //add instrument
         let instrument = create_instruments(&instrument_id, "SoftwareApplication", &version);
@@ -993,7 +993,7 @@ mod tests {
     ) -> Value {
         match value {
             Value::String(s) => {
-                if uuid_re.is_match(s) {
+                if uuid_re.is_match(s).unwrap_or(false) {
                     let entry = uuid_map.entry(s.clone()).or_insert_with(|| {
                         let label = format!("UUID-{counter}");
                         *counter += 1;
