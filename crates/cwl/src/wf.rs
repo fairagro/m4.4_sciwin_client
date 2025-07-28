@@ -157,7 +157,7 @@ impl Workflow {
 pub struct WorkflowStep {
     #[serde(default)]
     pub id: String,
-    pub run: StringOrDocument,    
+    pub run: StringOrDocument,
     #[serde(deserialize_with = "deserialize_workflow_inputs")]
     pub in_: Vec<WorkflowStepInputParameter>,
     pub out: Vec<String>,
@@ -169,6 +169,10 @@ pub struct WorkflowStep {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[serde(deserialize_with = "deserialize_hints")]
     pub hints: Vec<Requirement>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scatter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scatter_method: Option<ScatterMethod>,
 }
 
 impl Identifiable for WorkflowStep {
@@ -227,6 +231,17 @@ impl Default for StringOrDocument {
     fn default() -> Self {
         Self::String(String::default())
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum ScatterMethod {
+    #[serde(rename = "dotproduct")]
+    DotProduct,
+    #[serde(rename = "nested_crossproduct")]
+    NestedCrossProduct,
+    #[serde(rename = "flat_crossproduct")]
+    FlatCrossProduct,
 }
 
 #[cfg(test)]

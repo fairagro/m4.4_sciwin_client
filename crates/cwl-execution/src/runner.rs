@@ -118,13 +118,36 @@ pub fn run_workflow(
                 }
             }
 
-            let step_outputs = if let Some(path) = path {
-                execute(&path, &input_values, Some(tmp_path.clone()), None)?
-            } else if let StringOrDocument::Document(doc) = &step.run {
-                execute(workflow_folder, &input_values, Some(tmp_path.clone()), Some(doc))?
+            //decide if we are going to use scatter or normal execution
+            //TODO: ScatterMethod, LinkMerge, ...
+            let step_outputs = if let Some(scatter) = &step.scatter {
+                //get input
+                if let Some(DefaultValue::Array(input_array)) = input_values.inputs.get(scatter) {
+                    let mut step_outputs = HashMap::default();
+                    for input in input_array {
+                        //clone input values where scatter input is singular entry
+                        let mut input_values = input_values.clone();
+                        input_values.inputs.insert(scatter.to_string(), input.clone());
+
+                        let singular_outputs = execute_step(step, input_values, &path, workflow_folder, &tmp_path)?;
+
+                        //collect all outputs as array values!
+                        for (key, value) in singular_outputs {
+                            if let Some(DefaultValue::Array(vec)) = step_outputs.get_mut(&key) {
+                                vec.push(value);
+                            } else {
+                                step_outputs.insert(key, DefaultValue::Array(vec![value]));
+                            }
+                        }
+                    }
+                    step_outputs
+                } else {
+                    return Err("Fatal Error occured during a scatter step".into());
+                }
             } else {
-                unreachable!()
+                execute_step(step, input_values, &path, workflow_folder, &tmp_path)?
             };
+
             for (key, value) in step_outputs {
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
@@ -202,6 +225,23 @@ pub fn run_workflow(
 
     info!("✔️  Workflow {:?} executed successfully in {:.0?}!", &cwl_path, clock.elapsed());
     Ok(output_values.into_iter().map(|(k, v)| (k.clone(), v)).collect())
+}
+
+fn execute_step(
+    step: &commonwl::WorkflowStep,
+    input_values: InputObject,
+    path: &Option<PathBuf>,
+    workflow_folder: &Path,
+    tmp_path: &str,
+) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+    let step_outputs = if let Some(path) = path {
+        execute(path, &input_values, Some(tmp_path), None)?
+    } else if let StringOrDocument::Document(doc) = &step.run {
+        execute(workflow_folder, &input_values, Some(tmp_path), Some(doc))?
+    } else {
+        unreachable!()
+    };
+    Ok(step_outputs)
 }
 
 pub fn run_tool(
