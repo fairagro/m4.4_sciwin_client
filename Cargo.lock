@@ -3955,6 +3955,7 @@ checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
 name = "s4n"
 version = "0.7.0"
 dependencies = [
+ "anyhow",
  "assert_cmd",
  "calamine",
  "clap",

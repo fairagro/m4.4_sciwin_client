@@ -5,6 +5,7 @@ use crate::{
     util::get_qualified_filename,
     util::repo::{commit, get_modified_files, stage_file},
 };
+use anyhow::anyhow;
 use clap::{Args, Subcommand};
 use colored::Colorize;
 use commonwl::{
@@ -19,13 +20,12 @@ use prettytable::{Cell, Row, Table};
 use serde_yaml::Value;
 use std::{
     env,
-    error::Error,
     fs::{self, remove_file},
     path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
 
-pub fn handle_tool_commands(subcommand: &ToolCommands) -> Result<(), Box<dyn Error>> {
+pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args),
         ToolCommands::List(args) => list_tools(args),
@@ -100,10 +100,10 @@ pub struct ListToolArgs {
     pub list_all: bool,
 }
 
-pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
+pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
     // Parse input string
     if args.command.is_empty() {
-        return Err("No commandline string given!".into());
+        return Err(anyhow!("No commandline string given!"));
     }
     let command = args.command.iter().map(String::as_str).collect::<Vec<_>>();
 
@@ -113,14 +113,14 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         info!("📂 The current working directory is {}", cwd.to_string_lossy().green().bold());
     }
 
-    let repo = Repository::open(&cwd).map_err(|e| format!("Could not find git repository at {cwd:?}: {e}"))?;
+    let repo = Repository::open(&cwd).map_err(|e| anyhow!("Could not find git repository at {cwd:?}: {e}"))?;
     let modified = get_modified_files(&repo);
 
     //check for uncommited changes if a run will be made
     if !args.no_run && !modified.is_empty() {
         error!("Uncommitted changes detected:");
         print_list(&modified);
-        return Err("Uncommitted changes detected".into());
+        return Err(anyhow!("Uncommitted changes detected"));
     }
 
     let mut cwl = parser::parse_command_line(&command);
@@ -136,7 +136,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
         warn!("User requested no execution, could not determine outputs!");
     } else {
         // Execute command
-        run_command(&cwl, &mut RuntimeEnvironment::default()).map_err(|e| format!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+        run_command(&cwl, &mut RuntimeEnvironment::default()).map_err(|e| anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
         // Check files that changed
         let mut files = get_modified_files(&repo);
@@ -184,7 +184,8 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     //add fixed inputs
     if let Some(fixed_inputs) = &args.inputs {
-        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>())?;
+        parser::add_fixed_inputs(&mut cwl, &fixed_inputs.iter().map(String::as_str).collect::<Vec<_>>())
+            .map_err(|e| anyhow!("Could not gather fixed inputs: {e}"))?;
     }
 
     // Handle container requirements
@@ -236,7 +237,7 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
 
     let path = get_qualified_filename(&cwl.base_command, args.name.clone());
     let mut yaml = cwl.prepare_save(&path);
-    yaml = format_cwl(&yaml)?;
+    yaml = format_cwl(&yaml).map_err(|e| anyhow!("Failed to format CWL: {e}"))?;
     if args.is_raw {
         highlight_cwl(&yaml);
     } else {
@@ -248,13 +249,13 @@ pub fn create_tool(args: &CreateToolArgs) -> Result<(), Box<dyn Error>> {
                     commit(&repo, &format!("🪄 Creation of `{path}`"))?;
                 }
             }
-            Err(e) => return Err(Box::new(e)),
+            Err(e) => return Err(anyhow!("Creation of File {path} failed: {e}")),
         }
     }
     Ok(())
 }
 
-pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
+pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
     // Print the current working directory
     let cwd = env::current_dir()?;
     info!("📂 Available Tools in: {}", cwd.to_string_lossy().blue().bold());
@@ -328,10 +329,10 @@ pub fn list_tools(args: &ListToolArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn remove_tool(args: &RemoveToolArgs) -> Result<(), Box<dyn Error>> {
+pub fn remove_tool(args: &RemoveToolArgs) -> anyhow::Result<()> {
     if args.tool_names.is_empty() {
         error!("No tool provided!");
-        return Err("No Tool provided!".into());
+        return Err(anyhow!("No Tool provided!"));
     }
 
     let cwd = env::current_dir()?;
