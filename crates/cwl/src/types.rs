@@ -130,7 +130,7 @@ impl Serialize for CWLType {
     }
 }
 
-#[derive(Serialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone, Eq, Hash)]
 #[serde(untagged)]
 pub enum DefaultValue {
     File(File),
@@ -319,7 +319,7 @@ pub trait PathItem {
     fn secondary_files_mut(&mut self) -> Option<&mut Vec<DefaultValue>>;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct File {
     pub class: String,
@@ -530,7 +530,7 @@ impl<'de> Deserialize<'de> for SecondaryFileSchema {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Directory {
     pub class: String,

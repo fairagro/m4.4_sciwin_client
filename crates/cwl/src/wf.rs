@@ -1,3 +1,5 @@
+use crate::SingularPlural;
+
 use super::{
     deserialize::{deserialize_list, Identifiable},
     inputs::WorkflowStepInputParameter,
@@ -170,7 +172,7 @@ pub struct WorkflowStep {
     #[serde(deserialize_with = "deserialize_hints")]
     pub hints: Vec<Requirement>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub scatter: Option<String>,
+    pub scatter: Option<SingularPlural<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scatter_method: Option<ScatterMethod>,
 }

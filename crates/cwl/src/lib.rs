@@ -304,6 +304,13 @@ pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Bo
     Ok(workflow)
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum SingularPlural<T> {
+    Singular(T),
+    Plural(Vec<T>),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

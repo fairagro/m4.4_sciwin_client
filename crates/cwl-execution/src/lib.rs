@@ -1,10 +1,12 @@
 pub mod environment;
-pub mod expression;
 pub mod io;
 pub mod runner;
-pub mod staging;
-pub mod util;
-pub mod validate;
+
+mod expression;
+mod scatter;
+mod staging;
+mod util;
+mod validate;
 
 use commonwl::{
     guess_type,

@@ -8,6 +8,7 @@ use crate::{
     },
     format_command,
     io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
+    scatter::{self},
     staging::stage_required_files,
     util::{
         copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, evaluate_input, evaluate_input_as_string, get_file_metadata,
@@ -19,8 +20,8 @@ use crate::{
 use commonwl::{
     inputs::CommandLineBinding,
     requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
-    Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, Entry, File, PathItem, StringOrDocument, StringOrNumber,
-    Workflow,
+    Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, Entry, File, PathItem, ScatterMethod, SingularPlural,
+    StringOrDocument, StringOrNumber, Workflow,
 };
 use log::{info, warn};
 use rand::{distr::Alphanumeric, Rng};
@@ -119,31 +120,36 @@ pub fn run_workflow(
             }
 
             //decide if we are going to use scatter or normal execution
-            //TODO: ScatterMethod, LinkMerge, ...
+
             let step_outputs = if let Some(scatter) = &step.scatter {
                 //get input
-                if let Some(DefaultValue::Array(input_array)) = input_values.inputs.get(scatter) {
-                    let mut step_outputs = HashMap::default();
-                    for input in input_array {
-                        //clone input values where scatter input is singular entry
-                        let mut input_values = input_values.clone();
-                        input_values.inputs.insert(scatter.to_string(), input.clone());
+                let scatter_keys = match scatter {
+                    SingularPlural::Singular(item) => vec![item.clone()],
+                    SingularPlural::Plural(items) => items.clone(),
+                };
 
-                        let singular_outputs = execute_step(step, input_values, &path, workflow_folder, &tmp_path)?;
+                let method = step.scatter_method.as_ref().unwrap_or(&ScatterMethod::DotProduct);
 
-                        //collect all outputs as array values!
-                        for (key, value) in singular_outputs {
-                            if let Some(DefaultValue::Array(vec)) = step_outputs.get_mut(&key) {
-                                vec.push(value);
-                            } else {
-                                step_outputs.insert(key, DefaultValue::Array(vec![value]));
-                            }
-                        }
+                let scatter_inputs = scatter::gather_inputs(&scatter_keys, &input_values)?;
+                let jobs = scatter::gather_jobs(&scatter_inputs, &scatter_keys, method)?;
+
+                let mut step_outputs: HashMap<String, Vec<DefaultValue>> = HashMap::new();
+                for job in jobs {
+                    let mut sub_inputs = input_values.clone();
+                    for (k, v) in job {
+                        sub_inputs.inputs.insert(k, v);
                     }
-                    step_outputs
-                } else {
-                    return Err("Fatal Error occured during a scatter step".into());
+
+                    let singular_outputs = execute_step(step, sub_inputs, &path, workflow_folder, &tmp_path)?;
+
+                    for (key, value) in singular_outputs {
+                        step_outputs.entry(key).or_default().push(value);
+                    }
                 }
+                step_outputs
+                    .into_iter()
+                    .map(|(k, v)| (k, DefaultValue::Array(v)))
+                    .collect::<HashMap<_, _>>()
             } else {
                 execute_step(step, input_values, &path, workflow_folder, &tmp_path)?
             };
