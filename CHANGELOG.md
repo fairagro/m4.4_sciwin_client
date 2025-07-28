@@ -2,6 +2,10 @@
 ## 🚀 Features
 - Support Workflows in git submodules #137
 - Added `s4n install` and `s4n uninstall` commands #138
+- Runner supports simple scatter cases now
+
+## 🐛 Bugfixes
+- ramping up runner conformance from 204/378 to 209/378
 
 ## 🚜 Refactor
 - Code restructuring
