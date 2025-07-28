@@ -2,6 +2,7 @@ use crate::{
     config::Config,
     util::repo::{commit, get_modified_files, initial_commit, stage_all},
 };
+use anyhow::anyhow;
 use clap::Args;
 use git2::Repository;
 use log::{error, info, warn};
@@ -21,11 +22,10 @@ pub struct InitArgs {
     arc: bool,
 }
 
-pub fn handle_init_command(args: &InitArgs) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_init_command(args: &InitArgs) -> anyhow::Result<()> {
     if let Err(e) = initialize_project(args.project.clone(), args.arc) {
-        error!("Project Initialization failed: {e}");
         git_cleanup(args.project.clone());
-        return Err(e);
+        return Err(anyhow!("Could not initialize Project: {e}"));
     }
     Ok(())
 }

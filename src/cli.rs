@@ -1,7 +1,7 @@
 use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, InstallPackageArgs, PackageArgs, ToolCommands, WorkflowCommands};
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
-use std::{error::Error, io};
+use std::io;
 
 #[derive(Parser, Debug)]
 #[command(name="s4n", about=format!(r#"
@@ -62,7 +62,7 @@ pub enum Commands {
     },
 }
 
-pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> Result<(), Box<dyn Error>> {
+pub fn generate_completions<G: Generator>(generator: G, cmd: &mut Command) -> anyhow::Result<()> {
     generate(generator, cmd, cmd.get_name().to_string(), &mut io::stdout());
     Ok(())
 }

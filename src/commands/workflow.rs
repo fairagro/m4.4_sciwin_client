@@ -7,6 +7,7 @@ use crate::{
         DotRenderer, MermaidRenderer,
     },
 };
+use anyhow::anyhow;
 use clap::{Args, Subcommand, ValueEnum};
 use colored::Colorize;
 use commonwl::{format::format_cwl, load_tool, load_workflow, CWLDocument, StringOrDocument, Workflow};
@@ -16,16 +17,14 @@ use log::{error, info};
 use prettytable::{row, Cell, Row, Table};
 use serde_yaml::Value;
 use std::{
-    env,
-    error::Error,
-    fs,
+    env, fs,
     io::Write,
     path::{Path, PathBuf},
     vec,
 };
 use walkdir::WalkDir;
 
-pub fn handle_workflow_commands(command: &WorkflowCommands) -> Result<(), Box<dyn Error>> {
+pub fn handle_workflow_commands(command: &WorkflowCommands) -> anyhow::Result<()> {
     match command {
         WorkflowCommands::Create(args) => create_workflow(args),
         WorkflowCommands::Connect(args) => connect_workflow_nodes(args),
@@ -78,11 +77,11 @@ pub struct RemoveWorkflowArgs {
     pub rm_workflow: Vec<String>,
 }
 
-pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn create_workflow(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
     let wf = Workflow::default();
 
     let mut yaml = serde_yaml::to_string(&wf)?;
-    yaml = format_cwl(&yaml)?;
+    yaml = format_cwl(&yaml).map_err(|e| anyhow!("Could not formal yaml: {e}"))?;
 
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
 
@@ -94,7 +93,7 @@ pub fn create_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> 
         }
     }
 
-    create_and_write_file(&filename, &yaml).map_err(|e| format!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
+    create_and_write_file(&filename, &yaml).map_err(|e| anyhow!("❌ Could not create workflow {} at {}: {}", args.name, filename, e))?;
     info!("📄 Created new Workflow file: {filename}");
     print_diff("", &yaml);
 
@@ -111,24 +110,30 @@ pub struct ConnectWorkflowArgs {
     pub to: String,
 }
 
-pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
     //get workflow
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
-    let mut workflow = load_workflow(&filename)?;
+    let mut workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
     if from_parts[0] == "@inputs" {
-        workflow.add_input_connection(from_parts[1], &args.to)?;
+        workflow
+            .add_input_connection(from_parts[1], &args.to)
+            .map_err(|e| anyhow!("Could not add input connection from {} to {}: {e}", from_parts[1], args.to))?;
     } else if to_parts[0] == "@outputs" {
-        workflow.add_output_connection(&args.from, to_parts[1])?;
+        workflow
+            .add_output_connection(&args.from, to_parts[1])
+            .map_err(|e| anyhow!("Could not add output connection from {} to {}: {e}", args.from, to_parts[1]))?;
     } else {
-        workflow.add_step_connection(&args.from, &args.to)?;
+        workflow
+            .add_step_connection(&args.from, &args.to)
+            .map_err(|e| anyhow!("Could not add connection from {} to {}:: {e}", args.from, args.to))?;
     }
 
     //save workflow
     let mut yaml = serde_yaml::to_string(&workflow)?;
-    yaml = format_cwl(&yaml)?;
+    yaml = format_cwl(&yaml).map_err(|e| anyhow!("Could not format yaml: {e}"))?;
     let old = fs::read_to_string(&filename)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
@@ -138,25 +143,31 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn 
     Ok(())
 }
 
-pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
     // Get the workflow
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
-    let mut workflow = load_workflow(&filename)?;
+    let mut workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
 
     if from_parts[0] == "@inputs" {
-        workflow.remove_input_connection(from_parts[1], &args.to)?;
+        workflow
+            .remove_input_connection(from_parts[1], &args.to)
+            .map_err(|e| anyhow!("Could not remove input connection from {} to {}: {e}", from_parts[1], args.to))?;
     } else if to_parts[0] == "@outputs" {
-        workflow.remove_output_connection(&args.from, to_parts[1])?;
+        workflow
+            .remove_output_connection(&args.from, to_parts[1])
+            .map_err(|e| anyhow!("Could not remove output connection from {} to {}: {e}", args.from, to_parts[1]))?;
     } else {
-        workflow.remove_step_connection(&args.from, &args.to)?;
+        workflow
+            .remove_step_connection(&args.from, &args.to)
+            .map_err(|e| anyhow!("Could not remove connection from {} to {}:: {e}", args.from, args.to))?;
     }
 
     // save workflow
     let mut yaml = serde_yaml::to_string(&workflow)?;
-    yaml = format_cwl(&yaml)?;
+    yaml = format_cwl(&yaml).map_err(|e| anyhow!("Could not format yaml: {e}"))?;
     let old = fs::read_to_string(&filename)?;
     let mut file = fs::File::create(&filename)?;
     file.write_all(yaml.as_bytes())?;
@@ -166,7 +177,7 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> Result<(), Box<d
     Ok(())
 }
 
-pub fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn save_workflow(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
     //get workflow
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
     let repo = Repository::open(".")?;
@@ -177,10 +188,10 @@ pub fn save_workflow(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn get_workflow_status(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
     let path = Path::new(&filename).parent().unwrap_or(Path::new("."));
-    let workflow = load_workflow(&filename)?;
+    let workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     info!("Status report for Workflow {}", filename.green().bold());
 
@@ -222,7 +233,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
 
     for step in &workflow.steps {
         let tool = match &step.run {
-            StringOrDocument::String(run) => load_tool(path.join(run))?,
+            StringOrDocument::String(run) => load_tool(path.join(run)).map_err(|e| anyhow!("Could not load tool {:?}: {e}", path.join(run)))?,
             StringOrDocument::Document(boxed_doc) => match &**boxed_doc {
                 CWLDocument::CommandLineTool(doc) => doc.clone(),
                 _ => unreachable!(), //see #95
@@ -275,7 +286,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-pub fn list_workflows(args: &ListWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
     // Print the current working directory
     let cwd = env::current_dir()?;
     info!("📂 Scanning for workflows in: {}", cwd.to_str().unwrap_or("Invalid UTF-8").blue().bold());
@@ -389,7 +400,7 @@ fn format_with_line_breaks(items: &[String], max_per_line: usize) -> String {
 }
 
 /// Remove a workflow
-pub fn remove_workflow(args: &RemoveWorkflowArgs) -> Result<(), Box<dyn Error>> {
+pub fn remove_workflow(args: &RemoveWorkflowArgs) -> anyhow::Result<()> {
     let cwd = env::current_dir()?;
     let repo = Repository::open(cwd)?;
     let workflows_path = PathBuf::from("workflows");
@@ -436,13 +447,14 @@ pub enum Renderer {
     Dot,
 }
 
-pub fn visualize(filename: &PathBuf, renderer: &Renderer, no_defaults: bool) -> Result<(), Box<dyn Error>> {
-    let cwl = load_workflow(filename)?;
+pub fn visualize(filename: &PathBuf, renderer: &Renderer, no_defaults: bool) -> anyhow::Result<()> {
+    let cwl = load_workflow(filename).map_err(|e| anyhow!("Could mot load Workflow {filename:?}: {e}"))?;
 
     let code = match renderer {
         Renderer::Dot => render(&mut DotRenderer::default(), &cwl, filename, no_defaults),
         Renderer::Mermaid => render(&mut MermaidRenderer::default(), &cwl, filename, no_defaults),
-    }?;
+    }
+    .map_err(|e| anyhow!("Could not render visualization for {filename:?} using {renderer:?}: {e}"))?;
 
     println!("{code}");
     Ok(())

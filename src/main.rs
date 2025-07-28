@@ -30,14 +30,14 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     check_git_config()?;
     match &args.command {
-        Commands::Init(args) => handle_init_command(args),
+        Commands::Init(args) => Ok(handle_init_command(args)?),
         Commands::Tool { command } => Ok(handle_tool_commands(command)?),
         Commands::Run(args) => Ok(create_tool(args)?),
-        Commands::Workflow { command } => handle_workflow_commands(command),
+        Commands::Workflow { command } => Ok(handle_workflow_commands(command)?),
         Commands::Execute { command } => handle_execute_commands(command),
-        Commands::Install(args) => install_package(&args.identifier, &args.branch),
-        Commands::Uninstall(args) => remove_package(&args.identifier),
+        Commands::Install(args) => Ok(install_package(&args.identifier, &args.branch)?),
+        Commands::Uninstall(args) => Ok(remove_package(&args.identifier)?),
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
-        Commands::Completions { shell } => generate_completions(*shell, &mut Cli::command()),
+        Commands::Completions { shell } => Ok(generate_completions(*shell, &mut Cli::command())?),
     }
 }

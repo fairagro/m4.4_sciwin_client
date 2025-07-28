@@ -3,7 +3,7 @@ use clap::Args;
 use colored::Colorize;
 use log::info;
 use reqwest::Url;
-use std::{error::Error, path::Path};
+use std::path::Path;
 
 #[derive(Args, Debug)]
 pub struct InstallPackageArgs {
@@ -19,7 +19,7 @@ pub struct PackageArgs {
     pub identifier: String,
 }
 
-pub fn install_package(url: &str, branch: &Option<String>) -> Result<(), Box<dyn Error>> {
+pub fn install_package(url: &str, branch: &Option<String>) -> anyhow::Result<()> {
     let url = if url.starts_with("http") {
         url
     } else {
@@ -38,7 +38,7 @@ pub fn install_package(url: &str, branch: &Option<String>) -> Result<(), Box<dyn
     Ok(())
 }
 
-pub fn remove_package(package_id: &str) -> Result<(), Box<dyn Error>> {
+pub fn remove_package(package_id: &str) -> anyhow::Result<()> {
     remove_submodule(&format!("packages/{package_id}"))?;
 
     info!("📦 Removed Package {}", package_id.bold().red());
