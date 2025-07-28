@@ -100,9 +100,3 @@ tempfile = "3.19.1"
 [profile.dist]
 inherits = "release"
 lto = "thin"
-
-[package.metadata.wix]
-upgrade-guid = "0E96056C-17BE-44EF-B299-12D19B4FFDF4"
-path-guid = "4F851203-47E0-4E29-A325-6C14EA33173B"
-license = false
-eula = false
