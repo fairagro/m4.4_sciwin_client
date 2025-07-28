@@ -132,6 +132,8 @@ pub struct WorkflowStepInputParameter {
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DefaultValue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_from: Option<String>,
 }
 
 impl WorkflowStepInputParameter {
