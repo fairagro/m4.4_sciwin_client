@@ -342,14 +342,7 @@ mod tests {
         env,
         path::{Path, MAIN_SEPARATOR},
     };
-
-    pub fn os_path(path: &str) -> String {
-        if cfg!(target_os = "windows") {
-            Path::new(path).to_string_lossy().replace('/', "\\")
-        } else {
-            path.to_string()
-        }
-    }
+    use test_utils::os_path;
 
     #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
     fn test_resolve_filename() {
