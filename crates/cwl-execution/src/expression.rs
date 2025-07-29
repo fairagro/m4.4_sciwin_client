@@ -1,10 +1,10 @@
-use crate::{environment::RuntimeEnvironment, split_ranges, InputObject};
+use crate::{InputObject, environment::RuntimeEnvironment, split_ranges};
 use commonwl::{
-    requirements::{Requirement, WorkDirItem},
     Argument, CWLDocument, Command, DefaultValue, Entry, Expression, ExpressionType,
+    requirements::{Requirement, WorkDirItem},
 };
 use rustyscript::static_runtime;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use std::{collections::HashMap, error::Error, fs, path::Path};
 
@@ -252,10 +252,10 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
         }
 
         for output in &mut clt.outputs {
-            if let Some(binding) = &mut output.output_binding {
-                if let Some(glob) = binding.glob.as_mut() {
-                    *glob = replace_expressions(glob)?;
-                }
+            if let Some(binding) = &mut output.output_binding
+                && let Some(glob) = binding.glob.as_mut()
+            {
+                *glob = replace_expressions(glob)?;
             }
             if let Some(format) = &mut output.format {
                 let format = replace_expressions(format)?;

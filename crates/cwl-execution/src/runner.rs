@@ -83,12 +83,13 @@ pub fn run_workflow(
                 let source_parts: Vec<&str> = source.split('/').collect();
 
                 //try output
-                if source_parts.len() == 2 {
-                    if let Some(out_value) = outputs.get(source) {
-                        step_inputs.insert(parameter.id.to_string(), out_value.to_default_value());
-                        continue;
-                    }
+                if source_parts.len() == 2
+                    && let Some(out_value) = outputs.get(source)
+                {
+                    step_inputs.insert(parameter.id.to_string(), out_value.to_default_value());
+                    continue;
                 }
+
                 //try default
                 if let Some(default) = &parameter.default {
                     step_inputs.entry(parameter.id.to_string()).or_insert(default.to_owned());

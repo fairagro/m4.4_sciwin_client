@@ -2,7 +2,9 @@ use crate::{
     expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
-use commonwl::{inputs::CommandInputParameter, outputs::CommandOutputParameter, CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File};
+use commonwl::{
+    CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File, inputs::CommandInputParameter, outputs::CommandOutputParameter,
+};
 use glob::glob;
 use log::info;
 use serde_yaml::{Mapping, Value};
@@ -27,10 +29,11 @@ pub(crate) fn evaluate_input_as_string(
 ///Either gets the default value for input or the provided one (preferred)
 pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
     if let Some(value) = input_values.get(&input.id) {
-        if (matches!(input.type_, CWLType::Any) || input.type_.is_optional()) && matches!(value, DefaultValue::Any(Value::Null)) {
-            if let Some(default_) = &input.default {
-                return Ok(default_.clone());
-            }
+        if (matches!(input.type_, CWLType::Any) || input.type_.is_optional())
+            && matches!(value, DefaultValue::Any(Value::Null))
+            && let Some(default_) = &input.default
+        {
+            return Ok(default_.clone());
         }
 
         if value.has_matching_type(&input.type_) {
@@ -397,7 +400,7 @@ mod tests {
         inputs::CommandLineBinding,
         outputs::{CommandOutputBinding, CommandOutputParameter},
     };
-    use serde_yaml::{value, Value};
+    use serde_yaml::{Value, value};
     use serial_test::serial;
     use tempfile::tempdir;
 

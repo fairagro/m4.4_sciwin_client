@@ -1,11 +1,11 @@
 use crate::utils::{build_inputs_cwl, build_inputs_yaml, get_all_outputs, get_location, load_cwl_yaml, read_file_content, sanitize_path};
 use anyhow::{Context, Result};
 use serde::Deserializer;
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 use serde_json::json;
 use serde_yaml::{Mapping, Value};
-use std::path::Path;
 use std::path::MAIN_SEPARATOR;
+use std::path::Path;
 use std::{
     collections::{HashMap, HashSet},
     env, fs,
@@ -261,10 +261,10 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
                     // Collect output globs from the CommandLineTool
                     if let Some(outputs) = tool_json.get("outputs").and_then(|v| v.as_array()) {
                         for output in outputs {
-                            if let Some(glob) = output.get("outputBinding").and_then(|b| b.get("glob")) {
-                                if let Some(glob_str) = glob.as_str() {
-                                    tool_output_files.insert(glob_str.to_string());
-                                }
+                            if let Some(glob) = output.get("outputBinding").and_then(|b| b.get("glob"))
+                                && let Some(glob_str) = glob.as_str()
+                            {
+                                tool_output_files.insert(glob_str.to_string());
                             }
                         }
                     }
@@ -541,18 +541,18 @@ fn parse_inputs(
                 "default": default_value
             });
 
-            if let Some(default_file) = &input.default {
-                if let Some(location_str) = default_file.get("location").and_then(|v| v.as_str()) {
-                    let location_path = Path::new(location_str);
-                    let resolved_location = get_location(&full_cwl_path.to_string_lossy(), location_path)
-                        .with_context(|| format!("Failed to resolve location '{}' relative to '{}'", location_str, full_cwl_path.display()))?;
+            if let Some(default_file) = &input.default
+                && let Some(location_str) = default_file.get("location").and_then(|v| v.as_str())
+            {
+                let location_path = Path::new(location_str);
+                let resolved_location = get_location(&full_cwl_path.to_string_lossy(), location_path)
+                    .with_context(|| format!("Failed to resolve location '{}' relative to '{}'", location_str, full_cwl_path.display()))?;
 
-                    input_json["default"] = serde_json::json!({
-                        "class": "File",
-                        "location": format!("file://{}", resolved_location)
-                    });
-                    files.push(resolved_location);
-                }
+                input_json["default"] = serde_json::json!({
+                    "class": "File",
+                    "location": format!("file://{}", resolved_location)
+                });
+                files.push(resolved_location);
             }
 
             // Add inputBinding
@@ -653,10 +653,10 @@ fn parse_requirements(
 
                                     let new_name = Path::new(&entryname).file_name().and_then(|s| s.to_str()).map(|s| s.to_string());
 
-                                    if let Some(new_name) = &new_name {
-                                        if &entryname != new_name {
-                                            replaced_entrynames.insert(entryname.clone(), Some(new_name.clone()));
-                                        }
+                                    if let Some(new_name) = &new_name
+                                        && &entryname != new_name
+                                    {
+                                        replaced_entrynames.insert(entryname.clone(), Some(new_name.clone()));
                                     }
 
                                     let loc = get_location(&full_cwl_path.to_string_lossy(), Path::new(include_path))

@@ -1,8 +1,8 @@
-use crate::{environment::RuntimeEnvironment, io::get_file_property, InputObject};
+use crate::{InputObject, environment::RuntimeEnvironment, io::get_file_property};
 use commonwl::{
+    Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem,
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
-    Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem,
 };
 use fancy_regex::Regex;
 use pathdiff::diff_paths;
@@ -54,10 +54,10 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
 
     //set values in output glob
     for output in &mut clt.outputs {
-        if let Some(binding) = &mut output.output_binding {
-            if let Some(glob) = binding.glob.as_mut() {
-                *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
-            }
+        if let Some(binding) = &mut output.output_binding
+            && let Some(glob) = binding.glob.as_mut()
+        {
+            *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
         }
 
         //set values in output format
@@ -127,10 +127,10 @@ pub(crate) fn set_placeholder_values_requirements(
                     // this kind of expression seems to be unfolding into File or Directory itself.
                     // So we just need to find the correct input and set it to listing
                     let re = Regex::new(r"\$\(inputs.([\w.]*)\)").unwrap();
-                    if let Ok(Some(caps)) = re.captures(expr) {
-                        if let Some(input) = runtime.inputs.get(&caps[1]) {
-                            *listing = WorkDirItem::FileOrDirectory(Box::new(input.clone()));
-                        }
+                    if let Ok(Some(caps)) = re.captures(expr)
+                        && let Some(input) = runtime.inputs.get(&caps[1])
+                    {
+                        *listing = WorkDirItem::FileOrDirectory(Box::new(input.clone()));
                     }
                 }
             }
@@ -146,12 +146,11 @@ pub(crate) fn set_placeholder_values_in_string(text: &str, runtime: &RuntimeEnvi
         if let Some((base, suffix)) = placeholder.rsplit_once('.') {
             let mut input_value =
                 get_input_value(base, &runtime.inputs, inputs, suffix).unwrap_or_else(|| panic!("Input not provided for {placeholder}"));
-            if suffix == "dirname" {
-                if let Some(diff) = diff_paths(&input_value, runtime.runtime["tooldir"].to_string()) {
-                    if let Some(diff_str) = diff.to_str() {
-                        input_value = format!("./{}", input_value.trim_start_matches(diff_str));
-                    }
-                }
+            if suffix == "dirname"
+                && let Some(diff) = diff_paths(&input_value, runtime.runtime["tooldir"].to_string())
+                && let Some(diff_str) = diff.to_str()
+            {
+                input_value = format!("./{}", input_value.trim_start_matches(diff_str));
             }
             input_value
         } else {
@@ -185,10 +184,10 @@ fn get_input_value(key: &str, input_values: &HashMap<String, DefaultValue>, inpu
     }
 
     for input in inputs {
-        if input.id == key {
-            if let Some(default) = &input.default {
-                value = evaluate(default, suffix);
-            }
+        if input.id == key
+            && let Some(default) = &input.default
+        {
+            value = evaluate(default, suffix);
         }
     }
 
@@ -259,10 +258,12 @@ outputs:
         let text = "Searching for file $(inputs.infile.path)";
         let file = "tests/test_data/input.txt";
         let runtime = Default::default();
-        let inputs = vec![CommandInputParameter::default()
-            .with_id("infile")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(file)))];
+        let inputs = vec![
+            CommandInputParameter::default()
+                .with_id("infile")
+                .with_type(CWLType::File)
+                .with_default_value(DefaultValue::File(File::from_location(file))),
+        ];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = format!("Searching for file {file}");
@@ -276,10 +277,12 @@ outputs:
         let file = "../../tests/test_data/input.txt";
         let size = get_file_size(file).unwrap();
         let runtime = Default::default();
-        let inputs = vec![CommandInputParameter::default()
-            .with_id("infile")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(file)))];
+        let inputs = vec![
+            CommandInputParameter::default()
+                .with_id("infile")
+                .with_type(CWLType::File)
+                .with_default_value(DefaultValue::File(File::from_location(file))),
+        ];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = format!("File has size {size}");
@@ -292,10 +295,12 @@ outputs:
         let text = "Greeting: $(inputs.infile)";
         let file = "tests/test_data/input.txt";
         let runtime = Default::default();
-        let inputs = vec![CommandInputParameter::default()
-            .with_id("infile")
-            .with_type(CWLType::File)
-            .with_default_value(DefaultValue::File(File::from_location(file)))];
+        let inputs = vec![
+            CommandInputParameter::default()
+                .with_id("infile")
+                .with_type(CWLType::File)
+                .with_default_value(DefaultValue::File(File::from_location(file))),
+        ];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
         let expected = "Greeting: tests/test_data/input.txt";

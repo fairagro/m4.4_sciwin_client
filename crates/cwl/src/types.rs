@@ -92,17 +92,16 @@ impl<'de> Deserialize<'de> for CWLType {
             return deserialize_type_mapping(&map).map_err(serde::de::Error::custom);
         } else if let Value::Sequence(seq) = value {
             if seq.len() == 2 {
-                if let Value::String(type_str) = &seq[0] {
-                    if type_str == "null" {
-                        if let Value::String(type_str) = &seq[1] {
-                            return format!("{type_str}?").parse().map_err(serde::de::Error::custom);
-                        }
-                    }
+                if let Value::String(type_str) = &seq[0]
+                    && type_str == "null"
+                    && let Value::String(type_str) = &seq[1]
+                {
+                    return format!("{type_str}?").parse().map_err(serde::de::Error::custom);
                 }
-            } else if seq.len() == 1 {
-                if let Value::Mapping(map) = &seq[0] {
-                    return deserialize_type_mapping(map).map_err(serde::de::Error::custom);
-                }
+            } else if seq.len() == 1
+                && let Value::Mapping(map) = &seq[0]
+            {
+                return deserialize_type_mapping(map).map_err(serde::de::Error::custom);
             }
         }
         Err(serde::de::Error::custom("Expected string, sequence or mapping for CWLType"))
@@ -110,12 +109,11 @@ impl<'de> Deserialize<'de> for CWLType {
 }
 
 fn deserialize_type_mapping(map: &Mapping) -> Result<CWLType, String> {
-    if let Some(Value::String(type_str)) = map.get("type") {
-        if type_str == "array" {
-            if let Some(Value::String(item_str)) = map.get("items") {
-                return format!("{item_str}[]").parse();
-            }
-        }
+    if let Some(Value::String(type_str)) = map.get("type")
+        && type_str == "array"
+        && let Some(Value::String(item_str)) = map.get("items")
+    {
+        return format!("{item_str}[]").parse();
     }
     Err("Could not parse type mapping".into())
 }

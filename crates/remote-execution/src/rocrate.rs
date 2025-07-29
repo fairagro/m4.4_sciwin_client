@@ -2,10 +2,10 @@ use crate::api::download_files;
 use chrono::Utc;
 use fancy_regex::Regex;
 use keyring::Entry;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
-use toml_edit::{value, DocumentMut, Item, Table};
+use toml_edit::{DocumentMut, Item, Table, value};
 use uuid::Uuid;
 
 type ScriptStep = (String, Vec<(String, String)>, Vec<(String, String)>, Option<String>);
@@ -33,12 +33,12 @@ fn extract_workflow_steps(json_data: &Value) -> Vec<(String, String)> {
     let mut steps = Vec::new();
     if let Some(graph) = json_data.pointer("/workflow/specification/$graph").and_then(|v| v.as_array()) {
         for item in graph {
-            if item.get("class").and_then(Value::as_str) == Some("Workflow") {
-                if let Some(step_array) = item.get("steps").and_then(|v| v.as_array()) {
-                    for step in step_array {
-                        if let (Some(id), Some(run)) = (step.get("id").and_then(Value::as_str), step.get("run").and_then(Value::as_str)) {
-                            steps.push((id.to_string(), run.to_string()));
-                        }
+            if item.get("class").and_then(Value::as_str) == Some("Workflow")
+                && let Some(step_array) = item.get("steps").and_then(|v| v.as_array())
+            {
+                for step in step_array {
+                    if let (Some(id), Some(run)) = (step.get("id").and_then(Value::as_str), step.get("run").and_then(Value::as_str)) {
+                        steps.push((id.to_string(), run.to_string()));
                     }
                 }
             }
@@ -158,11 +158,7 @@ fn create_howto_steps(
         .filter_map(|fp| {
             let default_value = fp.get("defaultValue").and_then(Value::as_str)?;
             let id = fp.get("@id").and_then(Value::as_str)?;
-            if input_set.contains(default_value) {
-                Some(id.to_string())
-            } else {
-                None
-            }
+            if input_set.contains(default_value) { Some(id.to_string()) } else { None }
         })
         .collect();
     if formal_ids.is_empty() {
@@ -270,11 +266,11 @@ pub fn create_files(connections: &[(String, String, String)], parts: &[String], 
         if let Some(part) = parts.iter().find(|p| p.contains(name)) {
             file_id = part;
             alt_name = part;
-        } else if let Some(glob_or_loc) = find_glob_or_location_for_id(source_id, graph).or_else(|| find_glob_or_location_for_id(target_id, graph)) {
-            if let Some(part) = parts.iter().find(|p| p.contains(&glob_or_loc)) {
-                file_id = part;
-                alt_name = part;
-            }
+        } else if let Some(glob_or_loc) = find_glob_or_location_for_id(source_id, graph).or_else(|| find_glob_or_location_for_id(target_id, graph))
+            && let Some(part) = parts.iter().find(|p| p.contains(&glob_or_loc))
+        {
+            file_id = part;
+            alt_name = part;
         }
         // Optionally use rocrate_dir here, if needed
         let full_path = if rocrate_dir.is_empty() {
