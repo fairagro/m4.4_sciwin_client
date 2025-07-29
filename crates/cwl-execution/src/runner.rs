@@ -101,7 +101,7 @@ pub fn run_workflow(
                     match value {
                         DefaultValue::Any(val) if val.is_null() => continue,
                         _ => {
-                            step_inputs.insert(parameter.id.to_string(), value.to_owned());
+                            step_inputs.insert(parameter.id.to_string(), value.clone());
                         }
                     }
                 }
@@ -409,15 +409,10 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
         .runtime
         .insert("exitCode".to_string(), StringOrNumber::Integer(status_code as u64));
 
-    match output.status.success() {
-        true => Ok(()),
-        false => {
-            if tool.get_sucess_code() == status_code {
-                Ok(()) //fails expectedly
-            } else {
-                Err(format!("command returned with code {status_code:?}").into())
-            }
-        }
+    if output.status.success() || tool.get_sucess_code() == status_code {
+        Ok(()) //fails expectedly
+    } else {
+        Err(format!("command returned with code {status_code:?}").into())
     }
 }
 

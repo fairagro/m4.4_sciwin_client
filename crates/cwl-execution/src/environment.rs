@@ -80,7 +80,7 @@ impl RuntimeEnvironment {
 
         let mut environment = RuntimeEnvironment {
             runtime,
-            time_limit: input_values.get_requirement::<ToolTimeLimit>().map(|tt| tt.timelimit).unwrap_or(0),
+            time_limit: input_values.get_requirement::<ToolTimeLimit>().map_or(0, |tt| tt.timelimit),
             inputs,
             ..Default::default()
         };

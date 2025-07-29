@@ -100,8 +100,7 @@ pub fn file_matches(requested_file: &str, candidate_path: &str) -> bool {
     Path::new(requested_file)
         .file_name()
         .and_then(|f| f.to_str())
-        .map(|file_name| candidate_path.ends_with(file_name))
-        .unwrap_or(false)
+        .is_some_and(|file_name| candidate_path.ends_with(file_name))
 }
 
 pub fn collect_files_recursive(dir: &Path, files: &mut HashSet<String>) -> Result<()> {
@@ -634,7 +633,7 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
         for (_key, value) in mapping {
             if let Value::Mapping(file_entry) = value {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(path_str)) = file_entry.get(Value::String(field.to_string())) {
+                    if let Some(Value::String(path_str)) = file_entry.get(Value::String((*field).to_string())) {
                         if file_matches(requested_file, path_str) {
                             return Ok(Some(path_str.to_string()));
                         }
@@ -655,7 +654,7 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
         for input in inputs {
             if let Some(Value::Mapping(default_map)) = input.get("default") {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(loc)) = default_map.get(Value::String(field.to_string())) {
+                    if let Some(Value::String(loc)) = default_map.get(Value::String((*field).to_string())) {
                         if file_matches(requested_file, loc) {
                             return Ok(Some(loc.to_string()));
                         }

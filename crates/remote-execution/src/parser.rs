@@ -491,8 +491,7 @@ fn convert_command_line_tool_cwl_to_json(
             .map(|cmd| {
                 replaced_entrynames
                     .get(cmd)
-                    .map(|opt| opt.as_deref().unwrap_or(cmd))
-                    .unwrap_or(cmd)
+                    .map_or(cmd.as_str(), |opt| opt.as_deref().unwrap_or(cmd.as_str()))
                     .to_string()
             })
             .collect(),
@@ -588,7 +587,7 @@ fn parse_outputs(outputs: &[CWLOutput], tool_name: &str) -> Vec<serde_json::Valu
                 "outputBinding": {
                     "glob": output.output_binding
                         .as_ref()
-                        .map_or("".to_string(), |binding| binding.glob.clone())
+                        .map_or(String::new(), |binding| binding.glob.clone())
                 },
                 "type": output.output_type
             })
@@ -602,10 +601,7 @@ fn parse_requirements(
     replaced_entrynames: &mut HashMap<String, Option<String>>,
     files: &mut Vec<String>,
 ) -> Result<Vec<serde_json::Value>> {
-    let reqs = match requirements {
-        Some(r) => r,
-        None => return Ok(vec![]),
-    };
+    let Some(reqs) = requirements else { return Ok(vec![]) };
 
     let mut parsed = Vec::new();
 
@@ -628,12 +624,9 @@ fn parse_requirements(
                 serde_json::Value::Object(map)
             }
             "InitialWorkDirRequirement" => {
-                let listing = match &req.listing {
-                    Some(l) => l,
-                    None => {
-                        parsed.push(json!({ "class": "InitialWorkDirRequirement" }));
-                        continue;
-                    }
+                let Some(listing) = &req.listing else {
+                    parsed.push(json!({ "class": "InitialWorkDirRequirement" }));
+                    continue;
                 };
 
                 let mut formatted_listing = Vec::new();
