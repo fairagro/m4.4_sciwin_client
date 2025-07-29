@@ -124,11 +124,15 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use commonwl::{CWLType, DefaultValue};
     use cwl_execution::{environment::RuntimeEnvironment, runner::run_command};
     use rstest::rstest;
     use serde_yaml::Value;
+    use serial_test::serial;
+    use test_utils::with_temp_repository;
 
     fn parse_command(command: &str) -> CommandLineTool {
         let cmd = shlex::split(command).unwrap();
@@ -238,5 +242,19 @@ mod tests {
         let tool = parse_command("pg_dump postgres://postgres:password@localhost:5432/test \\> dump.sql");
         println!("{:?}", tool.inputs[0].id);
         assert!(BAD_WORDS.iter().any(|&word| tool.inputs.iter().any(|i| !i.id.contains(word))));
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_cwl_execute_command_multiple() {
+        with_temp_repository(|dir| {
+            let command = "python scripts/echo.py --test data/input.txt";
+            let args = shlex::split(command).expect("parsing failed");
+            let cwl = parse_command_line(&args.iter().map(AsRef::as_ref).collect::<Vec<_>>());
+            assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
+
+            let output_path = dir.path().join(Path::new("results.txt"));
+            assert!(output_path.exists());
+        });
     }
 }
