@@ -9,7 +9,6 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-#[allow(dead_code)]
 pub fn setup_python(dir_str: &str) -> (String, String) {
     //windows stuff
     let ext = if cfg!(target_os = "windows") { ".exe" } else { "" };
@@ -44,7 +43,6 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
     (new_path, old_path)
 }
 
-#[allow(dead_code)]
 pub fn check_git_user() -> Result<(), git2::Error> {
     let mut config = Config::open_default()?;
     if config.get_string("user.name").is_err() {
@@ -62,7 +60,6 @@ pub fn check_git_user() -> Result<(), git2::Error> {
 }
 
 /// Sets up a temporary repository with test data
-#[allow(dead_code)]
 fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
@@ -107,7 +104,6 @@ fn set_up_repository() -> TempDir {
 
 /// Sets up a repository with the files in `tests/test_data` in tmp folder.
 /// You *must* specify `#[serial]` for those tests
-#[allow(dead_code)]
 pub fn with_temp_repository<F>(test: F)
 where
     F: FnOnce(&TempDir) + panic::UnwindSafe,
@@ -122,7 +118,6 @@ where
     dir.close().unwrap();
 }
 
-#[allow(dead_code)]
 pub fn os_path(path: &str) -> String {
     if cfg!(target_os = "windows") {
         Path::new(path).to_string_lossy().replace('/', "\\")

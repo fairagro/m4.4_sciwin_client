@@ -1,6 +1,4 @@
-mod common;
 use assert_cmd::Command;
-use common::check_git_user;
 use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
@@ -11,6 +9,7 @@ use s4n::commands::{
 use serial_test::serial;
 use std::{env, fs, path::Path};
 use tempfile::tempdir;
+use test_utils::check_git_user;
 
 #[test]
 #[serial]

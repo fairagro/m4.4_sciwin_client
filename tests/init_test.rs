@@ -1,6 +1,4 @@
-mod common;
 use calamine::{open_workbook, Reader, Xlsx};
-use common::check_git_user;
 use s4n::commands::{
     create_arc_folder_structure, create_investigation_excel_file, create_minimal_folder_structure, git_cleanup, init_git_repo, initialize_project,
 };
@@ -10,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::{tempdir, Builder, NamedTempFile};
+use test_utils::check_git_user;
 
 #[test]
 #[serial]

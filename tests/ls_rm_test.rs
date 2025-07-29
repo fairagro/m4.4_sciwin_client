@@ -8,8 +8,7 @@ use serial_test::serial;
 use std::env;
 use std::{fs, vec};
 use tempfile::tempdir;
-mod common;
-use common::with_temp_repository;
+use test_utils::with_temp_repository;
 use std::path::Path;
 
 #[test]

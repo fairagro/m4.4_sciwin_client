@@ -3988,11 +3988,11 @@ dependencies = [
  "smart-default",
  "syntect",
  "tempfile",
+ "test_utils",
  "tokio",
  "toml",
  "toml_edit 0.23.2",
  "walkdir",
- "whoami",
 ]
 
 [[package]]
@@ -5047,6 +5047,16 @@ name = "termtree"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
+
+[[package]]
+name = "test_utils"
+version = "0.7.0"
+dependencies = [
+ "git2",
+ "s4n",
+ "tempfile",
+ "whoami",
+]
 
 [[package]]
 name = "text_lines"

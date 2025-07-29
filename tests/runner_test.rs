@@ -1,5 +1,3 @@
-mod common;
-use common::with_temp_repository;
 use commonwl::{load_tool, CWLDocument, CommandLineTool, DefaultValue};
 use cwl_execution::{
     environment::RuntimeEnvironment,
@@ -13,6 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::tempdir;
+use test_utils::with_temp_repository;
 
 #[test]
 #[serial]

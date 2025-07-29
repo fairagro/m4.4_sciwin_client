@@ -1,6 +1,5 @@
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
-mod common;
-use common::{check_git_user, setup_python};
+use test_utils::{check_git_user, setup_python};
 use commonwl::{
     load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},

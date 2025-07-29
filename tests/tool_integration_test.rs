@@ -1,5 +1,3 @@
-mod common;
-use common::os_path;
 use commonwl::{
     load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
@@ -17,6 +15,7 @@ use std::{
     fs::{self, read_to_string},
     path::Path,
 };
+use test_utils::os_path;
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test() {
