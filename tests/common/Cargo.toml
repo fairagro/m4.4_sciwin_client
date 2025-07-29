@@ -11,7 +11,6 @@ publish = false
 path = "lib.rs"
 
 [dependencies]
-s4n = { path = "../../" }
 git2 = { workspace = true }
 tempfile = { workspace = true }
 whoami = "1.6.0"

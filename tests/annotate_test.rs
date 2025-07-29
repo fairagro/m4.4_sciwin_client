@@ -1,7 +1,4 @@
-use s4n::commands::{
-    annotate, annotate_container, annotate_default, annotate_field, annotate_performer, annotate_person, annotate_process_step,
-    contains_docker_requirement, get_filename, handle_annotate_commands, parse_cwl, AnnotateCommands, AnnotateProcessArgs, PerformerArgs, PersonArgs,
-};
+use s4n::commands::*;
 use serde_yaml::Value;
 use serial_test::serial;
 use std::env;

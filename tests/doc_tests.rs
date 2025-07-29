@@ -1,18 +1,15 @@
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
-use test_utils::{check_git_user, setup_python};
 use commonwl::{
     load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
     Command, Entry,
 };
 use cwl_execution::io::copy_dir;
-use s4n::commands::{
-    connect_workflow_nodes, create_tool, create_workflow, execute_local, get_workflow_status, initialize_project, list_tools, save_workflow,
-    ConnectWorkflowArgs, CreateToolArgs, CreateWorkflowArgs, LocalExecuteArgs,
-};
+use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{tempdir, TempDir};
+use test_utils::{check_git_user, setup_python};
 
 fn setup() -> (PathBuf, TempDir) {
     let dir = tempdir().unwrap();

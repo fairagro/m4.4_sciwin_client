@@ -7,7 +7,7 @@ use cwl_execution::io::copy_dir;
 use fstest::fstest;
 use git2::Repository;
 use s4n::{
-    commands::{create_tool, handle_tool_commands, CreateToolArgs, ToolCommands},
+    commands::*,
     util::repo::{commit, get_modified_files, stage_all},
 };
 use std::{

@@ -1064,6 +1064,7 @@ dependencies = [
  "serial_test",
  "sysinfo",
  "tempfile",
+ "test_utils",
  "urlencoding",
  "wait-timeout",
 ]
@@ -5053,7 +5054,6 @@ name = "test_utils"
 version = "0.7.0"
 dependencies = [
  "git2",
- "s4n",
  "tempfile",
  "whoami",
 ]

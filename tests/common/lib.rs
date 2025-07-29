@@ -1,6 +1,5 @@
 use core::panic;
-use git2::{Config, Repository};
-use s4n::util::repo::{initial_commit, stage_all};
+use git2::{Config, IndexAddOption, Repository};
 use std::{
     env::{self},
     fs::{copy, create_dir_all},
@@ -8,6 +7,21 @@ use std::{
     process::Command,
 };
 use tempfile::{tempdir, TempDir};
+
+fn initial_commit(repo: &Repository) -> Result<(), git2::Error> {
+    let mut index = repo.index()?;
+    let new_oid = index.write_tree()?;
+    let new_tree = repo.find_tree(new_oid)?;
+    let author = repo.signature()?;
+    repo.commit(Some("HEAD"), &author, &author, "Initial commit", &new_tree, &[])?;
+    Ok(())
+}
+
+fn stage_all(repo: &Repository) -> Result<(), git2::Error> {
+    let mut index = repo.index()?;
+    index.add_all(std::iter::once(&"*"), IndexAddOption::DEFAULT, None)?;
+    index.write()
+}
 
 pub fn setup_python(dir_str: &str) -> (String, String) {
     //windows stuff
@@ -64,16 +78,16 @@ fn set_up_repository() -> TempDir {
     let dir = tempdir().expect("Failed to create a temporary directory");
     create_dir_all(dir.path().join(Path::new("scripts"))).expect("Failed to create scripts-dir");
     create_dir_all(dir.path().join(Path::new("data"))).expect("Failed to create data-dir");
-
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let source_files: [(PathBuf, &str); 8] = [
-        (Path::new("./tests/test_data/echo.py").to_path_buf(), "scripts/echo.py"),
-        (Path::new("./tests/test_data/echo2.py").to_path_buf(), "scripts/echo2.py"),
-        (Path::new("./tests/test_data/echo3.py").to_path_buf(), "scripts/echo3.py"),
-        (Path::new("./tests/test_data/script_test.py").to_path_buf(), "scripts/script_test.py"),
-        (Path::new("./tests/test_data/echo_inline.py").to_path_buf(), "scripts/echo_inline.py"),
-        (Path::new("./tests/test_data/input.txt").to_path_buf(), "data/input.txt"),
-        (Path::new("./tests/test_data/input2.txt").to_path_buf(), "data/input2.txt"),
-        (Path::new("./tests/test_data/Dockerfile").to_path_buf(), "Dockerfile"),
+        (root.join("../test_data/echo.py").to_path_buf(), "scripts/echo.py"),
+        (root.join("../test_data/echo2.py").to_path_buf(), "scripts/echo2.py"),
+        (root.join("../test_data/echo3.py").to_path_buf(), "scripts/echo3.py"),
+        (root.join("../test_data/script_test.py").to_path_buf(), "scripts/script_test.py"),
+        (root.join("../test_data/echo_inline.py").to_path_buf(), "scripts/echo_inline.py"),
+        (root.join("../test_data/input.txt").to_path_buf(), "data/input.txt"),
+        (root.join("../test_data/input2.txt").to_path_buf(), "data/input2.txt"),
+        (root.join("../test_data/Dockerfile").to_path_buf(), "Dockerfile"),
     ];
 
     for (src, target) in &source_files {

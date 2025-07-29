@@ -2,10 +2,7 @@ use assert_cmd::Command;
 use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
 use predicates::prelude::*;
-use s4n::commands::{
-    connect_workflow_nodes, create_workflow, disconnect_workflow_nodes, initialize_project, list_workflows, remove_workflow, ConnectWorkflowArgs,
-    CreateWorkflowArgs, ListWorkflowArgs, RemoveWorkflowArgs,
-};
+use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::Path};
 use tempfile::tempdir;
