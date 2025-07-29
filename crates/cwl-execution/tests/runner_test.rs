@@ -149,14 +149,14 @@ requirements:
   listing:
   - entryname: tests/test_data/echo.py
     entry:
-      $include: tests/test_data/echo.py
+      $include: ../../tests/test_data/echo.py
 
 inputs:
 - id: test
   type: File
   default:
     class: File
-    location: tests/test_data/input.txt
+    location: ../../tests/test_data/input.txt
   inputBinding:
     prefix: '--test'
 
@@ -186,7 +186,7 @@ baseCommand:
 #[serial]
 pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
-    let mut tool = CWLDocument::CommandLineTool(load_tool("tests/test_data/array_test.cwl").expect("Tool parsing failed"));
+    let mut tool = CWLDocument::CommandLineTool(load_tool("../../tests/test_data/array_test.cwl").expect("Tool parsing failed"));
     let result = run_tool(
         &mut tool,
         &Default::default(),
