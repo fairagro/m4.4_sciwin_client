@@ -1,9 +1,9 @@
 use crate::utils::{collect_files_recursive, get_location, load_cwl_yaml, load_yaml_file, resolve_input_file_path, sanitize_path};
 use anyhow::{Context, Result};
 use reqwest::blocking::{Client, ClientBuilder};
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
-use serde_json::json;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde_json::Value;
+use serde_json::json;
 use std::collections::HashSet;
 use std::fs::File;
 use std::path::Path;
@@ -161,7 +161,7 @@ pub fn upload_files(
     workflow_json: &Value,
 ) -> Result<()> {
     let mut files: HashSet<String> = HashSet::new();
-    let input_yaml_value = if let Some(ref input_path) = input_yaml {
+    let input_yaml_value = if let Some(input_path) = input_yaml {
         Some(load_yaml_file(Path::new(input_path)).context("Failed to load input YAML file")?)
     } else {
         None
@@ -367,9 +367,9 @@ mod tests {
     use httpmock::Method::POST;
     use httpmock::MockServer;
     use mockito::{self, Matcher, Server};
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::fs::{create_dir_all, write};
-    use tempfile::{tempdir, NamedTempFile};
+    use tempfile::{NamedTempFile, tempdir};
 
     #[test]
     fn test_ping_reana_success() {
@@ -388,7 +388,7 @@ mod tests {
     fn test_start_workflow_failure() {
         use httpmock::{Method::POST, MockServer};
         use reqwest::blocking::Client;
-        use serde_json::{json, Value};
+        use serde_json::{Value, json};
 
         let server = MockServer::start();
 

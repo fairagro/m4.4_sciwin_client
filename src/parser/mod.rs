@@ -1,8 +1,8 @@
 use crate::split_vec_at;
 use commonwl::{
+    Argument, Command, CommandLineTool,
     inputs::{CommandInputParameter, CommandLineBinding},
     requirements::{InitialWorkDirRequirement, Requirement},
-    Argument, Command, CommandLineTool,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -30,7 +30,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
 
     let remainder = match &base_command {
         Command::Single(_) => &commands[1..],
-        Command::Multiple(ref vec) => &commands[vec.len()..],
+        Command::Multiple(vec) => &commands[vec.len()..],
     };
 
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());

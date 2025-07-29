@@ -170,6 +170,10 @@ impl DocumentBase {
             .chain(self.hints.iter_mut())
             .find_map(|req| Requirement::get_mut(req))
     }
+
+    pub fn has_requirement(&self, target: Requirement) -> bool {
+        self.requirements.iter().chain(self.hints.iter()).any(|r| r == &target)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

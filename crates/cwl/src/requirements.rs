@@ -38,7 +38,7 @@ macro_rules! impl_from_requirement {
     ($i:ident, $t:ty) => {
         impl FromRequirement<$t> for Requirement {
             fn get(req: &Requirement) -> Option<&$t> {
-                if let Requirement::$i(ref v) = req {
+                if let Requirement::$i(v) = req {
                     Some(v)
                 } else {
                     None
@@ -46,7 +46,7 @@ macro_rules! impl_from_requirement {
             }
 
             fn get_mut(req: &mut Requirement) -> Option<&mut $t> {
-                if let Requirement::$i(ref mut v) = req {
+                if let Requirement::$i(v) = req {
                     Some(v)
                 } else {
                     None

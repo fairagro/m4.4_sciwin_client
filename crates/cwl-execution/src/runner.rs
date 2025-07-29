@@ -1,6 +1,6 @@
 use crate::{
-    container_engine,
-    environment::{collect_environment, RuntimeEnvironment},
+    CommandError, InputObject, container_engine,
+    environment::{RuntimeEnvironment, collect_environment},
     execute,
     expression::{
         eval, eval_tool, evaluate_condition, load_lib, parse_expressions, prepare_expression_engine, process_expressions, replace_expressions,
@@ -15,23 +15,22 @@ use crate::{
         is_docker_installed,
     },
     validate::set_placeholder_values,
-    CommandError, InputObject,
 };
 use commonwl::{
-    inputs::CommandLineBinding,
-    requirements::{DockerRequirement, InlineJavascriptRequirement, StringOrInclude},
     Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, Entry, File, PathItem, ScatterMethod, SingularPlural,
     StringOrDocument, StringOrNumber, Workflow,
+    inputs::CommandLineBinding,
+    requirements::{DockerRequirement, InlineJavascriptRequirement, Requirement, StringOrInclude},
 };
 use log::{info, warn};
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
     error::Error,
     fs::{self},
-    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
+    path::{MAIN_SEPARATOR_STR, Path, PathBuf},
     process::Command as SystemCommand,
     time::{Duration, Instant},
 };
@@ -120,8 +119,9 @@ pub fn run_workflow(
             }
 
             //decide if we are going to use scatter or normal execution
-
-            let step_outputs = if let Some(scatter) = &step.scatter {
+            let step_outputs = if let Some(scatter) = &step.scatter
+                && workflow.has_requirement(Requirement::ScatterFeatureRequirement)
+            {
                 //get input
                 let scatter_keys = match scatter {
                     SingularPlural::Singular(item) => vec![item.clone()],
@@ -450,7 +450,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     if !cmd.is_empty() {
         args.push(cmd.to_string());
         //append rest of base command as args
-        if let Command::Multiple(ref vec) = &tool.base_command {
+        if let Command::Multiple(vec) = &tool.base_command {
             args.extend(vec[1..].iter().cloned());
         }
     }
@@ -486,7 +486,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 
     //handle inputs
     for input in tool.inputs.iter() {
-        if let Some(ref binding) = &input.input_binding {
+        if let Some(binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
             let mut sort_key = vec![SortKey::Int(position as i32), SortKey::Str(input.id.clone())];

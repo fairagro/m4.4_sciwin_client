@@ -1,14 +1,13 @@
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 use commonwl::{
-    load_tool, load_workflow,
+    Command, Entry, load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
-    Command, Entry,
 };
 use cwl_execution::io::copy_dir;
 use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use test_utils::{check_git_user, setup_python};
 
 fn setup() -> (PathBuf, TempDir) {
@@ -323,12 +322,15 @@ pub fn test_pulling_containers() {
 
     //setup python env
     let (newpath, restore) = setup_python(dir.path().to_str().unwrap());
-    env::set_var("PATH", newpath);
-
+    unsafe {
+        env::set_var("PATH", newpath);
+    }
     assert!(create_tool(args).is_ok());
 
     //restore path
-    env::set_var("PATH", restore);
+    unsafe {
+        env::set_var("PATH", restore);
+    }
 
     let tool_path = dir.path().join(format!("workflows/{name}/{name}.cwl"));
     assert!(fs::exists(&tool_path).unwrap());
@@ -378,12 +380,16 @@ pub fn test_building_custom_containers() {
 
     //setup python env
     let (newpath, restore) = setup_python(dir.path().to_str().unwrap());
-    env::set_var("PATH", newpath);
+    unsafe {
+        env::set_var("PATH", newpath);
+    }
 
     assert!(create_tool(args).is_ok());
 
     //restore path
-    env::set_var("PATH", restore);
+    unsafe {
+        env::set_var("PATH", restore);
+    }
 
     let tool_path = dir.path().join(format!("workflows/{name}/{name}.cwl"));
     assert!(fs::exists(&tool_path).unwrap());
@@ -430,7 +436,9 @@ pub fn test_example_project() {
     let (newpath, restore) = setup_python(dir_str);
 
     //modify path variable
-    env::set_var("PATH", newpath);
+    unsafe {
+        env::set_var("PATH", newpath);
+    }
 
     check_git_user().unwrap();
 
@@ -551,6 +559,8 @@ pub fn test_example_project() {
     assert!(!fs::exists("results.csv").unwrap());
     assert!(fs::exists("results.svg").unwrap());
 
-    env::set_var("PATH", restore);
+    unsafe {
+        env::set_var("PATH", restore);
+    }
     env::set_current_dir(current).unwrap();
 }

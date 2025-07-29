@@ -224,11 +224,11 @@ pub fn annotate_person(args: &PersonArgs, role: &str) -> Result<(), Box<dyn Erro
         };
 
         // Check if the selected role (author or contributor) exists and is a sequence, then add new person
-        if let Some(Value::Sequence(ref mut persons)) = mapping.get_mut(role_key) {
+        if let Some(Value::Sequence(persons)) = mapping.get_mut(role_key) {
             // Check if the person already exists
             let person_exists = persons.iter().any(|person| {
-                if let Value::Mapping(ref existing_person) = person {
-                    if let Some(Value::String(ref id)) = existing_person.get(Value::String("s:identifier".to_string())) {
+                if let Value::Mapping(existing_person) = person {
+                    if let Some(Value::String(id)) = existing_person.get(Value::String("s:identifier".to_string())) {
                         return id == &args.id.clone().unwrap_or_default();
                     }
                 }
@@ -278,11 +278,11 @@ pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), B
     let yaml_result = parse_cwl(cwl_name)?;
     let mut yaml = yaml_result;
 
-    if let Value::Mapping(ref mut mapping) = yaml {
-        if let Some(Value::Sequence(ref mut container)) = mapping.get_mut("arc:has technology type") {
+    if let Value::Mapping(mapping) = &mut yaml {
+        if let Some(Value::Sequence(container)) = mapping.get_mut("arc:has technology type") {
             // Check if the container_info already exists in the sequence
             let container_exists = container.iter().any(|existing| {
-                if let Value::Mapping(ref existing_map) = existing {
+                if let Value::Mapping(existing_map) = existing {
                     return existing_map == &container_info;
                 }
                 false
@@ -385,10 +385,10 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
 
 pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Option<&str>) -> Result<(), Box<dyn Error>> {
     let mut yaml = parse_cwl(name)?;
-    if let Value::Mapping(ref mut mapping) = yaml {
+    if let Value::Mapping(mapping) = &mut yaml {
         match mapping.get_mut(namespace_key) {
             // Handle case where the namespace key exists as a sequence
-            Some(Value::Sequence(ref mut sequence)) if key.is_none() && value.is_none() => {
+            Some(Value::Sequence(sequence)) if key.is_none() && value.is_none() => {
                 if let Some(namespace) = key {
                     // Add to sequence if not already present
                     if !sequence.iter().any(|x| matches!(x, Value::String(s) if s == namespace)) {
@@ -397,7 +397,7 @@ pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Optio
                 }
             }
             // Handle case where the namespace key exists as a mapping
-            Some(Value::Mapping(ref mut namespaces)) => {
+            Some(Value::Mapping(namespaces)) => {
                 if let (Some(key), Some(value)) = (key, value) {
                     if !namespaces.contains_key(Value::String(key.to_string())) {
                         namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
@@ -414,7 +414,7 @@ pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Optio
                     let sequence = vec![Value::String(namespace.to_string())];
                     mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(sequence.clone()));
                 } else if let Some(value) = value {
-                    if let Some(Value::Sequence(ref mut schemas)) = mapping.get_mut(namespace_key) {
+                    if let Some(Value::Sequence(schemas)) = mapping.get_mut(namespace_key) {
                         // Check if the schema URL is already in the list
                         if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == value)) {
                             // If not, add the new schema to the sequence
