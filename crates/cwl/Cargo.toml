@@ -1,11 +1,11 @@
 [package]
 name = "commonwl"
-version = "0.7.0"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
 description = "CWL Rust library, intended to be used for YAML parsing with serde"
-edition = "2021"
 readme = "README.md"
-repository = "https://github.com/fairagro/m4.4_sciwin_client"
-license = "MIT OR Apache-2.0"
 authors = [
     "Jens Krumsieck",
     "Antonia Leidel",

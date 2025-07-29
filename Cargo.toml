@@ -1,16 +1,11 @@
 [package]
 name = "s4n"
 description = "SciWIn Client: Reproducible computational Workflows made easy!"
-version = "0.7.0"
-edition = "2021"
-repository = "https://github.com/fairagro/m4.4_sciwin_client"
-license = "MIT OR Apache-2.0"
-authors = [
-    "Jens Krumsieck",
-    "Antonia Leidel",
-    "Harald von Waldow",
-    "Patrick König",
-]
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 keywords = [
     "cwl",
     "common workflow language",
@@ -76,6 +71,18 @@ whoami = "1.6.0"
 # Workspace settings
 [workspace]
 members = ["crates/*", "."]
+
+[workspace.package]
+version = "0.7.0"
+edition = "2021"
+repository = "https://github.com/fairagro/m4.4_sciwin_client"
+license = "MIT OR Apache-2.0"
+authors = [
+    "Jens Krumsieck",
+    "Antonia Leidel",
+    "Harald von Waldow",
+    "Patrick König",
+]
 
 [workspace.dependencies]
 anyhow = "1.0.98"
