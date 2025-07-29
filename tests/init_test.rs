@@ -25,7 +25,7 @@ fn test_init_s4n_without_folder() {
     // test method without folder name and do not create arc folders
     let folder_name: Option<String> = None;
     let arc = false;
-    let result = initialize_project(folder_name, arc);
+    let result = initialize_project(&folder_name, arc);
 
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
@@ -83,7 +83,7 @@ fn test_init_s4n_without_folder_with_arc() {
     let folder_name: Option<String> = None;
     let arc = true;
 
-    let result = initialize_project(folder_name, arc);
+    let result = initialize_project(&folder_name, arc);
 
     // Assert results is ok and folders exist/ do not exist
     assert!(result.is_ok());
@@ -209,7 +209,7 @@ fn test_init_s4n_with_arc() {
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
     //call method with temp dir
-    let result = initialize_project(base_folder, arc);
+    let result = initialize_project(&base_folder, arc);
 
     assert!(result.is_ok(), "Expected successful initialization");
 
@@ -231,7 +231,7 @@ fn test_init_s4n_minimal() {
     let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
     //call method with temp dir
-    let result = initialize_project(base_folder, arc);
+    let result = initialize_project(&base_folder, arc);
     println!("{result:#?}");
     assert!(result.is_ok(), "Expected successful initialization");
 

@@ -440,10 +440,10 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     let cmd = match &tool.base_command {
         Command::Single(cmd) => cmd,
         Command::Multiple(vec) => {
-            if !vec.is_empty() {
-                &vec[0]
-            } else {
+            if vec.is_empty() {
                 &String::new()
+            } else {
+                &vec[0]
             }
         }
     };
@@ -469,13 +469,13 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                         ..Default::default()
                     };
                     sort_key.push(SortKey::Int(0));
-                    sort_key.push(SortKey::Int(i as i32));
+                    sort_key.push(SortKey::Int(i32::try_from(i)?));
                     bindings.push(BoundBinding { sort_key, command: binding });
                 }
                 Argument::Binding(binding) => {
-                    let position = binding.position.unwrap_or_default() as i32;
+                    let position = i32::try_from(binding.position.unwrap_or_default())?;
                     sort_key.push(SortKey::Int(position));
-                    sort_key.push(SortKey::Int(i as i32));
+                    sort_key.push(SortKey::Int(i32::try_from(i)?));
                     bindings.push(BoundBinding {
                         sort_key,
                         command: binding.clone(),
@@ -486,11 +486,11 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     }
 
     //handle inputs
-    for input in tool.inputs.iter() {
+    for input in &tool.inputs {
         if let Some(binding) = &input.input_binding {
             let mut binding = binding.clone();
             let position = binding.position.unwrap_or_default();
-            let mut sort_key = vec![SortKey::Int(position as i32), SortKey::Str(input.id.clone())];
+            let mut sort_key = vec![SortKey::Int(i32::try_from(position)?), SortKey::Str(input.id.clone())];
 
             let value = runtime.inputs.get(&input.id);
             set_self(&value)?;
@@ -513,7 +513,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                     } else {
                         for (i, item) in vec.iter().enumerate() {
                             binding.value_from = Some(item.as_value_string());
-                            sort_key.push(SortKey::Int(i as i32));
+                            sort_key.push(SortKey::Int(i32::try_from(i)?));
                             bindings.push(BoundBinding {
                                 sort_key: sort_key.clone(),
                                 command: binding.clone(),

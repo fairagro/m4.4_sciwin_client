@@ -59,7 +59,7 @@ pub fn print_diff(old: &str, new: &str) {
                     ChangeTag::Insert => format!("{sign} {}", change.value()).green(),
                 };
 
-                print!("{old_line} {new_line} | {styled_line}")
+                print!("{old_line} {new_line} | {styled_line}");
             }
         }
     }

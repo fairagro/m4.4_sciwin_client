@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use toml_edit::{DocumentMut, Item, Table, value};
+use util::is_cwl_file;
 use uuid::Uuid;
 
 type ScriptStep = (String, Vec<(String, String)>, Vec<(String, String)>, Option<String>);
@@ -829,7 +830,7 @@ pub fn create_ro_crate_metadata_json(
         let control_id = generate_id_with_hash();
         let mut docker_id = None;
         //if CommandLineTool
-        let step_name = if id.ends_with(".cwl") {
+        let step_name = if is_cwl_file(id) {
             organize_obj_ids.push(control_id.clone());
             //create docker_entity
             if let Some(docker_pull) = docker {

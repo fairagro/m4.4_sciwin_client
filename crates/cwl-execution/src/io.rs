@@ -1,10 +1,10 @@
-use rand::{distr::Alphanumeric, Rng};
+use rand::{Rng, distr::Alphanumeric};
 use std::{
     cell::RefCell,
     ffi::OsStr,
     fs::{self},
     io::{self, Error, Write},
-    path::{Path, MAIN_SEPARATOR_STR},
+    path::{MAIN_SEPARATOR_STR, Path},
     process::Command,
 };
 
@@ -119,10 +119,10 @@ pub fn get_first_file_with_prefix<P: AsRef<Path>>(location: P, prefix: &str) -> 
 }
 
 pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
-    let prefix = if !dir.ends_with(MAIN_SEPARATOR_STR) {
-        &format!("{dir}{MAIN_SEPARATOR_STR}")
-    } else {
+    let prefix = if dir.ends_with(MAIN_SEPARATOR_STR) {
         dir
+    } else {
+        &format!("{dir}{MAIN_SEPARATOR_STR}")
     };
     path.strip_prefix(prefix).unwrap_or(path)
 }

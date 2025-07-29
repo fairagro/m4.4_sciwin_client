@@ -1,4 +1,5 @@
 use commonwl::Command;
+use util::is_cwl_file;
 use std::path::Path;
 
 pub fn get_filename_without_extension(relative_path: impl AsRef<Path>) -> String {
@@ -39,7 +40,7 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
 
     if let Some(name) = the_name {
         filename.clone_from(&name);
-        if filename.ends_with(".cwl") {
+        if is_cwl_file(&filename) {
             filename = filename.replace(".cwl", "");
         }
     }

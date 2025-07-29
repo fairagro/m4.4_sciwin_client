@@ -1,7 +1,7 @@
 use crate::config;
 use clap::{Args, Subcommand};
 use commonwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
-use cwl_execution::{execute_cwlfile, set_container_engine, ContainerEngine};
+use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use keyring::Entry;
 use remote_execution::{
     api::{
@@ -297,12 +297,11 @@ fn logout_reana() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn derive_workflow_name(file: &std::path::Path, config: &Option<config::Config>) -> String {
+fn derive_workflow_name(file: &std::path::Path, config: Option<&config::Config>) -> String {
     let file_stem = file.file_stem().unwrap_or_default().to_string_lossy();
     config
         .as_ref()
-        .map(|c| format!("{} - {}", c.workflow.name, file_stem))
-        .unwrap_or_else(|| file_stem.to_string())
+        .map_or_else(|| file_stem.to_string(), |c| format!("{} - {}", c.workflow.name, file_stem))
 }
 
 pub fn analyze_workflow_logs(logs_str: &str) {
@@ -345,7 +344,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
     } else {
         None
     };
-    let workflow_name = derive_workflow_name(file, &config);
+    let workflow_name = derive_workflow_name(file, config.as_ref());
     // Get credentials
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;

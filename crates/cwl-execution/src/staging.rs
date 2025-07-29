@@ -1,12 +1,12 @@
 use crate::{
+    InputObject,
     environment::RuntimeEnvironment,
     io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to},
-    InputObject,
 };
 use commonwl::{
+    CWLDocument, CWLType, DefaultValue, Directory, Entry, File, PathItem,
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
-    CWLDocument, CWLType, DefaultValue, Directory, Entry, File, PathItem,
 };
 use glob::glob;
 use pathdiff::diff_paths;
@@ -15,7 +15,7 @@ use std::{
     error::Error,
     fs,
     io::{self},
-    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
+    path::{MAIN_SEPARATOR_STR, Path, PathBuf},
     vec,
 };
 use urlencoding::decode;
@@ -321,10 +321,10 @@ fn stage_secondary_files(incoming_data: &DefaultValue, path: &Path) -> Result<Ve
 fn handle_filename(value: &DefaultValue) -> String {
     let join_with_basename = |location: &str, basename: &Option<String>| {
         if let Some(basename) = basename {
-            if !location.ends_with(basename) {
-                basename.to_string()
-            } else {
+            if location.ends_with(basename) {
                 location.to_string()
+            } else {
+                basename.to_string()
             }
         } else {
             location.to_string()
@@ -341,7 +341,7 @@ fn handle_filename(value: &DefaultValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::{requirements::InitialWorkDirRequirement, Directory, File, StringOrNumber};
+    use commonwl::{Directory, File, StringOrNumber, requirements::InitialWorkDirRequirement};
     use serial_test::serial;
     use std::{collections::HashMap, path::PathBuf, vec};
     use tempfile::tempdir;

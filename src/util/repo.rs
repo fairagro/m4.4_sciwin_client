@@ -123,7 +123,7 @@ mod tests {
 
     #[fstest(repo = true)]
     fn test_add_remove_submodule() {
-        initialize_project(None, false).unwrap();
+        initialize_project(&None, false).unwrap();
 
         let result = add_submodule("https://github.com/JensKrumsieck/PorphyStruct", &Some("docs".to_string()), Path::new("ps"));
         assert!(result.is_ok());

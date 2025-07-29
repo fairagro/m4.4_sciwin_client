@@ -22,7 +22,7 @@ fn setup() -> (PathBuf, TempDir) {
 
     //init
     check_git_user().unwrap();
-    initialize_project(None, false).expect("Could not init s4n");
+    initialize_project(&None, false).expect("Could not init s4n");
 
     (current, dir)
 }
@@ -443,7 +443,7 @@ pub fn test_example_project() {
     check_git_user().unwrap();
 
     //init project
-    initialize_project(None, false).expect("Could not init s4n");
+    initialize_project(&None, false).expect("Could not init s4n");
 
     //create calculation tool
     create_tool(&CreateToolArgs {

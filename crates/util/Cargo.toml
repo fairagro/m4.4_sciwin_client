@@ -1,0 +1,7 @@
+[package]
+name = "util"
+description = "top-level helper functions"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true

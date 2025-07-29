@@ -229,7 +229,7 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
         clt.base_command = match std::mem::take(&mut clt.base_command) {
             Command::Single(cmd) => Command::Single(replace_expressions(&cmd)?),
             Command::Multiple(mut vec) => {
-                for item in vec.iter_mut() {
+                for item in &mut vec {
                     *item = replace_expressions(item)?
                 }
                 Command::Multiple(vec)

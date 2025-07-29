@@ -23,14 +23,14 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> anyhow::Result<()> {
-    if let Err(e) = initialize_project(args.project.clone(), args.arc) {
+    if let Err(e) = initialize_project(&args.project, args.arc) {
         git_cleanup(args.project.clone());
         return Err(anyhow!("Could not initialize Project: {e}"));
     }
     Ok(())
 }
 
-pub fn initialize_project(folder_name: Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn initialize_project(folder_name: &Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = folder_name.as_deref();
     let repo = if is_git_repo(folder) {
         Repository::open(folder.unwrap_or("."))?

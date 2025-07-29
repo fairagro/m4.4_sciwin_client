@@ -4,6 +4,7 @@ use commonwl::format::format_cwl;
 use dialoguer::Select;
 use log::error;
 use serde_yaml::{Mapping, Value};
+use util::is_cwl_file;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
@@ -313,9 +314,7 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
     let mut yaml = parse_cwl(&args.cwl_name)?;
 
     // Ensure the root of the YAML is a mapping
-    let mapping = if let Value::Mapping(ref mut mapping) = yaml {
-        mapping
-    } else {
+    let Value::Mapping(ref mut mapping) = yaml else {
         return Err("The CWL file does not have a valid YAML mapping at its root.".into());
     };
 
@@ -493,7 +492,7 @@ pub fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
 
 pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     // Ensure the filename ends with `.cwl`
-    let filename = if name.ends_with(".cwl") {
+    let filename = if is_cwl_file(name) {
         name.to_string()
     } else {
         format!("{name}.cwl")

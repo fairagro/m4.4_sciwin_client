@@ -84,7 +84,7 @@ pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Pat
         let contents = fs::read_to_string(check)?;
         let mut values: HashMap<String, DefaultValue> = serde_json::from_str(&contents)?;
         values.retain(|k, _| tool.outputs.iter().any(|o| o.id == *k));
-        for (_, value) in values.iter_mut() {
+        for value in values.values_mut() {
             match value {
                 DefaultValue::File(file) => {
                     if let Some(path) = &file.location {
@@ -206,7 +206,7 @@ fn evaluate_output_impl(
 
                     let value = if let Some(expression) = &binding.output_eval {
                         let mut ctx = File::from_location(glob_);
-                        ctx.format = output.format.clone();
+                        ctx.format.clone_from(&output.format);
                         let mut ctx = ctx.snapshot();
                         ctx.contents = Some(contents);
                         set_self(&vec![&ctx])?;

@@ -23,7 +23,7 @@ pub fn render<R: FlowchartRenderer>(r: &mut R, cwl: &Workflow, filename: &Path, 
 
         for input in &step.in_ {
             if let Some(src) = &input.source {
-                let src_id = src.split("/").next().unwrap();
+                let src_id = src.split('/').next().unwrap();
                 r.edge(src_id, &step.id, Some(&input.id), RenderStyle::Default);
             }
         }
@@ -41,7 +41,7 @@ pub fn render<R: FlowchartRenderer>(r: &mut R, cwl: &Workflow, filename: &Path, 
         }
     }
     for output in &cwl.outputs {
-        let src = output.output_source.split("/").next().unwrap();
+        let src = output.output_source.split('/').next().unwrap();
         r.edge(src, &output.id, Some(&output.id), RenderStyle::Default);
     }
 
@@ -137,8 +137,7 @@ config:
         self.storage.push("    direction TB".to_string());
 
         match style {
-            RenderStyle::Input => self.styles.push(format!("  style {id} fill:{GRAY_LIGHT},stroke-width:2px;")),
-            RenderStyle::Output => self.styles.push(format!("  style {id} fill:{GRAY_LIGHT},stroke-width:2px;")),
+            RenderStyle::Input | RenderStyle::Output => self.styles.push(format!("  style {id} fill:{GRAY_LIGHT},stroke-width:2px;")),
             _ => unimplemented!(),
         }
     }

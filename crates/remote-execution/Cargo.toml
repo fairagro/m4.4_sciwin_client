@@ -6,6 +6,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+util = { path = "../util" }
 anyhow = { workspace = true }
 fancy-regex = { workspace = true }
 reqwest = { workspace = true }

@@ -1,5 +1,5 @@
 use crate::{
-    cwl::{highlight_cwl, Saveable},
+    cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_list,
     util::get_qualified_filename,
@@ -9,9 +9,9 @@ use anyhow::anyhow;
 use clap::{Args, Subcommand};
 use colored::Colorize;
 use commonwl::{
+    DefaultValue, Directory,
     format::format_cwl,
     requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
-    DefaultValue, Directory,
 };
 use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
 use git2::Repository;
@@ -206,11 +206,11 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
 
     if let Some(mounts) = &args.mount {
         let entries = mounts.iter().filter_map(|m| {
-            if !m.is_dir() {
+            if m.is_dir() {
+                Some(WorkDirItem::FileOrDirectory(Box::new(DefaultValue::Directory(Directory::from_path(m)))))
+            } else {
                 eprintln!("{} is not a directory and has been skipped!", m.display());
                 None
-            } else {
-                Some(WorkDirItem::FileOrDirectory(Box::new(DefaultValue::Directory(Directory::from_path(m)))))
             }
         });
 

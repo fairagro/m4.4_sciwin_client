@@ -6,7 +6,7 @@ use std::{
     path::Path,
     process::Command,
 };
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 mod git;
 pub use git::*;
@@ -47,11 +47,11 @@ pub fn setup_python(dir_str: &str) -> (String, String) {
 
 pub struct Repo<'a>(&'a Path);
 
-pub fn repository<'a>(path: &'a Path) -> Repo<'a> {
+pub fn repository(path: &Path) -> Repo<'_> {
     Repo(path)
 }
 
-impl<'a> Repo<'a> {
+impl Repo<'_> {
     pub fn dir<P: AsRef<Path>>(&self, name: P) -> &Self {
         create_dir_all(self.0.join(name)).unwrap();
         self

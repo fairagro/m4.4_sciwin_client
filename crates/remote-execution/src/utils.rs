@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use serde_yaml::Mapping;
 use serde_yaml::Value;
 use std::collections::BTreeSet;
@@ -270,9 +270,7 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
         let relative_root = pathdiff::diff_paths(&common_root, std::env::current_dir()?).unwrap_or(common_root.clone());
 
         let relative_str = relative_root.to_string_lossy().to_string();
-        if !relative_str.is_empty() {
-            directories.insert(relative_str);
-        } else {
+        if relative_str.is_empty() {
             let current_dir = std::env::current_dir().context("Failed to get current directory")?;
             for entry in fs::read_dir(&current_dir).context("Failed to read current directory")? {
                 let entry = entry.context("Failed to read entry in current directory")?;
@@ -288,6 +286,8 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<
                     }
                 }
             }
+        } else {
+            directories.insert(relative_str);
         }
     }
 
@@ -673,7 +673,7 @@ mod tests {
     use super::*;
     use serde_yaml::Value;
     use std::collections::HashSet;
-    use std::fs::{self, create_dir_all, File};
+    use std::fs::{self, File, create_dir_all};
     use std::io::Write;
     use std::path::PathBuf;
     use tempfile::tempdir;
