@@ -29,14 +29,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
-      - name: Cache Python dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-      
+            ${{ runner.os }}-cargo-      
       - name: Setup podman (because docker is shitty on windows runner)
         if: runner.os == 'windows'
         shell: powershell
@@ -53,7 +46,5 @@ jobs:
           locked: true
       - name: Build
         run: cargo build --verbose
-      - name: Install CWL Tool
-        run: pip install cwltool
       - name: Run tests
         run: cargo nextest run
