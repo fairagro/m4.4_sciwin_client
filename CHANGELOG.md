@@ -2,10 +2,10 @@
 ## 🚀 Features
 - Support Workflows in git submodules #137
 - Added `s4n install` and `s4n uninstall` commands #138
-- Runner supports scattering now
+- Runner supports scatter and linkMerge now
 
 ## 🐛 Bugfixes
-- ramping up runner conformance from 204/378 to 212/378
+- ramping up runner conformance from 204/378 to 213/378
 - staging of arrays of files and dirs
 
 ## 🚜 Refactor

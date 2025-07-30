@@ -123,6 +123,14 @@ where
     Ok(parameters)
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum LinkMerge {
+    #[serde(rename = "merge_nested")]
+    MergeNested,
+    #[serde(rename = "merge_flattened")]
+    MergeFlattened,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkflowStepInputParameter {
@@ -134,6 +142,8 @@ pub struct WorkflowStepInputParameter {
     pub default: Option<DefaultValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_merge: Option<LinkMerge>
 }
 
 impl WorkflowStepInputParameter {
