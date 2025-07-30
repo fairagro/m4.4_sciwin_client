@@ -46,9 +46,14 @@ jobs:
           podman machine init
           $Env:DOCKER_HOST = 'npipe:////./pipe/podman-machine-default'
           podman machine start
+      - name: Install cargo-nextest
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-nextest
+          locked: true
       - name: Build
         run: cargo build --verbose
       - name: Install CWL Tool
         run: pip install cwltool
       - name: Run tests
-        run: cargo test --workspace -- --nocapture
+        run: cargo nextest run
