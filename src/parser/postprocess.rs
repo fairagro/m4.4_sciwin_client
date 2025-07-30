@@ -1,8 +1,4 @@
-use commonwl::{
-    inputs::CommandInputParameter,
-    requirements::{InlineJavascriptRequirement, Requirement},
-    Argument, CWLType, CommandLineTool, DefaultValue,
-};
+use commonwl::prelude::*;
 use std::collections::HashSet;
 
 /// Applies some postprocessing to the cwl `CommandLineTool`

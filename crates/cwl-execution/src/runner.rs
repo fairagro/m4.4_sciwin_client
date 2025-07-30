@@ -16,10 +16,7 @@ use crate::{
     validate::set_placeholder_values,
 };
 use commonwl::{
-    Argument, CWLDocument, CWLType, Command, CommandLineTool, DefaultValue, Directory, File, PathItem, ScatterMethod, SingularPlural,
-    StringOrDocument, StringOrNumber, Workflow,
-    inputs::{CommandLineBinding, LinkMerge},
-    requirements::{InlineJavascriptRequirement, Requirement, StringOrInclude},
+    PathItem, ScatterMethod, SingularPlural, StringOrDocument, StringOrNumber, inputs::LinkMerge, prelude::*, requirements::StringOrInclude,
 };
 use log::{info, warn};
 use serde_yaml::Value;

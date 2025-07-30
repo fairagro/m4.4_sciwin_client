@@ -1,9 +1,5 @@
 use crate::split_vec_at;
-use commonwl::{
-    Argument, Command, CommandLineTool,
-    inputs::{CommandInputParameter, CommandLineBinding},
-    requirements::{InitialWorkDirRequirement, Requirement},
-};
+use commonwl::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 

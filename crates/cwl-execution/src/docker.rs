@@ -1,6 +1,5 @@
 use crate::environment::RuntimeEnvironment;
-use commonwl::StringOrNumber;
-use commonwl::{Entry, requirements::DockerRequirement};
+use commonwl::{requirements::DockerRequirement, Entry, StringOrNumber};
 use rand::Rng;
 use rand::distr::Alphanumeric;
 use std::cell::RefCell;
