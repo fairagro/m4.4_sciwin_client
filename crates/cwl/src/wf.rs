@@ -261,8 +261,8 @@ mod tests {
 
     #[test]
     fn test_workflow_steps() {
-        let contents = fs::read_to_string("../../tests/test_data/hello_world/workflows/main/main.cwl").unwrap();
-        let workflow: Workflow = serde_yaml::from_str(&contents).unwrap();
+        let contents = include_str!("../../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let workflow: Workflow = serde_yaml::from_str(contents).unwrap();
 
         assert!(workflow.has_step("calculation"));
         assert!(workflow.has_step("plot"));

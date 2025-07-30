@@ -1,5 +1,5 @@
 use cwl_execution::io::copy_dir;
-use s4n::commands::{execute_local, LocalExecuteArgs};
+use s4n::commands::{LocalExecuteArgs, execute_local};
 use serial_test::serial;
 use std::{
     env,
@@ -24,7 +24,7 @@ pub fn test_execute_local() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = fs::read_to_string("tests/test_data/input.txt").unwrap();
+    let expected = include_str!("test_data/input.txt");
 
     assert_eq!(contents, expected);
 
@@ -50,7 +50,7 @@ pub fn test_execute_local_with_args() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = fs::read_to_string("tests/test_data/input_alt.txt").unwrap();
+    let expected = include_str!("test_data/input_alt.txt");
 
     assert_eq!(contents, expected);
 
@@ -73,7 +73,7 @@ pub fn test_execute_local_with_file() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = fs::read_to_string("tests/test_data/input_alt.txt").unwrap();
+    let expected = include_str!("test_data/input_alt.txt");
 
     assert_eq!(contents, expected);
 
