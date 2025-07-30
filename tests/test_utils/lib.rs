@@ -3,7 +3,7 @@ use git2::Repository;
 use std::{
     env::{self},
     fs::{self, create_dir_all},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 use tempfile::{TempDir, tempdir};
@@ -63,7 +63,7 @@ impl Repo<'_> {
         self
     }
 
-    pub fn finalize(&self) {
+    pub fn finalize(&self) -> &Self{
         check_git_user().unwrap();
         let repo = Repository::init(self.0).expect("Failed to create a blank repository");
         stage_all(&repo).expect("Could not stage files");
@@ -74,6 +74,14 @@ impl Repo<'_> {
             cfg.set_str("user.email", "derp@google.de").expect("Could not set email");
         }
         initial_commit(&repo).expect("Could not create inital commit");
+        
+        self
+    }
+
+    pub fn enter(&self) -> PathBuf {
+         let current_dir = env::current_dir().unwrap();
+         env::set_current_dir(self.0).unwrap();
+         current_dir
     }
 }
 

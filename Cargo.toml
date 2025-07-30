@@ -71,7 +71,7 @@ test_utils = { workspace = true }
 
 # Workspace settings
 [workspace]
-members = ["crates/*", ".", "tests/common"]
+members = ["crates/*", ".", "tests/test_utils"]
 
 [workspace.package]
 version = "0.7.0"
@@ -106,7 +106,7 @@ toml_edit = { version = "0.23.2", features = ["serde"] }
 tempfile = "3.19.1"
 
 # dev dependencies
-test_utils = { path = "tests/common" }
+test_utils = { path = "tests/test_utils" }
 
 # Dist Settings
 [profile.dist]
