@@ -249,7 +249,6 @@ pub enum ScatterMethod {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_identifyable() {
