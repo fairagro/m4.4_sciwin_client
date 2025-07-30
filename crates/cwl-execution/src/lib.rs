@@ -2,24 +2,28 @@ pub mod environment;
 pub mod io;
 pub mod runner;
 
+mod docker;
 mod expression;
+mod inputs;
+mod outputs;
+mod preprocess;
 mod scatter;
 mod staging;
-mod util;
 mod validate;
 
+pub use docker::{ContainerEngine, container_engine, set_container_engine};
+
 use commonwl::{
-    guess_type,
+    CWLDocument, CWLType, DefaultValue, Directory, File, PathItem, guess_type,
     requirements::{FromRequirement, Requirement},
-    CWLDocument, CWLType, DefaultValue, Directory, File, PathItem,
 };
 use io::preprocess_path_join;
+use preprocess::preprocess_cwl;
 use runner::{run_tool, run_workflow};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{cell::RefCell, collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
+use std::{collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
 use sysinfo::{Disks, MemoryRefreshKind, System};
-use util::preprocess_cwl;
 
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
     //gather inputs
@@ -281,36 +285,10 @@ pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
     slices
 }
 
-#[derive(Default, Clone, Copy)]
-pub enum ContainerEngine {
-    #[default]
-    Docker,
-    Podman,
-}
-
-impl Display for ContainerEngine {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ContainerEngine::Docker => write!(f, "docker"),
-            ContainerEngine::Podman => write!(f, "podman"),
-        }
-    }
-}
-
-thread_local! {static CONTAINER_ENGINE: RefCell<ContainerEngine> = const { RefCell::new(ContainerEngine::Docker) };}
-
-pub fn set_container_engine(value: ContainerEngine) {
-    CONTAINER_ENGINE.with(|engine| *engine.borrow_mut() = value);
-}
-
-pub fn container_engine() -> ContainerEngine {
-    CONTAINER_ENGINE.with(|engine| *engine.borrow())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::{requirements::EnvVarRequirement, EnviromentDefs};
+    use commonwl::{EnviromentDefs, requirements::EnvVarRequirement};
 
     #[test]
     fn test_add_requirement() {

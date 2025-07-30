@@ -2,12 +2,10 @@ use crate::{
     expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
 };
-use commonwl::{
-    CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File, inputs::CommandInputParameter, outputs::CommandOutputParameter,
-};
+use commonwl::{CWLType, CommandLineTool, DefaultValue, Directory, ExpressionTool, File, outputs::CommandOutputParameter};
 use glob::glob;
 use log::info;
-use serde_yaml::{Mapping, Value};
+use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
@@ -15,47 +13,7 @@ use std::{
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
-
-///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input_as_string(
-    input: &CommandInputParameter,
-    input_values: &HashMap<String, DefaultValue>,
-) -> Result<String, Box<dyn Error>> {
-    Ok(evaluate_input(input, input_values)?.as_value_string())
-}
-
-///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
-    if let Some(value) = input_values.get(&input.id) {
-        if (matches!(input.type_, CWLType::Any) || input.type_.is_optional())
-            && matches!(value, DefaultValue::Any(Value::Null))
-            && let Some(default_) = &input.default
-        {
-            return Ok(default_.clone());
-        }
-
-        if value.has_matching_type(&input.type_) {
-            return Ok(value.clone());
-        } else {
-            Err(format!(
-                "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
-                &input.type_, value
-            ))?
-        }
-    } else if let Some(default_) = &input.default {
-        return Ok(default_.clone());
-    }
-
-    if let CWLType::Optional(_) = input.type_ {
-        return Ok(DefaultValue::Any(Value::Null));
-    } else {
-        Err(format!("You did not include a value for {}", input.id).as_str())?;
-    }
-
-    Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
-}
 
 pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut outputs = HashMap::new();
@@ -305,181 +263,15 @@ pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -
     Ok(dir)
 }
 
-pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String, Box<dyn Error>> {
-    let mut yaml: Value = serde_yaml::from_str(contents)?;
-    let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
-    resolve_imports(&mut yaml, path)?;
-    resolve_shortcuts(&mut yaml);
-    Ok(serde_yaml::to_string(&yaml)?)
-}
-
-fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Error>> {
-    match value {
-        Value::Mapping(map) => {
-            if map.len() == 1 {
-                if let Some(Value::String(file)) = map.get(Value::String("$import".to_string())) {
-                    let path = base_path.join(file);
-                    let contents = fs::read_to_string(&path)?;
-                    let mut imported_value: Value = serde_yaml::from_str(&contents)?;
-                    resolve_imports(&mut imported_value, path.parent().unwrap_or(base_path))?;
-                    *value = imported_value;
-                    return Ok(());
-                }
-            }
-            for val in map.values_mut() {
-                resolve_imports(val, base_path)?;
-            }
-        }
-        Value::Sequence(seq) => {
-            for val in seq.iter_mut() {
-                resolve_imports(val, base_path)?;
-            }
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
-fn resolve_shortcuts(value: &mut Value) {
-    //get inputs block
-    let mut stdin_id: Option<String> = None;
-    if let Value::Mapping(cwl) = value {
-        let inputs = cwl.get_mut("inputs").unwrap(); //block is mandatory!
-        if let Value::Mapping(map) = inputs {
-            for (id, map_val) in map {
-                //if shortcut of shortcut expand first time
-                if map_val == &Value::String("stdin".to_string()) {
-                    let mut mapping = Mapping::new();
-                    mapping.insert(Value::String("type".to_string()), Value::String("stdin".to_string()));
-                    *map_val = Value::Mapping(mapping);
-                }
-                if let Value::Mapping(map_map) = map_val {
-                    process_stdin_input(map_map, id, &mut stdin_id);
-                }
-            }
-        } else if let Value::Sequence(seq) = inputs {
-            for item in seq {
-                if let Value::Mapping(map) = item {
-                    let id_val = map.get("id").cloned().unwrap();
-                    process_stdin_input(map, &id_val, &mut stdin_id);
-                }
-            }
-        }
-
-        if let Some(stdin_id) = stdin_id {
-            cwl.insert(Value::String("stdin".to_string()), Value::String(format!("$(inputs.{stdin_id}.path)")));
-        }
-    }
-}
-
-fn process_stdin_input(map: &mut Mapping, id: &Value, stdin_id: &mut Option<String>) {
-    if let Some(Value::String(type_str)) = map.get_mut(Value::String("type".to_string())) {
-        if type_str == "stdin" {
-            *type_str = "File".to_string();
-            map.insert(Value::String("streamable".to_string()), Value::Bool(true));
-            if let Value::String(id_str) = id {
-                *stdin_id = Some(id_str.clone());
-            }
-        }
-    }
-}
-
-pub fn is_docker_installed() -> bool {
-    let output = Command::new("docker").arg("--version").output();
-
-    matches!(output, Ok(output) if output.status.success())
-}
-
 #[cfg(test)]
 mod tests {
     use std::env;
 
     use super::*;
     use crate::io::copy_dir;
-    use commonwl::{
-        inputs::CommandLineBinding,
-        outputs::{CommandOutputBinding, CommandOutputParameter},
-    };
-    use serde_yaml::{Value, value};
+    use commonwl::outputs::{CommandOutputBinding, CommandOutputParameter};
     use serial_test::serial;
     use tempfile::tempdir;
-
-    #[test]
-    pub fn test_evaluate_input() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
-        let mut values = HashMap::new();
-        values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
-
-        let evaluation = evaluate_input(&input, &values.clone()).unwrap();
-
-        assert_eq!(evaluation, values["test"]);
-    }
-
-    #[test]
-    pub fn test_evaluate_input_as_string() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"));
-        let mut values = HashMap::new();
-        values.insert("test".to_string(), DefaultValue::Any(value::Value::String("Hello!".to_string())));
-
-        let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
-
-        assert_eq!(evaluation, values["test"].as_value_string());
-    }
-
-    #[test]
-    pub fn test_evaluate_input_empty_values() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
-            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
-        let values = HashMap::new();
-        let evaluation = evaluate_input_as_string(&input, &values.clone()).unwrap();
-
-        assert_eq!(evaluation, "Nice".to_string());
-    }
-
-    #[test]
-    pub fn test_evaluate_input_no_values() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::String)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
-            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
-        let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
-
-        assert_eq!(evaluation, "Nice".to_string());
-    }
-
-    #[test]
-    pub fn test_evaluate_input_any() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
-            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
-        let evaluation = evaluate_input_as_string(&input, &HashMap::new()).unwrap();
-
-        assert_eq!(evaluation, "Nice".to_string());
-    }
-
-    #[test]
-    pub fn test_evaluate_input_any_null() {
-        let input = CommandInputParameter::default()
-            .with_id("test")
-            .with_type(CWLType::Any)
-            .with_binding(CommandLineBinding::default().with_prefix("--arg"))
-            .with_default_value(DefaultValue::Any(Value::String("Nice".to_string())));
-        let evaluation = evaluate_input_as_string(&input, &HashMap::from([("test".to_string(), DefaultValue::Any(Value::Null))])).unwrap();
-        //if any and null, take default
-        assert_eq!(evaluation, "Nice".to_string());
-    }
 
     #[test]
     #[serial]

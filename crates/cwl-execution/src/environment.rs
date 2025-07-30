@@ -1,10 +1,10 @@
 use crate::{
-    get_available_disk_space, get_available_ram, get_processor_count, util::evaluate_input, validate::set_placeholder_values_in_string, InputObject,
+    InputObject, get_available_disk_space, get_available_ram, get_processor_count, inputs::evaluate_input, validate::set_placeholder_values_in_string,
 };
 use commonwl::{
+    CWLDocument, DefaultValue, EnviromentDefs, StringOrNumber,
     inputs::CommandInputParameter,
     requirements::{EnvVarRequirement, NetworkAccess, ResourceRequirement, ToolTimeLimit},
-    CWLDocument, DefaultValue, EnviromentDefs, StringOrNumber,
 };
 use serde::Serialize;
 use std::{
