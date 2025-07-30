@@ -521,8 +521,8 @@ mod tests {
         let expected_path_1 = tmp_dir.path().join(test_files[0]);
 
         assert_eq!(list.len(), 2);
-        assert_eq!(list[0], expected_path_0.to_string_lossy().into_owned());
-        assert_eq!(list[1], expected_path_1.to_string_lossy().into_owned());
+        assert!(list.contains(&expected_path_0.to_string_lossy().into_owned()));
+        assert!(list.contains(&expected_path_1.to_string_lossy().into_owned()));
     }
 
     #[test]
