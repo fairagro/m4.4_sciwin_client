@@ -5,8 +5,9 @@
 - Runner supports scatter and linkMerge now
 
 ## 🐛 Bugfixes
-- ramping up runner conformance from 204/378 to 215/378
-- staging of arrays of files and dirs
+- ramping up runner conformance from 204/378 to 216/378
+- fixed staging of arrays of files and dirs
+- fixed staging of iwdr arrays
 
 ## 🚜 Refactor
 - Code restructuring

@@ -53,66 +53,15 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
     for requirement in requirements {
         if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
             for listing in &iwdr.listing {
-                let into_path = match listing {
-                    WorkDirItem::Dirent(dirent) => {
-                        if let Some(entryname) = &dirent.entryname {
-                            path.join(entryname)
-                        } else {
-                            let eval = match &dirent.entry {
-                                Entry::Source(src) => Path::new(src),
-                                Entry::Include(include) => &get_iwdr_src(tool_path, &include.include)?,
-                            };
-                            path.join(eval.file_name().unwrap())
-                        }
+                if let WorkDirItem::FileOrDirectory(inner) = listing
+                    && let DefaultValue::Array(vec) = &**inner
+                {
+                    for item in vec {
+                        stage_iwdr_item(&WorkDirItem::FileOrDirectory(Box::new(item.clone())), &mut staged_files, path, tool_path)?;
                     }
-                    WorkDirItem::FileOrDirectory(val) => match &**val {
-                        DefaultValue::File(file) => {
-                            let location = Path::new(file.location.as_ref().unwrap());
-                            path.join(location.file_name().unwrap())
-                        }
-                        DefaultValue::Directory(directory) => {
-                            let location = Path::new(directory.location.as_ref().unwrap());
-                            path.join(location.file_name().unwrap())
-                        }
-                        _ => unreachable!(),
-                    },
-                    WorkDirItem::Expression(_) => unreachable!(), //resolved before!
-                };
-                //stage as listing's entry name
-                let path_str = &into_path.to_string_lossy();
-                match &listing {
-                    WorkDirItem::Dirent(dirent) => match &dirent.entry {
-                        Entry::Source(src) => {
-                            if fs::exists(src).unwrap_or(false) {
-                                let src = Path::new(src); //is safer ;)
-                                if src.is_file() {
-                                    copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {src:?} to {path_str}: {e}"))?;
-                                } else {
-                                    copy_dir(src, &into_path).map_err(|e| format!("Failed to copy dir from {src:?} to {path_str}: {e}"))?;
-                                }
-                            } else {
-                                create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {into_path:?}: {e}"))?;
-                            }
-                        }
-                        Entry::Include(include) => {
-                            let path = get_iwdr_src(tool_path, &include.include)?;
-                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
-                        }
-                    },
-                    WorkDirItem::FileOrDirectory(val) => match &**val {
-                        DefaultValue::File(file) => {
-                            let path = get_iwdr_src(tool_path, file.location.as_ref().unwrap())?;
-                            copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
-                        }
-                        DefaultValue::Directory(directory) => {
-                            let path = get_iwdr_src(tool_path, directory.location.as_ref().unwrap())?;
-                            copy_dir(&path, &into_path).map_err(|e| format!("Failed to copy dir from {path:?} to {into_path:?}: {e}"))?;
-                        }
-                        _ => unreachable!(),
-                    },
-                    WorkDirItem::Expression(_) => unreachable!(),
+                } else {
+                    stage_iwdr_item(listing, &mut staged_files, path, tool_path)?;
                 }
-                staged_files.push(path_str.clone().into_owned());
             }
         } else if let Requirement::DockerRequirement(dr) = requirement {
             if let Some(Entry::Include(file)) = &dr.docker_file {
@@ -124,6 +73,72 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
     }
 
     Ok(staged_files)
+}
+
+fn stage_iwdr_item(listing: &WorkDirItem, staged_files: &mut Vec<String>, path: &Path, tool_path: &Path) -> Result<(), Box<dyn Error>> {
+    let into_path = match listing {
+        WorkDirItem::Dirent(dirent) => {
+            if let Some(entryname) = &dirent.entryname {
+                path.join(entryname)
+            } else {
+                let eval = match &dirent.entry {
+                    Entry::Source(src) => Path::new(src),
+                    Entry::Include(include) => &get_iwdr_src(tool_path, &include.include)?,
+                };
+                path.join(eval.file_name().unwrap())
+            }
+        }
+
+        WorkDirItem::FileOrDirectory(val) => match &**val {
+            DefaultValue::File(file) => {
+                let location = Path::new(file.location.as_ref().unwrap());
+                path.join(location.file_name().unwrap())
+            }
+            DefaultValue::Directory(directory) => {
+                let location = Path::new(directory.location.as_ref().unwrap());
+                path.join(location.file_name().unwrap())
+            }
+            _ => unreachable!(),
+        },
+        WorkDirItem::Expression(_) => unreachable!(), //resolved before!
+    };
+    //stage as listing's entry name
+    let path_str = &into_path.to_string_lossy();
+    match &listing {
+        WorkDirItem::Dirent(dirent) => match &dirent.entry {
+            Entry::Source(src) => {
+                if fs::exists(src).unwrap_or(false) {
+                    let src = Path::new(src); //is safer ;)
+                    if src.is_file() {
+                        copy_file(src, &into_path).map_err(|e| format!("Failed to copy file from {src:?} to {path_str}: {e}"))?;
+                    } else {
+                        copy_dir(src, &into_path).map_err(|e| format!("Failed to copy dir from {src:?} to {path_str}: {e}"))?;
+                    }
+                } else {
+                    create_and_write_file(&into_path, src).map_err(|e| format!("Failed to create file {into_path:?}: {e}"))?;
+                }
+            }
+            Entry::Include(include) => {
+                let path = get_iwdr_src(tool_path, &include.include)?;
+                copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
+            }
+        },
+        WorkDirItem::FileOrDirectory(val) => match &**val {
+            DefaultValue::File(file) => {
+                let path = get_iwdr_src(tool_path, file.location.as_ref().unwrap())?;
+                copy_file(&path, &into_path).map_err(|e| format!("Failed to copy file from {path:?} to {into_path:?}: {e}"))?;
+            }
+            DefaultValue::Directory(directory) => {
+                let path = get_iwdr_src(tool_path, directory.location.as_ref().unwrap())?;
+                copy_dir(&path, &into_path).map_err(|e| format!("Failed to copy dir from {path:?} to {into_path:?}: {e}"))?;
+            }
+            _ => unreachable!(),
+        },
+        WorkDirItem::Expression(_) => unreachable!(),
+    }
+    staged_files.push(path_str.clone().into_owned());
+
+    Ok(())
 }
 
 fn get_iwdr_src(tool_path: &Path, basepath: &String) -> Result<PathBuf, Box<dyn Error + 'static>> {
