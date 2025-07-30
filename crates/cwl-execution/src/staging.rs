@@ -151,79 +151,89 @@ fn stage_input_files(
 
     for input in inputs {
         //step ahead if not file or dir
-        if input.type_ != CWLType::File && input.type_ != CWLType::Directory {
+        if input.type_ != CWLType::File
+            && input.type_ != CWLType::Directory
+            && input.type_ != CWLType::Array(Box::new(CWLType::File))
+            && input.type_ != CWLType::Array(Box::new(CWLType::Directory))
+        {
             continue;
         }
 
         //get correct data
         let mut data = runtime.inputs.remove(&input.id).unwrap();
 
-        //handle file literals
-        if let DefaultValue::File(ref mut f) = data {
-            if f.location.is_none() {
-                if let Some(contents) = &f.contents {
-                    let dest = create_file_literal(path, contents)?;
-                    f.location = Some(dest.to_string_lossy().into_owned());
-
-                    runtime.inputs.insert(input.id.clone(), data);
-                    continue;
-                }
-            } else if let Some(location) = &f.location {
-                if location.starts_with("https://") || location.starts_with("http://") {
-                    //set updated path:
-                    let downloaded_path = download_file(location, runtime)?;
-                    f.location = Some(downloaded_path.to_string_lossy().into_owned());
-                }
+        let staged_data = if let DefaultValue::Array(vec) = &mut data {
+            //stage array of Files or Dir
+            let mut staged_array = vec![];
+            for item in vec {
+                staged_array.push(stage_item(item, input, runtime, tool_path, path, out_dir, &mut staged_files)?);
             }
-        }
 
-        let data_location = decode(&data.as_value_string()).unwrap().to_string();
-        let mut data_path = PathBuf::from(&data_location);
-
-        //check exists? otherwise search relative to tool
-        if !data_path.exists() {
-            data_path = tool_path.join(data_path);
-        }
-
-        let mut staged_filename = handle_filename(&data);
-        if let Some(tmpdir) = runtime.runtime.get("tmpdir") {
-            if let Some(diff) = diff_paths(&staged_filename, tmpdir.to_string()) {
-                staged_filename = diff.to_string_lossy().into_owned();
-            }
-        }
-        let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
-
-        let staged_filename_relative = staged_filename_relative
-            .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
-            .to_string();
-
-        let staged_path = path.join(staged_filename_relative);
-        let staged_path_str = staged_path.to_string_lossy().into_owned();
-
-        let staged_data = match &data {
-            DefaultValue::File(file) => DefaultValue::File(File {
-                location: Some(staged_path_str.clone()),
-                ..file.clone()
-            }),
-            DefaultValue::Directory(dir) => DefaultValue::Directory(Directory {
-                location: Some(staged_path_str.clone()),
-                ..dir.clone()
-            }),
-            _ => data.clone(),
+            DefaultValue::Array(staged_array)
+        } else {
+            //stage singular item
+            stage_item(&mut data, input, runtime, tool_path, path, out_dir, &mut staged_files)?
         };
+        //insert into runtime
         runtime.inputs.insert(input.id.clone(), staged_data);
-
-        if input.type_ == CWLType::File {
-            copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {data_path:?} to {staged_path:?}: {e}"))?;
-            staged_files.push(staged_path_str.clone());
-            staged_files.extend(stage_secondary_files(&data, path)?);
-            staged_files.extend(stage_secondary_inputs(&data, path, input)?);
-        } else if input.type_ == CWLType::Directory {
-            copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {data_path:?} to {staged_path:?}: {e}"))?;
-            staged_files.push(staged_path_str.clone());
-        }
     }
     Ok(staged_files)
+}
+
+/// stage single item (dir or file)
+fn stage_item(
+    data: &mut DefaultValue,
+    input: &CommandInputParameter,
+    runtime: &mut RuntimeEnvironment,
+    tool_path: &Path,
+    path: &Path,
+    out_dir: &Path,
+    staged_files: &mut Vec<String>,
+) -> Result<DefaultValue, Box<dyn Error>> {
+    //handle file literals
+    if let DefaultValue::File(f) = data {
+        if f.location.is_none() {
+            if let Some(contents) = &f.contents {
+                let dest = create_file_literal(path, contents)?;
+                f.location = Some(dest.to_string_lossy().into_owned());
+
+                return Ok(data.to_owned());
+            }
+        } else if let Some(location) = &f.location {
+            if location.starts_with("https://") || location.starts_with("http://") {
+                //set updated path:
+                let downloaded_path = download_file(location, runtime)?;
+                f.location = Some(downloaded_path.to_string_lossy().into_owned());
+            }
+        }
+    }
+
+    let (data_path, staged_path) = compute_staging_path(data, runtime, path, tool_path, out_dir);
+    let staged_path_str = staged_path.to_string_lossy().into_owned();
+
+    let staged_data = match &data {
+        DefaultValue::File(file) => DefaultValue::File(File {
+            location: Some(staged_path_str.clone()),
+            ..file.clone()
+        }),
+        DefaultValue::Directory(dir) => DefaultValue::Directory(Directory {
+            location: Some(staged_path_str.clone()),
+            ..dir.clone()
+        }),
+        _ => data.clone(),
+    };
+
+    if input.type_ == CWLType::File || input.type_ == CWLType::Array(Box::new(CWLType::File)) {
+        copy_file(&data_path, &staged_path).map_err(|e| format!("Failed to copy file from {data_path:?} to {staged_path:?}: {e}"))?;
+        staged_files.push(staged_path_str.clone());
+        staged_files.extend(stage_secondary_files(data, path)?);
+        staged_files.extend(stage_secondary_inputs(data, path, input)?);
+    } else if input.type_ == CWLType::Directory || input.type_ == CWLType::Array(Box::new(CWLType::Directory)) {
+        copy_dir(&data_path, &staged_path).map_err(|e| format!("Failed to copy directory from {data_path:?} to {staged_path:?}: {e}"))?;
+        staged_files.push(staged_path_str.clone());
+    }
+
+    Ok(staged_data)
 }
 
 /// creates a file from content
@@ -257,6 +267,30 @@ fn download_file(location: &str, runtime: &mut RuntimeEnvironment) -> Result<Pat
     } else {
         Err("Could not extract filename from URL.".into())
     }
+}
+
+fn compute_staging_path(data: &DefaultValue, runtime: &mut RuntimeEnvironment, path: &Path, tool_path: &Path, out_dir: &Path) -> (PathBuf, PathBuf) {
+    let data_location = decode(&data.as_value_string()).unwrap().to_string();
+    let mut data_path = PathBuf::from(&data_location);
+
+    //check exists? otherwise search relative to tool
+    if !data_path.exists() {
+        data_path = tool_path.join(data_path);
+    }
+
+    let mut staged_filename = handle_filename(data);
+    if let Some(tmpdir) = runtime.runtime.get("tmpdir") {
+        if let Some(diff) = diff_paths(&staged_filename, tmpdir.to_string()) {
+            staged_filename = diff.to_string_lossy().into_owned();
+        }
+    }
+    let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
+
+    let staged_filename_relative = staged_filename_relative
+        .trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR))
+        .to_string();
+
+    (data_path, path.join(staged_filename_relative))
 }
 
 fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &CommandInputParameter) -> Result<Vec<String>, Box<dyn Error>> {
@@ -427,9 +461,9 @@ mod tests {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
 
-        let test_dir = "tests/test_data/input.txt";
+        let test_file = "tests/test_data/input.txt";
 
-        let value = DefaultValue::File(File::from_location(test_dir));
+        let value = DefaultValue::File(File::from_location(test_file));
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
 
         let list = stage_input_files(
@@ -441,10 +475,39 @@ mod tests {
         )
         .unwrap();
 
-        let expected_path = tmp_dir.path().join(test_dir);
+        let expected_path = tmp_dir.path().join(test_file);
 
         assert_eq!(list.len(), 1);
         assert_eq!(list[0], expected_path.to_string_lossy().into_owned());
+    }
+
+    #[test]
+    #[serial]
+    fn test_stage_input_files_file_array() {
+        //create tmp_dir
+        let tmp_dir = tempdir().unwrap();
+
+        let test_files = ["tests/test_data/input.txt", "tests/test_data/input2.txt"];
+        let value = test_files.map(|p| DefaultValue::File(File::from_location(p)));
+        let input = CommandInputParameter::default()
+            .with_id("test")
+            .with_type(CWLType::Array(Box::new(CWLType::File)));
+
+        let list = stage_input_files(
+            &[input],
+            &mut RuntimeEnvironment::default().with_inputs(HashMap::from([("test".to_string(), DefaultValue::Array(value.to_vec()))])),
+            Path::new("../../"),
+            tmp_dir.path(),
+            &PathBuf::from(""),
+        )
+        .unwrap();
+
+        let expected_path_0 = tmp_dir.path().join(test_files[0]);
+        let expected_path_1 = tmp_dir.path().join(test_files[0]);
+
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0], expected_path_0.to_string_lossy().into_owned());
+        assert_eq!(list[1], expected_path_1.to_string_lossy().into_owned());
     }
 
     #[test]
