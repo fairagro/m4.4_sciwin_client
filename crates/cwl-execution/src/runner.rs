@@ -104,29 +104,34 @@ pub fn run_workflow(
                         }
                     }
                 }
-
-                if workflow.has_requirement(Requirement::MultipleInputFeatureRequirement) && source.starts_with("[") {
+                if source.starts_with("[") {
                     //source can be array of input IDs if this requirement is set!
-                    let array: Vec<String> = serde_yaml::from_str(source)?;
-                    let mut data = vec![];
-                    for item in array {
-                        if let Some(input) = workflow.inputs.iter().find(|i| i.id == item) {
-                            let value = evaluate_input(input, &input_values.inputs)?;
-                            match parameter.link_merge {
-                                None | Some(LinkMerge::MergeNested) => data.push(value),
-                                Some(LinkMerge::MergeFlattened) => {
-                                    if let DefaultValue::Array(vec) = value {
-                                        data.extend(vec);
-                                    } else {
-                                        return Err("Expected array for MergeFlattened".into());
+                    let array: Vec<String> = serde_yaml::from_str(source)?;                    
+                    if workflow.has_requirement(Requirement::MultipleInputFeatureRequirement) {
+                        let mut data = vec![];
+                        for item in array {
+                            if let Some(input) = workflow.inputs.iter().find(|i| i.id == item) {
+                                let value = evaluate_input(input, &input_values.inputs)?;
+                                match parameter.link_merge {
+                                    None | Some(LinkMerge::MergeNested) => data.push(value),
+                                    Some(LinkMerge::MergeFlattened) => {
+                                        if let DefaultValue::Array(vec) = value {
+                                            data.extend(vec);
+                                        } else {
+                                            return Err("Expected array for MergeFlattened".into());
+                                        }
                                     }
                                 }
+                            } else {
+                                return Err(format!("Could not find input: {item}").into());
                             }
-                        } else {
-                            return Err(format!("Could not find input: {item}").into());
                         }
+                        step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
+                    } else if array.len() == 1 && let Some(input) = workflow.inputs.iter().find(|i| i.id == array[0]) {
+                        //if requirement is not set, but array is of length 1 we use first value
+                        let value = evaluate_input(input, &input_values.inputs)?;
+                        step_inputs.insert(parameter.id.to_string(), value);
                     }
-                    step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
                 }
             }
             let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
