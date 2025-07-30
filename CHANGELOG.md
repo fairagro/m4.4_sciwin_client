@@ -5,7 +5,7 @@
 - Runner supports scatter and linkMerge now
 
 ## 🐛 Bugfixes
-- ramping up runner conformance from 204/378 to 213/378
+- ramping up runner conformance from 204/378 to 215/378
 - staging of arrays of files and dirs
 
 ## 🚜 Refactor

@@ -106,7 +106,7 @@ pub fn run_workflow(
                 }
                 if source.starts_with("[") {
                     //source can be array of input IDs if this requirement is set!
-                    let array: Vec<String> = serde_yaml::from_str(source)?;                    
+                    let array: Vec<String> = serde_yaml::from_str(source)?;
                     if workflow.has_requirement(Requirement::MultipleInputFeatureRequirement) {
                         let mut data = vec![];
                         for item in array {
@@ -127,10 +127,15 @@ pub fn run_workflow(
                             }
                         }
                         step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
-                    } else if array.len() == 1 && let Some(input) = workflow.inputs.iter().find(|i| i.id == array[0]) {
-                        //if requirement is not set, but array is of length 1 we use first value
+                    } else if array.len() == 1
+                        && let Some(input) = workflow.inputs.iter().find(|i| i.id == array[0])
+                    {
+                        //if requirement is not set, but array is of length 1 we use first value or wrap into array if linkmerge tells to do
                         let value = evaluate_input(input, &input_values.inputs)?;
-                        step_inputs.insert(parameter.id.to_string(), value);
+                        match parameter.link_merge {
+                            Some(LinkMerge::MergeFlattened) | None => step_inputs.insert(parameter.id.to_string(), value),
+                            Some(LinkMerge::MergeNested) => step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(vec![value])),
+                        };
                     }
                 }
             }
