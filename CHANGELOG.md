@@ -5,7 +5,7 @@
 - Runner supports simple scatter cases now
 
 ## 🐛 Bugfixes
-- ramping up runner conformance from 204/378 to 209/378
+- ramping up runner conformance from 204/378 to 211/378
 
 ## 🚜 Refactor
 - Code restructuring

@@ -81,7 +81,6 @@ pub fn run_workflow(
             for parameter in &step.in_ {
                 let source = parameter.source.as_deref().unwrap_or_default();
                 let source_parts: Vec<&str> = source.split('/').collect();
-
                 //try output
                 if source_parts.len() == 2
                     && let Some(out_value) = outputs.get(source)
@@ -97,7 +96,7 @@ pub fn run_workflow(
 
                 //try input
                 if let Some(input) = workflow.inputs.iter().find(|i| i.id == *source) {
-                    let value = evaluate_input(input, &input_values.inputs)?;
+                    let value = evaluate_input(input, &input_values.inputs)?;                    
                     match value {
                         DefaultValue::Any(val) if val.is_null() => continue,
                         _ => {
@@ -105,6 +104,23 @@ pub fn run_workflow(
                         }
                     }
                 }
+
+                if workflow.has_requirement(Requirement::MultipleInputFeatureRequirement) && source.starts_with("["){
+                    //source can be array of input IDs if this requirement is set!
+                    let array: Vec<String> = serde_yaml::from_str(source)?;
+                    let mut data = vec![];
+                    for item in array {
+                        if let Some(input) = workflow.inputs.iter().find(|i| i.id == item) {
+                            let value = evaluate_input(input, &input_values.inputs)?;
+                            data.push(value);
+                        }
+                        else {
+                            return Err(format!("Could not find input: {item}").into());
+                        }
+                    }
+                    step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
+                }
+
             }
             let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
             input_values.inputs = step_inputs;

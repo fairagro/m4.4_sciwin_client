@@ -1,11 +1,11 @@
 use crate::SingularPlural;
 
 use super::{
-    deserialize::{deserialize_list, Identifiable},
+    CWLDocument, DocumentBase,
+    deserialize::{Identifiable, deserialize_list},
     inputs::WorkflowStepInputParameter,
     outputs::WorkflowOutputParameter,
-    requirements::{deserialize_hints, deserialize_requirements, Requirement},
-    CWLDocument, DocumentBase,
+    requirements::{Requirement, deserialize_hints, deserialize_requirements},
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
@@ -205,7 +205,14 @@ where
             .into_iter()
             .map(|(key, value)| {
                 let id = key.as_str().ok_or_else(|| serde::de::Error::custom("Expected string key"))?;
-                let param = if let Value::String(source_str) = value {
+
+                let param = if let Value::Sequence(vec) = value {
+                    //is seq<str>
+                    let seq = vec.iter().map(|i| i.as_str().unwrap_or_default().to_string()).collect::<Vec<_>>();
+                    WorkflowStepInputParameter::default()
+                        .with_id(id)
+                        .with_source(format!("[{}]", seq.join(",")))
+                } else if let Value::String(source_str) = value {
                     WorkflowStepInputParameter::default().with_id(id).with_source(source_str)
                 } else {
                     let mut param: WorkflowStepInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
