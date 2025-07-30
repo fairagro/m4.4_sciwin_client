@@ -215,6 +215,16 @@ where
                 } else if let Value::String(source_str) = value {
                     WorkflowStepInputParameter::default().with_id(id).with_source(source_str)
                 } else {
+                    let mut value = value;
+                    //check if source uses MultipleInputFeatureRequirement notation :)
+                    if let Some(Value::Sequence(vec)) = value.get("source") {
+                        let seq = vec.iter().map(|i| i.as_str().unwrap_or_default().to_string()).collect::<Vec<_>>();
+                        
+                        if let Some(map) = value.as_mapping_mut() {
+                            map.insert(Value::String("source".to_string()), Value::String(format!("[{}]", seq.join(","))));
+                        }
+                    }
+
                     let mut param: WorkflowStepInputParameter = serde_yaml::from_value(value).map_err(serde::de::Error::custom)?;
                     param.id = id.to_string();
                     param

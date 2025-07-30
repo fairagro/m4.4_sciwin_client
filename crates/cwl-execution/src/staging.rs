@@ -162,8 +162,7 @@ fn stage_input_files(
         if let DefaultValue::File(ref mut f) = data {
             if f.location.is_none() {
                 if let Some(contents) = &f.contents {
-                    let dest = path.join(get_random_filename(".literal", ""));
-                    fs::write(&dest, contents)?;
+                    let dest = create_file_literal(path, contents)?;
                     f.location = Some(dest.to_string_lossy().into_owned());
 
                     runtime.inputs.insert(input.id.clone(), data);
@@ -171,29 +170,9 @@ fn stage_input_files(
                 }
             } else if let Some(location) = &f.location {
                 if location.starts_with("https://") || location.starts_with("http://") {
-                    //download file
-                    let client = reqwest::blocking::Client::new();
-                    let mut res = client.get(location).send()?;
-                    if res.status() != reqwest::StatusCode::OK {
-                        return Err(format!("Failed to download file from {}: {}", location, res.status()).into());
-                    }
-
-                    //get file name from url
-                    if let Some(segment) = res
-                        .url()
-                        .path_segments()
-                        .and_then(|mut segments| segments.next_back())
-                        .map(|filename| Path::new(&runtime.runtime["tmpdir"].to_string()).join(filename))
-                    {
-                        let path = Path::new(&runtime.runtime["tmpdir"].to_string()).join(segment);
-                        let mut out = fs::File::create(&path)?;
-                        io::copy(&mut res, &mut out)?;
-
-                        //set updated path:
-                        f.location = Some(path.to_string_lossy().into_owned());
-                    } else {
-                        return Err("Could not extract filename from URL.".into());
-                    }
+                    //set updated path:
+                    let downloaded_path = download_file(location, runtime)?;
+                    f.location = Some(downloaded_path.to_string_lossy().into_owned());
                 }
             }
         }
@@ -245,6 +224,39 @@ fn stage_input_files(
         }
     }
     Ok(staged_files)
+}
+
+/// creates a file from content
+fn create_file_literal(path: &Path, contents: &String) -> Result<PathBuf, Box<dyn Error>> {
+    let dest = path.join(get_random_filename(".literal", ""));
+    fs::write(&dest, contents)?;
+    Ok(dest)
+}
+
+/// downnloads a file using web client
+fn download_file(location: &str, runtime: &mut RuntimeEnvironment) -> Result<PathBuf, Box<dyn Error>> {
+    let client = reqwest::blocking::Client::new();
+    let mut res = client.get(location).send()?;
+    if res.status() != reqwest::StatusCode::OK {
+        return Err(format!("Failed to download file from {}: {}", location, res.status()).into());
+    }
+
+    //get file name from url
+    if let Some(segment) = res
+        .url()
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .map(|filename| Path::new(&runtime.runtime["tmpdir"].to_string()).join(filename))
+    {
+        let path = Path::new(&runtime.runtime["tmpdir"].to_string()).join(segment);
+        let mut out = fs::File::create(&path)?;
+        io::copy(&mut res, &mut out)?;
+
+        //set updated path:
+        Ok(path)
+    } else {
+        Err("Could not extract filename from URL.".into())
+    }
 }
 
 fn stage_secondary_inputs(incoming_data: &DefaultValue, path: &Path, input: &CommandInputParameter) -> Result<Vec<String>, Box<dyn Error>> {

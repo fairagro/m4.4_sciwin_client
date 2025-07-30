@@ -120,7 +120,6 @@ pub fn run_workflow(
                     }
                     step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
                 }
-
             }
             let mut input_values = input_values.handle_requirements(&step.requirements, &step.hints);
             input_values.inputs = step_inputs;
