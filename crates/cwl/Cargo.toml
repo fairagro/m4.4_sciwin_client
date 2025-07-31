@@ -21,7 +21,7 @@ keywords = [
 ]
 categories = ["science"]
 
-[lints] 
+[lints]
 workspace = true
 
 [dependencies]
@@ -30,4 +30,4 @@ serde_yaml = { workspace = true }
 sha1 = "0.10.6"
 
 [dev-dependencies]
-rstest = "0.26.1"
+rstest = { workspace = true }

@@ -16,7 +16,7 @@ keywords = [
 ]
 categories = ["science"]
 
-[lints] 
+[lints]
 workspace = true
 
 # https://github.com/rscarson/rustyscript/issues/332
@@ -68,9 +68,10 @@ assert_cmd = "2.0.17"
 calamine = "0.29.0"
 fstest = "0.2.4"
 predicates = "3.1.3"
-rstest = "0.26.1"
-serial_test = "3.1.1"
+
 test_utils = { workspace = true }
+rstest = { workspace = true }
+serial_test = { workspace = true }
 
 # Workspace settings
 [workspace]
@@ -110,8 +111,10 @@ tempfile = "3.19.1"
 
 # dev dependencies
 test_utils = { path = "tests/test_utils" }
+rstest = "0.26.1"
+serial_test = "3.1.1"
 
-[workspace.lints.clippy] 
+[workspace.lints.clippy]
 case_sensitive_file_extension_comparisons = "warn"
 borrow_as_ptr = "warn"
 format_collect = "warn"
