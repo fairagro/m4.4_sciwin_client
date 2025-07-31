@@ -172,8 +172,8 @@ impl DocumentBase {
             .find_map(|req| Requirement::get_mut(req))
     }
 
-    pub fn has_requirement(&self, target: Requirement) -> bool {
-        self.requirements.iter().chain(self.hints.iter()).any(|r| r == &target)
+    pub fn has_requirement(&self, target: &Requirement) -> bool {
+        self.requirements.iter().chain(self.hints.iter()).any(|r| r == target)
     }
 }
 

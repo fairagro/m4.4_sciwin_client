@@ -1,0 +1,4 @@
+disallowed-macros = [
+    { path = "std::println", reason = "do you really need to print to stdout?. Use either eprintln (most cases) or allow for specific parts using #![allow(clippy::disallowed_macros)]" },
+    { path = "std::print", reason = "do you really need to print to stdout?. Use either eprint (most cases) or allow for specific parts using #![allow(clippy::disallowed_macros)]" },
+]

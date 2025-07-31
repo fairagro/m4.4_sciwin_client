@@ -211,9 +211,9 @@ where
                     let seq = vec.iter().map(|i| i.as_str().unwrap_or_default().to_string()).collect::<Vec<_>>();
                     WorkflowStepInputParameter::default()
                         .with_id(id)
-                        .with_source(format!("[{}]", seq.join(",")))
+                        .with_source(&format!("[{}]", seq.join(",")))
                 } else if let Value::String(source_str) = value {
-                    WorkflowStepInputParameter::default().with_id(id).with_source(source_str)
+                    WorkflowStepInputParameter::default().with_id(id).with_source(&source_str)
                 } else {
                     let mut value = value;
                     //check if source uses MultipleInputFeatureRequirement notation :)

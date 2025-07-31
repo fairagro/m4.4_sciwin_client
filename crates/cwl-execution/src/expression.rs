@@ -227,7 +227,7 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
             Command::Single(cmd) => Command::Single(replace_expressions(&cmd)?),
             Command::Multiple(mut vec) => {
                 for item in &mut vec {
-                    *item = replace_expressions(item)?
+                    *item = replace_expressions(item)?;
                 }
                 Command::Multiple(vec)
             }

@@ -1,12 +1,12 @@
 use crate::util::{get_workflows_folder, repo::get_submodule_paths, resolve_path};
 use commonwl::{
+    CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, StringOrDocument, Workflow, WorkflowStep,
     inputs::{CommandInputParameter, WorkflowStepInputParameter},
     load_doc,
     outputs::WorkflowOutputParameter,
     requirements::{Requirement, WorkDirItem},
-    CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, StringOrDocument, Workflow, WorkflowStep,
 };
-use dialoguer::{theme::ColorfulTheme, Select};
+use dialoguer::{Select, theme::ColorfulTheme};
 use git2::Repository;
 use log::{info, warn};
 use std::{
@@ -17,7 +17,7 @@ use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
     parsing::SyntaxSet,
-    util::{as_24_bit_terminal_escaped, LinesWithEndings},
+    util::{LinesWithEndings, as_24_bit_terminal_escaped},
 };
 
 pub trait Connectable {
@@ -313,6 +313,7 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     }
 }
 
+#[allow(clippy::disallowed_macros)]
 pub fn highlight_cwl(yaml: &str) {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
@@ -330,17 +331,17 @@ pub fn highlight_cwl(yaml: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::{create_tool, CreateToolArgs};
+    use crate::commands::{CreateToolArgs, create_tool};
     use commonwl::{
+        CWLType, Command, Dirent, File,
         inputs::CommandLineBinding,
         requirements::{DockerRequirement, InitialWorkDirRequirement},
-        CWLType, Command, Dirent, File,
     };
     use fstest::fstest;
     use serde_yaml::Value;
     use std::{
         env,
-        path::{Path, MAIN_SEPARATOR},
+        path::{MAIN_SEPARATOR, Path},
     };
     use test_utils::os_path;
 
@@ -415,7 +416,7 @@ mod tests {
 
         assert_eq!(
             clt.inputs[0].default,
-            Some(DefaultValue::File(File::from_location(os_path("../../test_data/input.txt"))))
+            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
         );
         let requirements = &clt.requirements;
         let req_0 = &requirements[0];
@@ -424,7 +425,7 @@ mod tests {
             *req_0,
             Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
                 listing: vec![WorkDirItem::Dirent(Dirent {
-                    entry: Entry::from_file(os_path("../../test/script.py")),
+                    entry: Entry::from_file(&os_path("../../test/script.py")),
                     entryname: Some("test/script.py".to_string()),
                     ..Default::default()
                 })]
@@ -433,7 +434,7 @@ mod tests {
         assert_eq!(
             *req_1,
             Requirement::DockerRequirement(DockerRequirement {
-                docker_file: Some(Entry::from_file(os_path("../../test/data/Dockerfile"))),
+                docker_file: Some(Entry::from_file(&os_path("../../test/data/Dockerfile"))),
                 docker_image_id: Some("test".to_string()),
                 ..Default::default()
             })

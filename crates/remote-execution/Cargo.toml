@@ -5,6 +5,9 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 
+[lints] 
+workspace = true
+
 [dependencies]
 util = { path = "../util" }
 anyhow = { workspace = true }

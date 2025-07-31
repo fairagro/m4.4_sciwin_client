@@ -1,9 +1,8 @@
-use crate::types::SecondaryFileSchema;
-
 use super::{
     deserialize::Identifiable,
     types::{CWLType, DefaultValue},
 };
+use crate::types::SecondaryFileSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 use std::ops::Not;
@@ -29,7 +28,7 @@ pub struct CommandInputParameter {
 }
 
 impl CommandInputParameter {
-    pub fn with_id(mut self, id: impl ToString) -> Self {
+    pub fn with_id<T: ToString + ?Sized>(mut self, id: &T) -> Self {
         self.id = id.to_string();
         self
     }
@@ -56,7 +55,7 @@ impl Identifiable for CommandInputParameter {
     }
 
     fn set_id(&mut self, id: String) {
-        self.id = id
+        self.id = id;
     }
 }
 
@@ -76,7 +75,7 @@ pub struct CommandLineBinding {
 }
 
 impl CommandLineBinding {
-    pub fn with_prefix(mut self, prefix: impl ToString) -> Self {
+    pub fn with_prefix<T: ToString + ?Sized>(mut self, prefix: &T) -> Self {
         self.prefix = Some(prefix.to_string());
         self
     }
@@ -143,16 +142,16 @@ pub struct WorkflowStepInputParameter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub link_merge: Option<LinkMerge>
+    pub link_merge: Option<LinkMerge>,
 }
 
 impl WorkflowStepInputParameter {
-    pub fn with_id(mut self, id: impl ToString) -> Self {
+    pub fn with_id<T: ToString + ?Sized>(mut self, id: &T) -> Self {
         self.id = id.to_string();
         self
     }
 
-    pub fn with_source(mut self, source: impl ToString) -> Self {
+    pub fn with_source<T: ToString + ?Sized>(mut self, source: &T) -> Self {
         self.source = Some(source.to_string());
         self
     }

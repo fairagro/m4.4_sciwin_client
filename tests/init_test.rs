@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use calamine::{open_workbook, Reader, Xlsx};
 use s4n::commands::*;
 use serial_test::serial;

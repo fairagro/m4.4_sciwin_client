@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use s4n::commands::*;
 use serde_yaml::Value;
 use serial_test::serial;

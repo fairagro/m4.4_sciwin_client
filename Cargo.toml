@@ -16,6 +16,9 @@ keywords = [
 ]
 categories = ["science"]
 
+[lints] 
+workspace = true
+
 # https://github.com/rscarson/rustyscript/issues/332
 [patch.crates-io]
 deno_media_type = { git = 'https://github.com/denoland/deno_media_type', tag = "0.2.6" }
@@ -107,6 +110,27 @@ tempfile = "3.19.1"
 
 # dev dependencies
 test_utils = { path = "tests/test_utils" }
+
+[workspace.lints.clippy] 
+case_sensitive_file_extension_comparisons = "warn"
+borrow_as_ptr = "warn"
+format_collect = "warn"
+inefficient_to_string = "warn"
+large_types_passed_by_value = "warn"
+manual_assert = "warn"
+manual_is_variant_and = "warn"
+manual_let_else = "warn"
+manual_string_new = "warn"
+needless_pass_by_value = "warn"
+option_option = "warn"
+ptr_as_ptr = "warn"
+wildcard_imports = "warn"
+same_functions_in_if_condition = "warn"
+semicolon_if_nothing_returned = "warn"
+str_split_at_newline = "warn"
+unnecessary_join = "warn"
+unnecessary_literal_bound = "warn"
+unnecessary_semicolon = "warn"
 
 # Dist Settings
 [profile.dist]

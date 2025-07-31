@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use assert_cmd::Command;
 use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;

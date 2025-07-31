@@ -18,7 +18,7 @@ pub struct CommandOutputParameter {
 }
 
 impl CommandOutputParameter {
-    pub fn with_id(mut self, id: impl ToString) -> Self {
+    pub fn with_id<T: ToString + ?Sized>(mut self, id: &T) -> Self {
         self.id = id.to_string();
         self
     }
@@ -97,7 +97,7 @@ pub struct WorkflowOutputParameter {
 }
 
 impl WorkflowOutputParameter {
-    pub fn with_id(&mut self, id: impl ToString) -> &Self {
+    pub fn with_id<T: ToString + ?Sized>(&mut self, id: &T) -> &Self {
         self.id = id.to_string();
         self
     }

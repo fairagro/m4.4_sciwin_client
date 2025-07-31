@@ -191,6 +191,6 @@ mod tests {
 
         let environment = collect_environment(&input_values);
 
-        assert_eq!(environment["MY_ENV"], "REQUIREMENT".to_string())
+        assert_eq!(environment["MY_ENV"], "REQUIREMENT".to_string());
     }
 }

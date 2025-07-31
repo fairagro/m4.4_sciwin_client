@@ -61,7 +61,7 @@ pub fn start_workflow(
     operational_parameters: Option<HashMap<String, Value>>,
     input_parameters: Option<HashMap<String, Value>>,
     restart: bool,
-    reana_specification: serde_yaml::Value,
+    reana_specification: &serde_yaml::Value,
 ) -> Result<Value> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -235,7 +235,7 @@ pub fn upload_files(
     }
 
     if files.is_empty() {
-        println!("No files to upload found in workflow JSON.");
+        eprintln!("No files to upload found in workflow JSON.");
         return Ok(());
     }
 
@@ -297,7 +297,7 @@ pub fn upload_files(
 
 pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str, files: &[String], folder: Option<&str>) -> Result<()> {
     if files.is_empty() {
-        println!("ℹ️ No files to download.");
+        eprintln!("ℹ️ No files to download.");
         return Ok(());
     }
 
@@ -336,10 +336,10 @@ pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str
             file.write_all(&content)
                 .with_context(|| format!("❌ Failed to write to file: {}", output_path.display()))?;
 
-            println!("✅ Downloaded: {}", output_path.display());
+            eprintln!("✅ Downloaded: {}", output_path.display());
         } else {
             let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-            println!("❌ Failed to download {file_name}. Response: {error_text}");
+            eprintln!("❌ Failed to download {file_name}. Response: {error_text}");
         }
     }
 
@@ -446,7 +446,7 @@ mod tests {
 
         let yaml_equiv: serde_yaml::Value = serde_yaml::from_str(&expected_json.to_string()).expect("YAML conversion failed");
 
-        let result = start_workflow(&server.base_url(), "test_token", workflow_id, None, None, false, yaml_equiv);
+        let result = start_workflow(&server.base_url(), "test_token", workflow_id, None, None, false, &yaml_equiv);
 
         assert!(result.is_err(), "Expected error, but got Ok.");
     }

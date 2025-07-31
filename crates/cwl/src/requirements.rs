@@ -125,7 +125,7 @@ where
             }
         }
         _ => return Err(serde::de::Error::custom("Expected sequence or mapping for requirements")),
-    };
+    }
 
     Ok(requirements)
 }

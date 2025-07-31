@@ -149,7 +149,7 @@ pub fn create_action(a: Action) -> Value {
 fn create_howto_steps(
     steps: &[(String, String)],
     connections: &[(String, String, String)],
-    inputs: Vec<String>,
+    inputs: &[String],
     id: &str,
     formal_parameters: &[Value],
 ) -> Vec<serde_json::Value> {
@@ -409,6 +409,7 @@ pub fn extract_or_prompt_metadata(graph: &[Value], toml_str: &str) -> (String, S
     (name, description, license)
 }
 
+#[allow(clippy::disallowed_macros)]
 fn prompt(message: &str) -> String {
     print!("{message}");
     std::io::stdout().flush().expect("Failed to flush stdout");
@@ -883,13 +884,8 @@ pub fn create_ro_crate_metadata_json(
         } else {
             continue;
         };
-        let how_to_steps = create_howto_steps(
-            &steps,
-            connections_slice,
-            inputs.iter().map(|(_, v)| v.to_string()).collect(),
-            id,
-            &formal_params,
-        );
+        let inputs_s: Vec<_> = inputs.iter().map(|(_, v)| v.to_string()).collect();
+        let how_to_steps = create_howto_steps(&steps, connections_slice, &inputs_s, id, &formal_params);
         graph.extend(how_to_steps);
 
         let step_opt = steps.iter().find(|(_, step_id)| *step_id == *id).map(|(file, _)| file.to_string());

@@ -365,7 +365,7 @@ impl Default for File {
 }
 
 impl File {
-    pub fn from_location(location: impl ToString) -> Self {
+    pub fn from_location<T: ToString + ?Sized>(location: &T) -> Self {
         File {
             location: Some(location.to_string()),
             ..Default::default()
@@ -558,7 +558,7 @@ impl Default for Directory {
 }
 
 impl Directory {
-    pub fn from_location(location: impl ToString) -> Self {
+    pub fn from_location<T: ToString + ?Sized>(location: &T) -> Self {
         Directory {
             location: Some(location.to_string()),
             ..Default::default()
@@ -633,7 +633,7 @@ pub enum Entry {
 }
 
 impl Entry {
-    pub fn from_file(path: impl ToString) -> Entry {
+    pub fn from_file<T: ToString + ?Sized>(path: &T) -> Entry {
         Entry::Include(Include { include: path.to_string() })
     }
 }
@@ -785,7 +785,6 @@ mod tests {
 
         for input in inputs {
             let t = guess_type(input.0);
-            println!("{:?}=>{:?}", input.0, input.1);
             assert_eq!(t, input.1);
         }
     }

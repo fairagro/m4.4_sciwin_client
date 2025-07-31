@@ -58,7 +58,7 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
         let mut build = SystemCommand::new(&container_engine);
         build.args(["build", "-f", &path, "-t", docker_image_id, "."]);
         let output = build.output().expect("Could not build container!");
-        println!("{}", String::from_utf8_lossy(&output.stderr));
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
         docker_image_id
     } else {
         unreachable!()

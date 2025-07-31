@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: &Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let mut outputs = HashMap::new();
     for output in &tool.outputs {
         if let Some(result) = value.get(&output.id) {
@@ -225,7 +225,7 @@ fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue
 }
 
 pub(crate) fn get_file_metadata<P: AsRef<Path> + Debug>(path: P, format: Option<String>) -> File {
-    let mut f = File::from_location(path.as_ref().to_string_lossy());
+    let mut f = File::from_location(&path.as_ref().to_string_lossy());
     f.format = format;
     f.snapshot()
 }

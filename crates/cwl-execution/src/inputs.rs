@@ -26,7 +26,7 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
             Err(format!(
                 "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
                 &input.type_, value
-            ))?
+            ))?;
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());

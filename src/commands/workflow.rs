@@ -338,7 +338,7 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
                                 ]));
                             } else {
                                 // Print only the workflow name if not all details
-                                println!("📄 {}", workflow_name.green().bold());
+                                eprintln!("📄 {}", workflow_name.green().bold());
                             }
                         }
                     }
@@ -349,7 +349,7 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
 
     // Print the table if listing all details
     if args.list_all {
-        table.printstd();
+        table.print_tty(true)?;
     }
 
     Ok(())
@@ -447,6 +447,7 @@ pub enum Renderer {
     Dot,
 }
 
+#[allow(clippy::disallowed_macros)]
 pub fn visualize(filename: &PathBuf, renderer: &Renderer, no_defaults: bool) -> anyhow::Result<()> {
     let cwl = load_workflow(filename).map_err(|e| anyhow!("Could mot load Workflow {filename:?}: {e}"))?;
 

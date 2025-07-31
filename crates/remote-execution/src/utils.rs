@@ -372,7 +372,7 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
                                 directories.insert(sanitized_location.clone());
                             }
                             _ => {}
-                        };
+                        }
 
                         let mut param_map = Mapping::new();
                         param_map.insert(Value::String("class".to_string()), Value::String(input_type.to_string()));

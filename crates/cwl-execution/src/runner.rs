@@ -102,7 +102,7 @@ pub fn run_workflow(
                 if source.starts_with("[") {
                     //source can be array of input IDs if this requirement is set!
                     let array: Vec<String> = serde_yaml::from_str(source)?;
-                    if workflow.has_requirement(Requirement::MultipleInputFeatureRequirement) {
+                    if workflow.has_requirement(&Requirement::MultipleInputFeatureRequirement) {
                         let mut data = vec![];
                         for item in array {
                             if let Some(input) = workflow.inputs.iter().find(|i| i.id == item) {
@@ -149,7 +149,7 @@ pub fn run_workflow(
 
             //decide if we are going to use scatter or normal execution
             let step_outputs = if let Some(scatter) = &step.scatter
-                && workflow.has_requirement(Requirement::ScatterFeatureRequirement)
+                && workflow.has_requirement(&Requirement::ScatterFeatureRequirement)
             {
                 //get input
                 let scatter_keys = match scatter {
@@ -169,7 +169,7 @@ pub fn run_workflow(
                         sub_inputs.inputs.insert(k, v);
                     }
 
-                    let singular_outputs = execute_step(step, sub_inputs, &path, workflow_folder, &tmp_path)?;
+                    let singular_outputs = execute_step(step, &sub_inputs, &path, workflow_folder, &tmp_path)?;
 
                     for (key, value) in singular_outputs {
                         step_outputs.entry(key).or_default().push(value);
@@ -180,7 +180,7 @@ pub fn run_workflow(
                     .map(|(k, v)| (k, DefaultValue::Array(v)))
                     .collect::<HashMap<_, _>>()
             } else {
-                execute_step(step, input_values, &path, workflow_folder, &tmp_path)?
+                execute_step(step, &input_values, &path, workflow_folder, &tmp_path)?
             };
 
             for (key, value) in step_outputs {
@@ -264,15 +264,15 @@ pub fn run_workflow(
 
 fn execute_step(
     step: &commonwl::WorkflowStep,
-    input_values: InputObject,
+    input_values: &InputObject,
     path: &Option<PathBuf>,
     workflow_folder: &Path,
     tmp_path: &str,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let step_outputs = if let Some(path) = path {
-        execute(path, &input_values, Some(tmp_path), None)?
+        execute(path, input_values, Some(tmp_path), None)?
     } else if let StringOrDocument::Document(doc) = &step.run {
-        execute(workflow_folder, &input_values, Some(tmp_path), Some(doc))?
+        execute(workflow_folder, input_values, Some(tmp_path), Some(doc))?
     } else {
         unreachable!()
     };
@@ -355,7 +355,7 @@ pub fn run_tool(
         evaluate_command_outputs(clt, output_directory)?
     } else if let CWLDocument::ExpressionTool(et) = &tool {
         if let Some(value) = result_value {
-            evaluate_expression_outputs(et, value)?
+            evaluate_expression_outputs(et, &value)?
         } else {
             HashMap::new()
         }
@@ -557,7 +557,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             bindings.push(BoundBinding {
                 sort_key,
                 command: binding.clone(),
-            })
+            });
         }
     }
 
@@ -576,13 +576,13 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                     if shellquote {
                         args.push(format!("\"{value}\""));
                     } else {
-                        args.push(value.to_string())
+                        args.push(value.to_string());
                     }
                 } else {
-                    args.push(value.to_string())
+                    args.push(value.to_string());
                 }
             } else {
-                args.push(value.to_string())
+                args.push(value.to_string());
             }
         }
     }
@@ -747,7 +747,7 @@ stdout: output.txt"#;
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
         let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
-        print!("{}", format_command(&cmd));
+        eprint!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("docker"));
     }
 
@@ -767,7 +767,7 @@ stdout: output.txt"#;
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
         let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
-        print!("{}", format_command(&cmd));
+        eprint!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("podman"));
     }
 }

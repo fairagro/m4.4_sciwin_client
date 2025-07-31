@@ -314,7 +314,7 @@ pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
                                 ]));
                             } else {
                                 // Print only the tool name if not all details
-                                println!("📄 {}", tool_name.green().bold());
+                                eprintln!("📄 {}", tool_name.green().bold());
                             }
                         }
                     }
@@ -324,7 +324,7 @@ pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
     }
     // Print the table
     if args.list_all {
-        table.printstd();
+        table.print_tty(true)?;
     }
     Ok(())
 }

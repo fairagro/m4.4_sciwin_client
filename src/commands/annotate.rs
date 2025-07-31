@@ -4,7 +4,6 @@ use commonwl::format::format_cwl;
 use dialoguer::Select;
 use log::error;
 use serde_yaml::{Mapping, Value};
-use util::is_cwl_file;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
@@ -14,6 +13,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs, path::Path};
 use tokio::runtime::Builder;
+use util::is_cwl_file;
 
 const REST_URL_TS: &str = "https://ts4nfdi-api-gateway.prod.km.k8s.zbmed.de/api-gateway/search?query=";
 const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
@@ -455,7 +455,7 @@ pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Bo
         // Check if the field is already present for fields like `s:license`
         if let Some(existing_value) = mapping.get(Value::String(field.to_string())) {
             if existing_value == &Value::String(value.to_string()) {
-                println!("Field '{field}' already has the value '{value}'.");
+                eprintln!("Field '{field}' already has the value '{value}'.");
                 return Ok(());
             }
         }
@@ -492,11 +492,7 @@ pub fn parse_cwl(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
 
 pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
     // Ensure the filename ends with `.cwl`
-    let filename = if is_cwl_file(name) {
-        name.to_string()
-    } else {
-        format!("{name}.cwl")
-    };
+    let filename = if is_cwl_file(name) { name.to_string() } else { format!("{name}.cwl") };
 
     // Get the current working directory
     let current_dir = env::current_dir()?;
@@ -544,7 +540,7 @@ pub async fn annotate_process_step(args: &AnnotateProcessArgs) -> Result<(), Box
     if let Value::Mapping(ref mut mapping) = yaml {
         // Create a process sequence if it doesn't exist
         if mapping.contains_key(Value::String("arc:has process sequence".to_string())) {
-            println!("Process sequence already exists");
+            eprintln!("Process sequence already exists");
         } else {
             let mut process_sequence = Mapping::new();
             process_sequence.insert(Value::String("class".to_string()), Value::String("arc:process sequence".to_string()));
@@ -645,7 +641,7 @@ pub async fn process_annotation_with_mapping(value: &str, mut parameter_name: Ma
 }
 
 pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, term: String) -> Result<(String, String, String), Box<dyn Error>> {
-    println!("{}", format!("Available annotations for '{term}':").green());
+    eprintln!("{}", format!("Available annotations for '{term}':").green());
 
     // Collect elements into a vector for indexing
     let elements: Vec<&(String, String, String)> = recommendations.iter().collect();
@@ -699,7 +695,7 @@ pub async fn ts_recommendations(search_term: &str, max_recommendations: usize) -
             }
         }
     } else {
-        println!("No valid annotations found.");
+        eprintln!("No valid annotations found.");
     }
 
     select_annotation(&recommendations, search_term.to_string())

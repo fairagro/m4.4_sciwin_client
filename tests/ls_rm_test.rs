@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 use assert_cmd::Command;
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;

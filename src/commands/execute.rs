@@ -2,6 +2,7 @@ use crate::config;
 use clap::{Args, Subcommand};
 use commonwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
 use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
+use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
 use remote_execution::{
     api::{
@@ -138,7 +139,7 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
             get_workflow_status(&reana_instance, &reana_token, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
         let status = status_response["status"].as_str().unwrap_or("unknown");
         let created = status_response["created"].as_str().unwrap_or("unknown");
-        println!("{name} {status} created at {created}");
+        eprintln!("{name} {status} created at {created}");
         //if single workflow failed, get step name and logs
         if status == "failed" {
             if let Some(logs_str) = status_response["logs"].as_str() {
@@ -159,7 +160,7 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
                     get_workflow_status(&reana_instance, &reana_token, trimmed).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
                 let status = status_response["status"].as_str().unwrap_or("unknown");
                 let created = status_response["created"].as_str().unwrap_or("unknown");
-                println!("{trimmed} {status} created at {created}");
+                eprintln!("{trimmed} {status} created at {created}");
             }
         }
     }
@@ -278,10 +279,7 @@ fn get_or_prompt_credential(service: &str, key: &str, prompt: &str) -> Result<St
     match entry.get_password() {
         Ok(val) => Ok(val),
         Err(keyring::Error::NoEntry) => {
-            print!("{prompt}");
-            std::io::stdout().flush()?;
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
+            let input: String = Input::with_theme(&ColorfulTheme::default()).with_prompt(prompt).interact_text()?;
             let value = input.trim().to_string();
             entry.set_password(&value)?;
             Ok(value)
@@ -293,7 +291,7 @@ fn get_or_prompt_credential(service: &str, key: &str, prompt: &str) -> Result<St
 fn logout_reana() -> Result<(), Box<dyn Error>> {
     Entry::new("reana", "instance")?.delete_credential()?;
     Entry::new("reana", "token")?.delete_credential()?;
-    println!("✅ Successfully logged out from previous REANA instances.");
+    eprintln!("✅ Successfully logged out from previous REANA instances.");
     Ok(())
 }
 
@@ -312,8 +310,8 @@ pub fn analyze_workflow_logs(logs_str: &str) {
         let job_name = job_info["job_name"].as_str().unwrap_or("unknown");
         let logs_text = job_info["logs"].as_str().unwrap_or("");
         if status == "failed" {
-            println!("❌ Workflow execution failed at step {job_name}:");
-            println!("Logs:\n{logs_text}\n");
+            eprintln!("❌ Workflow execution failed at step {job_name}:");
+            eprintln!("Logs:\n{logs_text}\n");
             found_failure = true;
         }
     }
@@ -328,8 +326,8 @@ pub fn analyze_workflow_logs(logs_str: &str) {
                 || logs_text.contains("Traceback")
                 || logs_text.to_lowercase().contains("failed")
             {
-                println!("❌ Workflow execution failed. Workflow step {job_name} may have encountered an error:");
-                println!("Logs:\n{logs_text}\n");
+                eprintln!("❌ Workflow execution failed. Workflow step {job_name} may have encountered an error:");
+                eprintln!("Logs:\n{logs_text}\n");
             }
         }
     }
@@ -363,8 +361,8 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
         return Err("Missing workflow_name in response".into());
     };
     upload_files(&reana_instance, &reana_token, input_file, file, workflow_name, &workflow_json)?;
-    start_workflow(&reana_instance, &reana_token, workflow_name, None, None, false, converted_yaml)?;
-    println!("✅ Started workflow execution");
+    start_workflow(&reana_instance, &reana_token, workflow_name, None, None, false, &converted_yaml)?;
+    eprintln!("✅ Started workflow execution");
     if watch {
         loop {
             let status_response =
@@ -373,7 +371,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
             if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {
                     "finished" => {
-                        println!("✅ Workflow finished successfully.");
+                        eprintln!("✅ Workflow finished successfully.");
                         if let Err(e) = download_remote_results(workflow_name, &None) {
                             eprintln!("Error downloading remote results: {e}");
                         }
@@ -409,6 +407,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
     Ok(())
 }
 
+#[allow(clippy::disallowed_macros)]
 pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(filename)?;
     let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
@@ -427,6 +426,7 @@ pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
         })
         .collect::<HashMap<_, _>>();
     let yaml = serde_yaml::to_string(&template)?;
+
     println!("{yaml}");
     Ok(())
 }

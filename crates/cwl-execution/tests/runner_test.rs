@@ -177,7 +177,7 @@ baseCommand:
     //delete results.txt
     let _ = fs::remove_file("results.txt");
     match result {
-        Ok(_) => println!("success!"),
+        Ok(_) => eprintln!("success!"),
         Err(e) => eprintln!("{e:?}"),
     }
 }

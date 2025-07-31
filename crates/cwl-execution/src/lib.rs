@@ -25,6 +25,7 @@ use serde_yaml::Value;
 use std::{collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
 use sysinfo::{Disks, MemoryRefreshKind, System};
 
+#[allow(clippy::disallowed_macros)]
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
     //gather inputs
     let mut input_values = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {

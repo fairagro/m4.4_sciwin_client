@@ -40,7 +40,7 @@ pub fn print_diff(old: &str, new: &str) {
     let diff = TextDiff::from_lines(old, new);
     for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
         if idx > 0 {
-            println!("{:-^1$}", "-", 80); //print line to separate groups
+            eprintln!("{:-^1$}", "-", 80); //print line to separate groups
         }
 
         for op in group {
@@ -59,7 +59,7 @@ pub fn print_diff(old: &str, new: &str) {
                     ChangeTag::Insert => format!("{sign} {}", change.value()).green(),
                 };
 
-                print!("{old_line} {new_line} | {styled_line}");
+                eprint!("{old_line} {new_line} | {styled_line}");
             }
         }
     }

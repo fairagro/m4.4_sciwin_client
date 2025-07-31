@@ -236,7 +236,6 @@ mod tests {
     #[test]
     pub fn test_badwords() {
         let tool = parse_command("pg_dump postgres://postgres:password@localhost:5432/test \\> dump.sql");
-        println!("{:?}", tool.inputs[0].id);
         assert!(BAD_WORDS.iter().any(|&word| tool.inputs.iter().any(|i| !i.id.contains(word))));
     }
 

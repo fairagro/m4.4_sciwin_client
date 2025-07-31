@@ -1,3 +1,4 @@
+#![allow(clippy::disallowed_macros)]
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 use commonwl::{
     Command, Entry, load_tool, load_workflow,
