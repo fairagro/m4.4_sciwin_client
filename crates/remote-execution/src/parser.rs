@@ -1,5 +1,6 @@
 use crate::utils::{build_inputs_cwl, build_inputs_yaml, get_all_outputs, get_location, load_cwl_yaml, read_file_content, sanitize_path};
 use anyhow::{Context, Result};
+use commonwl::Command as BaseCommand;
 use serde::Deserializer;
 use serde::{Deserialize, Serialize, de};
 use serde_json::json;
@@ -161,13 +162,6 @@ struct CWLRequirement {
 struct CWLListing {
     entryname: Option<String>,
     entry: Option<serde_yaml::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum BaseCommand {
-    Single(String),
-    Multiple(Vec<String>),
 }
 
 #[derive(Debug, Serialize)]

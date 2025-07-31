@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 util = { path = "../util" }
+commonwl = { path = "../cwl" }
 anyhow = { workspace = true }
 fancy-regex = { workspace = true }
 reqwest = { workspace = true }
