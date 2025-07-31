@@ -285,6 +285,7 @@ pub fn get_workflow_status(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::disallowed_macros)]
 pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
     // Print the current working directory
     let cwd = env::current_dir()?;
@@ -337,7 +338,7 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
                                 ]));
                             } else {
                                 // Print only the workflow name if not all details
-                                eprintln!("📄 {}", workflow_name.green().bold());
+                                println!("📄 {}", workflow_name.green().bold());
                             }
                         }
                     }
