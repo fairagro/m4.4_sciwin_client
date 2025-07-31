@@ -54,6 +54,24 @@ pub fn ping_reana(reana_server: &str) -> Result<Value> {
     Ok(json_response)
 }
 
+pub fn get_reana_user(reana_server: &str, reana_token: &str) -> Result<Value> {
+    let user_url = format!("{reana_server}/api/you?access_token={reana_token}");
+
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .context("Failed to build HTTP client")?;
+
+    let response = client
+        .get(&user_url)
+        .send()
+        .with_context(|| format!("Failed to send GET request to '{user_url}'"))?;
+
+    let json_response: Value = response.json().with_context(|| format!("Failed to parse JSON from '{user_url}'"))?;
+
+    Ok(json_response)
+}
+
 pub fn start_workflow(
     reana_server: &str,
     reana_token: &str,

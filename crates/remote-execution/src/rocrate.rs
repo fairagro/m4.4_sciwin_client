@@ -677,7 +677,7 @@ fn classify_and_prefix_params(id: &str, inputs: &[(String, String)], outputs: &[
         .collect()
 }
 
-fn get_or_prompt_credential(service: &str, key: &str, prompt_msg: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_or_prompt_credential(service: &str, key: &str, prompt_msg: &str) -> Result<String, Box<dyn std::error::Error>> {
     let entry = Entry::new(service, key)?;
 
     match entry.get_password() {

@@ -10,6 +10,7 @@ use remote_execution::{
     },
     parser::generate_workflow_json_from_cwl,
     rocrate::create_ro_crate,
+    arc_rocrate::workflow_json_to_arc_rocrate,
 };
 use serde_yaml::{Number, Value};
 use std::fs::OpenOptions;
@@ -30,7 +31,7 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
             } => execute_remote_start(file, input_file, *rocrate, *watch, *logout),
             RemoteSubcommands::Status { workflow_name } => check_remote_status(workflow_name),
             RemoteSubcommands::Download { workflow_name, output_dir } => download_remote_results(workflow_name, output_dir),
-            RemoteSubcommands::Rocrate { workflow_name, output_dir } => export_rocrate(workflow_name, output_dir),
+            RemoteSubcommands::Rocrate { workflow_name, output_dir, arc } => export_rocrate(workflow_name, output_dir, *arc),
             RemoteSubcommands::Logout => logout_reana(),
         },
         ExecuteCommands::MakeTemplate(args) => make_template(&args.cwl),
@@ -111,6 +112,8 @@ pub enum RemoteSubcommands {
             help = "Optional directory to save RO-Crate to, default rocrate"
         )]
         output_dir: Option<String>,
+        #[arg(short = 'a', long = "arc", help = "Export RO-Crate in ARC format")]
+        arc: bool,
     },
     #[command(about = "Delete reana information from credential storage (a.k.a logout)")]
     Logout,
@@ -206,7 +209,7 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
     Ok(())
 }
 
-pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Result<(), Box<dyn Error>> {
+pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>, arc: bool) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
     // Get workflow status, only export if finished?
@@ -235,15 +238,19 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Res
                 .and_then(|items| items.as_array())
                 .map(|array| array.iter().filter_map(|item| item.get("name")?.as_str().map(String::from)).collect())
                 .unwrap_or_default();
-            create_ro_crate(
-                specification,
-                &logs_str,
-                &conforms_to,
-                ro_crate_dir.clone(),
-                &workspace_files,
-                workflow_name,
-                &config_str,
-            )?;
+            if arc {
+                workflow_json_to_arc_rocrate(specification,ro_crate_dir.as_deref().unwrap_or("run"));
+            } else {
+                create_ro_crate(
+                    specification,
+                    &logs_str,
+                    &conforms_to,
+                    ro_crate_dir.clone(),
+                    &workspace_files,
+                    workflow_name,
+                    &config_str,
+                )?;
+            }
         }
         "failed" => {
             let logs = get_workflow_status(&reana_instance, &reana_token, workflow_name)?;
@@ -378,7 +385,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
                             eprintln!("Error downloading remote results: {e}");
                         }
                         if rocrate {
-                            if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string())) {
+                            if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string()), false) {
                                 eprintln!("Error trying to create a Provenance RO-Crate: {e}");
                             }
                         }
