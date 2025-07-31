@@ -2,19 +2,18 @@ use crate::{
     cwl::Connectable,
     print_diff,
     util::{
-        get_workflows_folder, render,
+        DotRenderer, MermaidRenderer, get_workflows_folder, render,
         repo::{commit, stage_file},
-        DotRenderer, MermaidRenderer,
     },
 };
 use anyhow::anyhow;
 use clap::{Args, Subcommand, ValueEnum};
 use colored::Colorize;
-use commonwl::{format::format_cwl, load_tool, load_workflow, CWLDocument, StringOrDocument, Workflow};
+use commonwl::{CWLDocument, StringOrDocument, Workflow, format::format_cwl, load_tool, load_workflow};
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;
 use log::{error, info};
-use prettytable::{row, Cell, Row, Table};
+use prettytable::{Cell, Row, Table, row};
 use serde_yaml::Value;
 use std::{
     env, fs,
@@ -349,7 +348,7 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
 
     // Print the table if listing all details
     if args.list_all {
-        table.print_tty(true)?;
+        table.printstd();
     }
 
     Ok(())

@@ -255,6 +255,7 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::disallowed_macros)]
 pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
     // Print the current working directory
     let cwd = env::current_dir()?;
@@ -314,7 +315,7 @@ pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
                                 ]));
                             } else {
                                 // Print only the tool name if not all details
-                                eprintln!("📄 {}", tool_name.green().bold());
+                                println!("📄 {}", tool_name.green().bold());
                             }
                         }
                     }
@@ -324,7 +325,7 @@ pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
     }
     // Print the table
     if args.list_all {
-        table.print_tty(true)?;
+        table.printstd();
     }
     Ok(())
 }
