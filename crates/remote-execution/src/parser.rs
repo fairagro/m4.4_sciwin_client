@@ -1,6 +1,6 @@
 use crate::utils::{build_inputs_cwl, build_inputs_yaml, get_all_outputs, get_location, load_cwl_yaml, read_file_content, sanitize_path};
 use anyhow::{Context, Result};
-use commonwl::Command as BaseCommand;
+use commonwl::{prelude::*, Command as BaseCommand};
 use serde::Deserializer;
 use serde::{Deserialize, Serialize, de};
 use serde_json::json;
@@ -69,7 +69,7 @@ struct CWLCommandLineTool {
 struct CWLInput {
     id: String,
     #[serde(rename = "type")]
-    input_type: String,
+    input_type: CWLType,
     default: Option<serde_yaml::Value>,
     input_binding: Option<CWLInputBinding>,
 }
@@ -79,7 +79,7 @@ struct CWLInput {
 struct CWLOutput {
     id: String,
     #[serde(rename = "type")]
-    output_type: Option<String>,
+    output_type: Option<CWLType>,
     #[serde(rename = "outputSource")]
     output_source: Option<serde_yaml::Value>,
     output_binding: Option<CWLOutputBinding>,

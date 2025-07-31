@@ -3,7 +3,9 @@ use serde_yaml::{Mapping, Number, Value};
 use sha1::{Digest, Sha1};
 use std::{
     collections::HashMap,
-    env, fs,
+    env,
+    fmt::Display,
+    fs,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -52,6 +54,12 @@ impl FromStr for CWLType {
                 _ => Err(format!("Invalid CWLType: {s}")),
             }
         }
+    }
+}
+
+impl Display for CWLType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serialize_type(self))
     }
 }
 
