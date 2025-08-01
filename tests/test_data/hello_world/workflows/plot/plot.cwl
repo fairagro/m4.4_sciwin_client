@@ -24,7 +24,7 @@ inputs:
     prefix: '--results'
 
 outputs:
-- id: results
+- id: o_results
   type: File
   outputBinding:
     glob: results.svg

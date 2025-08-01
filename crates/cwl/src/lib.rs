@@ -131,6 +131,7 @@ impl CWLDocument {
 #[serde(rename_all = "camelCase")]
 pub struct DocumentBase {
     pub class: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwl_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,

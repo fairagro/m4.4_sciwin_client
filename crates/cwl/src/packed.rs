@@ -63,6 +63,8 @@ fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>) ->
         graph.extend(pack_step(step, wf_dir, &wf_id)?);
     }
     let cwl_version = wf.cwl_version.as_ref().map_or("v1.2".to_string(), |v| v.clone());
+    wf.cwl_version = None;
+
     graph.push(CWLDocument::Workflow(wf));
 
     Ok(PackedCWL { graph, cwl_version })
@@ -81,7 +83,6 @@ fn pack_commandlinetool(tool: &mut CommandLineTool, filename: impl AsRef<Path>, 
     }
 
     let id = tool.id.clone().unwrap();
-
     for input in &mut tool.inputs {
         pack_input(input, &id, tool_dir);
     }
@@ -173,25 +174,41 @@ fn pack_entry(entry: &mut Entry, doc_dir: impl AsRef<Path>) -> Result<(), Box<dy
 
 fn pack_step(step: &mut WorkflowStep, wf_dir: impl AsRef<Path>, wf_id: &str) -> Result<Vec<CWLDocument>, Box<dyn Error>> {
     let step_id = format!("{wf_id}/{}", step.id);
-    let packed_graph = match &mut step.run {
+    step.id = step_id.to_string();
+
+    let mut packed_graph = match &mut step.run {
         StringOrDocument::String(filename) => {
             let path = Path::new(filename);
             let path = if path.is_absolute() { path } else { &wf_dir.as_ref().join(path) };
+            let filename = if let Some(filename) = path.file_name() {
+                filename.to_string_lossy().into_owned()
+            } else {
+                format!("{step_id}.cwl")
+            };
+            let step_hash = format!("#{filename}");
             let cwl = load_doc(path)?;
-            let graph = pack_cwl(&cwl, wf_dir.as_ref().join(&step.id), Some(&step_id))?;
+            let graph = pack_cwl(&cwl, path, Some(&step_hash))?;
 
-            step.run = StringOrDocument::String(step_id);
+            step.run = StringOrDocument::String(step_hash);
             graph
         }
         StringOrDocument::Document(doc) => {
-            let graph = pack_cwl(doc, wf_dir.as_ref().join(&step.id), Some(&step_id))?;
+            let step_hash = format!("#{step_id}.cwl");
+            let graph = pack_cwl(doc, wf_dir.as_ref().join(&step.id), Some(&step_hash))?;
 
-            step.run = StringOrDocument::String(step_id);
+            step.run = StringOrDocument::String(step_hash);
             graph
         }
     };
 
-    Ok(packed_graph)
+    //todo: alter step.in and step.out to have right ids
+
+    let packed_graph = &mut packed_graph;
+    for item in packed_graph.iter_mut() {
+        item.cwl_version = None;
+    }
+
+    Ok(packed_graph.to_owned())
 }
 
 #[cfg(test)]
@@ -200,6 +217,7 @@ mod tests {
     use crate::{
         CWLType, Command, Dirent, File, Include,
         inputs::CommandLineBinding,
+        load_workflow,
         outputs::CommandOutputBinding,
         prelude::{DockerRequirement, InitialWorkDirRequirement, Requirement},
     };
@@ -341,6 +359,18 @@ mod tests {
 
     #[test]
     fn test_pack_workflow() {
-        todo!()
+        let file = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+        let wf = load_workflow(file).unwrap();
+
+        let mut packed = pack_workflow(&wf, file, None).unwrap();
+        packed.graph.sort_by(|a, b| a.id.cmp(&b.id));
+        let json = serde_json::json!(&packed);
+
+        let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+        let reference_json =
+            include_str!("../../../tests/test_data/packed/main_packed.cwl").replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy());
+
+        let value: Value = serde_json::from_str(&reference_json).unwrap();
+        assert_eq!(json, value);
     }
 }
