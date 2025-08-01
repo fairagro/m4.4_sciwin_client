@@ -149,51 +149,36 @@ pub fn create_action(a: Action) -> Value {
 fn create_howto_steps(
     steps: &[(String, String)],
     connections: &[(String, String, String)],
-    inputs: &[String],
     id: &str,
-    formal_parameters: &[Value],
 ) -> Vec<serde_json::Value> {
-    let input_set: HashSet<&str> = inputs.iter().map(|s| s.as_str()).collect();
-    let formal_ids: HashSet<String> = formal_parameters
-        .iter()
-        .filter_map(|fp| {
-            let default_value = fp.get("defaultValue").and_then(Value::as_str)?;
-            let id = fp.get("@id").and_then(Value::as_str)?;
-            if input_set.contains(default_value) { Some(id.to_string()) } else { None }
-        })
-        .collect();
-    if formal_ids.is_empty() {
-        return Vec::new();
-    }
-    let new_connections = connections
-        .iter()
-        .filter_map(|(_, target, conn_id)| {
-            if formal_ids.contains(target) {
-                Some(json!({ "@id": conn_id }))
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<Value>>();
-    steps
-        .iter()
-        .enumerate()
-        .filter_map(|(i, (step_id, step_id_match))| {
-            if step_id_match == id {
-                Some(json!({
-                    "@id": format!("workflow.json{}", step_id),
-                    "@type": "HowToStep",
-                    "position": i.to_string(),
-                    "connection": new_connections,
-                    "workExample": {
-                        "@id": format!("workflow.json{}", id.rsplit('/').next().unwrap_or(""))
+    let mut result = Vec::new();
+    for (i, (step_id, step_id_match)) in steps.iter().enumerate() {
+        if step_id_match == id {
+            // Find connections for this step
+            let step_connections: Vec<Value> = connections
+                .iter()
+                .filter_map(|(_, target, conn_id)| {
+                    // Only include connections where target starts with this step's id
+                    if target.starts_with(&format!("workflow.json{id}")) {
+                        Some(json!({ "@id": conn_id }))
+                    } else {
+                        None
                     }
-                }))
-            } else {
-                None
-            }
-        })
-        .collect()
+                })
+                .collect();
+
+            result.push(json!({
+                "@id": format!("workflow.json{}", step_id),
+                "@type": "HowToStep",
+                "position": i.to_string(),
+                "connection": step_connections,
+                "workExample": {
+                    "@id": format!("workflow.json{}", id)
+                }
+            }));
+        }
+    }
+    result
 }
 
 fn create_software_application(id: &str, inputs: &[String], outputs: &[String]) -> Value {
@@ -590,69 +575,69 @@ fn create_container_image(id: &str, name: &str, tag: &str, registry: &str) -> Va
 
 //find connections of inputs, outputs and between workflow steps/CommandLineTools
 fn generate_connections(script_structure: &[ScriptStep]) -> Vec<(String, String, String)> {
-    let mut conns = vec![];
-    for (producer_id, _, producer_outputs, _) in script_structure {
-        for (consumer_id, consumer_inputs, _, _) in script_structure {
-            for (output_param_id, output_file) in producer_outputs {
-                for (_, input_file) in consumer_inputs {
-                    let output_filename = output_file.rsplit('/').next().unwrap_or(output_file);
-                    let input_filename = input_file.rsplit('/').next().unwrap_or(input_file);
+    let mut connections = Vec::new();
 
-                    if output_filename == input_filename {
-                        let id = output_param_id.trim_start_matches('#').rsplit('/').next().unwrap_or(output_param_id);
-                        let source = format!(
-                            "workflow.json#{}/{}",
-                            producer_id.trim_start_matches('#').rsplit('/').next().unwrap_or(producer_id),
-                            id
-                        );
-                        let target = format!(
-                            "workflow.json#{}/{}",
-                            consumer_id.trim_start_matches('#').rsplit('/').next().unwrap_or(consumer_id),
-                            id
-                        );
-                        conns.push((source, target, generate_id_with_hash()));
-                    }
+    // Map output file names to (output_param_id, producer_id)
+    let mut output_file_map: HashMap<String, (String, String)> = HashMap::new();
+    for (producer_id, _, producer_outputs, _) in script_structure {
+        for (output_param_id, output_file) in producer_outputs {
+            if let Some(file_name) = std::path::Path::new(output_file).file_name().and_then(|f| f.to_str()) {
+                output_file_map.insert(file_name.to_string(), (output_param_id.clone(), producer_id.clone()));
+            }
+        }
+    }
+
+    // For each input, find matching output by file name
+    for (_consumer_id, consumer_inputs, _, _) in script_structure {
+        for (input_param_id, input_file) in consumer_inputs {
+            if let Some(input_file_name) = std::path::Path::new(input_file).file_name().and_then(|f| f.to_str()) {
+                if let Some((output_param_id, _producer_id)) = output_file_map.get(input_file_name) {
+                    let source = format!("workflow.json#{}", output_param_id.trim_start_matches('#'));
+                    let target = format!("workflow.json#{}", input_param_id.trim_start_matches('#'));
+                    connections.push((source, target, generate_id_with_hash()));
                 }
             }
         }
     }
 
-    let (main, others): (Vec<_>, Vec<_>) = script_structure.iter().partition(|(id, _, _, _)| id == "#main");
-    let Some((_, main_inputs, main_outputs, _)) = main.first() else {
-        return vec![];
-    };
-    let other_ports: Vec<(String, String)> = others
-        .iter()
-        .flat_map(|(id, inputs, outputs, _)| {
-            let step = id.trim_start_matches('#');
-            inputs.iter().chain(outputs).map(move |(port, path)| {
-                let name = port.rsplit('/').next().unwrap_or(port);
-                (format!("workflow.json#{step}/{name}"), path.clone())
+    // Handle main workflow inputs/outputs connections to/from steps
+    let (main_steps, other_steps): (Vec<_>, Vec<_>) = script_structure.iter().partition(|(id, _, _, _)| id == "#main");
+    if let Some((_, main_inputs, main_outputs, _)) = main_steps.first() {
+        // Collect all step ports (inputs and outputs)
+        let step_ports: Vec<(String, String)> = other_steps
+            .iter()
+            .flat_map(|(id, inputs, outputs, _)| {
+                let step_id = id.trim_start_matches('#');
+                inputs.iter().chain(outputs).map(move |(port, path)| {
+                    let port_name = port.rsplit('/').next().unwrap_or(port);
+                    (format!("workflow.json#{step_id}/{port_name}"), path.clone())
+                })
             })
-        })
-        .collect();
-    for (name, path, flip) in main_inputs
-        .iter()
-        .map(|(n, p)| (n, p, false))
-        .chain(main_outputs.iter().map(|(n, p)| (n, p, true)))
-    {
-        let main_id = if name.starts_with("#main/") {
-            format!("workflow.json#main/{}", name.trim_start_matches("#main/"))
-        } else {
-            format!("workflow.json#main/{name}")
-        };
-        for (other_id, other_path) in &other_ports {
-            if path.ends_with(other_path) || other_path.ends_with(path) {
-                let (a, b) = if flip {
-                    (other_id.clone(), main_id.clone())
-                } else {
-                    (main_id.clone(), other_id.clone())
-                };
-                conns.push((a, b, generate_id_with_hash()));
+            .collect();
+
+        // Connect main inputs to step inputs, and step outputs to main outputs
+        for (name, path, is_output) in main_inputs.iter().map(|(n, p)| (n, p, false))
+            .chain(main_outputs.iter().map(|(n, p)| (n, p, true)))
+        {
+            let main_id = if name.starts_with("#main/") {
+                format!("workflow.json#main/{}", name.trim_start_matches("#main/"))
+            } else {
+                format!("workflow.json#main/{name}")
+            };
+            for (step_port_id, step_path) in &step_ports {
+                if path.ends_with(step_path) || step_path.ends_with(path) {
+                    let (source, target) = if is_output {
+                        (step_port_id.clone(), main_id.clone())
+                    } else {
+                        (main_id.clone(), step_port_id.clone())
+                    };
+                    connections.push((source, target, generate_id_with_hash()));
+                }
             }
         }
     }
-    conns
+
+    connections
 }
 
 fn classify_and_prefix_params(id: &str, inputs: &[(String, String)], outputs: &[(String, String)]) -> Vec<(String, String, String)> {
@@ -884,8 +869,7 @@ pub fn create_ro_crate_metadata_json(
         } else {
             continue;
         };
-        let inputs_s: Vec<_> = inputs.iter().map(|(_, v)| v.to_string()).collect();
-        let how_to_steps = create_howto_steps(&steps, connections_slice, &inputs_s, id, &formal_params);
+        let how_to_steps = create_howto_steps(&steps, connections_slice, id);
         graph.extend(how_to_steps);
 
         let step_opt = steps.iter().find(|(_, step_id)| *step_id == *id).map(|(file, _)| file.to_string());
@@ -905,12 +889,17 @@ pub fn create_ro_crate_metadata_json(
                     .map(String::from)
             })
             .collect();
+        let instrument_id = if step_name == "workflow" {
+            "workflow.json".to_string()
+        } else {
+            format!("workflow.json{id}")
+        };
         //createAction
         let create = Action {
             action_type: "CreateAction",
             id: &create_id,
             name: &format!("Run of workflow.json{}", step_opt.as_deref().unwrap_or("")),
-            instrument_id: &format!("workflow.json{id}"), //formatted
+            instrument_id: &instrument_id,
             object_ids: input_file_names,
             result_ids: Some(output_refs),
             start_time: start.as_deref(),

@@ -300,7 +300,7 @@
       "@type": "CreateAction",
       "name": "Run of workflow.json",
       "instrument": {
-        "@id": "workflow.json#main"
+        "@id": "workflow.json"
       },
       "object": [
         {
