@@ -109,7 +109,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
         inputs_value.parameters = serde_yaml::to_value(&params)?;
     }
 
-    let output_files: Vec<String> = get_all_outputs(cwl_path)
+    let output_files: Vec<String> = get_all_outputs(&workflow, cwl_path)
         .with_context(|| format!("Failed to get all outputs from CWL file '{cwl_path}'"))?
         .into_iter()
         .map(|(_, glob)| glob)
