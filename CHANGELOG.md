@@ -3,7 +3,7 @@
 - Support Workflows in git submodules #137
 - Added `s4n install` and `s4n uninstall` commands #138
 - Runner supports scatter and linkMerge now 
-- Support packed CWL Documents in Runner #142
+- Support packed CWL Documents in Runner #144
 
 ## 🐛 Bugfixes
 - ramping up runner conformance from 204/378 to 222/378
