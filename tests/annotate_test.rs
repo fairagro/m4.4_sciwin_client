@@ -281,13 +281,13 @@ async fn test_annotate_license() {
 
     let yaml = parse_cwl(cwl_name).unwrap();
     if let Value::Mapping(ref mapping) = yaml {
-        assert!(mapping.contains_key(&Value::String("s:license".to_string())));
+        assert!(mapping.contains_key(Value::String("s:license".to_string())));
         assert_eq!(
-            mapping.get(&Value::String("s:license".to_string())),
-            Some(&Value::Sequence(vec![Value::String("MIT".to_string())]))
+            mapping.get(Value::String("s:license".to_string())),
+            Some(Value::Sequence(vec![Value::String("MIT".to_string())]))
         );
-        assert!(mapping.contains_key(&Value::String("$namespaces".to_string())));
-        assert!(mapping.contains_key(&Value::String("$schemas".to_string())));
+        assert!(mapping.contains_key(Value::String("$namespaces".to_string())));
+        assert!(mapping.contains_key(Value::String("$schemas".to_string())));
     } else {
         panic!("YAML root is not a mapping");
     }
