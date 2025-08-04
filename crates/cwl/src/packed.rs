@@ -1,5 +1,11 @@
 use crate::{
-    inputs::CommandInputParameter, io::normalize_path, load_doc, outputs::{CommandOutputParameter, WorkflowOutputParameter}, prelude::Requirement, requirements::WorkDirItem, CWLDocument, CommandLineTool, DefaultValue, DocumentBase, Entry, ExpressionTool, Operation, StringOrDocument, Workflow, WorkflowStep
+    CWLDocument, DefaultValue, Entry, Operation, StringOrDocument, Workflow, WorkflowStep,
+    inputs::CommandInputParameter,
+    io::normalize_path,
+    load_doc,
+    outputs::{CommandOutputParameter, WorkflowOutputParameter},
+    prelude::Requirement,
+    requirements::WorkDirItem,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -10,13 +16,13 @@ use std::{
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
-struct PackedCWL {
+pub struct PackedCWL {
     #[serde(rename = "$graph")]
-    graph: Vec<CWLDocument>,
-    cwl_version: String,
+    pub graph: Vec<CWLDocument>,
+    pub cwl_version: String,
 }
 
-pub fn pack_cwl(doc: &CWLDocument, filename: impl AsRef<Path>, id: Option<&str>) -> Result<Vec<CWLDocument>, Box<dyn Error>> {
+fn pack_cwl(doc: &CWLDocument, filename: impl AsRef<Path>, id: Option<&str>) -> Result<Vec<CWLDocument>, Box<dyn Error>> {
     Ok(match doc {
         CWLDocument::CommandLineTool(tool) => {
             let mut tool = tool.clone();
@@ -35,7 +41,31 @@ pub fn pack_cwl(doc: &CWLDocument, filename: impl AsRef<Path>, id: Option<&str>)
     })
 }
 
-fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>) -> Result<PackedCWL, Box<dyn Error>> {
+/// Unpacks a packed Workflow into a self containing Workflow
+pub fn unpack_workflow(pack: &PackedCWL) -> Result<Workflow, Box<dyn Error>> {
+    //get root item; we need to check both # and not # version as json contains # and yaml does not...
+    let graph = pack.graph.clone();
+    let mut main = graph.into_iter().find(|i| i.id == Some("#main".to_string()) || i.id == Some("main".to_string()));
+    let Some(CWLDocument::Workflow(main)) = &mut main else {
+        return Err("Could not find root entity".into());
+    };
+
+    for step in &mut main.steps {
+        if let StringOrDocument::String(run) = &step.run {
+            //find item with id in list
+            let run = run.strip_prefix('#').unwrap_or(run);
+            let step_op = pack.graph.iter().find(|i| i.id == Some(format!("#{run}")) || i.id == Some(run.to_string()));
+            if let Some(step_op) = step_op {
+                step.run = StringOrDocument::Document(Box::new(step_op.clone()));
+            }
+        }
+    }
+
+    Ok(main.to_owned())
+}
+
+/// Returns a packed version of a workflow
+pub fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>) -> Result<PackedCWL, Box<dyn Error>> {
     let mut wf = wf.clone(); //make mutable reference
     if let Some(id) = id {
         wf.id = Some(id.to_string());
@@ -232,7 +262,7 @@ fn pack_step(step: &mut WorkflowStep, wf_dir: impl AsRef<Path>, wf_id: &str) -> 
 mod tests {
     use super::*;
     use crate::{
-        CWLType, Command, Dirent, File, Include,
+        CWLType, Command, CommandLineTool, Dirent, File, Include,
         inputs::CommandLineBinding,
         load_workflow,
         outputs::CommandOutputBinding,
@@ -389,5 +419,26 @@ mod tests {
 
         let value: Value = serde_json::from_str(&reference_json).unwrap();
         assert_eq!(json, value);
+    }
+
+    #[test]
+    fn test_unpack_workflow() {
+        let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+        let pack = include_str!("../../../tests/test_data/packed/main_packed.cwl").replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy());
+
+        let pack: PackedCWL = serde_json::from_str(&pack).unwrap();
+        let unpacked = unpack_workflow(&pack).unwrap();
+
+        assert!(unpacked.has_step("#main/calculation"));
+        let Some(step) = unpacked.get_step("#main/calculation") else {
+            unreachable!()
+        };
+
+        if let StringOrDocument::Document(doc) = &step.run {
+            assert_eq!(doc.id, Some("#calculation.cwl".to_string()));
+            assert_eq!(doc.class, "CommandLineTool".to_string());
+        } else {
+            panic!()
+        }
     }
 }

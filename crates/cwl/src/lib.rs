@@ -1,5 +1,5 @@
-use inputs::{deserialize_inputs, CommandInputParameter};
-use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
+use inputs::{CommandInputParameter, deserialize_inputs};
+use requirements::{FromRequirement, Requirement, deserialize_hints, deserialize_requirements};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::fmt;
@@ -10,14 +10,14 @@ use std::{
     ops::{Deref, DerefMut},
     path::Path,
 };
-mod io;
-mod packed;
 pub mod deserialize;
 pub mod format;
 pub mod inputs;
+mod io;
 pub mod outputs;
-pub mod requirements;
+pub mod packed;
 pub mod prelude;
+pub mod requirements;
 
 mod clt;
 mod et;

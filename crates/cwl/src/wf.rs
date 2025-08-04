@@ -253,7 +253,6 @@ impl Default for StringOrDocument {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
 pub enum ScatterMethod {
     #[serde(rename = "dotproduct")]
     DotProduct,

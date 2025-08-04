@@ -175,6 +175,16 @@ pub fn run_workflow(
                         step_outputs.entry(key).or_default().push(value);
                     }
                 }
+
+                //if output arrays are empty we need to add them if scatter is set. see <https://www.commonwl.org/v1.2/Workflow.html#WorkflowStep>
+                if step.scatter.is_some() {
+                    for out in &step.out {
+                        if !step_outputs.contains_key(out) {
+                            step_outputs.insert(out.clone(), vec![]);
+                        }
+                    }
+                }
+
                 step_outputs
                     .into_iter()
                     .map(|(k, v)| (k, DefaultValue::Array(v)))
