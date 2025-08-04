@@ -51,20 +51,7 @@ pub fn unpack_workflow(pack: &PackedCWL) -> Result<Workflow, Box<dyn Error>> {
     let Some(CWLDocument::Workflow(main)) = &mut main else {
         return Err("Could not find root entity".into());
     };
-    // we can savely unwrap here
-    let main_id = main.id.clone().unwrap();
-
-    for step in &mut main.steps {
-        unpack_step(step, &main_id, &pack.graph)?;
-    }
-
-    for input in &mut main.inputs {
-        unpack_input(input, &main_id);
-    }
-
-    for output in &mut main.outputs {
-        unpack_workflow_output(output, &main_id);
-    }
+    unpack_wf(main, &pack.graph)?;
 
     Ok(main.to_owned())
 }
@@ -106,6 +93,24 @@ pub fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>
     graph.push(CWLDocument::Workflow(wf));
 
     Ok(PackedCWL { graph, cwl_version })
+}
+
+fn unpack_wf(wf: &mut Workflow, graph: &[CWLDocument]) -> Result<(), Box<dyn Error>> {
+    let id = wf.id.clone().unwrap();
+
+    for step in &mut wf.steps {
+        unpack_step(step, &id, graph)?;
+    }
+
+    for input in &mut wf.inputs {
+        unpack_input(input, &id);
+    }
+
+    for output in &mut wf.outputs {
+        unpack_workflow_output(output, &id);
+    }
+
+    Ok(())
 }
 
 fn pack_tool<T: Operation>(tool: &mut T, filename: impl AsRef<Path>, id: Option<&str>) -> Result<(), Box<dyn Error>> {
@@ -302,7 +307,7 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
             match &mut step_op {
                 CWLDocument::CommandLineTool(tool) => unpack_tool(tool),
                 CWLDocument::ExpressionTool(tool) => unpack_tool(tool),
-                CWLDocument::Workflow(_) => todo!(),
+                CWLDocument::Workflow(wf) => unpack_wf(wf, graph)?,
             }
             step.run = StringOrDocument::Document(Box::new(step_op));
         }
