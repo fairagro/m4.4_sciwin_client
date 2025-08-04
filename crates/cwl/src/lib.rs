@@ -1,5 +1,5 @@
-use inputs::{deserialize_inputs, CommandInputParameter};
-use requirements::{deserialize_hints, deserialize_requirements, FromRequirement, Requirement};
+use inputs::{CommandInputParameter, deserialize_inputs};
+use requirements::{FromRequirement, Requirement, deserialize_hints, deserialize_requirements};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::fmt;
@@ -10,13 +10,14 @@ use std::{
     ops::{Deref, DerefMut},
     path::Path,
 };
-
 pub mod deserialize;
 pub mod format;
 pub mod inputs;
+mod io;
 pub mod outputs;
-pub mod requirements;
+pub mod packed;
 pub mod prelude;
+pub mod requirements;
 
 mod clt;
 mod et;
@@ -26,6 +27,8 @@ pub use clt::*;
 pub use et::*;
 pub use types::*;
 pub use wf::*;
+
+use crate::outputs::CommandOutputParameter;
 
 /// Represents a CWL (Common Workflow Language) document, which can be one of the following types:
 /// - `CommandLineTool`: A CWL CommandLineTool document.
@@ -131,6 +134,7 @@ impl CWLDocument {
 #[serde(rename_all = "camelCase")]
 pub struct DocumentBase {
     pub class: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwl_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
@@ -175,6 +179,11 @@ impl DocumentBase {
     pub fn has_requirement(&self, target: &Requirement) -> bool {
         self.requirements.iter().chain(self.hints.iter()).any(|r| r == target)
     }
+}
+
+pub trait Operation: DerefMut<Target = DocumentBase> {
+    fn outputs_mut(&mut self) -> &mut Vec<CommandOutputParameter>;
+    fn outputs(&self) -> &Vec<CommandOutputParameter>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

@@ -15,6 +15,7 @@ pub use docker::{ContainerEngine, container_engine, set_container_engine};
 
 use commonwl::{
     CWLDocument, CWLType, DefaultValue, Directory, File, PathItem, guess_type,
+    packed::{PackedCWL, unpack_workflow},
     requirements::{FromRequirement, Requirement},
 };
 use io::preprocess_path_join;
@@ -107,6 +108,25 @@ pub fn execute(
     //load cwl
     let mut doc: CWLDocument = if let Some(doc) = cwl_doc {
         doc.clone()
+    } else if cwlfile.as_ref().file_name().unwrap().to_string_lossy().contains("#") {
+        //if file_name does not exist we have more serious problems than this unwrap call :D
+        let path = cwlfile.as_ref().to_string_lossy();
+        let Some((real_path, id)) = path.split_once('#') else {
+            return Err("Could not determine how to load packed cwl file".into());
+        };
+
+        let contents = fs::read_to_string(real_path).map_err(|e| format!("Could not read CWL File {real_path:?}: {e}"))?;
+        //we need to do preprocess here but we can not,yet
+        let packed: PackedCWL = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse packed CWL File {real_path:?}: {e}"))?;
+        if id != "main" {
+            packed
+                .graph
+                .into_iter()
+                .find(|i| i.id == Some(id.to_string()))
+                .ok_or_else(|| Box::<dyn Error>::from(format!("Could not find document {id}")))?
+        } else {
+            CWLDocument::Workflow(unpack_workflow(&packed)?)
+        }
     } else {
         let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
         let contents = preprocess_cwl(&contents, &cwlfile)?;

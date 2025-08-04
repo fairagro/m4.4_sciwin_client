@@ -12,19 +12,19 @@ inputs:
 outputs:
 - id: out
   type: File
-  outputSource: plot/results
+  outputSource: plot/o_results
 
 steps:
 - id: calculation
   in:
     population: population
     speakers: speakers
-  run: '../calculation/calculation.cwl'
+  run: ../calculation/calculation.cwl
   out:
   - results
 - id: plot
   in:
     results: calculation/results
-  run: '../plot/plot.cwl'
+  run: ../plot/plot.cwl
   out:
-  - results
+  - o_results

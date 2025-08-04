@@ -1,5 +1,5 @@
 use super::outputs::{deserialize_outputs, CommandOutputParameter};
-use crate::DocumentBase;
+use crate::{DocumentBase, Operation};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut, Range};
 
@@ -49,6 +49,16 @@ impl Deref for ExpressionTool {
 impl DerefMut for ExpressionTool {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
+    }
+}
+
+impl Operation for ExpressionTool {
+    fn outputs_mut(&mut self) -> &mut Vec<CommandOutputParameter> {
+        &mut self.outputs
+    }
+
+    fn outputs(&self) -> &Vec<CommandOutputParameter> {
+        &self.outputs
     }
 }
 
