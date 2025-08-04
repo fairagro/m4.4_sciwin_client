@@ -1,13 +1,18 @@
 use crate::{
     CWLDocument, CommandLineTool, DefaultValue, Entry, StringOrDocument, Workflow, WorkflowStep,
     inputs::CommandInputParameter,
+    io::normalize_path,
     load_doc,
     outputs::{CommandOutputParameter, WorkflowOutputParameter},
     prelude::Requirement,
     requirements::WorkDirItem,
 };
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fs, path::Path};
+use std::{
+    error::Error,
+    fs::{self},
+    path::Path,
+};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -113,7 +118,12 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = format!("file://{location}");
             } else {
                 let path = doc_dir.as_ref().join(&location);
-                *location = format!("file://{}", path.canonicalize().unwrap_or(path).to_string_lossy());
+                let path = if path.exists() {
+                    path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
+                } else {
+                    normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
+                };
+                *location = format!("file://{path}");
             }
         }
     }
@@ -201,7 +211,16 @@ fn pack_step(step: &mut WorkflowStep, wf_dir: impl AsRef<Path>, wf_id: &str) -> 
         }
     };
 
-    //todo: alter step.in and step.out to have right ids
+    for input in &mut step.in_ {
+        input.id = format!("{step_id}/{}", input.id);
+        if let Some(src) = &mut input.source {
+            *src = format!("{wf_id}/{src}");
+        }
+    }
+
+    for output in &mut step.out {
+        *output = format!("{step_id}/{output}");
+    }
 
     let packed_graph = &mut packed_graph;
     for item in packed_graph.iter_mut() {

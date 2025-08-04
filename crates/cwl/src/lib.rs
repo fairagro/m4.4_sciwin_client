@@ -10,6 +10,7 @@ use std::{
     ops::{Deref, DerefMut},
     path::Path,
 };
+mod io;
 mod packed;
 pub mod deserialize;
 pub mod format;
