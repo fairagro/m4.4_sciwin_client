@@ -90,6 +90,7 @@ pub fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>
     wf.cwl_version = None;
 
     graph.push(CWLDocument::Workflow(wf));
+    graph.sort_by(|a, b| a.id.cmp(&b.id));
 
     Ok(PackedCWL { graph, cwl_version })
 }
@@ -486,8 +487,7 @@ mod tests {
         let file = "../../tests/test_data/hello_world/workflows/main/main.cwl";
         let wf = load_workflow(file).unwrap();
 
-        let mut packed = pack_workflow(&wf, file, None).unwrap();
-        packed.graph.sort_by(|a, b| a.id.cmp(&b.id));
+        let packed = pack_workflow(&wf, file, None).unwrap();
         let json = serde_json::json!(&packed);
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
