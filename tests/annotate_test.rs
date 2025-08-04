@@ -284,7 +284,7 @@ async fn test_annotate_license() {
         assert!(mapping.contains_key(Value::String("s:license".to_string())));
         assert_eq!(
             mapping.get(Value::String("s:license".to_string())),
-            Some(Value::Sequence(vec![Value::String("MIT".to_string())]))
+            Some(Value::Sequence(vec![Value::String("MIT".to_string())])).as_ref()
         );
         assert!(mapping.contains_key(Value::String("$namespaces".to_string())));
         assert!(mapping.contains_key(Value::String("$schemas".to_string())));
