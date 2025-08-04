@@ -1,10 +1,9 @@
 use crate::{
-    CWLDocument, DefaultValue, Entry, Operation, StringOrDocument, Workflow, WorkflowStep,
+    CWLDocument, DefaultValue, Entry, Operation, Requirement, StringOrDocument, Workflow, WorkflowStep,
     inputs::CommandInputParameter,
     io::normalize_path,
     load_doc,
     outputs::{CommandOutputParameter, WorkflowOutputParameter},
-    prelude::Requirement,
     requirements::WorkDirItem,
 };
 use serde::{Deserialize, Serialize};
