@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     requirements::{DockerRequirement, FromRequirement},
-    DocumentBase,
+    DocumentBase, Operation,
 };
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -89,6 +89,16 @@ impl Deref for CommandLineTool {
 impl DerefMut for CommandLineTool {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
+    }
+}
+
+impl Operation for CommandLineTool {
+    fn outputs_mut(&mut self) -> &mut Vec<CommandOutputParameter> {
+        &mut self.outputs
+    }
+
+    fn outputs(&self) -> &Vec<CommandOutputParameter> {
+        &self.outputs
     }
 }
 

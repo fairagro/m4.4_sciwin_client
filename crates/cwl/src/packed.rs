@@ -1,11 +1,5 @@
 use crate::{
-    CWLDocument, CommandLineTool, DefaultValue, Entry, StringOrDocument, Workflow, WorkflowStep,
-    inputs::CommandInputParameter,
-    io::normalize_path,
-    load_doc,
-    outputs::{CommandOutputParameter, WorkflowOutputParameter},
-    prelude::Requirement,
-    requirements::WorkDirItem,
+    inputs::CommandInputParameter, io::normalize_path, load_doc, outputs::{CommandOutputParameter, WorkflowOutputParameter}, prelude::Requirement, requirements::WorkDirItem, CWLDocument, CommandLineTool, DefaultValue, DocumentBase, Entry, ExpressionTool, Operation, StringOrDocument, Workflow, WorkflowStep
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -24,16 +18,20 @@ struct PackedCWL {
 
 pub fn pack_cwl(doc: &CWLDocument, filename: impl AsRef<Path>, id: Option<&str>) -> Result<Vec<CWLDocument>, Box<dyn Error>> {
     Ok(match doc {
-        CWLDocument::CommandLineTool(clt) => {
-            let mut clt = clt.clone();
-            pack_commandlinetool(&mut clt, filename, id)?;
-            vec![CWLDocument::CommandLineTool(clt)]
+        CWLDocument::CommandLineTool(tool) => {
+            let mut tool = tool.clone();
+            pack_tool(&mut tool, filename, id)?;
+            vec![CWLDocument::CommandLineTool(tool)]
         }
         CWLDocument::Workflow(wf) => {
             let packed_wf = pack_workflow(wf, filename, id)?;
             packed_wf.graph
         }
-        CWLDocument::ExpressionTool(et) => todo!(),
+        CWLDocument::ExpressionTool(tool) => {
+            let mut tool = tool.clone();
+            pack_tool(&mut tool, filename, id)?;
+            vec![CWLDocument::ExpressionTool(tool)]
+        }
     })
 }
 
@@ -75,7 +73,7 @@ fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>) ->
     Ok(PackedCWL { graph, cwl_version })
 }
 
-fn pack_commandlinetool(tool: &mut CommandLineTool, filename: impl AsRef<Path>, id: Option<&str>) -> Result<(), Box<dyn Error>> {
+fn pack_tool<T: Operation>(tool: &mut T, filename: impl AsRef<Path>, id: Option<&str>) -> Result<(), Box<dyn Error>> {
     let tool_dir = filename.as_ref().parent().unwrap_or(filename.as_ref());
     let name = filename.as_ref().file_name().unwrap().to_string_lossy();
 
@@ -92,7 +90,7 @@ fn pack_commandlinetool(tool: &mut CommandLineTool, filename: impl AsRef<Path>, 
         pack_input(input, &id, tool_dir);
     }
 
-    for output in &mut tool.outputs {
+    for output in tool.outputs_mut() {
         pack_command_output(output, &id);
     }
 
@@ -366,7 +364,7 @@ mod tests {
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
         let file_path = base_dir.join("tests/test_data/hello_world/workflows/calculation/calculation.cwl");
-        pack_commandlinetool(&mut tool, file_path, Some("#main")).unwrap();
+        pack_tool(&mut tool, file_path, Some("#main")).unwrap();
         let json = serde_json::json!(&tool);
 
         let reference_json =

@@ -28,6 +28,8 @@ pub use et::*;
 pub use types::*;
 pub use wf::*;
 
+use crate::outputs::CommandOutputParameter;
+
 /// Represents a CWL (Common Workflow Language) document, which can be one of the following types:
 /// - `CommandLineTool`: A CWL CommandLineTool document.
 /// - `Workflow`: A CWL Workflow document.
@@ -177,6 +179,11 @@ impl DocumentBase {
     pub fn has_requirement(&self, target: &Requirement) -> bool {
         self.requirements.iter().chain(self.hints.iter()).any(|r| r == target)
     }
+}
+
+pub trait Operation: DerefMut<Target = DocumentBase> {
+    fn outputs_mut(&mut self) -> &mut Vec<CommandOutputParameter>;
+    fn outputs(&self) -> &Vec<CommandOutputParameter>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
