@@ -45,20 +45,25 @@ fn pack_cwl(doc: &CWLDocument, filename: impl AsRef<Path>, id: Option<&str>) -> 
 pub fn unpack_workflow(pack: &PackedCWL) -> Result<Workflow, Box<dyn Error>> {
     //get root item; we need to check both # and not # version as json contains # and yaml does not...
     let graph = pack.graph.clone();
-    let mut main = graph.into_iter().find(|i| i.id == Some("#main".to_string()) || i.id == Some("main".to_string()));
+    let mut main = graph
+        .into_iter()
+        .find(|i| i.id == Some("#main".to_string()) || i.id == Some("main".to_string()));
     let Some(CWLDocument::Workflow(main)) = &mut main else {
         return Err("Could not find root entity".into());
     };
+    // we can savely unwrap here
+    let main_id = main.id.clone().unwrap();
 
     for step in &mut main.steps {
-        if let StringOrDocument::String(run) = &step.run {
-            //find item with id in list
-            let run = run.strip_prefix('#').unwrap_or(run);
-            let step_op = pack.graph.iter().find(|i| i.id == Some(format!("#{run}")) || i.id == Some(run.to_string()));
-            if let Some(step_op) = step_op {
-                step.run = StringOrDocument::Document(Box::new(step_op.clone()));
-            }
-        }
+        unpack_step(step, &main_id, &pack.graph)?;
+    }
+
+    for input in &mut main.inputs {
+        unpack_input(input, &main_id);
+    }
+
+    for output in &mut main.outputs {
+        unpack_workflow_output(output, &main_id);
     }
 
     Ok(main.to_owned())
@@ -134,6 +139,18 @@ fn pack_tool<T: Operation>(tool: &mut T, filename: impl AsRef<Path>, id: Option<
     Ok(())
 }
 
+fn unpack_tool<T: Operation>(tool: &mut T) {
+    //we can savely unwrap here
+    let id = tool.id.clone().unwrap();
+    for input in &mut tool.inputs {
+        unpack_input(input, &id);
+    }
+
+    for output in tool.outputs_mut() {
+        unpack_command_output(output, &id);
+    }
+}
+
 fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl AsRef<Path>) {
     input.id = format!("{root_id}/{}", input.id);
 
@@ -170,13 +187,30 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
     }
 }
 
+fn unpack_input(input: &mut CommandInputParameter, id: &str) {
+    input.id = input.id.strip_prefix(&format!("{id}/")).unwrap_or(&input.id).to_string();
+}
+
 fn pack_workflow_output(output: &mut WorkflowOutputParameter, root_id: &str) {
     output.id = format!("{root_id}/{}", output.id);
     output.output_source = format!("{root_id}/{}", output.output_source);
 }
 
+fn unpack_workflow_output(output: &mut WorkflowOutputParameter, id: &str) {
+    output.id = output.id.strip_prefix(&format!("{id}/")).unwrap_or(&output.id).to_string();
+    output.output_source = output
+        .output_source
+        .strip_prefix(&format!("{id}/"))
+        .unwrap_or(&output.output_source)
+        .to_string();
+}
+
 fn pack_command_output(output: &mut CommandOutputParameter, root_id: &str) {
     output.id = format!("{root_id}/{}", output.id);
+}
+
+fn unpack_command_output(output: &mut CommandOutputParameter, id: &str) {
+    output.id = output.id.strip_prefix(&format!("{id}/")).unwrap_or(&output.id).to_string();
 }
 
 fn pack_requirement(requirement: &mut Requirement, doc_dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
@@ -256,6 +290,45 @@ fn pack_step(step: &mut WorkflowStep, wf_dir: impl AsRef<Path>, wf_id: &str) -> 
     }
 
     Ok(packed_graph.to_owned())
+}
+
+fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) -> Result<(), Box<dyn Error>> {
+    if let StringOrDocument::String(run) = &step.run {
+        //find item with id in list
+        let run = run.strip_prefix('#').unwrap_or(run);
+        let step_op = graph.iter().find(|i| i.id == Some(format!("#{run}")) || i.id == Some(run.to_string()));
+        if let Some(step_op) = step_op {
+            let mut step_op = step_op.clone(); //we later need to clone anyways
+            match &mut step_op {
+                CWLDocument::CommandLineTool(tool) => unpack_tool(tool),
+                CWLDocument::ExpressionTool(tool) => unpack_tool(tool),
+                CWLDocument::Workflow(_) => todo!(),
+            }
+            step.run = StringOrDocument::Document(Box::new(step_op));
+        }
+    }
+
+    for input in &mut step.in_ {
+        if let Some(stripped) = input.id.strip_prefix(&format!("{}/", step.id)) {
+            input.id = stripped.to_string();
+        }
+
+        if let Some(source) = &input.source {
+            if let Some(stripped) = source.strip_prefix(&format!("{root_id}/")) {
+                input.source = Some(stripped.to_string());
+            }
+        }
+    }
+
+    for output in &mut step.out {
+        if let Some(stripped) = output.strip_prefix(&format!("{}/", step.id)) {
+            *output = stripped.to_string();
+        }
+    }
+
+    step.id = step.id.strip_prefix(&format!("{root_id}/")).unwrap_or(&step.id).to_string();
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -429,10 +502,10 @@ mod tests {
         let pack: PackedCWL = serde_json::from_str(&pack).unwrap();
         let unpacked = unpack_workflow(&pack).unwrap();
 
-        assert!(unpacked.has_step("#main/calculation"));
-        let Some(step) = unpacked.get_step("#main/calculation") else {
-            unreachable!()
-        };
+        fs::write("test.cwl", serde_yaml::to_string(&unpacked).unwrap()).unwrap();
+
+        assert!(unpacked.has_step("calculation"));
+        let Some(step) = unpacked.get_step("calculation") else { unreachable!() };
 
         if let StringOrDocument::Document(doc) = &step.run {
             assert_eq!(doc.id, Some("#calculation.cwl".to_string()));

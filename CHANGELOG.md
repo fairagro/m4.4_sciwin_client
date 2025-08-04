@@ -6,7 +6,7 @@
 - Support packed CWL Documents in Runner #144
 
 ## 🐛 Bugfixes
-- ramping up runner conformance from 204/378 to 222/378
+- ramping up runner conformance from 204/378 to 223/378
 - fixed staging of arrays of files and dirs
 - fixed staging of iwdr arrays
 
