@@ -62,6 +62,7 @@ smart-default = "0.7.1"
 similar = "2.7.0"
 tokio = { version = "1.47.1", features = ["macros"] }
 walkdir = "2.5.0"
+skim = "0.20.4"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
