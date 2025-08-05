@@ -12,14 +12,12 @@ use std::path::PathBuf;
 use std::{env, fs, path::Path};
 use tokio::runtime::Builder;
 use util::is_cwl_file;
-use dialoguer::{Input, Confirm, Select};
+use dialoguer::{Input, Confirm, Select, FuzzySelect};
 use crate::{
     cwl::{highlight_cwl},
 };
 use std::io::{self, Write};
 use reqwest::get;
-use skim::prelude::*;
-use std::io::Cursor;
 
 
 const REST_URL_TS: &str = "https://terminology.services.base4nfdi.de/api-gateway/search?query=";
@@ -226,7 +224,7 @@ pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error
     let response = get("https://spdx.org/licenses/licenses.json").await?;
     let json: serde_json::Value = response.json().await?;
 
-    // Extract name and reference for each license
+    // Extract and format license entries
     let licenses = json["licenses"]
         .as_array()
         .unwrap_or(&vec![])
@@ -238,37 +236,28 @@ pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error
         })
         .collect::<Vec<_>>();
 
-    // Prepare display list for skim
-    let display_list: Vec<String> = licenses
+    let mut sorted_list = licenses.clone();
+    sorted_list.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Prepare display list for FuzzySelect
+    let display_list: Vec<String> = sorted_list
         .iter()
         .map(|(name, reference)| format!("{name} ({reference})"))
         .collect();
 
-    let license_text = display_list.join("\n");
-    let item_reader = SkimItemReader::default();
-    let items = item_reader.of_bufread(Cursor::new(license_text));
+    // Use FuzzySelect for interactive search
+    let selection = FuzzySelect::new()
+        .with_prompt("Type in a license to search for and select one of the suggestions")
+        .items(&display_list)
+        .max_length(10)
+        .interact_opt()?;
 
-    let options = SkimOptionsBuilder::default()
-        .height("40%".to_string())
-        .prompt("Choose a license by typing in a search term > ".to_string())
-        .multi(false)
-        .build()
-        .unwrap();
-
-    let selected = Skim::run_with(&options, Some(items))
-        .map(|out| out.selected_items)
-        .unwrap_or_default();
-
-    if let Some(item) = selected.first() {
-        // Find the index of the selected item
-        let output = item.output();
-        if let Some(idx) = display_list.iter().position(|s| *s == output) {
-            let (name, reference) = &licenses[idx];
-            return Ok(Some((name.clone(), reference.clone())));
-        }
+    if let Some(idx) = selection {
+        let (name, reference) = &sorted_list[idx];
+        Ok(Some((name.clone(), reference.clone())))
+    } else {
+        Ok(None)
     }
-    eprintln!("No license selected.");
-    Ok(None)
 }
 
 pub async fn annotate_license(cwl_name: &str, license: &Option<String>) -> Result<(), Box<dyn Error>> {
@@ -287,7 +276,7 @@ pub async fn annotate_license(cwl_name: &str, license: &Option<String>) -> Resul
     Ok(())
 }
 
-
+//maybe remove disallowed_macros but also no error, check alternatives to eprintln!
 #[allow(clippy::disallowed_macros)]
 async fn get_affiliation_and_orcid(first_name: &str, last_name: &str) -> (Option<String>, Option<String>, Option<String>) {
     if first_name.is_empty() || last_name.is_empty() {
