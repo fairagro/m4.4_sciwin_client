@@ -173,7 +173,7 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
     }
     if changed {
         eprintln!(
-            "ℹ️  Adjusted basecommand of {} to `{}`, due to an Issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114.",
+            "ℹ️  Adjusted basecommand of {} to `{}`, due to an open issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114.",
             tool.id.clone().unwrap(),
             command_vec.join(" ")
         );
