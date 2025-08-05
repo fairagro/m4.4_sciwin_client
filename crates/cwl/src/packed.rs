@@ -168,8 +168,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace(MAIN_SEPARATOR_STR, "/");
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -179,8 +178,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 };
                 *location = Url::from_file_path(path)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace(MAIN_SEPARATOR_STR, "/");
+                    .to_string();
             }
         }
     }
@@ -192,8 +190,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace(MAIN_SEPARATOR_STR, "/");
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -203,8 +200,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 };
                 *location = Url::from_file_path(path)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace(MAIN_SEPARATOR_STR, "/");
+                    .to_string();
             }
         }
     }
@@ -382,7 +378,6 @@ mod tests {
         pack_input(&mut input, "#calculation.cwl", file_path).unwrap();
 
         let json = serde_json::json!(&input);
-        println!("{json}");
         let reference_json = r##"{
                     "id": "#calculation.cwl/population",
                     "type": "File",
@@ -394,7 +389,7 @@ mod tests {
                         "prefix": "--population"
                     }
                 }"##
-        .replace("XXX", &base_dir.to_string_lossy());
+        .replace("XXX", &base_dir.to_string_lossy()).replace("/", MAIN_SEPARATOR_STR);
 
         let value: Value = serde_json::from_str(&reference_json).unwrap();
         assert_eq!(json, value);
