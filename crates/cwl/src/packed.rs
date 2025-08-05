@@ -169,7 +169,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
                     .to_string()
-                    .replace(r#"/"#, MAIN_SEPARATOR_STR);
+                    .replace(MAIN_SEPARATOR_STR, "/");
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -180,7 +180,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = Url::from_file_path(path)
                     .map_err(|_| "Could not get url from file_path")?
                     .to_string()
-                    .replace(r#"/"#, MAIN_SEPARATOR_STR);
+                    .replace(MAIN_SEPARATOR_STR, "/");
             }
         }
     }
@@ -193,7 +193,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
                     .to_string()
-                    .replace(r#"/"#, MAIN_SEPARATOR_STR);
+                    .replace(MAIN_SEPARATOR_STR, "/");
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -204,7 +204,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = Url::from_file_path(path)
                     .map_err(|_| "Could not get url from file_path")?
                     .to_string()
-                    .replace(r#"//"#, MAIN_SEPARATOR_STR);
+                    .replace(MAIN_SEPARATOR_STR, "/");
             }
         }
     }
