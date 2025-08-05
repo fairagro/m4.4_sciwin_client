@@ -493,7 +493,9 @@ mod tests {
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
             .replace("//?", "");
         let mut value: Value = serde_json::from_str(&reference_json).unwrap();
-        assert_eq!(normalize_json_newlines(&mut json), normalize_json_newlines(&mut value));
+        normalize_json_newlines(&mut json);
+        normalize_json_newlines(&mut value);
+        assert_eq!(json, value);
     }
 
     #[test]
@@ -509,7 +511,9 @@ mod tests {
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
             .replace("//?", "");
         let mut value: Value = serde_json::from_str(&reference_json).unwrap();
-        assert_eq!(normalize_json_newlines(&mut json), normalize_json_newlines(&mut value));
+        normalize_json_newlines(&mut json);
+        normalize_json_newlines(&mut value);
+        assert_eq!(json, value);
     }
 
     #[test]
