@@ -12,6 +12,7 @@ use std::{
     fs::{self},
     path::Path,
 };
+use url::Url;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -69,7 +70,7 @@ pub fn pack_workflow(wf: &Workflow, filename: impl AsRef<Path>, id: Option<&str>
 
     let mut graph = vec![];
     for input in &mut wf.inputs {
-        pack_input(input, &wf_id, wf_dir);
+        pack_input(input, &wf_id, wf_dir)?;
     }
 
     for output in &mut wf.outputs {
@@ -127,7 +128,7 @@ fn pack_tool<T: Operation>(tool: &mut T, filename: impl AsRef<Path>, id: Option<
 
     let id = tool.id.clone().unwrap();
     for input in &mut tool.inputs {
-        pack_input(input, &id, tool_dir);
+        pack_input(input, &id, tool_dir)?;
     }
 
     for output in tool.outputs_mut() {
@@ -156,7 +157,7 @@ fn unpack_tool<T: Operation>(tool: &mut T) {
     }
 }
 
-fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl AsRef<Path>) {
+fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
     input.id = format!("{root_id}/{}", input.id);
 
     //generate absolute paths for default values
@@ -165,7 +166,9 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             && !location.starts_with("file://")
         {
             if Path::new(location).is_absolute() {
-                *location = format!("file://{location}");
+                *location = Url::from_file_path(&location)
+                    .map_err(|_| "Could not get url from file_path")?
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -173,7 +176,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = format!("file://{path}");
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
@@ -183,13 +186,22 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             && !location.starts_with("file://")
         {
             if Path::new(location).is_absolute() {
-                *location = format!("file://{location}");
+                *location = Url::from_file_path(&location)
+                    .map_err(|_| "Could not get url from file_path")?
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
-                *location = format!("file://{}", path.canonicalize().unwrap_or(path).to_string_lossy());
+                let path = if path.exists() {
+                    path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
+                } else {
+                    normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
+                };
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
+
+    Ok(())
 }
 
 fn unpack_input(input: &mut CommandInputParameter, id: &str) {
@@ -359,10 +371,9 @@ mod tests {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
 
         let file_path = base_dir.join("tests/test_data/hello_world/workflows/calculation");
-        pack_input(&mut input, "#calculation.cwl", file_path);
+        pack_input(&mut input, "#calculation.cwl", file_path).unwrap();
 
         let json = serde_json::json!(&input);
-        println!("{json:#?}");
         let reference_json = r##"{
                     "id": "#calculation.cwl/population",
                     "type": "File",
@@ -505,8 +516,6 @@ mod tests {
 
         let pack: PackedCWL = serde_json::from_str(&pack).unwrap();
         let unpacked = unpack_workflow(&pack).unwrap();
-
-        fs::write("test.cwl", serde_yaml::to_string(&unpacked).unwrap()).unwrap();
 
         assert!(unpacked.has_step("calculation"));
         let Some(step) = unpacked.get_step("calculation") else { unreachable!() };

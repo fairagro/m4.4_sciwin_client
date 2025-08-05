@@ -840,6 +840,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha1",
+ "url",
 ]
 
 [[package]]
