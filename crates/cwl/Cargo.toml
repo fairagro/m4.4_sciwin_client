@@ -33,3 +33,4 @@ url = "2.5.4"
 
 [dev-dependencies]
 rstest = { workspace = true }
+test_utils = { workspace = true }

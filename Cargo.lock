@@ -840,6 +840,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha1",
+ "test_utils",
  "url",
 ]
 
@@ -5024,6 +5025,7 @@ name = "test_utils"
 version = "0.7.0"
 dependencies = [
  "git2",
+ "serde_json",
  "tempfile",
  "whoami",
 ]

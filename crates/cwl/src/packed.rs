@@ -168,8 +168,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace("//?", "");
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -177,10 +176,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace("//?", "");
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
@@ -192,8 +188,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace("//?", "");
+                    .to_string();
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -201,10 +196,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string()
-                    .replace("//?", "");
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
@@ -358,8 +350,6 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
 
 #[cfg(test)]
 mod tests {
-    use std::path::MAIN_SEPARATOR_STR;
-
     use super::*;
     use crate::{
         CWLType, Command, CommandLineTool, Dirent, File, Include,
@@ -369,6 +359,8 @@ mod tests {
         prelude::{DockerRequirement, InitialWorkDirRequirement, Requirement},
     };
     use serde_json::Value;
+    use std::path::MAIN_SEPARATOR_STR;
+    use test_utils::normalize_json_newlines;
 
     #[test]
     fn test_pack_input() {
@@ -395,8 +387,8 @@ mod tests {
                         "prefix": "--population"
                     }
                 }"##
-        .replace("XXX", &base_dir.to_string_lossy())
-        .replace(MAIN_SEPARATOR_STR, "/");
+        .replace("XXX", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
+        .replace("//?", "");
 
         let value: Value = serde_json::from_str(&reference_json).unwrap();
         assert_eq!(json, value);
@@ -495,13 +487,13 @@ mod tests {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
         let file_path = base_dir.join("tests/test_data/hello_world/workflows/calculation/calculation.cwl");
         pack_tool(&mut tool, file_path, Some("#main")).unwrap();
-        let json = serde_json::json!(&tool);
+        let mut json = serde_json::json!(&tool);
 
         let reference_json = include_str!("../../../tests/test_data/packed/calculation_packed.cwl")
-            .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"));
-
-        let value: Value = serde_json::from_str(&reference_json).unwrap();
-        assert_eq!(json, value);
+            .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
+            .replace("//?", "");
+        let mut value: Value = serde_json::from_str(&reference_json).unwrap();
+        assert_eq!(normalize_json_newlines(&mut json), normalize_json_newlines(&mut value));
     }
 
     #[test]
@@ -510,14 +502,14 @@ mod tests {
         let wf = load_workflow(file).unwrap();
 
         let packed = pack_workflow(&wf, file, None).unwrap();
-        let json = serde_json::json!(&packed);
+        let mut json = serde_json::json!(&packed);
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
         let reference_json = include_str!("../../../tests/test_data/packed/main_packed.cwl")
-            .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"));
-
-        let value: Value = serde_json::from_str(&reference_json).unwrap();
-        assert_eq!(json, value);
+            .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
+            .replace("//?", "");
+        let mut value: Value = serde_json::from_str(&reference_json).unwrap();
+        assert_eq!(normalize_json_newlines(&mut json), normalize_json_newlines(&mut value));
     }
 
     #[test]

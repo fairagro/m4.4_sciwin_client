@@ -1,5 +1,6 @@
 use core::panic;
 use git2::Repository;
+use serde_json::Value;
 use std::{
     env::{self},
     fs::{self, create_dir_all},
@@ -63,7 +64,7 @@ impl Repo<'_> {
         self
     }
 
-    pub fn finalize(&self) -> &Self{
+    pub fn finalize(&self) -> &Self {
         check_git_user().unwrap();
         let repo = Repository::init(self.0).expect("Failed to create a blank repository");
         stage_all(&repo).expect("Could not stage files");
@@ -74,14 +75,14 @@ impl Repo<'_> {
             cfg.set_str("user.email", "derp@google.de").expect("Could not set email");
         }
         initial_commit(&repo).expect("Could not create inital commit");
-        
+
         self
     }
 
     pub fn enter(&self) -> PathBuf {
-         let current_dir = env::current_dir().unwrap();
-         env::set_current_dir(self.0).unwrap();
-         current_dir
+        let current_dir = env::current_dir().unwrap();
+        env::set_current_dir(self.0).unwrap();
+        current_dir
     }
 }
 
@@ -124,5 +125,24 @@ pub fn os_path(path: &str) -> String {
         Path::new(path).to_string_lossy().replace('/', "\\")
     } else {
         path.to_string()
+    }
+}
+
+pub fn normalize_json_newlines(val: &mut Value) {
+    match val {
+        Value::String(s) => {
+            *s = s.replace("\r\n", "\n");
+        }
+        Value::Array(arr) => {
+            for item in arr {
+                normalize_json_newlines(item);
+            }
+        }
+        Value::Object(map) => {
+            for value in map.values_mut() {
+                normalize_json_newlines(value);
+            }
+        }
+        _ => {}
     }
 }
