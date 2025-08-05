@@ -182,12 +182,14 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
     Ok(())
 }
 
-/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
+/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
 fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if dr.docker_file.is_some() {
-            eprintln!("ℹ️  REANA currently is not able to use Dockerfile in DockerRequirement!");
-            anyhow::bail!("Aborted execution, because Workflow is most likely to fail!");
+            eprintln!(
+                "ℹ️  Tool {} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!",
+                tool.id.clone().unwrap()
+            );
         }
     }
     Ok(())
