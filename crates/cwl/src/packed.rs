@@ -168,7 +168,8 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+                    .to_string()
+                    .replace(r#"\\?\"#, "");
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -176,7 +177,10 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
+                *location = Url::from_file_path(path)
+                    .map_err(|_| "Could not get url from file_path")?
+                    .to_string()
+                    .replace(r#"\\?\"#, "");
             }
         }
     }
@@ -188,7 +192,8 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             if Path::new(location).is_absolute() {
                 *location = Url::from_file_path(&location)
                     .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+                    .to_string()
+                    .replace(r#"\\?\"#, "");
             } else {
                 let path = doc_dir.as_ref().join(&location);
                 let path = if path.exists() {
@@ -196,7 +201,10 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
+                *location = Url::from_file_path(path)
+                    .map_err(|_| "Could not get url from file_path")?
+                    .to_string()
+                    .replace(r#"\\?\"#, "");
             }
         }
     }
