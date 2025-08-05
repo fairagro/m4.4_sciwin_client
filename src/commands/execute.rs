@@ -195,7 +195,7 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
             if let Some(logs_str) = status_response["logs"].as_str() {
                 analyze_workflow_logs(logs_str);
             }
-            return Err("❌ Workflow '{workflow_name}' failed.".into());
+            return Err(format!("❌ Workflow '{workflow_name}' failed.").into());
         }
         "created" | "pending" | "running" | "stopped" => {
             return Err(format!("⚠️ Workflow '{workflow_name}' is in '{workflow_status}' state. Cannot export RO-Crate.").into());

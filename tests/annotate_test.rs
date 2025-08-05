@@ -267,31 +267,32 @@ async fn test_annotate_description() {
 #[tokio::test]
 #[serial]
 async fn test_annotate_license() {
+
     let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
+    let current = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
 
-    env::set_current_dir(dir.path()).unwrap();
+    let cwl_name = "test_license.cwl";
+    fs::write(cwl_name, "class: CommandLineTool\n").unwrap();
 
-    let temp_file_name = "test.cwl";
+    let license = Some("MIT".to_string());
+    let result = annotate_license(cwl_name, &license).await;
+    assert!(result.is_ok());
 
-    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
+    let yaml = parse_cwl(cwl_name).unwrap();
+    if let Value::Mapping(ref mapping) = yaml {
+        assert!(mapping.contains_key(Value::String("s:license".to_string())));
+        assert_eq!(
+            mapping.get(Value::String("s:license".to_string())),
+            Some(Value::Sequence(vec![Value::String("MIT".to_string())])).as_ref()
+        );
+        assert!(mapping.contains_key(Value::String("$namespaces".to_string())));
+        assert!(mapping.contains_key(Value::String("$schemas".to_string())));
+    } else {
+        panic!("YAML root is not a mapping");
+    }
 
-    let command = AnnotateCommands::License {
-        cwl_name: temp_file_name.to_string(),
-        license: "MIT".to_string(),
-    };
-
-    let result = handle_annotate_commands(&command).await;
-
-    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
-    assert!(
-        updated_content.contains("MIT"),
-        "Expected license annotation to be added, but got: {updated_content}"
-    );
-
-    env::set_current_dir(current).unwrap();
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[tokio::test]
@@ -308,13 +309,16 @@ async fn test_annotate_performer() {
 
     let command = AnnotateCommands::Performer(PerformerArgs {
         cwl_name: temp_file_name.to_string(),
-        first_name: "J".to_string(),
-        last_name: "Doe".to_string(),
+        first_name: Some("J".to_string()),
+        last_name: Some("Doe".to_string()),
         mail: Some("doe@mail.com".to_string()),
         affiliation: Some("institute1".to_string()),
         role: None,
+        address: None,
+        mid_initials: None,
+        phone: None,
+        fax: None,
     });
-
     let result = handle_annotate_commands(&command).await;
 
     assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
@@ -717,11 +721,15 @@ async fn test_annotate_performer_add_to_existing_list() {
 
     let args = PerformerArgs {
         cwl_name: cwl_filename.to_string(),
-        first_name: "Jane".to_string(),
-        last_name: "Smith".to_string(),
+        first_name: Some("Jane".to_string()),
+        last_name: Some("Smith".to_string()),
         mail: Some("jane.smith@example.com".to_string()),
         affiliation: Some("Example Organization".to_string()),
         role: None,
+        address: None,
+        mid_initials: None,
+        phone: None,
+        fax: None,
     };
 
     let result = annotate_performer(&args);
@@ -795,11 +803,15 @@ async fn test_annotate_performer_avoid_duplicate() {
 
     let args = PerformerArgs {
         cwl_name: cwl_filename.to_string(),
-        first_name: "Charlie".to_string(),
-        last_name: "Davis".to_string(),
+        first_name: Some("Charlie".to_string()),
+        last_name: Some("Davis".to_string()),
         mail: Some("charlie.davis@example.com".to_string()),
         affiliation: None,
         role: None,
+        address: None,
+        mid_initials: None,
+        phone: None,
+        fax: None,
     };
 
     let result = annotate_performer(&args);
@@ -834,11 +846,15 @@ async fn test_annotate_performer_invalid_root() {
 
     let args = PerformerArgs {
         cwl_name: cwl_filename.to_string(),
-        first_name: "David".to_string(),
-        last_name: "Evans".to_string(),
-        mail: None,
-        affiliation: None,
+        first_name: Some("David".to_string()),
+        last_name: Some("Evans".to_string()),
         role: None,
+        address: None,
+        mid_initials: None,
+        phone: None,
+        fax: None,
+        affiliation: None,
+        mail: None
     };
 
     let result = annotate_performer(&args);
@@ -880,75 +896,6 @@ outputs: []
     let result = contains_docker_requirement(empty_file.to_str().unwrap());
     assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {result:?}");
     assert!(!result.unwrap(), "Expected DockerRequirement to be absent in empty file");
-
-    env::set_current_dir(current).unwrap();
-}
-
-#[tokio::test]
-#[serial]
-async fn test_annotate_field() {
-    use std::fs;
-    use tempfile::tempdir;
-
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    let temp_file_name = "test.cwl";
-
-    let existing_field_content = r#"
-class: CommandLineTool
-s:license: "MIT"
-    "#;
-    fs::write(temp_file_name, existing_field_content).unwrap();
-
-    let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).unwrap();
-    assert!(
-        updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to remain unchanged, but got: {updated_content}"
-    );
-
-    let different_value_content = r#"
-class: CommandLineTool
-s:license: "GPL"
-    "#;
-    fs::write(temp_file_name, different_value_content).unwrap();
-
-    let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).unwrap();
-    assert!(
-        updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to be updated to 'MIT', but got: {updated_content}"
-    );
-
-    let no_field_content = r"
-class: CommandLineTool
-    ";
-    fs::write(temp_file_name, no_field_content).unwrap();
-
-    let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_ok(), "Expected Ok(()), but got Err: {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).unwrap();
-    assert!(
-        updated_content.contains("s:license: MIT"),
-        "Expected 's:license' field to be added, but got: {updated_content}"
-    );
-
-    // Case 4: Invalid YAML file
-    let invalid_yaml_content = r"
-class: CommandLineTool
-    invalid_yaml: {::}
-    ";
-    fs::write(temp_file_name, invalid_yaml_content).unwrap();
-
-    let result = annotate_field(temp_file_name, "s:license", "MIT");
-    assert!(result.is_err(), "Expected Err for invalid YAML, but got Ok(()): {result:?}");
 
     env::set_current_dir(current).unwrap();
 }

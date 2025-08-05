@@ -1,7 +1,6 @@
 use clap::{Args, Subcommand};
 use colored::Colorize;
 use commonwl::format::format_cwl;
-use dialoguer::Select;
 use log::error;
 use serde_yaml::{Mapping, Value};
 use std::collections::HashSet;
@@ -9,13 +8,19 @@ use std::error::Error;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs, path::Path};
 use tokio::runtime::Builder;
 use util::is_cwl_file;
+use dialoguer::{Input, Confirm, Select, FuzzySelect};
+use crate::{
+    cwl::{highlight_cwl},
+};
+use std::io::{self, Write};
+use reqwest::get;
 
-const REST_URL_TS: &str = "https://ts4nfdi-api-gateway.prod.km.k8s.zbmed.de/api-gateway/search?query=";
+
+const REST_URL_TS: &str = "https://terminology.services.base4nfdi.de/api-gateway/search?query=";
 const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
 const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf";
 const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
@@ -39,10 +44,9 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
     match command {
         AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name),
         AnnotateCommands::Description { cwl_name, description } => annotate_field(cwl_name, "doc", description),
-        AnnotateCommands::License { cwl_name, license } => annotate_field(cwl_name, "s:license", license),
+        AnnotateCommands::License { cwl_name, license } => annotate_license(cwl_name, license).await,
         AnnotateCommands::Schema { cwl_name, schema } => annotate(cwl_name, "$schemas", None, Some(schema)),
         AnnotateCommands::Namespace { cwl_name, namespace, short } => annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace)),
-        //AnnotateCommands::Author(args) => annotate_author(args)?,
         AnnotateCommands::Author(args) => {
             let role_args = PersonArgs {
                 cwl_name: args.cwl_name.clone(),
@@ -61,7 +65,13 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
             };
             annotate_person(&role_args, "contributor")
         }
-        AnnotateCommands::Performer(args) => annotate_performer(args).await,
+        AnnotateCommands::Performer(args) => {
+        if args.first_name.is_none() && args.last_name.is_none() {
+            annotate_performer_default(args).await
+        } else {
+            annotate_performer(args).await
+        }
+    }
         AnnotateCommands::Process(args) => annotate_process_step(args).await,
         AnnotateCommands::Container { cwl_name, container } => annotate_container(cwl_name, container),
         AnnotateCommands::Custom { cwl_name, field, value } => annotate_field(cwl_name, field, value),
@@ -75,35 +85,35 @@ pub enum AnnotateCommands {
     Name {
         #[arg(help = "Name of the CWL file")]
         cwl_name: String,
-        #[arg(short = 'n', long = "name", help = "Name of the tool or workflow")]
+        #[arg(help = "Name of the tool or workflow")]
         name: String,
     },
     #[command(about = "Annotates description of a tool or workflow")]
     Description {
         #[arg(help = "Name of the CWL file")]
         cwl_name: String,
-        #[arg(short = 'd', long = "description", help = "Description of the tool or workflow")]
+        #[arg(help = "Description of the tool or workflow")]
         description: String,
     },
     #[command(about = "Annotates license of a tool or workflow")]
     License {
         #[arg(help = "Name of the CWL file")]
         cwl_name: String,
-        #[arg(short = 'l', long = "license", help = "License to annotate")]
-        license: String,
+        #[arg(help = "License to annotate")]
+        license: Option<String>,
     },
     #[command(about = "Annotates schema of a tool or workflow")]
     Schema {
         #[arg(help = "Name of the CWL file")]
         cwl_name: String,
-        #[arg(short = 's', long = "schema", help = "Schema to annotate")]
+        #[arg(help = "Schema used for annotation")]
         schema: String,
     },
     #[command(about = "Annotates namespace of a tool or workflow")]
     Namespace {
         #[arg(help = "Name of the CWL file")]
         cwl_name: String,
-        #[arg(short = 'n', long = "namespace", help = "Namespace to annotate")]
+        #[arg(help = "Namespace to annotate")]
         namespace: String,
         #[arg(short = 's', long = "short", help = "Namespace abbreviation to annotate")]
         short: Option<String>,
@@ -155,19 +165,32 @@ pub struct PersonArgs {
 /// Arguments for annotate performer command
 #[derive(Args, Debug)]
 pub struct PerformerArgs {
+    #[arg(help = "Name of the CWL file")]
     pub cwl_name: String,
 
     #[arg(short = 'f', long = "first_name", help = "First name of the performer")]
-    pub first_name: String,
+    pub first_name: Option<String>,
 
     #[arg(short = 'l', long = "last_name", help = "Last name of the performer")]
-    pub last_name: String,
+    pub last_name: Option<String>,
 
-    #[arg(short = 'm', long = "mail", help = "Email of the performer")]
+    #[arg(short = 'm', long = "mid_initials", help = "Middle initials of the performer")]
+    pub mid_initials: Option<String>,
+
+    #[arg(short = 'e', long = "email", help = "Email of the performer")]
     pub mail: Option<String>,
 
     #[arg(short = 'a', long = "affiliation", help = "Affiliation of the performer")]
     pub affiliation: Option<String>,
+
+    #[arg(short = 'd', long = "address", help = "Address of the performer")]
+    pub address: Option<String>,
+
+    #[arg(short = 'p', long = "phone", help = "Phone number of the performer")]
+    pub phone: Option<String>,
+
+    #[arg(short = 'x', long = "fax", help = "Fax number of the performer")]
+    pub fax: Option<String>,
 
     #[arg(short = 'r', long = "role", help = "Role of the performer")]
     pub role: Option<String>,
@@ -193,6 +216,520 @@ pub struct AnnotateProcessArgs {
 
     #[arg(short = 'v', long = "value", help = "Process step value")]
     pub value: Option<String>,
+}
+
+
+pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error>> {
+    // Fetch the SPDX license list
+    let response = get("https://spdx.org/licenses/licenses.json").await?;
+    let json: serde_json::Value = response.json().await?;
+
+    // Extract and format license entries
+    let licenses = json["licenses"]
+        .as_array()
+        .unwrap_or(&vec![])
+        .iter()
+        .filter_map(|l| {
+            let reference = l.get("reference")?.as_str()?.to_string();
+            let name = l.get("name")?.as_str()?.to_string();
+            Some((name, reference))
+        })
+        .collect::<Vec<_>>();
+
+    let mut sorted_list = licenses.clone();
+    sorted_list.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Prepare display list for FuzzySelect
+    let display_list: Vec<String> = sorted_list
+        .iter()
+        .map(|(name, reference)| format!("{name} ({reference})"))
+        .collect();
+
+    // Use FuzzySelect for interactive search
+    let selection = FuzzySelect::new()
+        .with_prompt("Type in a license to search for and select one of the suggestions")
+        .items(&display_list)
+        .max_length(10)
+        .interact_opt()?;
+
+    if let Some(idx) = selection {
+        let (name, reference) = &sorted_list[idx];
+        Ok(Some((name.clone(), reference.clone())))
+    } else {
+        Ok(None)
+    }
+}
+
+pub async fn annotate_license(cwl_name: &str, license: &Option<String>) -> Result<(), Box<dyn Error>> {
+    if let Some(license_value) = license {
+        annotate(cwl_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+        annotate(cwl_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
+        annotate(cwl_name, "s:license", None, Some(license_value))?;
+    } else {
+        // If no license is provided, ask user to select one
+        if let Some((_name, spdx_license)) = ask_for_license().await? {
+            annotate(cwl_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+            annotate(cwl_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
+            annotate(cwl_name, "s:license", None, Some(&spdx_license))?;
+        }
+    }
+    Ok(())
+}
+
+//maybe remove disallowed_macros but also no error, check alternatives to eprintln!
+#[allow(clippy::disallowed_macros)]
+async fn get_affiliation_and_orcid(first_name: &str, last_name: &str) -> (Option<String>, Option<String>, Option<String>) {
+    if first_name.is_empty() || last_name.is_empty() {
+        return (None, None, None);
+    }
+
+    let query = format!(
+        "given-names:{} AND family-name:{}",
+        first_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
+            + first_name.chars().skip(1).collect::<String>().as_str(),
+        last_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
+            + last_name.chars().skip(1).collect::<String>().as_str()
+    );
+    let search_url = format!("https://pub.orcid.org/v3.0/expanded-search/?q={query}");
+    let client = reqwest::Client::new();
+
+    let resp = client.get(&search_url).header("Accept", "application/json").send().await;
+
+    if let Ok(resp) = resp {
+        if let Ok(json) = resp.json::<serde_json::Value>().await {
+            if let Some(results) = json.get("expanded-result").and_then(|v| v.as_array()) {
+                let get_field = |result: &serde_json::Value, key: &str| {
+                    result.get(key)
+                        .and_then(|v| if v.is_array() { v.as_array().and_then(|arr| arr.first()).and_then(|f| f.as_str()) } else { v.as_str() })
+                        .unwrap_or("").to_string()
+                };
+                
+                let show_options = |results: &[serde_json::Value]| -> Option<(String, String, String)> {
+                    println!("\nOther possible matches:");
+                    let options: Vec<String> = results.iter().take(5).map(|result| {
+                        let given_names = get_field(result, "given-names");
+                        let family_name = get_field(result, "family-names");
+                        let institution = get_field(result, "institution-name");
+                        format!("{given_names} {family_name} ({institution})")
+                    }).collect();
+
+                    let selection = Select::new()
+                        .with_prompt("Select the correct person, or Esc to skip")
+                        .items(&options)
+                        .default(0)
+                        .interact_opt()
+                        .unwrap_or(None);
+
+                    if let Some(idx) = selection {
+                        let selected = &results[idx];
+                        Some((
+                            get_field(selected, "institution-name"),
+                            get_field(selected, "orcid-id"),
+                            get_field(selected, "email"),
+                        ))
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(first_result) = results.first() {
+                    let mut first_affiliation = get_field(first_result, "institution-name");
+                    let mut first_orcid = get_field(first_result, "orcid-id");
+                    let mut first_mail = get_field(first_result, "email");
+                    println!(
+                        "\nFirst ORCID search result:\n\
+                         ──────────────────────────────\n\
+                         Name       : {first_name} {last_name}\n\
+                         Affiliation: {first_affiliation}\n\
+                         ORCID      : {first_orcid}\n\
+                         Email      : {first_mail}\n",
+                    );
+                    let is_right_person = Confirm::new()
+                        .with_prompt("Is this the correct person?")
+                        .interact()
+                        .unwrap_or(false);
+                        if !is_right_person {
+                            if let Some((aff, orcid, mail)) = show_options(results) {
+                                first_affiliation = aff;
+                                first_orcid = orcid;
+                                first_mail = mail;
+                            }
+                        }
+                     println!(
+                        "\nPerson:\n\
+                        ──────────────────────────────\n\
+                        Name       : {first_name} {last_name}\n\
+                        Email      : {first_mail}\n"
+                    );
+                     io::stdout().flush().ok();
+                    // Allow user to edit fields if some of them are wrong
+                    if Confirm::new()
+                        .with_prompt("Do you want to edit any of these fields?")
+                        .interact()
+                        .unwrap_or(false)
+                    {
+                        //not possible to edit ORCID or name but mail and affiliation?
+                        first_affiliation = Input::new()
+                            .with_prompt("Edit affiliation (leave blank to keep)")
+                            .default(first_affiliation.clone())
+                            .allow_empty(true)
+                            .interact_text()
+                            .unwrap_or(first_affiliation.clone());
+                        first_mail = Input::new()
+                            .with_prompt("Edit email (leave blank to keep)")
+                            .default(first_mail.clone())
+                            .allow_empty(true)
+                            .interact_text()
+                            .unwrap_or(first_mail.clone());
+                    }
+                        return (
+                            if !first_affiliation.is_empty() { Some(first_affiliation) } else { None },
+                            if !first_orcid.is_empty() { Some(first_orcid) } else { None },
+                            if !first_mail.is_empty() { Some(first_mail) } else { None },
+                        );
+                   
+                }
+            }
+        }
+    }
+    (None, None, None)
+}
+
+
+async fn annotate_performer_default(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
+    // Ask user for first name and last name
+    let first_name: String = Input::new()
+        .with_prompt("Enter performer's first name")
+        .interact_text()?;
+    let last_name: String = Input::new()
+        .with_prompt("Enter performer's last name")
+        .interact_text()?;
+
+    // Ask for other fields
+    let mid_initials = {
+        let input: String = Input::new()
+            .with_prompt("Enter performer's middle initials (or leave blank)")
+            .allow_empty(true)
+            .interact_text()?;
+        if input.is_empty() { None } else { Some(input) }
+    };
+
+    let address = {
+        let input: String = Input::new()
+            .with_prompt("Enter performer's address (or leave blank)")
+            .allow_empty(true)
+            .interact_text()?;
+        if input.is_empty() { None } else { Some(input) }
+    };
+
+    let phone = {
+        let input: String = Input::new()
+            .with_prompt("Enter performer's phone number (or leave blank)")
+            .allow_empty(true)
+            .interact_text()?;
+        if input.is_empty() { None } else { Some(input) }
+    };
+
+    let fax = {
+        let input: String = Input::new()
+            .with_prompt("Enter performer's fax number (or leave blank)")
+            .allow_empty(true)
+            .interact_text()?;
+        if input.is_empty() { None } else { Some(input) }
+    };
+
+    // Ask if user wants to search person via ORCID
+    let search_orcid = Confirm::new()
+        .with_prompt("Do you want to search for this person via ORCID?")
+        .interact()?;
+
+    let mut mail: Option<String> = None;
+    let mut affiliation = None;
+    let mut role: Option<String> = None;
+
+    if search_orcid {
+        let (aff, _orcid, m) = get_affiliation_and_orcid(&first_name, &last_name).await;
+        affiliation = aff;
+        mail = m;
+        // Optionally ask for role
+        if Confirm::new()
+            .with_prompt("Do you want to annotate a role?")
+            .interact()? {
+            let input: String = Input::new()
+                .with_prompt("Enter role (or leave blank)")
+                .allow_empty(true)
+                .interact_text()?;
+            if !input.is_empty() { role = Some(input); }
+        }
+    } else {
+        // Ask if user wants to annotate other fields
+        if Confirm::new()
+            .with_prompt("Do you want to annotate additional fields (email, affiliation, role)?")
+            .interact()? {
+            let input: String = Input::new()
+                .with_prompt("Enter email (or leave blank)")
+                .allow_empty(true)
+                .interact_text()?;
+            if !input.is_empty() { mail = Some(input); }
+            let input: String = Input::new()
+                .with_prompt("Enter affiliation (or leave blank)")
+                .allow_empty(true)
+                .interact_text()?;
+            if !input.is_empty() { affiliation = Some(input); }
+            let input: String = Input::new()
+                .with_prompt("Enter role (or leave blank)")
+                .allow_empty(true)
+                .interact_text()?;
+            if !input.is_empty() { role = Some(input); }
+        }
+    }
+
+    let default_performer = PerformerArgs {
+        cwl_name: args.cwl_name.clone(),
+        first_name: Some(first_name),
+        last_name: Some(last_name),
+        mid_initials,
+        mail,
+        affiliation,
+        address,
+        phone,
+        fax,
+        role,
+    };
+    annotate_performer(&default_performer).await
+}
+
+pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
+    // Ensure ARC namespace and schema are defined
+    annotate(&args.cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
+    // Parse CWL file into YAML
+    let mut yaml = parse_cwl(&args.cwl_name)?;
+
+    // Ensure the root of the YAML is a mapping
+    let Value::Mapping(ref mut mapping) = yaml else {
+        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
+    };
+
+    // Prepare performer information
+    let mut performer_info = Mapping::new();
+    performer_info.insert(Value::String("class".to_string()), Value::String("arc:Person".to_string()));
+    performer_info.insert(
+        Value::String("arc:first name".to_string()),
+        Value::String(args.first_name.clone().unwrap_or_default()),
+    );
+    performer_info.insert(
+        Value::String("arc:last name".to_string()),
+        Value::String(args.last_name.clone().unwrap_or_default()),
+    );
+
+    // Add optional fields if present
+    if let Some(ref mid_initials) = args.mid_initials {
+        performer_info.insert(Value::String("arc:mid initials".to_string()), Value::String(mid_initials.clone()));
+    }
+    if let Some(ref mail) = args.mail {
+        performer_info.insert(Value::String("arc:email".to_string()), Value::String(mail.clone()));
+    }
+    if let Some(ref affiliation) = args.affiliation {
+        performer_info.insert(Value::String("arc:affiliation".to_string()), Value::String(affiliation.clone()));
+    }
+    if let Some(ref address) = args.address {
+        performer_info.insert(Value::String("arc:address".to_string()), Value::String(address.clone()));
+    }
+    if let Some(ref phone) = args.phone {
+        performer_info.insert(Value::String("arc:phone".to_string()), Value::String(phone.clone()));
+    }
+    if let Some(ref fax) = args.fax {
+        performer_info.insert(Value::String("arc:fax".to_string()), Value::String(fax.clone()));
+    }
+
+    // Handle role information
+    if let Some(ref role) = args.role {
+        let mut role_mapping = Mapping::new();
+        role_mapping.insert(Value::String("class".to_string()), Value::String("arc:role".to_string()));
+
+        // Process role annotations
+        let annotation_value = process_annotation_with_mapping(role, role_mapping.clone(), false).await?;
+        role_mapping.extend(annotation_value);
+
+        // Add the role to the performer info
+        let has_role_key = Value::String("arc:has role".to_string());
+        match performer_info.get_mut(&has_role_key) {
+            Some(Value::Sequence(has_roles)) => has_roles.push(Value::Mapping(role_mapping)),
+            _ => {
+                performer_info.insert(has_role_key, Value::Sequence(vec![Value::Mapping(role_mapping)]));
+            }
+        }
+    }
+
+    // Add or update the performer in the "arc:performer" field
+    let performer_key = Value::String("arc:performer".to_string());
+    match mapping.get_mut(&performer_key) {
+        Some(Value::Sequence(performers)) => {
+            // Check if a performer with the same first and last name exists
+            let mut existing_index = None;
+            for (idx, performer) in performers.iter().enumerate() {
+                if let Value::Mapping(existing_performer) = performer {
+                    let first_name_match = existing_performer.get(Value::String("arc:first name".to_string()))
+                        == Some(&Value::String(args.first_name.clone().unwrap_or_default()));
+                    let last_name_match = existing_performer.get(Value::String("arc:last name".to_string()))
+                        == Some(&Value::String(args.last_name.clone().unwrap_or_default()));
+                    if first_name_match && last_name_match {
+                        existing_index = Some(idx);
+                        break;
+                    }
+                }
+            }
+
+            if let Some(idx) = existing_index {
+                let existing_performer = &performers[idx];
+                // Compare existing performer with new performer_info
+                let is_same = if let Value::Mapping(existing_map) = existing_performer {
+                    *existing_map == performer_info
+                } else {
+                    false
+                };
+
+                if is_same {
+                    // Information is identical, nothing to do
+                    return Ok(());
+                } else {
+                    // Display existing performer information before asking to extend
+                    eprintln!("A performer with the same first and last name exists:");
+                    if let Ok(yaml_str) = serde_yaml::to_string(existing_performer) {
+                        highlight_cwl(&yaml_str);
+                    }
+                    let extend = Confirm::new()
+                        .with_prompt("Do you want to update this performer with new information?")
+                        .interact()
+                        .unwrap_or(false);
+                    if extend {
+                        if let Value::Mapping(existing_performer) = &mut performers[idx] {
+                            // Extend the existing performer with new fields from performer_info
+                            for (k, v) in performer_info {
+                                existing_performer.insert(k, v);
+                            }
+                        }
+                    } else {
+                        // Add as a new performer
+                        performers.push(Value::Mapping(performer_info));
+                    }
+                }
+            } else {
+                // No matching performer, add as new
+                performers.push(Value::Mapping(performer_info));
+            }
+        }
+        _ => {
+            // Initialize "arc:performer" as a sequence if it doesn't exist
+            mapping.insert(performer_key, Value::Sequence(vec![Value::Mapping(performer_info)]));
+        }
+    }
+
+    // Write the updated YAML back to the CWL file
+    write_updated_yaml(&args.cwl_name, &yaml)
+}
+
+
+pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
+    annotate(tool_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
+    annotate(tool_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
+    annotate(tool_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
+    annotate(tool_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    let filename = get_filename(tool_name)?;
+
+    if contains_docker_requirement(&filename)? {
+        annotate_container(tool_name, "Docker Container")?;
+    }
+    Ok(())
+}
+
+pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), Box<dyn Error>> {
+    annotate(cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
+    annotate(cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
+    // Prepare the container information
+    let mut container_info = Mapping::new();
+    container_info.insert(Value::String("class".to_string()), Value::String("arc:technology type".to_string()));
+    container_info.insert(
+        Value::String("arc:annotation value".to_string()),
+        Value::String(container_value.to_string()),
+    );
+
+    let yaml_result = parse_cwl(cwl_name)?;
+    let mut yaml = yaml_result;
+
+    if let Value::Mapping(mapping) = &mut yaml {
+        if let Some(Value::Sequence(container)) = mapping.get_mut("arc:has technology type") {
+            // Check if the container_info already exists in the sequence
+            let container_exists = container.iter().any(|existing| {
+                if let Value::Mapping(existing_map) = existing {
+                    return existing_map == &container_info;
+                }
+                false
+            });
+
+            // Add container_info only if it doesn't already exist
+            if !container_exists {
+                container.push(Value::Mapping(container_info));
+            }
+        } else {
+            // If `arc:has technology type` doesn't exist, create it and add the container info
+            let containers = vec![Value::Mapping(container_info)];
+            mapping.insert(Value::String("arc:has technology type".to_string()), Value::Sequence(containers));
+        }
+    } else {
+        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
+    }
+
+    write_updated_yaml(cwl_name, &yaml)
+}
+
+pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Option<&str>) -> Result<(), Box<dyn Error>> {
+    let mut yaml = parse_cwl(name)?;
+    if let Value::Mapping(mapping) = &mut yaml {
+        match mapping.get_mut(namespace_key) {
+            // Handle case where the namespace key exists as a sequence
+            Some(Value::Sequence(sequence)) if key.is_none() && value.is_none() => {
+                if let Some(namespace) = key {
+                    // Add to sequence if not already present
+                    if !sequence.iter().any(|x| matches!(x, Value::String(s) if s == namespace)) {
+                        sequence.push(Value::String(namespace.to_string()));
+                    }
+                }
+            }
+            // Handle case where the namespace key exists as a mapping
+            Some(Value::Mapping(namespaces)) => {
+                if let (Some(key), Some(value)) = (key, value) {
+                    if !namespaces.contains_key(Value::String(key.to_string())) {
+                        namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
+                    }
+                }
+            }
+            // Handle case where the namespace key does not exist
+            _ => {
+                if let (Some(key), Some(value)) = (key, value) {
+                    let mut namespaces = Mapping::new();
+                    namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
+                    mapping.insert(Value::String(namespace_key.to_string()), Value::Mapping(namespaces.clone()));
+                } else if let Some(namespace) = key {
+                    let sequence = vec![Value::String(namespace.to_string())];
+                    mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(sequence.clone()));
+                } else if let Some(value) = value {
+                    if let Some(Value::Sequence(schemas)) = mapping.get_mut(namespace_key) {
+                        // Check if the schema URL is already in the list
+                        if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == value)) {
+                            // If not, add the new schema to the sequence
+                            schemas.push(Value::String(value.to_string()));
+                        }
+                    } else {
+                        let schemas = vec![Value::String(value.to_string())];
+                        mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(schemas));
+                    }
+                }
+            }
+        }
+    }
+    write_updated_yaml(name, &yaml)
 }
 
 pub fn annotate_person(args: &PersonArgs, role: &str) -> Result<(), Box<dyn Error>> {
@@ -252,184 +789,6 @@ pub fn annotate_person(args: &PersonArgs, role: &str) -> Result<(), Box<dyn Erro
     write_updated_yaml(&args.cwl_name, &yaml)
 }
 
-pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
-    annotate(tool_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
-    annotate(tool_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
-    annotate(tool_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
-    annotate(tool_name, "$schemas", None, Some(ARC_SCHEMA))?;
-    let filename = get_filename(tool_name)?;
-
-    if contains_docker_requirement(&filename)? {
-        annotate_container(tool_name, "Docker Container")?;
-    }
-    Ok(())
-}
-
-pub fn annotate_container(cwl_name: &str, container_value: &str) -> Result<(), Box<dyn Error>> {
-    annotate(cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
-    annotate(cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
-    // Prepare the container information
-    let mut container_info = Mapping::new();
-    container_info.insert(Value::String("class".to_string()), Value::String("arc:technology type".to_string()));
-    container_info.insert(
-        Value::String("arc:annotation value".to_string()),
-        Value::String(container_value.to_string()),
-    );
-
-    let yaml_result = parse_cwl(cwl_name)?;
-    let mut yaml = yaml_result;
-
-    if let Value::Mapping(mapping) = &mut yaml {
-        if let Some(Value::Sequence(container)) = mapping.get_mut("arc:has technology type") {
-            // Check if the container_info already exists in the sequence
-            let container_exists = container.iter().any(|existing| {
-                if let Value::Mapping(existing_map) = existing {
-                    return existing_map == &container_info;
-                }
-                false
-            });
-
-            // Add container_info only if it doesn't already exist
-            if !container_exists {
-                container.push(Value::Mapping(container_info));
-            }
-        } else {
-            // If `arc:has technology type` doesn't exist, create it and add the container info
-            let containers = vec![Value::Mapping(container_info)];
-            mapping.insert(Value::String("arc:has technology type".to_string()), Value::Sequence(containers));
-        }
-    } else {
-        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
-    }
-
-    write_updated_yaml(cwl_name, &yaml)
-}
-
-pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
-    // Ensure ARC namespace and schema are defined
-    annotate(&args.cwl_name, "$schemas", None, Some(ARC_SCHEMA))?;
-    annotate(&args.cwl_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
-
-    // Parse CWL file into YAML
-    let mut yaml = parse_cwl(&args.cwl_name)?;
-
-    // Ensure the root of the YAML is a mapping
-    let Value::Mapping(ref mut mapping) = yaml else {
-        return Err("The CWL file does not have a valid YAML mapping at its root.".into());
-    };
-
-    // Prepare performer information
-    let mut performer_info = Mapping::new();
-    performer_info.insert(Value::String("class".to_string()), Value::String("arc:Person".to_string()));
-    performer_info.insert(Value::String("arc:first name".to_string()), Value::String(args.first_name.clone()));
-    performer_info.insert(Value::String("arc:last name".to_string()), Value::String(args.last_name.clone()));
-
-    // Add optional fields if present
-    if let Some(ref mail) = args.mail {
-        performer_info.insert(Value::String("arc:email".to_string()), Value::String(mail.clone()));
-    }
-
-    if let Some(ref affiliation) = args.affiliation {
-        performer_info.insert(Value::String("arc:affiliation".to_string()), Value::String(affiliation.clone()));
-    }
-
-    // Handle role information
-    if let Some(ref role) = args.role {
-        let mut role_mapping = Mapping::new();
-        role_mapping.insert(Value::String("class".to_string()), Value::String("arc:role".to_string()));
-
-        // Process role annotations
-        let annotation_value = process_annotation_with_mapping(role, role_mapping.clone(), false).await?;
-        role_mapping.extend(annotation_value);
-
-        // Add the role to the performer info
-        let has_role_key = Value::String("arc:has role".to_string());
-        match performer_info.get_mut(&has_role_key) {
-            Some(Value::Sequence(has_roles)) => has_roles.push(Value::Mapping(role_mapping)),
-            _ => {
-                performer_info.insert(has_role_key, Value::Sequence(vec![Value::Mapping(role_mapping)]));
-            }
-        }
-    }
-
-    // Add or update the performer in the "arc:performer" field
-    let performer_key = Value::String("arc:performer".to_string());
-    match mapping.get_mut(&performer_key) {
-        Some(Value::Sequence(performers)) => {
-            // Check if the performer already exists based on email match
-            let performer_exists = performers.iter().any(|performer| {
-                if let Value::Mapping(existing_performer) = performer {
-                    args.mail
-                        .as_ref()
-                        .is_some_and(|mail| existing_performer.get(Value::String("arc:email".to_string())) == Some(&Value::String(mail.clone())))
-                } else {
-                    false
-                }
-            });
-
-            // Add the performer if it doesn't already exist
-            if !performer_exists {
-                performers.push(Value::Mapping(performer_info));
-            }
-        }
-        _ => {
-            // Initialize "arc:performer" as a sequence if it doesn't exist
-            mapping.insert(performer_key, Value::Sequence(vec![Value::Mapping(performer_info)]));
-        }
-    }
-
-    // Write the updated YAML back to the CWL file
-    write_updated_yaml(&args.cwl_name, &yaml)
-}
-
-pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Option<&str>) -> Result<(), Box<dyn Error>> {
-    let mut yaml = parse_cwl(name)?;
-    if let Value::Mapping(mapping) = &mut yaml {
-        match mapping.get_mut(namespace_key) {
-            // Handle case where the namespace key exists as a sequence
-            Some(Value::Sequence(sequence)) if key.is_none() && value.is_none() => {
-                if let Some(namespace) = key {
-                    // Add to sequence if not already present
-                    if !sequence.iter().any(|x| matches!(x, Value::String(s) if s == namespace)) {
-                        sequence.push(Value::String(namespace.to_string()));
-                    }
-                }
-            }
-            // Handle case where the namespace key exists as a mapping
-            Some(Value::Mapping(namespaces)) => {
-                if let (Some(key), Some(value)) = (key, value) {
-                    if !namespaces.contains_key(Value::String(key.to_string())) {
-                        namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
-                    }
-                }
-            }
-            // Handle case where the namespace key does not exist
-            _ => {
-                if let (Some(key), Some(value)) = (key, value) {
-                    let mut namespaces = Mapping::new();
-                    namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
-                    mapping.insert(Value::String(namespace_key.to_string()), Value::Mapping(namespaces.clone()));
-                } else if let Some(namespace) = key {
-                    let sequence = vec![Value::String(namespace.to_string())];
-                    mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(sequence.clone()));
-                } else if let Some(value) = value {
-                    if let Some(Value::Sequence(schemas)) = mapping.get_mut(namespace_key) {
-                        // Check if the schema URL is already in the list
-                        if !schemas.iter().any(|x| matches!(x, Value::String(s) if s == value)) {
-                            // If not, add the new schema to the sequence
-                            schemas.push(Value::String(value.to_string()));
-                        }
-                    } else {
-                        let schemas = vec![Value::String(value.to_string())];
-                        mapping.insert(Value::String(namespace_key.to_string()), Value::Sequence(schemas));
-                    }
-                }
-            }
-        }
-    }
-    write_updated_yaml(name, &yaml)
-}
-
 /// Helper function to write updated YAML to a file.
 pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>> {
     let path = get_filename(name)?;
@@ -445,10 +804,6 @@ pub fn write_updated_yaml(name: &str, yaml: &Value) -> Result<(), Box<dyn Error>
 }
 
 pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Box<dyn Error>> {
-    if field == "s:license" {
-        annotate(cwl_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
-        annotate(cwl_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
-    }
     let mut yaml = parse_cwl(cwl_name)?;
 
     if let Value::Mapping(ref mut mapping) = yaml {
