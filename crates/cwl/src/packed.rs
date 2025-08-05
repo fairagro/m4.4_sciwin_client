@@ -388,7 +388,7 @@ mod tests {
                     }
                 }"##
         .replace("XXX", &base_dir.to_string_lossy())
-        .replace("/", MAIN_SEPARATOR_STR);
+        .replace( MAIN_SEPARATOR_STR, "/");
 
         let value: Value = serde_json::from_str(&reference_json).unwrap();
         assert_eq!(json, value);
