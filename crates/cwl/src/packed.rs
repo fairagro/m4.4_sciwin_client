@@ -382,6 +382,7 @@ mod tests {
         pack_input(&mut input, "#calculation.cwl", file_path).unwrap();
 
         let json = serde_json::json!(&input);
+        println!("{json}");
         let reference_json = r##"{
                     "id": "#calculation.cwl/population",
                     "type": "File",
