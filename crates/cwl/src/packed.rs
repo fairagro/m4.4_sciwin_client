@@ -204,7 +204,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 *location = Url::from_file_path(path)
                     .map_err(|_| "Could not get url from file_path")?
                     .to_string()
-                    .replace(r#"/"#, MAIN_SEPARATOR_STR);
+                    .replace(r#"//"#, MAIN_SEPARATOR_STR);
             }
         }
     }
