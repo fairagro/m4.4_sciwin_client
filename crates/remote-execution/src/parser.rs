@@ -94,6 +94,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
     for item in &mut specification.graph {
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
+            adjust_docker_requirement(tool)?;
         }
     }
 
@@ -172,8 +173,8 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
     }
     if changed {
         eprintln!(
-            r#"ℹ️ Adjusted Base Command to {}, due to an Issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114
-Please report if you experience any issues regarding this."#,
+            "ℹ️  Adjusted basecommand of {} to `{}`, due to an Issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114.",
+            tool.id.clone().unwrap(),
             command_vec.join(" ")
         );
         tool.base_command = Command::Multiple(command_vec);
@@ -181,6 +182,16 @@ Please report if you experience any issues regarding this."#,
     Ok(())
 }
 
+/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
+fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
+    if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
+        if dr.docker_file.is_some() {
+            eprintln!("ℹ️  REANA currently is not able to use Dockerfile in DockerRequirement!");
+            anyhow::bail!("Aborted execution, because Workflow is most likely to fail!");
+        }
+    }
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
