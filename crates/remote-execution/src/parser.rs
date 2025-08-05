@@ -4,6 +4,7 @@ use commonwl::{
     load_doc,
     packed::{PackedCWL, pack_workflow},
     prelude::*,
+    requirements::WorkDirItem,
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
@@ -89,7 +90,12 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
     let CWLDocument::Workflow(workflow) = cwl_document else {
         anyhow::bail!("Document is not of kind CWL Workflow {file:?}");
     };
-    let specification = pack_workflow(&workflow, file, None).map_err(|e| anyhow::anyhow!("Could not pack file {file:?}: {e}"))?;
+    let mut specification = pack_workflow(&workflow, file, None).map_err(|e| anyhow::anyhow!("Could not pack file {file:?}: {e}"))?;
+    for item in &mut specification.graph {
+        if let CWLDocument::CommandLineTool(tool) = item {
+            adjust_basecommand(tool)?;
+        }
+    }
 
     let mut inputs_value = serde_yaml::from_value::<WorkflowInputs>(Value::Mapping(inputs_yaml_data.clone()))
         .context("Failed to deserialize inputs YAML into WorkflowInputs")?;
@@ -131,6 +137,48 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
     let serialized = serde_json::to_value(&workflow_json).context("Failed to serialize workflow JSON")?;
 
     Ok(serialized)
+}
+
+/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>
+fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
+    let mut changed = false;
+    let mut command_vec = match &tool.base_command {
+        Command::Multiple(vec) => vec.clone(),
+        _ => return Ok(()),
+    };
+    if let Some(iwdr) = tool.get_requirement_mut::<InitialWorkDirRequirement>() {
+        for item in &mut iwdr.listing {
+            if let WorkDirItem::Dirent(dirent) = item
+                && let Some(entryname) = &mut dirent.entryname
+                && command_vec.contains(entryname)
+            {
+                //check whether entryname has a path attached to script item and rewrite command and entryname if so
+                let path = Path::new(entryname);
+                if path.parent().is_some() {
+                    let pos = command_vec
+                        .iter()
+                        .position(|c| c == entryname)
+                        .ok_or(anyhow::anyhow!("Failed to find command item {entryname}"))?;
+                    *entryname = path
+                        .file_name()
+                        .ok_or(anyhow::anyhow!("Failed to get filename from {path:?}"))?
+                        .to_string_lossy()
+                        .into_owned();
+                    command_vec[pos] = (*entryname).to_string();
+                    changed = true;
+                }
+            }
+        }
+    }
+    if changed {
+        eprintln!(
+            r#"ℹ️ Adjusted Base Command to {}, due to an Issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114
+Please report if you experience any issues regarding this."#,
+            command_vec.join(" ")
+        );
+        tool.base_command = Command::Multiple(command_vec);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -195,7 +243,12 @@ mod tests {
 
         // Check workflow steps
         let graph = &json["workflow"]["specification"]["$graph"];
-        let main = graph.as_array().unwrap().iter().find(|i| i["id"] == serde_json::Value::String("#main".to_string())).unwrap();
+        let main = graph
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["id"] == serde_json::Value::String("#main".to_string()))
+            .unwrap();
         let steps = &main["steps"];
         assert!(steps.is_array(), "Steps should be an array");
 
@@ -256,7 +309,12 @@ mod tests {
         assert_eq!(cwl_files.as_array().unwrap().len(), 3);
 
         let graph = &json["workflow"]["specification"]["$graph"];
-        let main = graph.as_array().unwrap().iter().find(|i| i["id"] == serde_json::Value::String("#main".to_string())).unwrap();
+        let main = graph
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["id"] == serde_json::Value::String("#main".to_string()))
+            .unwrap();
         let steps = &main["steps"];
         assert!(steps.is_array(), "Steps should be an array");
 
