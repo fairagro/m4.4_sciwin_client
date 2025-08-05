@@ -303,6 +303,8 @@ mod tests {
     #[serial]
     pub fn test_get_file_metadata() {
         let path = env::current_dir().unwrap().join("../../tests").join("test_data").join("file.txt");
+        assert!(path.exists());
+        
         let result = get_file_metadata(path.clone(), None);
         let expected = File {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),

@@ -12,5 +12,6 @@ path = "lib.rs"
 
 [dependencies]
 git2 = { workspace = true }
+serde_json = { workspace = true }
 tempfile = { workspace = true }
 whoami = "1.6.0"
