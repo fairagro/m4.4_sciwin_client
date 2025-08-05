@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fs::{self},
-    path::{MAIN_SEPARATOR_STR, Path},
+    path::Path,
 };
 use url::Url;
 
@@ -176,9 +176,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
@@ -198,9 +196,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
                 } else {
                     normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
                 };
-                *location = Url::from_file_path(path)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
             }
         }
     }
@@ -354,6 +350,8 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
 
 #[cfg(test)]
 mod tests {
+    use std::path::MAIN_SEPARATOR_STR;
+
     use super::*;
     use crate::{
         CWLType, Command, CommandLineTool, Dirent, File, Include,
@@ -389,7 +387,8 @@ mod tests {
                         "prefix": "--population"
                     }
                 }"##
-        .replace("XXX", &base_dir.to_string_lossy()).replace("/", MAIN_SEPARATOR_STR);
+        .replace("XXX", &base_dir.to_string_lossy())
+        .replace("/", MAIN_SEPARATOR_STR);
 
         let value: Value = serde_json::from_str(&reference_json).unwrap();
         assert_eq!(json, value);
