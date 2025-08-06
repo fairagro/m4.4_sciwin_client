@@ -188,10 +188,10 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
             eprintln!("ℹ️  Tool {id} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!");
-            eprintln!("🌶️  s4n is trying to resolve this issue...");
+            eprintln!("🌶️  Trying to build and temporarily push the image...");
             //we build the image and send it to ttl.sh
             let image_name = uuid::Uuid::new_v4().to_string();
-            let tag = format!("ttl.sh/{image_name}:2h");
+            let tag = format!("ttl.sh/{image_name}:1h");
             //write dockerfile to temp dir
             let file_content = match dockerfile {
                 commonwl::Entry::Source(src) => src.clone(),
@@ -216,11 +216,13 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
             let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
             report_console_output(&mut process);
             process.wait()?;
+            eprintln!("📎  Docker image was published at {tag} and is available for 1 hour");
 
             //set docker pull and remove dockerfile
             dr.docker_pull = Some(tag);
             dr.docker_file = None;
             dr.docker_image_id = None;
+
         }
     }
     Ok(())
