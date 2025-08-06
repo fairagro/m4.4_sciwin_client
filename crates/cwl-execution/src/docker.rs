@@ -1,11 +1,12 @@
 use crate::environment::RuntimeEnvironment;
-use commonwl::{requirements::DockerRequirement, Entry, StringOrNumber};
+use commonwl::{Entry, StringOrNumber, requirements::DockerRequirement};
 use rand::Rng;
 use rand::distr::Alphanumeric;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::process::Command as SystemCommand;
 use std::{fs, path::MAIN_SEPARATOR_STR, process::Command};
+use util::report_console_output;
 
 pub fn is_docker_installed() -> bool {
     let output = Command::new("docker").arg("--version").output();
@@ -56,9 +57,12 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
         let path = path.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
         let mut build = SystemCommand::new(&container_engine);
-        build.args(["build", "-f", &path, "-t", docker_image_id, "."]);
-        let output = build.output().expect("Could not build container!");
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+        let mut process = build
+            .args(["build", "-f", &path, "-t", docker_image_id, "."])
+            .spawn()
+            .expect("Could not build container!");
+        report_console_output(&mut process);
+        process.wait().expect("Could not build container!");
         docker_image_id
     } else {
         unreachable!()
