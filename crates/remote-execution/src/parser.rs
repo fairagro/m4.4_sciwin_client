@@ -113,9 +113,15 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
         }
     }
     if !params.is_empty() {
-        inputs_value.parameters = serde_yaml::to_value(&params)?;
+        if let Value::Mapping(values) = &mut inputs_value.parameters {
+            for (k, v) in params {
+                if !values.contains_key(k) {
+                    values.insert(k.into(), v.into());
+                }
+            }
+        }
     }
-
+    
     let output_files: Vec<String> = get_all_outputs(&workflow, cwl_path)
         .with_context(|| format!("Failed to get all outputs from CWL file '{cwl_path}'"))?
         .into_iter()
@@ -134,7 +140,6 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
             r#type: "cwl".to_string(),
         },
     };
-
     let serialized = serde_json::to_value(&workflow_json).context("Failed to serialize workflow JSON")?;
 
     Ok(serialized)
@@ -213,7 +218,7 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
                 .arg(".")
                 .spawn()?;
             report_console_output(&mut process);
-            process.wait()?;            
+            process.wait()?;
             eprintln!("✔️  Successfully built Docker image in Tool {id}");
 
             //push
