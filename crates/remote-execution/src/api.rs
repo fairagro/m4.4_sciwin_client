@@ -1,7 +1,7 @@
+use crate::reana::{Content, Reana, WorkflowEndpoint};
 use crate::utils::{collect_files_recursive, get_location, load_cwl_yaml, load_yaml_file, resolve_input_file_path, sanitize_path};
 use anyhow::{Context, Result};
-use reqwest::blocking::{Client, ClientBuilder};
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::blocking::Client;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashSet;
@@ -21,17 +21,11 @@ pub fn create_workflow(
     workflow: &serde_json::Value,
     workflow_name: Option<&str>,
 ) -> Result<Value, Box<dyn Error>> {
-    let mut headers = HeaderMap::new();
-    headers.insert(CONTENT_TYPE, "application/json".parse()?);
-
-    let client = Client::builder().default_headers(headers).danger_accept_invalid_certs(true).build()?;
-
-    let mut url = format!("{reana_server}/api/workflows?access_token={reana_token}");
+    let mut params = HashMap::new();
     if let Some(name) = workflow_name {
-        url.push_str(&format!("&workflow_name={name}"));
+        params.insert("workflow_name".to_string(), name.to_string());
     }
-
-    let response = client.post(&url).json(workflow).send()?.error_for_status()?;
+    let response = Reana::new(reana_server, reana_token).post(&WorkflowEndpoint::Root, Content::Json(workflow.clone()), Some(params))?;
 
     Ok(response.json()?)
 }
@@ -63,14 +57,6 @@ pub fn start_workflow(
     restart: bool,
     reana_specification: &serde_yaml::Value,
 ) -> Result<Value> {
-    let mut headers = HeaderMap::new();
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    let client = ClientBuilder::new()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("Failed to build HTTP client")?;
-
     let body = json!({
         "operational_options": operational_parameters.unwrap_or_default(),
         "input_parameters": input_parameters.unwrap_or_default(),
@@ -78,16 +64,7 @@ pub fn start_workflow(
         "reana_specification": reana_specification
     });
 
-    let url = format!("{reana_server}/api/workflows/{workflow_name}/start?access_token={reana_token}");
-
-    let response = client
-        .post(&url)
-        .headers(headers)
-        .json(&body)
-        .send()
-        .with_context(|| format!("Failed to send POST request to {url}"))?
-        .error_for_status()
-        .with_context(|| format!("Server returned error status for POST to {url}"))?;
+    let response = Reana::new(reana_server, reana_token).post(&WorkflowEndpoint::Start(workflow_name), Content::Json(body), None)?;
 
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow start request")?;
 
@@ -95,28 +72,14 @@ pub fn start_workflow(
 }
 
 pub fn get_workflow_logs(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value, Box<dyn Error>> {
-    let url = format!("{}/api/workflows/{}/logs?access_token={}", &reana_server, workflow_id, reana_token);
-
-    let client = Client::builder().danger_accept_invalid_certs(true).build()?;
-
-    let response = client.get(&url).send()?;
+    let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Logs(workflow_id))?;
     let json_response: Value = response.json()?;
 
     Ok(json_response)
 }
 
 pub fn get_workflow_status(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
-    let url = format!("{reana_server}/api/workflows/{workflow_id}/status?access_token={reana_token}");
-
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("Failed to build HTTP client")?;
-
-    let response = client
-        .get(&url)
-        .send()
-        .with_context(|| format!("Failed to send GET request to '{url}'"))?;
+    let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Status(workflow_id))?;
 
     let status = response.status();
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow status request")?;
@@ -130,17 +93,8 @@ pub fn get_workflow_status(reana_server: &str, reana_token: &str, workflow_id: &
 }
 
 pub fn get_workflow_specification(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
-    let url = format!("{reana_server}/api/workflows/{workflow_id}/specification?access_token={reana_token}");
-
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("Failed to build HTTP client")?;
-
-    let response = client
-        .get(&url)
-        .send()
-        .with_context(|| format!("Failed to send GET request to '{url}'"))?;
+    let reana = Reana::new(reana_server, reana_token);
+    let response = reana.get(&WorkflowEndpoint::Specification(workflow_id))?;
 
     let status = response.status();
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow status request")?;
@@ -160,6 +114,7 @@ pub fn upload_files(
     workflow_name: &str,
     workflow_json: &Value,
 ) -> Result<()> {
+    eprintln!("Uploading Files ...");
     let mut files: HashSet<String> = HashSet::new();
     let input_yaml_value = if let Some(input_path) = input_yaml {
         Some(load_yaml_file(Path::new(input_path)).context("Failed to load input YAML file")?)
@@ -239,16 +194,6 @@ pub fn upload_files(
         return Ok(());
     }
 
-    // Prepare HTTP client
-    let mut headers = HeaderMap::new();
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"));
-
-    let client = ClientBuilder::new()
-        .default_headers(headers)
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("Failed to build HTTP client")?;
-
     for file_name in files {
         let mut file_path = PathBuf::from(&file_name);
         if !file_path.exists() {
@@ -274,21 +219,14 @@ pub fn upload_files(
 
         let name = pathdiff::diff_paths(&file_name, std::env::current_dir()?).unwrap_or_else(|| Path::new(&file_name).to_path_buf());
 
-        let upload_url = format!(
-            "{}/api/workflows/{}/workspace?file_name={}&access_token={}",
-            reana_server,
-            workflow_name,
-            sanitize_path(&name.to_string_lossy()),
-            reana_token
-        );
-
-        // Upload file
-        let response = client
-            .post(&upload_url)
-            .body(file_content)
-            .send()
-            .with_context(|| format!("Failed to upload file to '{upload_url}'"))?;
-
+        let mut params = HashMap::new();
+        params.insert("file_name".to_string(), sanitize_path(&name.to_string_lossy()));
+        let response = Reana::new(reana_server, reana_token).post(
+            &WorkflowEndpoint::Workspace(workflow_name, None),
+            Content::OctetStream(file_content),
+            Some(params),
+        )?;
+        eprintln!("✔️  Uploaded {file_name}");
         let _response_text = response.text().context("Failed to read server response after upload")?;
     }
 
@@ -301,22 +239,12 @@ pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str
         return Ok(());
     }
 
-    let client = ClientBuilder::new()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("❌ Failed to build HTTP client")?;
-
     if let Some(ref dir) = folder {
         fs::create_dir_all(dir).with_context(|| format!("❌ Failed to create folder: {dir}"))?;
     }
 
     for file_name in files {
-        let url = format!("{reana_server}/api/workflows/{workflow_name}/workspace/{file_name}?access_token={reana_token}");
-
-        let response = client
-            .get(&url)
-            .send()
-            .with_context(|| format!("❌ HTTP request failed for URL: {url}"))?;
+        let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Workspace(workflow_name, Some(file_name.to_string())))?;
 
         if response.status().is_success() {
             let file_path_name = Path::new(file_name)
@@ -347,14 +275,7 @@ pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str
 }
 
 pub fn get_workflow_workspace(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
-    let url = format!("{reana_server}/api/workflows/{workflow_id}/workspace?access_token={reana_token}");
-
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("❌ Failed to build HTTP client")?;
-
-    let response = client.get(&url).send().with_context(|| format!("❌ Failed to send request to {url}"))?;
+    let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Workspace(workflow_id, None))?;
 
     let json_response: Value = response.json().context("❌ Failed to parse JSON response")?;
 
