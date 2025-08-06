@@ -8,14 +8,8 @@ use commonwl::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
-use std::{
-    collections::HashMap,
-    env::temp_dir,
-    fs,
-    io::{BufRead, BufReader},
-    path::Path,
-    process::Command as SystemCommand,
-};
+use std::{collections::HashMap, env::temp_dir, fs, path::Path, process::Command as SystemCommand};
+use util::report_console_output;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WorkflowOutputs {
@@ -194,9 +188,10 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
             eprintln!("ℹ️  Tool {id} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!");
+            eprintln!("🌶️  s4n is trying to resolve this issue...");
             //we build the image and send it to ttl.sh
             let image_name = uuid::Uuid::new_v4().to_string();
-
+            let tag = format!("ttl.sh/{image_name}:2h");
             //write dockerfile to temp dir
             let file_content = match dockerfile {
                 commonwl::Entry::Source(src) => src.clone(),
@@ -209,25 +204,23 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
             let mut process = SystemCommand::new("docker")
                 .arg("build")
                 .arg("-t")
-                .arg(format!("ttl.sh/{image_name}:2h"))
+                .arg(&tag)
                 .arg("-f")
                 .arg(filenname)
                 .arg(".")
                 .spawn()?;
-            if let Some(stdout) = process.stdout.as_mut() {
-                let lines = BufReader::new(stdout).lines();
-                for line in lines {
-                    eprintln!("{line:?}");
-                }
-            }
-
-            if let Some(stderr) = process.stderr.as_mut() {
-                let lines = BufReader::new(stderr).lines();
-                for line in lines {
-                    eprintln!("{line:?}");
-                }
-            }
+            report_console_output(&mut process);
             process.wait()?;
+
+            //push
+            let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
+            report_console_output(&mut process);
+            process.wait()?;
+
+            //set docker pull and remove dockerfile
+            dr.docker_pull = Some(tag);
+            dr.docker_file = None;
+            dr.docker_image_id = None;
         }
     }
     Ok(())
