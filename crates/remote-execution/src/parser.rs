@@ -100,7 +100,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
     for item in &mut specification.graph {
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
-            //adjust_docker_requirement(tool)?;
+            adjust_docker_requirement(tool)?;
         }
     }
 
