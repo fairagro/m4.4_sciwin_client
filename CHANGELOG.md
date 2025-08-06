@@ -4,6 +4,7 @@
 - Added `s4n install` and `s4n uninstall` commands #138
 - Runner supports scatter and linkMerge now 
 - Support packed CWL Documents in Runner #144
+- Use ttl.sh to build Docker images for REANA on the fly (fixes #119)
 
 ## 🐛 Bugfixes
 - ramping up runner conformance from 204/378 to 223/378
@@ -12,6 +13,7 @@
 
 ## 🚜 Refactor
 - Code restructuring
+- Consolidation in REANA specific (De)Serialization code #145
 
 # v0.7.0
 ## 🚀 Features
