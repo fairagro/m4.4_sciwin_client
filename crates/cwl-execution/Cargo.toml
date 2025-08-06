@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 commonwl = { path = "../cwl" }
+util = { path = "../util" }
 fancy-regex = { workspace = true }
 log = { workspace = true }
 pathdiff = { workspace = true }

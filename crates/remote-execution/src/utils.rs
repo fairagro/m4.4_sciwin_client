@@ -1,4 +1,6 @@
 use anyhow::{Context, Result, anyhow};
+use commonwl::StringOrDocument;
+use commonwl::Workflow;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
 use std::collections::BTreeSet;
@@ -476,53 +478,32 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
     Ok(inputs_mapping)
 }
 
-pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>> {
-    let main_yaml_str =
-        fs::read_to_string(main_workflow_path).with_context(|| format!("Failed to read main workflow file '{main_workflow_path}'"))?;
-    let main_yaml: Value =
-        serde_yaml::from_str(&main_yaml_str).with_context(|| format!("Failed to parse YAML from main workflow file '{main_workflow_path}'"))?;
-
-    let outputs_section = main_yaml
-        .get("outputs")
-        .with_context(|| "No 'outputs' section in main workflow")?
-        .as_sequence()
-        .with_context(|| "'outputs' section is not a sequence")?;
-
-    let steps_section = main_yaml
-        .get("steps")
-        .with_context(|| "No 'steps' section in main workflow")?
-        .as_sequence()
-        .with_context(|| "'steps' section is not a sequence")?;
-
-    let main_workflow_path = Path::new(main_workflow_path);
-    let main_workflow_dir = main_workflow_path
+pub fn get_all_outputs<P: AsRef<Path>>(workflow: &Workflow, path: P) -> Result<Vec<(String, String)>> {
+    let main_workflow_dir = path
+        .as_ref()
         .parent()
         .with_context(|| "Failed to get parent directory of main workflow file")?;
-
     let mut results = Vec::new();
 
-    for output in outputs_section {
-        let output_source = output
-            .get("outputSource")
-            .and_then(|v| v.as_str())
-            .with_context(|| "Output missing 'outputSource' field or it's not a string")?;
-
-        let parts: Vec<&str> = output_source.split('/').collect();
+    for output in &workflow.outputs {
+        let parts: Vec<&str> = output.output_source.split('/').collect();
         if parts.len() != 2 {
             anyhow::bail!(
                 "Invalid 'outputSource' format for output: '{}'. Expected format 'step_id/output_id'",
-                output_source
+                output.output_source
             );
         }
         let step_id = parts[0];
         let output_id = parts[1];
 
-        let run_file_path = steps_section
+        let run_file_path = workflow
+            .steps
             .iter()
             .find_map(|step| {
-                let id = step.get("id").and_then(|v| v.as_str())?;
-                if id == step_id {
-                    step.get("run").and_then(|v| v.as_str()).map(|s| s.to_string())
+                if step.id == step_id
+                    && let StringOrDocument::String(run) = &step.run
+                {
+                    Some(run)
                 } else {
                     None
                 }
@@ -530,7 +511,7 @@ pub fn get_all_outputs(main_workflow_path: &str) -> Result<Vec<(String, String)>
             .with_context(|| format!("Step with id '{step_id}' not found or missing 'run' field in main workflow"))?;
 
         let full_run_file_path = main_workflow_dir
-            .join(&run_file_path)
+            .join(run_file_path)
             .canonicalize()
             .with_context(|| format!("Failed to canonicalize run file path '{run_file_path}' for step '{step_id}'"))?;
 
@@ -670,6 +651,7 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use commonwl::load_workflow;
     use serde_yaml::Value;
     use std::collections::HashSet;
     use std::fs::{self, File, create_dir_all};
@@ -1243,8 +1225,9 @@ mod tests {
     fn test_get_all_outputs_with_existing_file() {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let workflow_file_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let workflow = load_workflow(&workflow_file_path).unwrap();
         assert!(workflow_file_path.exists(), "CWL file not found at: {workflow_file_path:?}");
-        let result = get_all_outputs(&workflow_file_path.to_string_lossy());
+        let result = get_all_outputs(&workflow, &workflow_file_path);
         assert!(result.is_ok());
         let outputs = result.unwrap();
         assert_eq!(outputs.len(), 1);
