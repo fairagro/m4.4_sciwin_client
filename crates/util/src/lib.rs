@@ -1,7 +1,7 @@
 use std::{
     io::{BufRead, BufReader},
     path::Path,
-    process::Child,
+    process::{Child, Command},
 };
 
 pub fn is_cwl_file(path: &str) -> bool {
@@ -22,4 +22,10 @@ pub fn report_console_output(process: &mut Child) {
             eprintln!("{line:?}");
         }
     }
+}
+
+pub fn is_docker_installed() -> bool {
+    let output = Command::new("docker").arg("--version").output();
+
+    matches!(output, Ok(output) if output.status.success())
 }

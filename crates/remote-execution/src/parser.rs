@@ -9,7 +9,7 @@ use commonwl::{
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
 use std::{collections::HashMap, env::temp_dir, fs, path::Path, process::Command as SystemCommand};
-use util::report_console_output;
+use util::{is_docker_installed, report_console_output};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WorkflowOutputs {
@@ -188,6 +188,9 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
             eprintln!("ℹ️  Tool {id} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!");
+            if !is_docker_installed() {
+                return Ok(());
+            }
             eprintln!("🌶️  Trying to build and temporarily push the image...");
             //we build the image and send it to ttl.sh
             let image_name = uuid::Uuid::new_v4().to_string();
@@ -222,7 +225,6 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
             dr.docker_pull = Some(tag);
             dr.docker_file = None;
             dr.docker_image_id = None;
-
         }
     }
     Ok(())
