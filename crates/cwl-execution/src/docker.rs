@@ -8,7 +8,8 @@ use std::process::Command as SystemCommand;
 use std::{fs, path::MAIN_SEPARATOR_STR, process::Command};
 
 pub fn is_docker_installed() -> bool {
-    let output = Command::new("docker").arg("--version").output();
+    let engine = container_engine().to_string();
+    let output = Command::new(engine).arg("--version").output();
 
     matches!(output, Ok(output) if output.status.success())
 }

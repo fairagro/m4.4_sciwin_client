@@ -1,5 +1,5 @@
 use crate::{
-    CommandError, InputObject,
+    CommandError, InputObject, container_engine,
     docker::{build_docker_command, is_docker_installed},
     environment::{RuntimeEnvironment, collect_environment},
     execute,
@@ -388,8 +388,12 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
         if is_docker_installed() {
             command = build_docker_command(&mut command, docker, runtime);
         } else {
-            eprintln!("Docker is not installed, can not use containerization on this system!");
-            warn!("Docker is not installed, can not use");
+            eprintln!(
+                "{} is not installed, can not use {} on this system!",
+                container_engine(),
+                container_engine()
+            );
+            warn!("{} is not installed, can not use", container_engine());
         }
     }
 
