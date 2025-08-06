@@ -51,7 +51,23 @@ impl<'a> Reana<'a> {
     pub fn get(&self, endpoint: &WorkflowEndpoint) -> anyhow::Result<Response> {
         let client = Client::builder().danger_accept_invalid_certs(true).build()?;
         let url = self.url(endpoint, None);
-        client.get(&url).send().with_context(|| format!("❌ Failed to send GET request to URL: {url}"))
+        client
+            .get(&url)
+            .send()
+            .with_context(|| format!("❌ Failed to send GET request to URL: {url}"))
+    }
+
+    pub fn ping(&self) -> anyhow::Result<Response> {
+        let ping_url = format!("{}/api/ping", self.server);
+        let client = Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .context("Failed to build HTTP client")?;
+
+        client
+            .get(&ping_url)
+            .send()
+            .with_context(|| format!("❌ Failed to send GET request to URL: {ping_url}"))
     }
 }
 

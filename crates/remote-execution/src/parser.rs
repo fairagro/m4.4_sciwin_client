@@ -173,7 +173,7 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
     }
     if changed {
         eprintln!(
-            "ℹ️  Adjusted basecommand of {} to `{}`, due to an open issue with REANA: https://github.com/fairagro/m4.4_sciwin_client/issues/114.",
+            "ℹ️  Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
             tool.id.clone().unwrap(),
             command_vec.join(" ")
         );
@@ -187,11 +187,11 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     let id = tool.id.clone().unwrap();
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
-            eprintln!("ℹ️  Tool {id} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!");
+            eprintln!("ℹ️  Tool {id} depends on Dockerfile, which not supported by REANA!");
             if !is_docker_installed() || is_ci_process() {
                 return Ok(());
             }
-            eprintln!("🌶️  Trying to build and temporarily push the image...");
+            eprintln!("🌶️  Trying to use a workaround for Dockerfile in Tool {id}...");
             //we build the image and send it to ttl.sh
             let image_name = uuid::Uuid::new_v4().to_string();
             let tag = format!("ttl.sh/{image_name}:1h");
@@ -213,13 +213,14 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
                 .arg(".")
                 .spawn()?;
             report_console_output(&mut process);
-            process.wait()?;
+            process.wait()?;            
+            eprintln!("✔️  Successfully built Docker image in Tool {id}");
 
             //push
             let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
             report_console_output(&mut process);
             process.wait()?;
-            eprintln!("📎  Docker image was published at {tag} and is available for 1 hour");
+            eprintln!("✔️  Docker image was published at {tag} and is available for 1 hour in Tool {id}");
 
             //set docker pull and remove dockerfile
             dr.docker_pull = Some(tag);

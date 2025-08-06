@@ -1,7 +1,6 @@
 use crate::reana::{Content, Reana, WorkflowEndpoint};
 use crate::utils::{collect_files_recursive, get_location, load_cwl_yaml, load_yaml_file, resolve_input_file_path, sanitize_path};
 use anyhow::{Context, Result};
-use reqwest::blocking::Client;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashSet;
@@ -15,12 +14,7 @@ use std::{
     path::PathBuf,
 };
 
-pub fn create_workflow(
-    reana_server: &str,
-    reana_token: &str,
-    workflow: &serde_json::Value,
-    workflow_name: Option<&str>,
-) -> Result<Value, Box<dyn Error>> {
+pub fn create_workflow(reana_server: &str, reana_token: &str, workflow: &Value, workflow_name: Option<&str>) -> Result<Value, Box<dyn Error>> {
     let mut params = HashMap::new();
     if let Some(name) = workflow_name {
         params.insert("workflow_name".to_string(), name.to_string());
@@ -31,19 +25,8 @@ pub fn create_workflow(
 }
 
 pub fn ping_reana(reana_server: &str) -> Result<Value> {
-    let ping_url = format!("{reana_server}/api/ping");
-
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .context("Failed to build HTTP client")?;
-
-    let response = client
-        .get(&ping_url)
-        .send()
-        .with_context(|| format!("Failed to send GET request to '{ping_url}'"))?;
-
-    let json_response: Value = response.json().with_context(|| format!("Failed to parse JSON from '{ping_url}'"))?;
+    let response = Reana::new(reana_server, "").ping()?;
+    let json_response: Value = response.json().with_context(|| "Failed to parse JSON from".to_string())?;
 
     Ok(json_response)
 }
