@@ -188,7 +188,7 @@ fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
             eprintln!("ℹ️  Tool {id} depends on Dockerfile, however REANA currently is not able to use Dockerfile in DockerRequirement!");
-            if !is_docker_installed() || !is_ci_process() {
+            if !is_docker_installed() || is_ci_process() {
                 return Ok(());
             }
             eprintln!("🌶️  Trying to build and temporarily push the image...");
