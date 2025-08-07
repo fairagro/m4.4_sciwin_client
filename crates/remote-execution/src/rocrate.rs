@@ -1,4 +1,5 @@
 use crate::api::download_files;
+use crate::reana::Reana;
 use chrono::Utc;
 use fancy_regex::Regex;
 use keyring::Entry;
@@ -146,11 +147,7 @@ pub fn create_action(a: Action) -> Value {
     action
 }
 
-fn create_howto_steps(
-    steps: &[(String, String)],
-    connections: &[(String, String, String)],
-    id: &str,
-) -> Vec<serde_json::Value> {
+fn create_howto_steps(steps: &[(String, String)], connections: &[(String, String, String)], id: &str) -> Vec<serde_json::Value> {
     let mut result = Vec::new();
     for (i, (step_id, step_id_match)) in steps.iter().enumerate() {
         if step_id_match == id {
@@ -616,7 +613,9 @@ fn generate_connections(script_structure: &[ScriptStep]) -> Vec<(String, String,
             .collect();
 
         // Connect main inputs to step inputs, and step outputs to main outputs
-        for (name, path, is_output) in main_inputs.iter().map(|(n, p)| (n, p, false))
+        for (name, path, is_output) in main_inputs
+            .iter()
+            .map(|(n, p)| (n, p, false))
             .chain(main_outputs.iter().map(|(n, p)| (n, p, true)))
         {
             let main_id = if name.starts_with("#main/") {
@@ -742,8 +741,9 @@ pub fn create_ro_crate(
     }
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let reana = Reana::new(&reana_instance, &reana_token);
     //download intermediate outputs that were found
-    download_files(&reana_instance, &reana_token, workflow_name, &found_paths, Some(&folder_name))?;
+    download_files(&reana, workflow_name, &found_paths, Some(&folder_name))?;
 
     Ok(())
 }

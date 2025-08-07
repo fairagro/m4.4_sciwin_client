@@ -4,7 +4,7 @@ use commonwl::prelude::*;
 use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
-use remote_execution::prelude::*;
+use remote_execution::{prelude::*, reana::Reana};
 use serde_yaml::{Number, Value};
 use std::{
     collections::HashMap,
@@ -132,9 +132,10 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
 pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let reana = Reana::new(&reana_instance, &reana_token);
+
     if let Some(name) = workflow_name {
-        let status_response =
-            get_workflow_status(&reana_instance, &reana_token, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+        let status_response = get_workflow_status(&reana, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
         let status = status_response["status"].as_str().unwrap_or("unknown");
         let created = status_response["created"].as_str().unwrap_or("unknown");
         let icon = if status == "finished" {
@@ -161,8 +162,7 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
         for line in reader.lines().map_while(Result::ok) {
             let trimmed = line.trim();
             if !trimmed.is_empty() {
-                let status_response =
-                    get_workflow_status(&reana_instance, &reana_token, trimmed).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+                let status_response = get_workflow_status(&reana, trimmed).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
                 let status = status_response["status"].as_str().unwrap_or("unknown");
                 let created = status_response["created"].as_str().unwrap_or("unknown");
                 let icon = if status == "finished" {
@@ -182,13 +182,14 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
 pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
-    let status_response =
-        get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+    let reana = Reana::new(&reana_instance, &reana_token);
+
+    let status_response = get_workflow_status(&reana, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
     let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
     // Get workflow status, only download if finished?
     match workflow_status {
         "finished" => {
-            let workflow_json = get_workflow_specification(&reana_instance, &reana_token, workflow_name)?;
+            let workflow_json = get_workflow_specification(&reana, workflow_name)?;
             let output_files = workflow_json
                 .get("specification")
                 .and_then(|spec| spec.get("outputs"))
@@ -201,7 +202,7 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
                         .collect::<Vec<String>>()
                 })
                 .unwrap_or_default();
-            download_files(&reana_instance, &reana_token, workflow_name, &output_files, output_dir.as_deref())?;
+            download_files(&reana, workflow_name, &output_files, output_dir.as_deref())?;
         }
         "failed" => {
             if let Some(logs_str) = status_response["logs"].as_str() {
@@ -222,19 +223,20 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
 pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let reana = Reana::new(&reana_instance, &reana_token);
+
     // Get workflow status, only export if finished?
-    let status_response =
-        get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+    let status_response = get_workflow_status(&reana, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
     let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
     match workflow_status {
         "finished" => {
-            let workflow_json = get_workflow_specification(&reana_instance, &reana_token, workflow_name)?;
+            let workflow_json = get_workflow_specification(&reana, workflow_name)?;
             let config_path = PathBuf::from("workflow.toml");
             let config_str = fs::read_to_string(&config_path)?;
             let specification = workflow_json
                 .get("specification")
                 .ok_or("❌ 'specification' field missing in workflow JSON")?;
-            let logs = get_workflow_logs(&reana_instance, &reana_token, workflow_name)?;
+            let logs = get_workflow_logs(&reana, workflow_name)?;
             let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize REANA JSON logs");
             let conforms_to = [
                 "https://w3id.org/ro/wfrun/process/0.5",
@@ -259,7 +261,7 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Res
             )?;
         }
         "failed" => {
-            let logs = get_workflow_status(&reana_instance, &reana_token, workflow_name)?;
+            let logs = get_workflow_status(&reana, workflow_name)?;
             let logs_str = serde_json::to_string_pretty(&logs).expect("Failed to serialize REANA JSON logs");
             analyze_workflow_logs(&logs_str);
             return Err("❌ Workflow failed. Logs analyzed.".into());
@@ -358,8 +360,9 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
     // Get credentials
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let reana = Reana::new(&reana_instance, &reana_token);
     // Ping
-    let ping_status = ping_reana(&reana_instance)?;
+    let ping_status = ping_reana(&reana)?;
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
         eprintln!("⚠️ Unexpected response from Reana server: {ping_status:?}");
         return Ok(());
@@ -371,17 +374,16 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
     let workflow_json = serde_json::to_value(workflow_json)?;
     let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
     // Create workflow
-    let create_response = create_workflow(&reana_instance, &reana_token, &workflow_json, Some(&workflow_name))?;
+    let create_response = create_workflow(&reana, &workflow_json, Some(&workflow_name))?;
     let Some(workflow_name) = create_response["workflow_name"].as_str() else {
         return Err("Missing workflow_name in response".into());
     };
-    upload_files(&reana_instance, &reana_token, input_file, file, workflow_name, &workflow_json)?;
-    start_workflow(&reana_instance, &reana_token, workflow_name, None, None, false, &converted_yaml)?;
+    upload_files(&reana, input_file, file, workflow_name, &workflow_json)?;
+    start_workflow(&reana, workflow_name, None, None, false, &converted_yaml)?;
     eprintln!("✅ Started workflow execution");
     if watch {
         loop {
-            let status_response =
-                get_workflow_status(&reana_instance, &reana_token, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+            let status_response = get_workflow_status(&reana, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
             let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
             if TERMINAL_STATUSES.contains(&workflow_status) {
                 match workflow_status {

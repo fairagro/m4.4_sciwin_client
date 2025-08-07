@@ -14,26 +14,25 @@ use std::{
     path::PathBuf,
 };
 
-pub fn create_workflow(reana_server: &str, reana_token: &str, workflow: &Value, workflow_name: Option<&str>) -> Result<Value, Box<dyn Error>> {
+pub fn create_workflow(reana: &Reana, workflow: &Value, workflow_name: Option<&str>) -> Result<Value, Box<dyn Error>> {
     let mut params = HashMap::new();
     if let Some(name) = workflow_name {
         params.insert("workflow_name".to_string(), name.to_string());
     }
-    let response = Reana::new(reana_server, reana_token).post(&WorkflowEndpoint::Root, Content::Json(workflow.clone()), Some(params))?;
+    let response = reana.post(&WorkflowEndpoint::Root, Content::Json(workflow.clone()), Some(params))?;
 
     Ok(response.json()?)
 }
 
-pub fn ping_reana(reana_server: &str) -> Result<Value> {
-    let response = Reana::new(reana_server, "").ping()?;
+pub fn ping_reana(reana: &Reana) -> Result<Value> {
+    let response = reana.ping()?;
     let json_response: Value = response.json().with_context(|| "Failed to parse JSON from".to_string())?;
 
     Ok(json_response)
 }
 
 pub fn start_workflow(
-    reana_server: &str,
-    reana_token: &str,
+    reana: &Reana,
     workflow_name: &str,
     operational_parameters: Option<HashMap<String, Value>>,
     input_parameters: Option<HashMap<String, Value>>,
@@ -47,22 +46,22 @@ pub fn start_workflow(
         "reana_specification": reana_specification
     });
 
-    let response = Reana::new(reana_server, reana_token).post(&WorkflowEndpoint::Start(workflow_name), Content::Json(body), None)?;
+    let response = reana.post(&WorkflowEndpoint::Start(workflow_name), Content::Json(body), None)?;
 
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow start request")?;
 
     Ok(json_response)
 }
 
-pub fn get_workflow_logs(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value, Box<dyn Error>> {
-    let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Logs(workflow_id))?;
+pub fn get_workflow_logs(reana: &Reana, workflow_id: &str) -> Result<Value, Box<dyn Error>> {
+    let response = reana.get(&WorkflowEndpoint::Logs(workflow_id))?;
     let json_response: Value = response.json()?;
 
     Ok(json_response)
 }
 
-pub fn get_workflow_status(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
-    let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Status(workflow_id))?;
+pub fn get_workflow_status(reana: &Reana, workflow_id: &str) -> Result<Value> {
+    let response = reana.get(&WorkflowEndpoint::Status(workflow_id))?;
 
     let status = response.status();
     let json_response: Value = response.json().context("Failed to parse JSON response from workflow status request")?;
@@ -75,8 +74,7 @@ pub fn get_workflow_status(reana_server: &str, reana_token: &str, workflow_id: &
     }
 }
 
-pub fn get_workflow_specification(reana_server: &str, reana_token: &str, workflow_id: &str) -> Result<Value> {
-    let reana = Reana::new(reana_server, reana_token);
+pub fn get_workflow_specification(reana: &Reana, workflow_id: &str) -> Result<Value> {
     let response = reana.get(&WorkflowEndpoint::Specification(workflow_id))?;
 
     let status = response.status();
@@ -89,14 +87,7 @@ pub fn get_workflow_specification(reana_server: &str, reana_token: &str, workflo
     }
 }
 
-pub fn upload_files(
-    reana_server: &str,
-    reana_token: &str,
-    input_yaml: &Option<PathBuf>,
-    file: &PathBuf,
-    workflow_name: &str,
-    workflow_json: &Value,
-) -> Result<()> {
+pub fn upload_files(reana: &Reana, input_yaml: &Option<PathBuf>, file: &PathBuf, workflow_name: &str, workflow_json: &Value) -> Result<()> {
     eprintln!("Uploading Files ...");
     let mut files: HashSet<String> = HashSet::new();
     let input_yaml_value = if let Some(input_path) = input_yaml {
@@ -204,7 +195,7 @@ pub fn upload_files(
 
         let mut params = HashMap::new();
         params.insert("file_name".to_string(), sanitize_path(&name.to_string_lossy()));
-        let response = Reana::new(reana_server, reana_token).post(
+        let response = reana.post(
             &WorkflowEndpoint::Workspace(workflow_name, None),
             Content::OctetStream(file_content),
             Some(params),
@@ -216,7 +207,7 @@ pub fn upload_files(
     Ok(())
 }
 
-pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str, files: &[String], folder: Option<&str>) -> Result<()> {
+pub fn download_files(reana: &Reana, workflow_name: &str, files: &[String], folder: Option<&str>) -> Result<()> {
     if files.is_empty() {
         eprintln!("ℹ️ No files to download.");
         return Ok(());
@@ -227,7 +218,7 @@ pub fn download_files(reana_server: &str, reana_token: &str, workflow_name: &str
     }
 
     for file_name in files {
-        let response = Reana::new(reana_server, reana_token).get(&WorkflowEndpoint::Workspace(workflow_name, Some(file_name.to_string())))?;
+        let response = reana.get(&WorkflowEndpoint::Workspace(workflow_name, Some(file_name.to_string())))?;
 
         if response.status().is_success() {
             let file_path_name = Path::new(file_name)
@@ -284,7 +275,10 @@ mod tests {
             .with_header("content-type", "application/json")
             .with_body(r#"{"status": "ok"}"#)
             .create();
-        let response: Value = ping_reana(&server.url()).unwrap();
+        let url = &server.url();
+        let reana = Reana::new(url, "");
+
+        let response: Value = ping_reana(&reana).unwrap();
         assert_eq!(response["status"], "ok");
     }
 
@@ -349,8 +343,9 @@ mod tests {
         assert_eq!(json["message"], "Workflow not found.");
 
         let yaml_equiv: serde_yaml::Value = serde_yaml::from_str(&expected_json.to_string()).expect("YAML conversion failed");
-
-        let result = start_workflow(&server.base_url(), "test_token", workflow_id, None, None, false, &yaml_equiv);
+        let url = &server.base_url();
+        let reana = Reana::new(url, "test-token");
+        let result = start_workflow(&reana, workflow_id, None, None, false, &yaml_equiv);
 
         assert!(result.is_err(), "Expected error, but got Ok.");
     }
@@ -424,8 +419,9 @@ mod tests {
                 "workflow_id": "1234"
             }));
         });
-
-        let result = create_workflow(&server.base_url(), "test-token", &workflow_payload, None);
+        let url = &server.base_url();
+        let reana = Reana::new(url, "test-token");
+        let result = create_workflow(&reana, &workflow_payload, None);
 
         assert!(result.is_ok());
         let json_response = result.unwrap();
@@ -452,7 +448,9 @@ mod tests {
             then.status(401).json_body(json!({ "message": "Unauthorized" }));
         });
 
-        let result = create_workflow(&server.base_url(), "invalid_token", &workflow_payload, None);
+        let url = &server.base_url();
+        let reana = Reana::new(url, "invalid-token");
+        let result = create_workflow(&reana, &workflow_payload, None);
 
         assert!(result.is_err());
     }
@@ -473,7 +471,9 @@ mod tests {
                 .body(r#"{"status": "completed"}"#);
         });
 
-        let result = get_workflow_status(&server.base_url(), access_token, workflow_id);
+        let url = &server.base_url();
+        let reana = Reana::new(url, access_token);
+        let result = get_workflow_status(&reana, workflow_id);
 
         assert!(result.is_ok());
         let json = result.unwrap();
@@ -496,7 +496,9 @@ mod tests {
                 .body(r#"{"error": "workflow not found"}"#);
         });
 
-        let result = get_workflow_status(&server.base_url(), access_token, workflow_id);
+        let url = &server.base_url();
+        let reana = Reana::new(url, access_token);
+        let result = get_workflow_status(&reana, workflow_id);
 
         assert!(result.is_err());
 
@@ -558,15 +560,9 @@ mod tests {
 
         let dummy_cwl = NamedTempFile::new().unwrap();
         write(dummy_cwl.path(), "cwlVersion: v1.2").unwrap();
-
-        let result = upload_files(
-            &server.base_url(),
-            reana_token,
-            &None,
-            &dummy_cwl.path().to_path_buf(),
-            workflow_name,
-            &workflow_json,
-        );
+        let url = &server.base_url();
+        let reana = Reana::new(url, reana_token);
+        let result = upload_files(&reana, &None, &dummy_cwl.path().to_path_buf(), workflow_name, &workflow_json);
 
         assert!(result.is_ok(), "upload_files failed: {:?}", result.err());
         _mock_upload.assert_hits(3);
@@ -580,7 +576,9 @@ mod tests {
 
         let files = vec![];
 
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
+        let url = &server.base_url();
+        let reana = Reana::new(url, reana_token);
+        let result = download_files(&reana, workflow_name, &files, None);
 
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
     }
@@ -610,7 +608,9 @@ mod tests {
         env::set_current_dir(&temp_dir).expect("Failed to set current dir");
         let files = vec!["results.svg".to_string()];
 
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
+        let url = &server.base_url();
+        let reana = Reana::new(url, reana_token);
+        let result = download_files(&reana, workflow_name, &files, None);
 
         env::set_current_dir(&original_dir).expect("Failed to restore original dir");
 
@@ -640,7 +640,9 @@ mod tests {
         });
 
         let files = vec![test_filename.to_string()];
-        let result = download_files(&server.base_url(), reana_token, workflow_name, &files, None);
+        let url = &server.base_url();
+        let reana = Reana::new(url, reana_token);
+        let result = download_files(&reana, workflow_name, &files, None);
 
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
         _mock.assert_hits(1);
