@@ -51,7 +51,7 @@ pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Pat
                         let path = &pathdiff::diff_paths(&path, env::current_dir()?).unwrap_or(path);
                         let dest = &initial_dir.join(path);
                         fs::copy(path, dest)?;
-                        eprintln!("📜 Wrote output file: {:?}", &initial_dir.join(dest));
+                        info!("📜 Wrote output file: {:?}", &initial_dir.join(dest));
                         file.location = Some(dest.to_string_lossy().into_owned());
                         *file = file.snapshot();
                     }
@@ -62,7 +62,7 @@ pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Pat
                         let path = &pathdiff::diff_paths(&path, env::current_dir()?).unwrap_or(path);
                         let dest = &initial_dir.join(path);
                         copy_dir(path, dest)?;
-                        eprintln!("📜 Wrote output directory: {:?}", &dest);
+                        info!("📜 Wrote output directory: {:?}", &dest);
                     }
                 }
                 _ => (),
