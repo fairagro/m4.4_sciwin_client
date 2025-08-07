@@ -4,7 +4,7 @@ use commonwl::prelude::*;
 use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
-use remote_execution::{prelude::*, reana::Reana};
+use remote_execution::prelude::*;
 use serde_yaml::{Number, Value};
 use std::{
     collections::HashMap,
