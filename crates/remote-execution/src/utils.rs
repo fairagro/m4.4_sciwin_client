@@ -281,10 +281,10 @@ pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &PathBuf) -> Res
                     if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                         directories.insert(str_path.to_string());
                     }
-                } else if path.is_file() {
-                    if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
-                        files.insert(str_path.to_string());
-                    }
+                } else if path.is_file()
+                    && let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str())
+                {
+                    files.insert(str_path.to_string());
                 }
             }
         } else {
@@ -342,20 +342,20 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
                     if let Value::Mapping(default_map) = default {
                         let mut sanitized_map = default_map.clone();
 
-                        if let Some(location_val) = sanitized_map.get_mut(Value::String("location".to_string())) {
-                            if let Some(location) = location_val.as_str() {
-                                let sanitized_location = sanitize_path(location);
-                                *location_val = Value::String(sanitized_location.clone());
+                        if let Some(location_val) = sanitized_map.get_mut(Value::String("location".to_string()))
+                            && let Some(location) = location_val.as_str()
+                        {
+                            let sanitized_location = sanitize_path(location);
+                            *location_val = Value::String(sanitized_location.clone());
 
-                                match input_type {
-                                    "File" => {
-                                        files.insert(sanitized_location);
-                                    }
-                                    "Directory" => {
-                                        directories.insert(sanitized_location);
-                                    }
-                                    _ => {}
+                            match input_type {
+                                "File" => {
+                                    files.insert(sanitized_location);
                                 }
+                                "Directory" => {
+                                    directories.insert(sanitized_location);
+                                }
+                                _ => {}
                             }
                         }
                         parameters.insert(id.to_string(), Value::Mapping(sanitized_map));
@@ -429,10 +429,10 @@ pub fn build_inputs_cwl(cwl_input_path: &str, inputs_yaml: Option<&String>) -> R
                 if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
                     directories.insert(str_path.to_string());
                 }
-            } else if path.is_file() {
-                if let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str()) {
-                    files.insert(str_path.to_string());
-                }
+            } else if path.is_file()
+                && let Some(str_path) = path.strip_prefix(&current_dir).ok().and_then(|p| p.to_str())
+            {
+                files.insert(str_path.to_string());
             }
         }
     }
@@ -586,14 +586,12 @@ pub fn find_input_location(cwl_file_path: &str, id: &str) -> Result<Option<Strin
             for input in inputs_section {
                 let input_id = input.get("id").and_then(|v| v.as_str()).unwrap_or_default();
 
-                if input_id == id {
-                    if let Some(default) = input.get("default").and_then(|v| v.as_mapping()) {
-                        if let Some(location_val) = default.get(Value::String("location".to_string())) {
-                            if let Some(location) = location_val.as_str() {
-                                return Ok(Some(location.to_string()));
-                            }
-                        }
-                    }
+                if input_id == id
+                    && let Some(default) = input.get("default").and_then(|v| v.as_mapping())
+                    && let Some(location_val) = default.get(Value::String("location".to_string()))
+                    && let Some(location) = location_val.as_str()
+                {
+                    return Ok(Some(location.to_string()));
                 }
             }
         }
@@ -614,10 +612,10 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
         for (_key, value) in mapping {
             if let Value::Mapping(file_entry) = value {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(path_str)) = file_entry.get(Value::String((*field).to_string())) {
-                        if file_matches(requested_file, path_str) {
-                            return Ok(Some(path_str.to_string()));
-                        }
+                    if let Some(Value::String(path_str)) = file_entry.get(Value::String((*field).to_string()))
+                        && file_matches(requested_file, path_str)
+                    {
+                        return Ok(Some(path_str.to_string()));
                     }
                 }
             }
@@ -635,10 +633,10 @@ pub fn resolve_input_file_path(requested_file: &str, input_yaml: Option<&Value>,
         for input in inputs {
             if let Some(Value::Mapping(default_map)) = input.get("default") {
                 for field in &["location", "path"] {
-                    if let Some(Value::String(loc)) = default_map.get(Value::String((*field).to_string())) {
-                        if file_matches(requested_file, loc) {
-                            return Ok(Some(loc.to_string()));
-                        }
+                    if let Some(Value::String(loc)) = default_map.get(Value::String((*field).to_string()))
+                        && file_matches(requested_file, loc)
+                    {
+                        return Ok(Some(loc.to_string()));
                     }
                 }
             }

@@ -164,10 +164,10 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
                         for entry in paths {
                             let entry = entry?;
                             let file_path = entry.path();
-                            if file_path.is_file() {
-                                if let Err(e) = stage_file(&repo, file_path.to_str().unwrap()) {
-                                    eprintln!("Error staging file '{}': {}", file_path.display(), e);
-                                }
+                            if file_path.is_file()
+                                && let Err(e) = stage_file(&repo, file_path.to_str().unwrap())
+                            {
+                                eprintln!("Error staging file '{}': {}", file_path.display(), e);
                             }
                         }
                     } else {
@@ -288,35 +288,35 @@ pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
                 let file_path = entry.path();
                 if let Ok(content) = fs::read_to_string(file_path) {
                     // Parse content
-                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content) {
-                        if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
-                            if args.list_all {
-                                // Extract inputs
-                                if let Some(inputs) = parsed_yaml.get("inputs") {
-                                    for input in inputs.as_sequence().unwrap_or(&vec![]) {
-                                        if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                                            inputs_list.push(format!("{tool_name}/{id}"));
-                                        }
+                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content)
+                        && parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool")
+                    {
+                        if args.list_all {
+                            // Extract inputs
+                            if let Some(inputs) = parsed_yaml.get("inputs") {
+                                for input in inputs.as_sequence().unwrap_or(&vec![]) {
+                                    if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
+                                        inputs_list.push(format!("{tool_name}/{id}"));
                                     }
                                 }
-                                // Extract outputs
-                                if let Some(outputs) = parsed_yaml.get("outputs") {
-                                    for output in outputs.as_sequence().unwrap_or(&vec![]) {
-                                        if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
-                                            outputs_list.push(format!("{tool_name}/{id}"));
-                                        }
-                                    }
-                                }
-                                // add row to the table
-                                table.add_row(Row::new(vec![
-                                    Cell::new(tool_name).style_spec("bFg"),
-                                    Cell::new(&inputs_list.join(", ")),
-                                    Cell::new(&outputs_list.join(", ")),
-                                ]));
-                            } else {
-                                // Print only the tool name if not all details
-                                println!("📄 {}", tool_name.green().bold());
                             }
+                            // Extract outputs
+                            if let Some(outputs) = parsed_yaml.get("outputs") {
+                                for output in outputs.as_sequence().unwrap_or(&vec![]) {
+                                    if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
+                                        outputs_list.push(format!("{tool_name}/{id}"));
+                                    }
+                                }
+                            }
+                            // add row to the table
+                            table.add_row(Row::new(vec![
+                                Cell::new(tool_name).style_spec("bFg"),
+                                Cell::new(&inputs_list.join(", ")),
+                                Cell::new(&outputs_list.join(", ")),
+                            ]));
+                        } else {
+                            // Print only the tool name if not all details
+                            println!("📄 {}", tool_name.green().bold());
                         }
                     }
                 }

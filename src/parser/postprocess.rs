@@ -28,10 +28,10 @@ fn detect_array_inputs(tool: &mut CommandLineTool) {
             }
 
             // Append additional default value if present
-            if let Some(DefaultValue::Array(defaults)) = &mut existing.default {
-                if let Some(default) = input.default {
-                    defaults.push(default);
-                }
+            if let Some(DefaultValue::Array(defaults)) = &mut existing.default
+                && let Some(default) = input.default
+            {
+                defaults.push(default);
             }
         }
     }
@@ -53,25 +53,26 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     for input in &inputs {
         if let Some(default) = &input.default {
             for output in &mut tool.outputs {
-                if let Some(binding) = &mut output.output_binding {
-                    if binding.glob == Some(default.as_value_string()) {
-                        binding.glob = Some(process_input(input));
-                        processed_once = true;
-                    }
-                }
-            }
-            if let Some(stdout) = &tool.stdout {
-                if *stdout == default.as_value_string() {
-                    tool.stdout = Some(process_input(input));
+                if let Some(binding) = &mut output.output_binding
+                    && binding.glob == Some(default.as_value_string())
+                {
+                    binding.glob = Some(process_input(input));
                     processed_once = true;
                 }
             }
-            if let Some(stderr) = &tool.stderr {
-                if *stderr == default.as_value_string() {
-                    tool.stderr = Some(process_input(input));
-                    processed_once = true;
-                }
+            if let Some(stdout) = &tool.stdout
+                && *stdout == default.as_value_string()
+            {
+                tool.stdout = Some(process_input(input));
+                processed_once = true;
             }
+            if let Some(stderr) = &tool.stderr
+                && *stderr == default.as_value_string()
+            {
+                tool.stderr = Some(process_input(input));
+                processed_once = true;
+            }
+
             if let Some(arguments) = &mut tool.arguments {
                 for argument in arguments.iter_mut() {
                     match argument {
@@ -82,12 +83,11 @@ fn post_process_variables(tool: &mut CommandLineTool) {
                             }
                         }
                         Argument::Binding(binding) => {
-                            if let Some(from) = &mut binding.value_from {
-                                if *from == default.as_value_string() {
+                            if let Some(from) = &mut binding.value_from
+                                && *from == default.as_value_string() {
                                     *from = process_input(input);
                                     processed_once = true;
                                 }
-                            }
                         }
                     }
                 }
@@ -96,11 +96,11 @@ fn post_process_variables(tool: &mut CommandLineTool) {
     }
 
     for output in &mut tool.outputs {
-        if let Some(binding) = &mut output.output_binding {
-            if matches!(binding.glob.as_deref(), Some(".")) {
-                output.id = "output_directory".to_string();
-                binding.glob = Some("$(runtime.outdir)".to_string());
-            }
+        if let Some(binding) = &mut output.output_binding
+            && matches!(binding.glob.as_deref(), Some("."))
+        {
+            output.id = "output_directory".to_string();
+            binding.glob = Some("$(runtime.outdir)".to_string());
         }
     }
 

@@ -315,9 +315,9 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
                 let file_path = entry.path();
 
                 // Read the contents of the file for detailed information
-                if let Ok(content) = fs::read_to_string(file_path) {
-                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content) {
-                        if parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("Workflow") {
+                if let Ok(content) = fs::read_to_string(file_path)
+                    && let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content)
+                        && parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("Workflow") {
                             // Extract inputs, outputs, and steps
                             let inputs_list = extract_workflow_list(parsed_yaml.get("inputs"));
                             let outputs_list = extract_workflow_list(parsed_yaml.get("outputs"));
@@ -341,8 +341,6 @@ pub fn list_workflows(args: &ListWorkflowArgs) -> anyhow::Result<()> {
                                 println!("📄 {}", workflow_name.green().bold());
                             }
                         }
-                    }
-                }
             }
         }
     }

@@ -480,18 +480,18 @@ pub fn get_workflow_structure(workflow_json: &Value) -> Vec<ScriptStep> {
         .unwrap_or_default();
     // docker info for CommandLineTool
     for e in &elements {
-        if e.get("class") == Some(&Value::String("CommandLineTool".into())) {
-            if let Some(id) = e.get("id").and_then(Value::as_str) {
-                let docker = e.get("requirements").and_then(Value::as_array).and_then(|r| {
-                    r.iter().find_map(|req| {
-                        (req.get("class") == Some(&Value::String("DockerRequirement".into())))
-                            .then(|| req.get("dockerPull")?.as_str())
-                            .flatten()
-                    })
-                });
-                if let Some(img) = docker {
-                    docker_map.insert(id.to_string(), img.to_string());
-                }
+        if e.get("class") == Some(&Value::String("CommandLineTool".into()))
+            && let Some(id) = e.get("id").and_then(Value::as_str)
+        {
+            let docker = e.get("requirements").and_then(Value::as_array).and_then(|r| {
+                r.iter().find_map(|req| {
+                    (req.get("class") == Some(&Value::String("DockerRequirement".into())))
+                        .then(|| req.get("dockerPull")?.as_str())
+                        .flatten()
+                })
+            });
+            if let Some(img) = docker {
+                docker_map.insert(id.to_string(), img.to_string());
             }
         }
     }
@@ -587,12 +587,12 @@ fn generate_connections(script_structure: &[ScriptStep]) -> Vec<(String, String,
     // For each input, find matching output by file name
     for (_consumer_id, consumer_inputs, _, _) in script_structure {
         for (input_param_id, input_file) in consumer_inputs {
-            if let Some(input_file_name) = std::path::Path::new(input_file).file_name().and_then(|f| f.to_str()) {
-                if let Some((output_param_id, _producer_id)) = output_file_map.get(input_file_name) {
-                    let source = format!("workflow.json#{}", output_param_id.trim_start_matches('#'));
-                    let target = format!("workflow.json#{}", input_param_id.trim_start_matches('#'));
-                    connections.push((source, target, generate_id_with_hash()));
-                }
+            if let Some(input_file_name) = std::path::Path::new(input_file).file_name().and_then(|f| f.to_str())
+                && let Some((output_param_id, _producer_id)) = output_file_map.get(input_file_name)
+            {
+                let source = format!("workflow.json#{}", output_param_id.trim_start_matches('#'));
+                let target = format!("workflow.json#{}", input_param_id.trim_start_matches('#'));
+                connections.push((source, target, generate_id_with_hash()));
             }
         }
     }
@@ -696,46 +696,45 @@ pub fn create_ro_crate(
     file.write_all(metadata_str.as_bytes())?;
     if let Some(graph) = ro_crate_metadata_json.get_mut("@graph").and_then(|g| g.as_array_mut()) {
         for entity in graph {
-            if let Some(default_value) = entity.get_mut("defaultValue") {
-                if let Some(path_str) = default_value.as_str() {
-                    if let Some(stripped) = path_str.strip_prefix("file://") {
-                        let path = std::path::Path::new(stripped);
-                        if path.exists() && path.is_file() {
-                            if let Some(file_name) = path.file_name().and_then(|f| f.to_str()) {
-                                let target_path = std::path::Path::new(&folder_name).join(file_name);
-                                std::fs::copy(path, &target_path)?;
-                                *default_value = Value::String(file_name.to_string());
-                            }
-                        }
-                    }
+            if let Some(default_value) = entity.get_mut("defaultValue")
+                && let Some(path_str) = default_value.as_str()
+                && let Some(stripped) = path_str.strip_prefix("file://")
+            {
+                let path = std::path::Path::new(stripped);
+                if path.exists()
+                    && path.is_file()
+                    && let Some(file_name) = path.file_name().and_then(|f| f.to_str())
+                {
+                    let target_path = std::path::Path::new(&folder_name).join(file_name);
+                    std::fs::copy(path, &target_path)?;
+                    *default_value = Value::String(file_name.to_string());
                 }
             }
         }
     }
     // Collect parts
     let mut found_paths = Vec::new();
-    if let Some(graph) = ro_crate_metadata_json.get("@graph").and_then(|g| g.as_array()) {
-        if let Some(main_entity) = graph.iter().find(|e| e.get("@id") == Some(&Value::String("./".to_string()))) {
-            if let Some(parts) = main_entity.get("hasPart").and_then(|p| p.as_array()) {
-                for entry in parts {
-                    if let Some(path_value) = entry.get("@id") {
-                        if let Some(path_str) = path_value.as_str() {
-                            let local_path = std::path::PathBuf::from(&folder_name).join(path_str);
-                            //already in rocrate folder, skip
-                            if local_path.exists() {
-                                continue;
-                            //check if there is a file in the workspace that has the same ending
-                            } else if let Some(matching_file) = workspace_files
-                                .iter()
-                                .find(|wf| std::path::Path::new(wf).file_name().is_some_and(|f| f == path_str))
-                            {
-                                found_paths.push(matching_file.clone());
-                            }
-                        }
-                    } else {
-                        eprintln!("⚠️ No 'hasPart' field found in entry: {entry}");
+    if let Some(graph) = ro_crate_metadata_json.get("@graph").and_then(|g| g.as_array())
+        && let Some(main_entity) = graph.iter().find(|e| e.get("@id") == Some(&Value::String("./".to_string())))
+        && let Some(parts) = main_entity.get("hasPart").and_then(|p| p.as_array())
+    {
+        for entry in parts {
+            if let Some(path_value) = entry.get("@id") {
+                if let Some(path_str) = path_value.as_str() {
+                    let local_path = std::path::PathBuf::from(&folder_name).join(path_str);
+                    //already in rocrate folder, skip
+                    if local_path.exists() {
+                        continue;
+                    //check if there is a file in the workspace that has the same ending
+                    } else if let Some(matching_file) = workspace_files
+                        .iter()
+                        .find(|wf| std::path::Path::new(wf).file_name().is_some_and(|f| f == path_str))
+                    {
+                        found_paths.push(matching_file.clone());
                     }
                 }
+            } else {
+                eprintln!("⚠️ No 'hasPart' field found in entry: {entry}");
             }
         }
     }

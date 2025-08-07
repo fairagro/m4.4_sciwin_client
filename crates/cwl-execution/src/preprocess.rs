@@ -12,15 +12,15 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String,
 fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Error>> {
     match value {
         Value::Mapping(map) => {
-            if map.len() == 1 {
-                if let Some(Value::String(file)) = map.get(Value::String("$import".to_string())) {
-                    let path = base_path.join(file);
-                    let contents = fs::read_to_string(&path)?;
-                    let mut imported_value: Value = serde_yaml::from_str(&contents)?;
-                    resolve_imports(&mut imported_value, path.parent().unwrap_or(base_path))?;
-                    *value = imported_value;
-                    return Ok(());
-                }
+            if map.len() == 1
+                && let Some(Value::String(file)) = map.get(Value::String("$import".to_string()))
+            {
+                let path = base_path.join(file);
+                let contents = fs::read_to_string(&path)?;
+                let mut imported_value: Value = serde_yaml::from_str(&contents)?;
+                resolve_imports(&mut imported_value, path.parent().unwrap_or(base_path))?;
+                *value = imported_value;
+                return Ok(());
             }
             for val in map.values_mut() {
                 resolve_imports(val, base_path)?;
@@ -69,13 +69,13 @@ fn resolve_shortcuts(value: &mut Value) {
 }
 
 fn process_stdin_input(map: &mut Mapping, id: &Value, stdin_id: &mut Option<String>) {
-    if let Some(Value::String(type_str)) = map.get_mut(Value::String("type".to_string())) {
-        if type_str == "stdin" {
-            *type_str = "File".to_string();
-            map.insert(Value::String("streamable".to_string()), Value::Bool(true));
-            if let Value::String(id_str) = id {
-                *stdin_id = Some(id_str.clone());
-            }
+    if let Some(Value::String(type_str)) = map.get_mut(Value::String("type".to_string()))
+        && type_str == "stdin"
+    {
+        *type_str = "File".to_string();
+        map.insert(Value::String("streamable".to_string()), Value::Bool(true));
+        if let Value::String(id_str) = id {
+            *stdin_id = Some(id_str.clone());
         }
     }
 }

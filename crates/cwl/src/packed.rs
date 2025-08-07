@@ -161,43 +161,41 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
     input.id = format!("{root_id}/{}", input.id);
 
     //generate absolute paths for default values
-    if let Some(DefaultValue::File(file)) = &mut input.default {
-        if let Some(location) = &mut file.location
-            && !location.starts_with("file://")
-        {
-            if Path::new(location).is_absolute() {
-                *location = Url::from_file_path(&location)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+    if let Some(DefaultValue::File(file)) = &mut input.default
+        && let Some(location) = &mut file.location
+        && !location.starts_with("file://")
+    {
+        if Path::new(location).is_absolute() {
+            *location = Url::from_file_path(&location)
+                .map_err(|_| "Could not get url from file_path")?
+                .to_string();
+        } else {
+            let path = doc_dir.as_ref().join(&location);
+            let path = if path.exists() {
+                path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
             } else {
-                let path = doc_dir.as_ref().join(&location);
-                let path = if path.exists() {
-                    path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
-                } else {
-                    normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
-                };
-                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
-            }
+                normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
+            };
+            *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
         }
     }
 
-    if let Some(DefaultValue::Directory(dir)) = &mut input.default {
-        if let Some(location) = &mut dir.location
-            && !location.starts_with("file://")
-        {
-            if Path::new(location).is_absolute() {
-                *location = Url::from_file_path(&location)
-                    .map_err(|_| "Could not get url from file_path")?
-                    .to_string();
+    if let Some(DefaultValue::Directory(dir)) = &mut input.default
+        && let Some(location) = &mut dir.location
+        && !location.starts_with("file://")
+    {
+        if Path::new(location).is_absolute() {
+            *location = Url::from_file_path(&location)
+                .map_err(|_| "Could not get url from file_path")?
+                .to_string();
+        } else {
+            let path = doc_dir.as_ref().join(&location);
+            let path = if path.exists() {
+                path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
             } else {
-                let path = doc_dir.as_ref().join(&location);
-                let path = if path.exists() {
-                    path.canonicalize().unwrap_or(path).to_string_lossy().into_owned()
-                } else {
-                    normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
-                };
-                *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
-            }
+                normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
+            };
+            *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
         }
     }
 
@@ -330,10 +328,10 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
             input.id = stripped.to_string();
         }
 
-        if let Some(source) = &input.source {
-            if let Some(stripped) = source.strip_prefix(&format!("{root_id}/")) {
-                input.source = Some(stripped.to_string());
-            }
+        if let Some(source) = &input.source
+            && let Some(stripped) = source.strip_prefix(&format!("{root_id}/"))
+        {
+            input.source = Some(stripped.to_string());
         }
     }
 

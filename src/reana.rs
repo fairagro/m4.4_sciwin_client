@@ -66,51 +66,51 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
 /// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
 fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let id = tool.id.clone().unwrap();
-    if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
-        if let Some(dockerfile) = &mut dr.docker_file {
-            warn!("Tool {id} depends on Dockerfile, which not supported by REANA!");
-            if !is_docker_installed() {
-                return Ok(());
-            }
-            info!("Trying to use a workaround for Dockerfile in Tool {}...", id.green().bold());
-            //we build the image and send it to ttl.sh
-            let image_name = uuid::Uuid::new_v4().to_string();
-            let tag = format!("ttl.sh/{image_name}:1h");
-            //write dockerfile to temp dir
-            let file_content = match dockerfile {
-                commonwl::Entry::Source(src) => src.clone(),
-                commonwl::Entry::Include(include) => fs::read_to_string(include.include.clone())?,
-            };
-            let filenname = env::temp_dir().join(&image_name);
-            fs::write(&filenname, file_content)?;
-
-            //build docker file
-            let mut process = SystemCommand::new("docker")
-                .arg("build")
-                .arg("-t")
-                .arg(&tag)
-                .arg("-f")
-                .arg(filenname)
-                .arg(".")
-                .spawn()?;
-            report_console_output(&mut process);
-            process.wait()?;
-            eprintln!("✔️  Successfully built Docker image in Tool {}", id.green().bold());
-
-            //push
-            let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
-            report_console_output(&mut process);
-            process.wait()?;
-            eprintln!(
-                "✔️  Docker image was published at {tag} and is available for 1 hour in Tool {}",
-                id.green().bold()
-            );
-
-            //set docker pull and remove dockerfile
-            dr.docker_pull = Some(tag);
-            dr.docker_file = None;
-            dr.docker_image_id = None;
+    if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>()
+        && let Some(dockerfile) = &mut dr.docker_file
+    {
+        warn!("Tool {id} depends on Dockerfile, which not supported by REANA!");
+        if !is_docker_installed() {
+            return Ok(());
         }
+        info!("Trying to use a workaround for Dockerfile in Tool {}...", id.green().bold());
+        //we build the image and send it to ttl.sh
+        let image_name = uuid::Uuid::new_v4().to_string();
+        let tag = format!("ttl.sh/{image_name}:1h");
+        //write dockerfile to temp dir
+        let file_content = match dockerfile {
+            commonwl::Entry::Source(src) => src.clone(),
+            commonwl::Entry::Include(include) => fs::read_to_string(include.include.clone())?,
+        };
+        let filenname = env::temp_dir().join(&image_name);
+        fs::write(&filenname, file_content)?;
+
+        //build docker file
+        let mut process = SystemCommand::new("docker")
+            .arg("build")
+            .arg("-t")
+            .arg(&tag)
+            .arg("-f")
+            .arg(filenname)
+            .arg(".")
+            .spawn()?;
+        report_console_output(&mut process);
+        process.wait()?;
+        eprintln!("✔️  Successfully built Docker image in Tool {}", id.green().bold());
+
+        //push
+        let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
+        report_console_output(&mut process);
+        process.wait()?;
+        eprintln!(
+            "✔️  Docker image was published at {tag} and is available for 1 hour in Tool {}",
+            id.green().bold()
+        );
+
+        //set docker pull and remove dockerfile
+        dr.docker_pull = Some(tag);
+        dr.docker_file = None;
+        dr.docker_image_id = None;
     }
     Ok(())
 }

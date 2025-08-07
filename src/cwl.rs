@@ -53,10 +53,10 @@ impl Saveable for CommandLineTool {
                 }
             } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
                 for listing in &mut iwdr.listing {
-                    if let WorkDirItem::Dirent(dirent) = listing {
-                        if let Entry::Include(include) = &mut dirent.entry {
-                            include.include = resolve_path(&include.include, path);
-                        }
+                    if let WorkDirItem::Dirent(dirent) = listing
+                        && let Entry::Include(include) = &mut dirent.entry
+                    {
+                        include.include = resolve_path(&include.include, path);
                     }
                 }
             }
@@ -83,10 +83,10 @@ impl Connectable for Workflow {
 
             info!("➕ Added step {name} to workflow");
 
-            if let CWLDocument::Workflow(_) = doc {
-                if !self.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement)) {
-                    self.requirements.push(Requirement::SubworkflowFeatureRequirement);
-                }
+            if let CWLDocument::Workflow(_) = doc
+                && !self.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement))
+            {
+                self.requirements.push(Requirement::SubworkflowFeatureRequirement);
             }
         }
     }
@@ -253,13 +253,14 @@ impl Connectable for Workflow {
         }
         // Check if this output is part of any step output and remove it, do we want that?
         let mut removed_from_step = false;
-        if let Some(step) = self.steps.iter_mut().find(|s| s.id == from_parts[0]) {
-            if let Some(output_index) = step.out.iter().position(|out| out == from_parts[1]) {
-                step.out.remove(output_index);
-                removed_from_step = true;
-                info!("➖ Removed output {to_output} from step {} in workflow!", step.id);
-            }
+        if let Some(step) = self.steps.iter_mut().find(|s| s.id == from_parts[0])
+            && let Some(output_index) = step.out.iter().position(|out| out == from_parts[1])
+        {
+            step.out.remove(output_index);
+            removed_from_step = true;
+            info!("➖ Removed output {to_output} from step {} in workflow!", step.id);
         }
+
         if !removed_from_outputs {
             warn!("No matching output found for '{to_output}' in workflow outputs.");
         }

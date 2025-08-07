@@ -1,24 +1,21 @@
+use crate::cwl::highlight_cwl;
 use clap::{Args, Subcommand};
 use colored::Colorize;
 use commonwl::format::format_cwl;
+use dialoguer::{Confirm, FuzzySelect, Input, Select};
 use log::error;
+use reqwest::get;
 use serde_yaml::{Mapping, Value};
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::{env, fs, path::Path};
 use tokio::runtime::Builder;
 use util::is_cwl_file;
-use dialoguer::{Input, Confirm, Select, FuzzySelect};
-use crate::{
-    cwl::{highlight_cwl},
-};
-use std::io::{self, Write};
-use reqwest::get;
-
 
 const REST_URL_TS: &str = "https://terminology.services.base4nfdi.de/api-gateway/search?query=";
 const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
@@ -66,12 +63,12 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
             annotate_person(&role_args, "contributor")
         }
         AnnotateCommands::Performer(args) => {
-        if args.first_name.is_none() && args.last_name.is_none() {
-            annotate_performer_default(args).await
-        } else {
-            annotate_performer(args).await
+            if args.first_name.is_none() && args.last_name.is_none() {
+                annotate_performer_default(args).await
+            } else {
+                annotate_performer(args).await
+            }
         }
-    }
         AnnotateCommands::Process(args) => annotate_process_step(args).await,
         AnnotateCommands::Container { cwl_name, container } => annotate_container(cwl_name, container),
         AnnotateCommands::Custom { cwl_name, field, value } => annotate_field(cwl_name, field, value),
@@ -218,7 +215,6 @@ pub struct AnnotateProcessArgs {
     pub value: Option<String>,
 }
 
-
 pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error>> {
     // Fetch the SPDX license list
     let response = get("https://spdx.org/licenses/licenses.json").await?;
@@ -240,10 +236,7 @@ pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error
     sorted_list.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Prepare display list for FuzzySelect
-    let display_list: Vec<String> = sorted_list
-        .iter()
-        .map(|(name, reference)| format!("{name} ({reference})"))
-        .collect();
+    let display_list: Vec<String> = sorted_list.iter().map(|(name, reference)| format!("{name} ({reference})")).collect();
 
     // Use FuzzySelect for interactive search
     let selection = FuzzySelect::new()
@@ -285,7 +278,11 @@ async fn get_affiliation_and_orcid(first_name: &str, last_name: &str) -> (Option
 
     let query = format!(
         "given-names:{} AND family-name:{}",
-        first_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
+        first_name
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().collect::<String>())
+            .unwrap_or_default()
             + first_name.chars().skip(1).collect::<String>().as_str(),
         last_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
             + last_name.chars().skip(1).collect::<String>().as_str()
@@ -295,115 +292,115 @@ async fn get_affiliation_and_orcid(first_name: &str, last_name: &str) -> (Option
 
     let resp = client.get(&search_url).header("Accept", "application/json").send().await;
 
-    if let Ok(resp) = resp {
-        if let Ok(json) = resp.json::<serde_json::Value>().await {
-            if let Some(results) = json.get("expanded-result").and_then(|v| v.as_array()) {
-                let get_field = |result: &serde_json::Value, key: &str| {
-                    result.get(key)
-                        .and_then(|v| if v.is_array() { v.as_array().and_then(|arr| arr.first()).and_then(|f| f.as_str()) } else { v.as_str() })
-                        .unwrap_or("").to_string()
-                };
-                
-                let show_options = |results: &[serde_json::Value]| -> Option<(String, String, String)> {
-                    println!("\nOther possible matches:");
-                    let options: Vec<String> = results.iter().take(5).map(|result| {
-                        let given_names = get_field(result, "given-names");
-                        let family_name = get_field(result, "family-names");
-                        let institution = get_field(result, "institution-name");
-                        format!("{given_names} {family_name} ({institution})")
-                    }).collect();
-
-                    let selection = Select::new()
-                        .with_prompt("Select the correct person, or Esc to skip")
-                        .items(&options)
-                        .default(0)
-                        .interact_opt()
-                        .unwrap_or(None);
-
-                    if let Some(idx) = selection {
-                        let selected = &results[idx];
-                        Some((
-                            get_field(selected, "institution-name"),
-                            get_field(selected, "orcid-id"),
-                            get_field(selected, "email"),
-                        ))
+    if let Ok(resp) = resp
+        && let Ok(json) = resp.json::<serde_json::Value>().await
+        && let Some(results) = json.get("expanded-result").and_then(|v| v.as_array())
+    {
+        let get_field = |result: &serde_json::Value, key: &str| {
+            result
+                .get(key)
+                .and_then(|v| {
+                    if v.is_array() {
+                        v.as_array().and_then(|arr| arr.first()).and_then(|f| f.as_str())
                     } else {
-                        None
+                        v.as_str()
                     }
-                };
+                })
+                .unwrap_or("")
+                .to_string()
+        };
 
-                if let Some(first_result) = results.first() {
-                    let mut first_affiliation = get_field(first_result, "institution-name");
-                    let mut first_orcid = get_field(first_result, "orcid-id");
-                    let mut first_mail = get_field(first_result, "email");
-                    println!(
-                        "\nFirst ORCID search result:\n\
+        let show_options = |results: &[serde_json::Value]| -> Option<(String, String, String)> {
+            println!("\nOther possible matches:");
+            let options: Vec<String> = results
+                .iter()
+                .take(5)
+                .map(|result| {
+                    let given_names = get_field(result, "given-names");
+                    let family_name = get_field(result, "family-names");
+                    let institution = get_field(result, "institution-name");
+                    format!("{given_names} {family_name} ({institution})")
+                })
+                .collect();
+
+            let selection = Select::new()
+                .with_prompt("Select the correct person, or Esc to skip")
+                .items(&options)
+                .default(0)
+                .interact_opt()
+                .unwrap_or(None);
+
+            if let Some(idx) = selection {
+                let selected = &results[idx];
+                Some((
+                    get_field(selected, "institution-name"),
+                    get_field(selected, "orcid-id"),
+                    get_field(selected, "email"),
+                ))
+            } else {
+                None
+            }
+        };
+
+        if let Some(first_result) = results.first() {
+            let mut first_affiliation = get_field(first_result, "institution-name");
+            let mut first_orcid = get_field(first_result, "orcid-id");
+            let mut first_mail = get_field(first_result, "email");
+            println!(
+                "\nFirst ORCID search result:\n\
                          ──────────────────────────────\n\
                          Name       : {first_name} {last_name}\n\
                          Affiliation: {first_affiliation}\n\
                          ORCID      : {first_orcid}\n\
                          Email      : {first_mail}\n",
-                    );
-                    let is_right_person = Confirm::new()
-                        .with_prompt("Is this the correct person?")
-                        .interact()
-                        .unwrap_or(false);
-                        if !is_right_person {
-                            if let Some((aff, orcid, mail)) = show_options(results) {
-                                first_affiliation = aff;
-                                first_orcid = orcid;
-                                first_mail = mail;
-                            }
-                        }
-                     println!(
-                        "\nPerson:\n\
+            );
+            let is_right_person = Confirm::new().with_prompt("Is this the correct person?").interact().unwrap_or(false);
+            if !is_right_person && let Some((aff, orcid, mail)) = show_options(results) {
+                first_affiliation = aff;
+                first_orcid = orcid;
+                first_mail = mail;
+            }
+            println!(
+                "\nPerson:\n\
                         ──────────────────────────────\n\
                         Name       : {first_name} {last_name}\n\
                         Email      : {first_mail}\n"
-                    );
-                     io::stdout().flush().ok();
-                    // Allow user to edit fields if some of them are wrong
-                    if Confirm::new()
-                        .with_prompt("Do you want to edit any of these fields?")
-                        .interact()
-                        .unwrap_or(false)
-                    {
-                        //not possible to edit ORCID or name but mail and affiliation?
-                        first_affiliation = Input::new()
-                            .with_prompt("Edit affiliation (leave blank to keep)")
-                            .default(first_affiliation.clone())
-                            .allow_empty(true)
-                            .interact_text()
-                            .unwrap_or(first_affiliation.clone());
-                        first_mail = Input::new()
-                            .with_prompt("Edit email (leave blank to keep)")
-                            .default(first_mail.clone())
-                            .allow_empty(true)
-                            .interact_text()
-                            .unwrap_or(first_mail.clone());
-                    }
-                        return (
-                            if !first_affiliation.is_empty() { Some(first_affiliation) } else { None },
-                            if !first_orcid.is_empty() { Some(first_orcid) } else { None },
-                            if !first_mail.is_empty() { Some(first_mail) } else { None },
-                        );
-                   
-                }
+            );
+            io::stdout().flush().ok();
+            // Allow user to edit fields if some of them are wrong
+            if Confirm::new()
+                .with_prompt("Do you want to edit any of these fields?")
+                .interact()
+                .unwrap_or(false)
+            {
+                //not possible to edit ORCID or name but mail and affiliation?
+                first_affiliation = Input::new()
+                    .with_prompt("Edit affiliation (leave blank to keep)")
+                    .default(first_affiliation.clone())
+                    .allow_empty(true)
+                    .interact_text()
+                    .unwrap_or(first_affiliation.clone());
+                first_mail = Input::new()
+                    .with_prompt("Edit email (leave blank to keep)")
+                    .default(first_mail.clone())
+                    .allow_empty(true)
+                    .interact_text()
+                    .unwrap_or(first_mail.clone());
             }
+            return (
+                if !first_affiliation.is_empty() { Some(first_affiliation) } else { None },
+                if !first_orcid.is_empty() { Some(first_orcid) } else { None },
+                if !first_mail.is_empty() { Some(first_mail) } else { None },
+            );
         }
     }
     (None, None, None)
 }
 
-
 async fn annotate_performer_default(args: &PerformerArgs) -> Result<(), Box<dyn Error>> {
     // Ask user for first name and last name
-    let first_name: String = Input::new()
-        .with_prompt("Enter performer's first name")
-        .interact_text()?;
-    let last_name: String = Input::new()
-        .with_prompt("Enter performer's last name")
-        .interact_text()?;
+    let first_name: String = Input::new().with_prompt("Enter performer's first name").interact_text()?;
+    let last_name: String = Input::new().with_prompt("Enter performer's last name").interact_text()?;
 
     // Ask for other fields
     let mid_initials = {
@@ -452,35 +449,42 @@ async fn annotate_performer_default(args: &PerformerArgs) -> Result<(), Box<dyn 
         affiliation = aff;
         mail = m;
         // Optionally ask for role
-        if Confirm::new()
-            .with_prompt("Do you want to annotate a role?")
-            .interact()? {
+        if Confirm::new().with_prompt("Do you want to annotate a role?").interact()? {
             let input: String = Input::new()
                 .with_prompt("Enter role (or leave blank)")
                 .allow_empty(true)
                 .interact_text()?;
-            if !input.is_empty() { role = Some(input); }
+            if !input.is_empty() {
+                role = Some(input);
+            }
         }
     } else {
         // Ask if user wants to annotate other fields
         if Confirm::new()
             .with_prompt("Do you want to annotate additional fields (email, affiliation, role)?")
-            .interact()? {
+            .interact()?
+        {
             let input: String = Input::new()
                 .with_prompt("Enter email (or leave blank)")
                 .allow_empty(true)
                 .interact_text()?;
-            if !input.is_empty() { mail = Some(input); }
+            if !input.is_empty() {
+                mail = Some(input);
+            }
             let input: String = Input::new()
                 .with_prompt("Enter affiliation (or leave blank)")
                 .allow_empty(true)
                 .interact_text()?;
-            if !input.is_empty() { affiliation = Some(input); }
+            if !input.is_empty() {
+                affiliation = Some(input);
+            }
             let input: String = Input::new()
                 .with_prompt("Enter role (or leave blank)")
                 .allow_empty(true)
                 .interact_text()?;
-            if !input.is_empty() { role = Some(input); }
+            if !input.is_empty() {
+                role = Some(input);
+            }
         }
     }
 
@@ -630,7 +634,6 @@ pub async fn annotate_performer(args: &PerformerArgs) -> Result<(), Box<dyn Erro
     write_updated_yaml(&args.cwl_name, &yaml)
 }
 
-
 pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
     annotate(tool_name, "$namespaces", Some("s"), Some(SCHEMAORG_NAMESPACE))?;
     annotate(tool_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
@@ -699,10 +702,10 @@ pub fn annotate(name: &str, namespace_key: &str, key: Option<&str>, value: Optio
             }
             // Handle case where the namespace key exists as a mapping
             Some(Value::Mapping(namespaces)) => {
-                if let (Some(key), Some(value)) = (key, value) {
-                    if !namespaces.contains_key(Value::String(key.to_string())) {
-                        namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
-                    }
+                if let (Some(key), Some(value)) = (key, value)
+                    && !namespaces.contains_key(Value::String(key.to_string()))
+                {
+                    namespaces.insert(Value::String(key.to_string()), Value::String(value.to_string()));
                 }
             }
             // Handle case where the namespace key does not exist
@@ -765,10 +768,10 @@ pub fn annotate_person(args: &PersonArgs, role: &str) -> Result<(), Box<dyn Erro
         if let Some(Value::Sequence(persons)) = mapping.get_mut(role_key) {
             // Check if the person already exists
             let person_exists = persons.iter().any(|person| {
-                if let Value::Mapping(existing_person) = person {
-                    if let Some(Value::String(id)) = existing_person.get(Value::String("s:identifier".to_string())) {
-                        return id == &args.id.clone().unwrap_or_default();
-                    }
+                if let Value::Mapping(existing_person) = person
+                    && let Some(Value::String(id)) = existing_person.get(Value::String("s:identifier".to_string()))
+                {
+                    return id == &args.id.clone().unwrap_or_default();
                 }
                 false
             });
@@ -808,11 +811,11 @@ pub fn annotate_field(cwl_name: &str, field: &str, value: &str) -> Result<(), Bo
 
     if let Value::Mapping(ref mut mapping) = yaml {
         // Check if the field is already present for fields like `s:license`
-        if let Some(existing_value) = mapping.get(Value::String(field.to_string())) {
-            if existing_value == &Value::String(value.to_string()) {
-                eprintln!("Field '{field}' already has the value '{value}'.");
-                return Ok(());
-            }
+        if let Some(existing_value) = mapping.get(Value::String(field.to_string()))
+            && existing_value == &Value::String(value.to_string())
+        {
+            eprintln!("Field '{field}' already has the value '{value}'.");
+            return Ok(());
         }
 
         // Add or update the field

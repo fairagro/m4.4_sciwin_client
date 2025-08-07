@@ -7,7 +7,10 @@ use commonwl::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
-use std::{collections::HashMap, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowOutputs {
@@ -104,12 +107,12 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<PathBuf>
             }
         }
     }
-    if !params.is_empty() {
-        if let Value::Mapping(values) = &mut inputs_value.parameters {
-            for (k, v) in params {
-                if !values.contains_key(k) {
-                    values.insert(k.into(), v.into());
-                }
+    if !params.is_empty()
+        && let Value::Mapping(values) = &mut inputs_value.parameters
+    {
+        for (k, v) in params {
+            if !values.contains_key(k) {
+                values.insert(k.into(), v.into());
             }
         }
     }

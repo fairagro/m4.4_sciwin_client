@@ -166,10 +166,11 @@ fn evaluate_workflow_status(reana: &Reana, name: &str, analyze_logs: bool) -> Re
     };
     eprintln!("{icon} {name} {status} created at {created}");
     //if single workflow failed, get step name and logs
-    if status == "failed" && analyze_logs {
-        if let Some(logs_str) = status_response["logs"].as_str() {
-            analyze_workflow_logs(logs_str);
-        }
+    if status == "failed"
+        && analyze_logs
+        && let Some(logs_str) = status_response["logs"].as_str()
+    {
+        analyze_workflow_logs(logs_str);
     }
     Ok(())
 }
@@ -387,10 +388,8 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
                         if let Err(e) = download_remote_results(workflow_name, &None) {
                             eprintln!("Error downloading remote results: {e}");
                         }
-                        if rocrate {
-                            if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string())) {
-                                eprintln!("Error trying to create a Provenance RO-Crate: {e}");
-                            }
+                        if rocrate && let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string())) {
+                            eprintln!("Error trying to create a Provenance RO-Crate: {e}");
                         }
                     }
                     "failed" => {
@@ -410,10 +409,8 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
     } else {
         save_workflow_name(workflow_name)?;
     }
-    if logout {
-        if let Err(e) = logout_reana() {
-            eprintln!("Error logging out of reana instance: {e}");
-        }
+    if logout && let Err(e) = logout_reana() {
+        eprintln!("Error logging out of reana instance: {e}");
     }
 
     Ok(())

@@ -119,10 +119,10 @@ pub fn upload_files(reana: &Reana, input_yaml: &Option<PathBuf>, file: &PathBuf,
                         let file_path = entry.path();
                         if file_path.is_dir() {
                             collect_files_recursive(&file_path, &mut files).context("Failed to recursively collect directory files")?;
-                        } else if file_path.is_file() {
-                            if let Some(file_str) = file_path.to_str() {
-                                files.insert(file_str.to_string());
-                            }
+                        } else if file_path.is_file()
+                            && let Some(file_str) = file_path.to_str()
+                        {
+                            files.insert(file_str.to_string());
                         }
                     }
                 } else {
@@ -170,19 +170,19 @@ pub fn upload_files(reana: &Reana, input_yaml: &Option<PathBuf>, file: &PathBuf,
 
     for file_name in files {
         let mut file_path = PathBuf::from(&file_name);
-        if !file_path.exists() {
-            if let Ok(Some(resolved)) = resolve_input_file_path(file_path.to_string_lossy().as_ref(), input_yaml_value.as_ref(), Some(&cwl_yaml)) {
-                let cwd = std::env::current_dir().context("Failed to get cwd")?;
-                let base_path = if let Some(input_yaml_str) = input_yaml {
-                    cwd.join(input_yaml_str)
-                } else {
-                    cwd.join(file)
-                };
+        if !file_path.exists()
+            && let Ok(Some(resolved)) = resolve_input_file_path(file_path.to_string_lossy().as_ref(), input_yaml_value.as_ref(), Some(&cwl_yaml))
+        {
+            let cwd = std::env::current_dir().context("Failed to get cwd")?;
+            let base_path = if let Some(input_yaml_str) = input_yaml {
+                cwd.join(input_yaml_str)
+            } else {
+                cwd.join(file)
+            };
 
-                let path_str = base_path.to_string_lossy().to_string();
-                let l = get_location(&path_str, Path::new(&resolved)).context("Failed to resolve file location")?;
-                file_path = PathBuf::from(l);
-            }
+            let path_str = base_path.to_string_lossy().to_string();
+            let l = get_location(&path_str, Path::new(&resolved)).context("Failed to resolve file location")?;
+            file_path = PathBuf::from(l);
         }
 
         // Read file content

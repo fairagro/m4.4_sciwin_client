@@ -63,12 +63,12 @@ fn stage_requirements(requirements: &[Requirement], tool_path: &Path, path: &Pat
                     stage_iwdr_item(listing, &mut staged_files, path, tool_path)?;
                 }
             }
-        } else if let Requirement::DockerRequirement(dr) = requirement {
-            if let Some(Entry::Include(file)) = &dr.docker_file {
-                let destination_file = path.join("Dockerfile");
-                copy_file(tool_path.join(&file.include), &destination_file)?;
-                staged_files.push(destination_file.to_string_lossy().into_owned());
-            }
+        } else if let Requirement::DockerRequirement(dr) = requirement
+            && let Some(Entry::Include(file)) = &dr.docker_file
+        {
+            let destination_file = path.join("Dockerfile");
+            copy_file(tool_path.join(&file.include), &destination_file)?;
+            staged_files.push(destination_file.to_string_lossy().into_owned());
         }
     }
 
@@ -214,12 +214,12 @@ fn stage_item(
 
                 return Ok(data.to_owned());
             }
-        } else if let Some(location) = &f.location {
-            if location.starts_with("https://") || location.starts_with("http://") {
-                //set updated path:
-                let downloaded_path = download_file(location, runtime)?;
-                f.location = Some(downloaded_path.to_string_lossy().into_owned());
-            }
+        } else if let Some(location) = &f.location
+            && (location.starts_with("https://") || location.starts_with("http://"))
+        {
+            //set updated path:
+            let downloaded_path = download_file(location, runtime)?;
+            f.location = Some(downloaded_path.to_string_lossy().into_owned());
         }
     }
 
@@ -294,10 +294,10 @@ fn compute_staging_path(data: &DefaultValue, runtime: &mut RuntimeEnvironment, p
     }
 
     let mut staged_filename = handle_filename(data);
-    if let Some(tmpdir) = runtime.runtime.get("tmpdir") {
-        if let Some(diff) = diff_paths(&staged_filename, tmpdir.to_string()) {
-            staged_filename = diff.to_string_lossy().into_owned();
-        }
+    if let Some(tmpdir) = runtime.runtime.get("tmpdir")
+        && let Some(diff) = diff_paths(&staged_filename, tmpdir.to_string())
+    {
+        staged_filename = diff.to_string_lossy().into_owned();
     }
     let staged_filename_relative = make_relative_to(&staged_filename, out_dir.to_str().unwrap_or_default());
 
