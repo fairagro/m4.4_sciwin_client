@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::fmt::Display;
 use std::process::{Command as SystemCommand, Stdio};
 use std::{fs, path::MAIN_SEPARATOR_STR, process::Command};
-use util::report_console_output;
+use util::handle_process;
 
 pub fn is_docker_installed() -> bool {
     let engine = container_engine().to_string();
@@ -64,8 +64,7 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
             .stderr(Stdio::piped())
             .spawn()
             .expect("Could not build container!");
-        report_console_output(&mut process).unwrap();
-        process.wait().expect("Could not build container!");
+        handle_process(&mut process, 0).expect("Could not build container");
         docker_image_id
     } else {
         unreachable!()

@@ -2,7 +2,12 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
     process::{Child, Command},
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
+
+use wait_timeout::ChildExt;
 
 pub fn is_cwl_file(path: &str) -> bool {
     Path::new(path).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cwl"))
@@ -11,35 +16,55 @@ pub fn is_cwl_file(path: &str) -> bool {
 pub struct Output {
     pub stdout: String,
     pub stderr: String,
+    pub exit_code: i32,
 }
 
-pub fn report_console_output(process: &mut Child) -> Result<Output, Box<dyn std::error::Error>> {
-    let mut stdout_buf = String::new();
-    let mut stderr_buf = String::new();
+pub fn handle_process(process: &mut Child, timelimit: u64) -> Result<Output, Box<dyn std::error::Error>> {
+    let stdout_buf = Arc::new(Mutex::new(String::new()));
+    let stderr_buf = Arc::new(Mutex::new(String::new()));
 
-    if let Some(stdout) = process.stdout.take() {
+    let stdout = process.stdout.take().expect("Not Piped");
+    let stderr = process.stderr.take().expect("Not Piped");
+
+    let stdout_buf_clone = Arc::clone(&stdout_buf);
+    let stdout_handle = thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
         let mut line = String::new();
-        while reader.read_line(&mut line)? > 0 {
+        while reader.read_line(&mut line).unwrap() > 0 {
             eprint!("{line}");
-            stdout_buf.push_str(&line);
+            stdout_buf_clone.lock().unwrap().push_str(&line);
             line.clear();
         }
-    }
+    });
 
-    if let Some(stderr) = process.stderr.take() {
+    let stderr_buf_clone = Arc::clone(&stderr_buf);
+    let stderr_handle = thread::spawn(move || {
         let mut reader = BufReader::new(stderr);
         let mut line = String::new();
-        while reader.read_line(&mut line)? > 0 {
+        while reader.read_line(&mut line).unwrap() > 0 {
             eprint!("{line}");
-            stderr_buf.push_str(&line);
+            stderr_buf_clone.lock().unwrap().push_str(&line);
             line.clear();
         }
-    }
+    });
+
+    let status = if timelimit > 0 {
+        if process.wait_timeout(Duration::from_secs(timelimit))?.is_none() {
+            process.kill()?;
+            return Err("Time elapsed".into());
+        }
+        process.wait()?
+    } else {
+        process.wait()?
+    };
+
+    stdout_handle.join().unwrap();
+    stderr_handle.join().unwrap();
 
     Ok(Output {
-        stdout: stdout_buf,
-        stderr: stderr_buf,
+        stdout: Arc::try_unwrap(stdout_buf).unwrap().into_inner()?,
+        stderr: Arc::try_unwrap(stderr_buf).unwrap().into_inner()?,
+        exit_code: status.code().unwrap_or(1),
     })
 }
 

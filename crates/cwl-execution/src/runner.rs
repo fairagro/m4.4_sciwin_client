@@ -27,11 +27,10 @@ use std::{
     fs::{self},
     path::{Path, PathBuf},
     process::{Command as SystemCommand, Stdio},
-    time::{Duration, Instant},
+    time::Instant,
 };
 use tempfile::tempdir;
-use util::report_console_output;
-use wait_timeout::ChildExt;
+use util::handle_process;
 
 pub fn run_workflow(
     workflow: &mut Workflow,
@@ -396,17 +395,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
     info!("⏳ Executing Command: `{}`", format_command(&command));
 
     let mut child = command.spawn()?;
-    let output = report_console_output(&mut child)?;
-
-    let status = if runtime.time_limit > 0 {
-        if child.wait_timeout(Duration::from_secs(runtime.time_limit))?.is_none() {
-            child.kill()?;
-            return Err("Time elapsed".into());
-        }
-        child.wait()?
-    } else {
-        child.wait()?
-    };
+    let output = handle_process(&mut child, runtime.time_limit)?;
 
     //handle redirection of stdout
     {
@@ -439,12 +428,12 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
         }
     }
 
-    let status_code = status.code().unwrap_or(1);
+    let status_code = output.exit_code;
     runtime
         .runtime
         .insert("exitCode".to_string(), StringOrNumber::Integer(status_code as u64));
 
-    if status.success() || tool.get_sucess_code() == status_code {
+    if tool.get_sucess_code() == status_code {
         Ok(()) //fails expectedly
     } else {
         Err(format!("command returned with code {status_code:?}").into())

@@ -5,7 +5,7 @@ use remote_execution::parser::WorkflowJson;
 use std::collections::HashMap;
 use std::process::{Command as SystemCommand, Stdio};
 use std::{env, fs, path::Path};
-use util::{is_docker_installed, report_console_output};
+use util::{handle_process, is_docker_installed};
 
 use crate::parser::SCRIPT_EXECUTORS;
 
@@ -96,7 +96,7 @@ fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
-        report_console_output(&mut process).map_err(|e| anyhow::anyhow!("{e}"))?;
+        handle_process(&mut process, 0).map_err(|e| anyhow::anyhow!("{e}"))?;
         process.wait()?;
         eprintln!("✔️  Successfully built Docker image in Tool {}", id.green().bold());
 
@@ -107,7 +107,7 @@ fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
-        report_console_output(&mut process).map_err(|e| anyhow::anyhow!("{e}"))?;
+        handle_process(&mut process, 0).map_err(|e| anyhow::anyhow!("{e}"))?;
         process.wait()?;
         eprintln!(
             "✔️  Docker image was published at {tag} and is available for 1 hour in Tool {}",
