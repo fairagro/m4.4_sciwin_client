@@ -26,7 +26,7 @@ use std::{
     error::Error,
     fs::{self},
     path::{Path, PathBuf},
-    process::Command as SystemCommand,
+    process::{Command as SystemCommand, Stdio},
     time::{Duration, Instant},
 };
 use tempfile::tempdir;
@@ -394,22 +394,23 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
 
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
-    let mut child = command.spawn()?;
-    report_console_output(&mut child);
 
-    let output = if runtime.time_limit > 0 {
+    let mut child = command.spawn()?;
+    let output = report_console_output(&mut child)?;
+
+    let status = if runtime.time_limit > 0 {
         if child.wait_timeout(Duration::from_secs(runtime.time_limit))?.is_none() {
             child.kill()?;
             return Err("Time elapsed".into());
         }
-        child.wait_with_output()?
+        child.wait()?
     } else {
-        child.wait_with_output()?
+        child.wait()?
     };
 
     //handle redirection of stdout
     {
-        let out = &String::from_utf8_lossy(&output.stdout);
+        let out = &output.stdout;
         if let Some(stdout) = &tool.stdout {
             create_and_write_file_forced(stdout, out)?;
         } else if tool.has_stdout_output() {
@@ -420,11 +421,13 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
+        } else if !output.stdout.is_empty() {
+            eprintln!("{out}");
         }
     }
     //handle redirection of stderr
     {
-        let out = &String::from_utf8_lossy(&output.stderr);
+        let out = &output.stderr;
         if let Some(stderr) = &tool.stderr {
             create_and_write_file_forced(stderr, out)?;
         } else if tool.has_stderr_output() {
@@ -435,15 +438,17 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
+        } else if !output.stderr.is_empty() {
+            eprintln!("{out}");
         }
     }
 
-    let status_code = output.status.code().unwrap_or(1);
+    let status_code = status.code().unwrap_or(1);
     runtime
         .runtime
         .insert("exitCode".to_string(), StringOrNumber::Integer(status_code as u64));
 
-    if output.status.success() || tool.get_sucess_code() == status_code {
+    if status.success() || tool.get_sucess_code() == status_code {
         Ok(()) //fails expectedly
     } else {
         Err(format!("command returned with code {status_code:?}").into())
@@ -641,6 +646,9 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
             .unwrap_or(&StringOrNumber::String(current_dir.clone()))
             .to_string(),
     );
+
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
 
     Ok(command)
 }
