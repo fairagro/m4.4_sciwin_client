@@ -135,23 +135,7 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
     let reana = Reana::new(&reana_instance, &reana_token);
 
     if let Some(name) = workflow_name {
-        let status_response = get_workflow_status(&reana, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
-        let status = status_response["status"].as_str().unwrap_or("unknown");
-        let created = status_response["created"].as_str().unwrap_or("unknown");
-        let icon = if status == "finished" {
-            "✅"
-        } else if status == "failed" {
-            "❌"
-        } else {
-            "⌛"
-        };
-        eprintln!("{icon} {name} {status} created at {created}");
-        //if single workflow failed, get step name and logs
-        if status == "failed" {
-            if let Some(logs_str) = status_response["logs"].as_str() {
-                analyze_workflow_logs(logs_str);
-            }
-        }
+        evaluate_workflow_status(&reana, name, true)?;
     } else {
         let file_path = status_file_path();
         if !file_path.exists() {
@@ -162,18 +146,29 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
         for line in reader.lines().map_while(Result::ok) {
             let trimmed = line.trim();
             if !trimmed.is_empty() {
-                let status_response = get_workflow_status(&reana, trimmed).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
-                let status = status_response["status"].as_str().unwrap_or("unknown");
-                let created = status_response["created"].as_str().unwrap_or("unknown");
-                let icon = if status == "finished" {
-                    "✅"
-                } else if status == "failed" {
-                    "❌"
-                } else {
-                    "⌛"
-                };
-                eprintln!("{icon} {trimmed} {status} created at {created}");
+                evaluate_workflow_status(&reana, trimmed, false)?;
             }
+        }
+    }
+    Ok(())
+}
+
+fn evaluate_workflow_status(reana: &Reana, name: &str, analyze_logs: bool) -> Result<(), Box<dyn Error>> {
+    let status_response = get_workflow_status(reana, name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+    let status = status_response["status"].as_str().unwrap_or("unknown");
+    let created = status_response["created"].as_str().unwrap_or("unknown");
+    let icon = if status == "finished" {
+        "✅"
+    } else if status == "failed" {
+        "❌"
+    } else {
+        "⌛"
+    };
+    eprintln!("{icon} {name} {status} created at {created}");
+    //if single workflow failed, get step name and logs
+    if status == "failed" && analyze_logs {
+        if let Some(logs_str) = status_response["logs"].as_str() {
+            analyze_workflow_logs(logs_str);
         }
     }
     Ok(())
