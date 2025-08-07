@@ -11,7 +11,7 @@ pub use outputs::*;
 pub use postprocess::post_process_cwl;
 
 //TODO complete list
-static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
+pub(crate) static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 

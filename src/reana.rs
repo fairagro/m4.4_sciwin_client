@@ -1,9 +1,13 @@
 use colored::Colorize;
 use commonwl::{prelude::*, requirements::WorkDirItem};
+use log::{info, warn};
 use remote_execution::parser::WorkflowJson;
+use std::collections::HashMap;
 use std::process::Command as SystemCommand;
 use std::{env, fs, path::Path};
 use util::{is_docker_installed, report_console_output};
+
+use crate::parser::SCRIPT_EXECUTORS;
 
 /// Performs some compatibility adjustments on workflow json for the exeuction using REANA.
 pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Result<()> {
@@ -11,6 +15,7 @@ pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Re
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
             publish_docker_ephemeral(tool)?;
+            inject_docker_pull(tool)?;
         }
     }
     Ok(())
@@ -48,8 +53,8 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
         }
     }
     if changed {
-        eprintln!(
-            "ℹ️  Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
+        info!(
+            "Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
             tool.id.clone().unwrap().green().bold(),
             command_vec.join(" ")
         );
@@ -63,11 +68,11 @@ fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let id = tool.id.clone().unwrap();
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
-            eprintln!("ℹ️  Tool {id} depends on Dockerfile, which not supported by REANA!");
+            warn!("Tool {id} depends on Dockerfile, which not supported by REANA!");
             if !is_docker_installed() {
                 return Ok(());
             }
-            eprintln!("🌶️  Trying to use a workaround for Dockerfile in Tool {}...", id.green().bold());
+            info!("Trying to use a workaround for Dockerfile in Tool {}...", id.green().bold());
             //we build the image and send it to ttl.sh
             let image_name = uuid::Uuid::new_v4().to_string();
             let tag = format!("ttl.sh/{image_name}:1h");
@@ -107,5 +112,36 @@ fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
             dr.docker_image_id = None;
         }
     }
+    Ok(())
+}
+
+/// check whether "python", "Rscript", ... is used and inject Docker image
+/// We can not rely on the REANA server has those tools installed
+fn inject_docker_pull(tool: &mut CommandLineTool) -> anyhow::Result<()> {
+    let id = tool.id.clone().unwrap();
+
+    let command_vec = match &tool.base_command {
+        Command::Multiple(vec) => vec.clone(),
+        _ => return Ok(()),
+    };
+
+    let default_images = HashMap::from([("python", "python"), ("Rscript", "r-base"), ("node", "node")]);
+
+    if SCRIPT_EXECUTORS.contains(&&*command_vec[0]) && tool.get_requirement::<DockerRequirement>().is_some() {
+        //is script executor but does not use containerization
+        warn!(
+            "Tool {} is using {} and does not use a proper container",
+            id.green().bold(),
+            command_vec[0].bold()
+        );
+
+        if let Some(container) = default_images.get(&&*command_vec[0]) {
+            tool.requirements
+                .push(Requirement::DockerRequirement(DockerRequirement::from_pull(container)));
+
+            eprintln!("✔️  Added container {} to tool {}", container.bold(), id.green().bold());
+        }
+    }
+
     Ok(())
 }
