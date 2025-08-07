@@ -85,8 +85,8 @@ pub enum RemoteSubcommands {
     Start {
         #[arg(help = "CWL File to execute")]
         file: PathBuf,
-        #[arg(short = 'i', long = "input", help = "Input YAML file")]
-        input_file: Option<String>,
+        #[arg(help = "Input YAML file")]
+        input_file: Option<PathBuf>,
         #[arg(long = "rocrate", help = "Create Provenance Run Crate")]
         rocrate: bool,
         #[arg(long = "logout", help = "Delete reana information from credential storage (a.k.a logout)")]
@@ -352,7 +352,7 @@ pub fn analyze_workflow_logs(logs_str: &str) {
     }
 }
 
-pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
+pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
     let config_path = PathBuf::from("workflow.toml");

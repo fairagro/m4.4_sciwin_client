@@ -190,9 +190,9 @@ pub fn read_file_content(file_path: &str) -> Result<String> {
     Ok(content)
 }
 
-pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &str) -> Result<Mapping> {
-    let input_yaml = fs::read_to_string(input_yaml_path).with_context(|| format!("Failed to read input YAML file at '{input_yaml_path}'"))?;
-    let input_value: Value = serde_yaml::from_str(&input_yaml).with_context(|| format!("Failed to parse input YAML at '{input_yaml_path}'"))?;
+pub fn build_inputs_yaml(cwl_input_path: &str, input_yaml_path: &PathBuf) -> Result<Mapping> {
+    let input_yaml = fs::read_to_string(input_yaml_path).with_context(|| format!("Failed to read input YAML file at '{input_yaml_path:?}'"))?;
+    let input_value: Value = serde_yaml::from_str(&input_yaml).with_context(|| format!("Failed to parse input YAML at '{input_yaml_path:?}'"))?;
 
     let cwl_content = fs::read_to_string(cwl_input_path).with_context(|| format!("Failed to read CWL input file at '{cwl_input_path}'"))?;
     let cwl_value: Value = serde_yaml::from_str(&cwl_content).with_context(|| format!("Failed to parse CWL file at '{cwl_input_path}'"))?;
@@ -742,7 +742,7 @@ mod tests {
         let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
         assert!(cwl_path.exists(), "Test cwl file does not exist");
 
-        let result = build_inputs_yaml(&cwl_path.to_string_lossy(), &input_yaml_path.to_string_lossy());
+        let result = build_inputs_yaml(&cwl_path.to_string_lossy(), &input_yaml_path);
         assert!(result.is_ok(), "build_inputs_yaml failed: {result:?}");
         let mapping = result.unwrap();
 

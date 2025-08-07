@@ -92,7 +92,7 @@ pub fn get_workflow_specification(reana_server: &str, reana_token: &str, workflo
 pub fn upload_files(
     reana_server: &str,
     reana_token: &str,
-    input_yaml: &Option<String>,
+    input_yaml: &Option<PathBuf>,
     file: &PathBuf,
     workflow_name: &str,
     workflow_json: &Value,

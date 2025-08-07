@@ -7,7 +7,7 @@ use commonwl::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::{Path, PathBuf}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowOutputs {
@@ -76,11 +76,11 @@ pub enum ParameterValue {
     Scalar(String),
 }
 
-pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<WorkflowJson> {
+pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<PathBuf>) -> Result<WorkflowJson> {
     let cwl_path = file.to_str().with_context(|| format!("Invalid UTF-8 in CWL file path: {file:?}"))?;
 
     let inputs_yaml_data = match input_file {
-        Some(yaml_file) => build_inputs_yaml(cwl_path, yaml_file).with_context(|| format!("Failed to build inputs YAML from file '{yaml_file}'"))?,
+        Some(yaml_file) => build_inputs_yaml(cwl_path, yaml_file).with_context(|| format!("Failed to build inputs YAML from file {yaml_file:?}"))?,
         None => build_inputs_cwl(cwl_path, None).with_context(|| format!("Failed to build inputs from CWL file '{cwl_path}'"))?,
     };
 
@@ -227,7 +227,7 @@ mod tests {
         assert!(cwl_path.exists(), "CWL file not found at {cwl_path:?}");
         assert!(inputs_yaml_path.exists(), "Inputs YAML file not found at {inputs_yaml_path:?}");
 
-        let result = generate_workflow_json_from_cwl(&cwl_path, &Some(inputs_yaml_path.to_string_lossy().to_string()));
+        let result = generate_workflow_json_from_cwl(&cwl_path, &Some(inputs_yaml_path));
 
         assert!(result.is_ok(), "Expected generation to succeed");
         let json = serde_json::to_value(result.unwrap()).unwrap();
