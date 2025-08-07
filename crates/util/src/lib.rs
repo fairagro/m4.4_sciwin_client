@@ -21,7 +21,7 @@ pub fn report_console_output(process: &mut Child) -> Result<Output, Box<dyn std:
         let lines = BufReader::new(stdout).lines();
         for line in lines {
             let line = line?;
-            eprintln!("{line:?}");
+            eprintln!("{line}");
             stdout_buf.push_str(&line);
             stdout_buf.push('\n');
         }
@@ -30,7 +30,7 @@ pub fn report_console_output(process: &mut Child) -> Result<Output, Box<dyn std:
         let lines = BufReader::new(stderr).lines();
         for line in lines {
             let line = line?;
-            eprintln!("{line:?}");
+            eprintln!("{line}");
             stderr_buf.push_str(&line);
             stderr_buf.push('\n');
         }
