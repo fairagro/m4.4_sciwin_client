@@ -30,6 +30,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tempfile::tempdir;
+use util::report_console_output;
 use wait_timeout::ChildExt;
 
 pub fn run_workflow(
@@ -399,16 +400,17 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
 
     //run
     info!("⏳ Executing Command: `{}`", format_command(&command));
+    let mut child = command.spawn()?;
+    report_console_output(&mut child);
 
     let output = if runtime.time_limit > 0 {
-        let mut child = command.spawn()?;
         if child.wait_timeout(Duration::from_secs(runtime.time_limit))?.is_none() {
             child.kill()?;
             return Err("Time elapsed".into());
         }
         child.wait_with_output()?
     } else {
-        command.output()?
+        child.wait_with_output()?
     };
 
     //handle redirection of stdout
@@ -424,8 +426,6 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else if !output.stdout.is_empty() {
-            eprintln!("{out}");
         }
     }
     //handle redirection of stderr
@@ -441,8 +441,6 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else if !output.stderr.is_empty() {
-            eprintln!("❌ {out}");
         }
     }
 
