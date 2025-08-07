@@ -1,6 +1,5 @@
 use rand::{Rng, distr::Alphanumeric};
 use std::{
-    cell::RefCell,
     ffi::OsStr,
     fs::{self},
     io::{self, Error, Write},
@@ -125,18 +124,6 @@ pub fn make_relative_to<'a>(path: &'a str, dir: &str) -> &'a str {
         &format!("{dir}{MAIN_SEPARATOR_STR}")
     };
     path.strip_prefix(prefix).unwrap_or(path)
-}
-
-thread_local!(static PRINT_OUTPUT: RefCell<bool> = const { RefCell::new(true) });
-
-pub fn set_print_output(value: bool) {
-    PRINT_OUTPUT.with(|print_output| {
-        *print_output.borrow_mut() = value;
-    });
-}
-
-pub fn print_output() -> bool {
-    PRINT_OUTPUT.with(|print_output| *print_output.borrow())
 }
 
 pub fn preprocess_path_join<P: AsRef<Path>>(path: P, location: &str) -> String {

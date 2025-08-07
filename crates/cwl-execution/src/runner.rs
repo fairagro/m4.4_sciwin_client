@@ -9,7 +9,7 @@ use crate::{
     },
     format_command,
     inputs::{evaluate_input, evaluate_input_as_string},
-    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command, print_output, set_print_output},
+    io::{copy_dir, copy_file, create_and_write_file_forced, get_random_filename, get_shell_command},
     outputs::{copy_output_dir, evaluate_command_outputs, evaluate_expression_outputs, get_file_metadata},
     scatter::{self},
     staging::stage_required_files,
@@ -59,9 +59,6 @@ pub fn run_workflow(
     };
 
     let input_values = input_values.handle_requirements(&workflow.requirements, &workflow.hints);
-
-    //prevent tool from outputting
-    set_print_output(false);
 
     let mut outputs: HashMap<String, DefaultValue> = HashMap::new();
     for step_id in sorted_step_ids {
@@ -202,8 +199,6 @@ pub fn run_workflow(
         }
     }
 
-    set_print_output(true);
-
     fn output_file(file: &File, tmp_path: &str, output_directory: &str) -> Result<File, Box<dyn Error>> {
         let path = file.path.as_ref().map_or_else(String::new, |p| p.clone());
         let new_loc = Path::new(&path).to_string_lossy().replace(tmp_path, output_directory);
@@ -281,8 +276,10 @@ fn execute_step(
     tmp_path: &str,
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     let step_outputs = if let Some(path) = path {
+        info!("🚲 Executing Tool {path:?} ...");
         execute(path, input_values, Some(tmp_path), None)?
     } else if let StringOrDocument::Document(doc) = &step.run {
+        info!("🚲 Executing Tool {} ...", step.id);
         execute(workflow_folder, input_values, Some(tmp_path), Some(doc))?
     } else {
         unreachable!()
@@ -298,9 +295,6 @@ pub fn run_tool(
 ) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
     //measure performance
     let clock = Instant::now();
-    if !print_output() {
-        info!("🚲 Executing Tool {cwl_path:?} ...");
-    }
     //create staging directory
     let dir = tempdir()?;
     info!("📁 Created staging directory: {:?}", dir.path());
