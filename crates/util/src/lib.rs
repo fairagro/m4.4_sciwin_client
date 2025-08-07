@@ -17,28 +17,29 @@ pub fn report_console_output(process: &mut Child) -> Result<Output, Box<dyn std:
     let mut stdout_buf = String::new();
     let mut stderr_buf = String::new();
 
-    if let Some(stdout) = process.stdout.as_mut() {
-        let lines = BufReader::new(stdout).lines();
-        for line in lines {
-            let line = line?;
-            eprintln!("{line}");
+    if let Some(stdout) = process.stdout.take() {
+        let mut reader = BufReader::new(stdout);
+        let mut line = String::new();
+        while reader.read_line(&mut line)? > 0 {
+            eprint!("{line}");
             stdout_buf.push_str(&line);
-            stdout_buf.push('\n');
+            line.clear();
         }
     }
-    if let Some(stderr) = process.stderr.as_mut() {
-        let lines = BufReader::new(stderr).lines();
-        for line in lines {
-            let line = line?;
-            eprintln!("{line}");
+
+    if let Some(stderr) = process.stderr.take() {
+        let mut reader = BufReader::new(stderr);
+        let mut line = String::new();
+        while reader.read_line(&mut line)? > 0 {
+            eprint!("{line}");
             stderr_buf.push_str(&line);
-            stderr_buf.push('\n');
+            line.clear();
         }
     }
 
     Ok(Output {
-        stdout: stdout_buf.trim_end().to_string(),
-        stderr: stderr_buf.trim_end().to_string(),
+        stdout: stdout_buf,
+        stderr: stderr_buf,
     })
 }
 

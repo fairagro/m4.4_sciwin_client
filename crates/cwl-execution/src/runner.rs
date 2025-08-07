@@ -421,8 +421,6 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else if !output.stdout.is_empty() {
-            eprintln!("{out}");
         }
     }
     //handle redirection of stderr
@@ -438,8 +436,6 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .and_then(|binding| binding.glob.clone())
                 .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
             create_and_write_file_forced(filename, out)?;
-        } else if !output.stderr.is_empty() {
-            eprintln!("{out}");
         }
     }
 

@@ -119,6 +119,8 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
         })
         .collect::<Vec<_>>();
     docker_command.args(args);
+    docker_command.stderr(Stdio::piped());
+    docker_command.stdout(Stdio::piped());
 
     docker_command
 }
