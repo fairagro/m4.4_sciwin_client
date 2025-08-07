@@ -209,7 +209,7 @@ pub fn test_execute_local_tool_default_cwl() {
     assert!(execute_local(&args).is_ok());
     assert!(fs::exists(&out_file).unwrap());
     let contents = fs::read_to_string(&out_file).unwrap();
-    assert_eq!(contents, "File\n".to_string());
+    assert_eq!(contents, "File".to_string());
 
     assert!(execute_local(&args_override).is_ok());
     assert!(fs::exists(&out_file).unwrap());
