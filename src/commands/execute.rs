@@ -4,14 +4,7 @@ use commonwl::prelude::*;
 use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
-use remote_execution::{
-    api::{
-        create_workflow, download_files, get_workflow_logs, get_workflow_specification, get_workflow_status, get_workflow_workspace, ping_reana,
-        start_workflow, upload_files,
-    },
-    parser::generate_workflow_json_from_cwl,
-    rocrate::create_ro_crate,
-};
+use remote_execution::prelude::*;
 use serde_yaml::{Number, Value};
 use std::{
     collections::HashMap,
