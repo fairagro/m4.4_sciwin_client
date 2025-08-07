@@ -9,12 +9,21 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::tempdir;
+use test_utils::repository;
 
 #[test]
 #[serial]
 pub fn test_execute_local() {
+    let dir = tempdir().unwrap();
+    let current = repository(dir.path())
+        .copy_file("../test_data/echo.cwl", "echo.cwl")
+        .copy_file("../test_data/echo.py", "echo.py")
+        .copy_file("../test_data/input.txt", "input.txt")
+        .finalize()
+        .enter();
+
     let args = LocalExecuteArgs {
-        file: PathBuf::from("tests/test_data/echo.cwl"),
+        file: PathBuf::from("echo.cwl"),
         ..Default::default()
     };
 
@@ -28,19 +37,23 @@ pub fn test_execute_local() {
     let expected = include_str!("test_data/input.txt");
 
     assert_eq!(contents, expected);
-
-    fs::remove_file(file).unwrap();
+    env::set_current_dir(current).unwrap();
 }
 
 #[test]
 #[serial]
 pub fn test_execute_local_with_args() {
+    let dir = tempdir().unwrap();
+    let current = repository(dir.path())
+        .copy_file("../test_data/echo.cwl", "echo.cwl")
+        .copy_file("../test_data/echo.py", "echo.py")
+        .copy_file("../test_data/input_alt.txt", "input_alt.txt")
+        .finalize()
+        .enter();
+
     let args = LocalExecuteArgs {
-        file: PathBuf::from("tests/test_data/echo.cwl"),
-        args: ["--test", "tests/test_data/input_alt.txt"]
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>(),
+        file: PathBuf::from("echo.cwl"),
+        args: ["--test", "input_alt.txt"].iter().map(ToString::to_string).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -54,16 +67,24 @@ pub fn test_execute_local_with_args() {
     let expected = include_str!("test_data/input_alt.txt");
 
     assert_eq!(contents, expected);
-
-    fs::remove_file(file).unwrap();
+    env::set_current_dir(current).unwrap();
 }
 
 #[test]
 #[serial]
 pub fn test_execute_local_with_file() {
+    let dir = tempdir().unwrap();
+    let current = repository(dir.path())
+        .copy_file("../test_data/echo.cwl", "echo.cwl")
+        .copy_file("../test_data/echo.py", "echo.py")
+        .copy_file("../test_data/echo-job.yml", "echo-job.yml")
+        .copy_file("../test_data/input_alt.txt", "input_alt.txt")
+        .finalize()
+        .enter();
+
     let args = LocalExecuteArgs {
-        file: PathBuf::from("tests/test_data/echo.cwl"),
-        args: iter::once(&"tests/test_data/echo-job.yml").map(ToString::to_string).collect::<Vec<_>>(),
+        file: PathBuf::from("echo.cwl"),
+        args: iter::once(&"echo-job.yml").map(ToString::to_string).collect::<Vec<_>>(),
         ..Default::default()
     };
 
@@ -77,42 +98,59 @@ pub fn test_execute_local_with_file() {
     let expected = include_str!("test_data/input_alt.txt");
 
     assert_eq!(contents, expected);
-
-    fs::remove_file(file).unwrap();
+    env::set_current_dir(current).unwrap();
 }
 
 #[test]
 #[serial]
 pub fn test_execute_local_outdir() {
     let dir = tempdir().unwrap();
+    let current = repository(dir.path())
+        .copy_file("../test_data/echo.cwl", "echo.cwl")
+        .copy_file("../test_data/echo.py", "echo.py")
+        .copy_file("../test_data/input.txt", "input.txt")
+        .finalize()
+        .enter();
+
+    let dir = tempdir().unwrap();
     let args = LocalExecuteArgs {
         out_dir: Some(dir.path().to_string_lossy().into_owned()),
-        file: PathBuf::from("tests/test_data/echo.cwl"),
+        file: PathBuf::from("echo.cwl"),
         ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
 
     let file = dir.path().join("results.txt");
+
     assert!(file.exists());
-    fs::remove_file(file).unwrap();
+    env::set_current_dir(current).unwrap();
 }
 
 #[test]
 #[serial]
 pub fn test_execute_local_is_quiet() {
+    let dir = tempdir().unwrap();
+    let current = repository(dir.path())
+        .copy_file("../test_data/echo.cwl", "echo.cwl")
+        .copy_file("../test_data/echo.py", "echo.py")
+        .copy_file("../test_data/input.txt", "input.txt")
+        .finalize()
+        .enter();
+
     //does not really test if it is quiet but rather that the process works
     let args = LocalExecuteArgs {
         is_quiet: true,
-        file: PathBuf::from("tests/test_data/echo.cwl"),
+        file: PathBuf::from("echo.cwl"),
         ..Default::default()
     };
 
     execute_local(&args).expect("Could not execute CommandLineTool");
 
     let file = Path::new("results.txt");
+
     assert!(file.exists());
-    fs::remove_file(file).unwrap();
+    env::set_current_dir(current).unwrap();
 }
 
 #[test]

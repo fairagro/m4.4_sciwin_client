@@ -1,3 +1,4 @@
+use copy_dir::copy_dir;
 use core::panic;
 use git2::Repository;
 use serde_json::Value;
@@ -61,6 +62,13 @@ impl Repo<'_> {
     pub fn copy_file<P: AsRef<Path>>(&self, file: P, path: P) -> &Self {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         fs::copy(root.join(file), self.0.join(path)).unwrap();
+        self
+    }
+
+    pub fn copy_dir<P: AsRef<Path>>(&self, dir: P, path: P) -> &Self {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        copy_dir(root.join(dir), self.0.join(path)).unwrap();
+
         self
     }
 
