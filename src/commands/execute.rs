@@ -373,12 +373,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
     }
     // Generate worfklow.json
     let mut workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
-    for item in &mut workflow_json.workflow.specification.graph {
-        if let CWLDocument::CommandLineTool(tool) = item {
-            reana::adjust_basecommand(tool)?;
-            reana::adjust_docker_requirement(tool)?;
-        }
-    }
+    reana::compatibility_adjustments(&mut workflow_json)?;
 
     let workflow_json = serde_json::to_value(workflow_json)?;
     let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;

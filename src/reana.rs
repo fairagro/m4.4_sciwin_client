@@ -1,11 +1,23 @@
 use colored::Colorize;
 use commonwl::{prelude::*, requirements::WorkDirItem};
+use remote_execution::parser::WorkflowJson;
 use std::process::Command as SystemCommand;
 use std::{env, fs, path::Path};
 use util::{is_docker_installed, report_console_output};
 
+/// Performs some compatibility adjustments on workflow json for the exeuction using REANA.
+pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Result<()> {
+    for item in &mut workflow_json.workflow.specification.graph {
+        if let CWLDocument::CommandLineTool(tool) = item {
+            adjust_basecommand(tool)?;
+            publish_docker_ephemeral(tool)?;
+        }
+    }
+    Ok(())
+}
+
 /// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>
-pub(crate) fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
+fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let mut changed = false;
     let mut command_vec = match &tool.base_command {
         Command::Multiple(vec) => vec.clone(),
@@ -47,7 +59,7 @@ pub(crate) fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<(
 }
 
 /// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
-pub(crate) fn adjust_docker_requirement(tool: &mut CommandLineTool) -> anyhow::Result<()> {
+fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let id = tool.id.clone().unwrap();
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
         if let Some(dockerfile) = &mut dr.docker_file {
