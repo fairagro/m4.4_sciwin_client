@@ -1,4 +1,4 @@
-use crate::config;
+use crate::{config, reana};
 use clap::{Args, Subcommand};
 use commonwl::{CWLDocument, CWLType, DefaultValue, Directory, File};
 use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
@@ -13,10 +13,15 @@ use remote_execution::{
     rocrate::create_ro_crate,
 };
 use serde_yaml::{Number, Value};
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::io::{BufRead, BufReader};
-use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::{self, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
+    thread,
+    time::Duration,
+};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -367,7 +372,15 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
         return Ok(());
     }
     // Generate worfklow.json
-    let workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
+    let mut workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
+    for item in &mut workflow_json.workflow.specification.graph {
+        if let CWLDocument::CommandLineTool(tool) = item {
+            reana::adjust_basecommand(tool)?;
+            reana::adjust_docker_requirement(tool)?;
+        }
+    }
+
+    let workflow_json = serde_json::to_value(workflow_json)?;
     let converted_yaml: serde_yaml::Value = serde_json::from_value(workflow_json.clone())?;
     // Create workflow
     let create_response = create_workflow(&reana_instance, &reana_token, &workflow_json, Some(&workflow_name))?;

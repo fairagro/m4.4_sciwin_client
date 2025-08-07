@@ -4,36 +4,34 @@ use commonwl::{
     load_doc,
     packed::{PackedCWL, pack_workflow},
     prelude::*,
-    requirements::WorkDirItem,
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_yaml::Value;
-use std::{collections::HashMap, env::temp_dir, fs, path::Path, process::Command as SystemCommand};
-use util::{is_ci_process, is_docker_installed, report_console_output};
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct WorkflowOutputs {
+pub struct WorkflowOutputs {
     files: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
-struct WorkflowJson {
-    inputs: WorkflowInputs,
-    outputs: WorkflowOutputs,
-    version: String,
-    workflow: WorkflowSpec,
+pub struct WorkflowJson {
+    pub inputs: WorkflowInputs,
+    pub outputs: WorkflowOutputs,
+    pub version: String,
+    pub workflow: WorkflowSpec,
 }
 
 #[derive(Debug, Serialize)]
-struct WorkflowSpec {
-    file: String,
-    specification: PackedCWL,
+pub struct WorkflowSpec {
+    pub file: String,
+    pub specification: PackedCWL,
     #[serde(rename = "type")]
-    r#type: String,
+    pub r#type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct WorkflowInputs {
+pub struct WorkflowInputs {
     directories: Vec<String>,
     files: Vec<String>,
     parameters: serde_yaml::Value,
@@ -78,7 +76,7 @@ pub enum ParameterValue {
     Scalar(String),
 }
 
-pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<serde_json::Value> {
+pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>) -> Result<WorkflowJson> {
     let cwl_path = file.to_str().with_context(|| format!("Invalid UTF-8 in CWL file path: {file:?}"))?;
 
     let inputs_yaml_data = match input_file {
@@ -90,13 +88,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
     let CWLDocument::Workflow(workflow) = cwl_document else {
         anyhow::bail!("Document is not of kind CWL Workflow {file:?}");
     };
-    let mut specification = pack_workflow(&workflow, file, None).map_err(|e| anyhow::anyhow!("Could not pack file {file:?}: {e}"))?;
-    for item in &mut specification.graph {
-        if let CWLDocument::CommandLineTool(tool) = item {
-            adjust_basecommand(tool)?;
-            adjust_docker_requirement(tool)?;
-        }
-    }
+    let specification = pack_workflow(&workflow, file, None).map_err(|e| anyhow::anyhow!("Could not pack file {file:?}: {e}"))?;
 
     let mut inputs_value = serde_yaml::from_value::<WorkflowInputs>(Value::Mapping(inputs_yaml_data.clone()))
         .context("Failed to deserialize inputs YAML into WorkflowInputs")?;
@@ -121,7 +113,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
             }
         }
     }
-    
+
     let output_files: Vec<String> = get_all_outputs(&workflow, cwl_path)
         .with_context(|| format!("Failed to get all outputs from CWL file '{cwl_path}'"))?
         .into_iter()
@@ -130,7 +122,7 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
 
     let outputs = WorkflowOutputs { files: output_files };
 
-    let workflow_json = WorkflowJson {
+    Ok(WorkflowJson {
         inputs: inputs_value,
         outputs,
         version: "0.9.4".to_string(),
@@ -139,102 +131,9 @@ pub fn generate_workflow_json_from_cwl(file: &Path, input_file: &Option<String>)
             specification,
             r#type: "cwl".to_string(),
         },
-    };
-    let serialized = serde_json::to_value(&workflow_json).context("Failed to serialize workflow JSON")?;
-
-    Ok(serialized)
+    })
 }
 
-/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>
-fn adjust_basecommand(tool: &mut CommandLineTool) -> Result<()> {
-    let mut changed = false;
-    let mut command_vec = match &tool.base_command {
-        Command::Multiple(vec) => vec.clone(),
-        _ => return Ok(()),
-    };
-    if let Some(iwdr) = tool.get_requirement_mut::<InitialWorkDirRequirement>() {
-        for item in &mut iwdr.listing {
-            if let WorkDirItem::Dirent(dirent) = item
-                && let Some(entryname) = &mut dirent.entryname
-                && command_vec.contains(entryname)
-            {
-                //check whether entryname has a path attached to script item and rewrite command and entryname if so
-                let path = Path::new(entryname);
-                if path.parent().is_some() {
-                    let pos = command_vec
-                        .iter()
-                        .position(|c| c == entryname)
-                        .ok_or(anyhow::anyhow!("Failed to find command item {entryname}"))?;
-                    *entryname = path
-                        .file_name()
-                        .ok_or(anyhow::anyhow!("Failed to get filename from {path:?}"))?
-                        .to_string_lossy()
-                        .into_owned();
-                    command_vec[pos] = (*entryname).to_string();
-                    changed = true;
-                }
-            }
-        }
-    }
-    if changed {
-        eprintln!(
-            "ℹ️  Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
-            tool.id.clone().unwrap(),
-            command_vec.join(" ")
-        );
-        tool.base_command = Command::Multiple(command_vec);
-    }
-    Ok(())
-}
-
-/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
-fn adjust_docker_requirement(tool: &mut CommandLineTool) -> Result<()> {
-    let id = tool.id.clone().unwrap();
-    if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() {
-        if let Some(dockerfile) = &mut dr.docker_file {
-            eprintln!("ℹ️  Tool {id} depends on Dockerfile, which not supported by REANA!");
-            if !is_docker_installed() || is_ci_process() {
-                return Ok(());
-            }
-            eprintln!("🌶️  Trying to use a workaround for Dockerfile in Tool {id}...");
-            //we build the image and send it to ttl.sh
-            let image_name = uuid::Uuid::new_v4().to_string();
-            let tag = format!("ttl.sh/{image_name}:1h");
-            //write dockerfile to temp dir
-            let file_content = match dockerfile {
-                commonwl::Entry::Source(src) => src.clone(),
-                commonwl::Entry::Include(include) => fs::read_to_string(include.include.clone())?,
-            };
-            let filenname = temp_dir().join(&image_name);
-            fs::write(&filenname, file_content)?;
-
-            //build docker file
-            let mut process = SystemCommand::new("docker")
-                .arg("build")
-                .arg("-t")
-                .arg(&tag)
-                .arg("-f")
-                .arg(filenname)
-                .arg(".")
-                .spawn()?;
-            report_console_output(&mut process);
-            process.wait()?;
-            eprintln!("✔️  Successfully built Docker image in Tool {id}");
-
-            //push
-            let mut process = SystemCommand::new("docker").arg("push").arg(&tag).spawn()?;
-            report_console_output(&mut process);
-            process.wait()?;
-            eprintln!("✔️  Docker image was published at {tag} and is available for 1 hour in Tool {id}");
-
-            //set docker pull and remove dockerfile
-            dr.docker_pull = Some(tag);
-            dr.docker_file = None;
-            dr.docker_image_id = None;
-        }
-    }
-    Ok(())
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,7 +147,7 @@ mod tests {
         let result = generate_workflow_json_from_cwl(&cwl_path, &None);
 
         assert!(result.is_ok(), "Expected generation to succeed");
-        let json = result.unwrap();
+        let json = serde_json::to_value(result.unwrap()).unwrap();
 
         // Basic assertions
         assert_eq!(json["version"], "0.9.4");
@@ -331,7 +230,7 @@ mod tests {
         let result = generate_workflow_json_from_cwl(&cwl_path, &Some(inputs_yaml_path.to_string_lossy().to_string()));
 
         assert!(result.is_ok(), "Expected generation to succeed");
-        let json = result.expect("Failed to generate workflow JSON");
+        let json = serde_json::to_value(result.unwrap()).unwrap();
 
         assert_eq!(json["version"], "0.9.4");
         assert_eq!(json["workflow"]["type"], "cwl");

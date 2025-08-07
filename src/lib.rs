@@ -4,6 +4,7 @@ pub mod config;
 pub mod cwl;
 pub mod parser;
 pub mod util;
+mod reana;
 
 use colored::Colorize;
 use log::info;

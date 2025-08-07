@@ -29,7 +29,3 @@ pub fn is_docker_installed() -> bool {
 
     matches!(output, Ok(output) if output.status.success())
 }
-
-pub fn is_ci_process() -> bool {
-    std::env::var("CI").is_ok()
-}
