@@ -37,8 +37,8 @@ pub fn report_console_output(process: &mut Child) -> Result<Output, Box<dyn std:
     }
 
     Ok(Output {
-        stdout: stdout_buf,
-        stderr: stderr_buf,
+        stdout: stdout_buf.trim_end().to_string(),
+        stderr: stderr_buf.trim_end().to_string(),
     })
 }
 
