@@ -23,8 +23,8 @@ use preprocess::preprocess_cwl;
 use runner::{run_tool, run_workflow};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, error::Error, fmt::Display, fs, num::NonZero, path::Path, process::Command, thread};
-use sysinfo::{Disks, MemoryRefreshKind, System};
+use std::{collections::HashMap, error::Error, fmt::Display, fs, path::Path, process::Command, sync::LazyLock};
+use sysinfo::{CpuRefreshKind, Disks, MemoryRefreshKind, System};
 
 #[allow(clippy::disallowed_macros)]
 pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
@@ -259,21 +259,6 @@ impl ExitCode for CommandError {
     }
 }
 
-pub(crate) fn get_processor_count() -> usize {
-    thread::available_parallelism().map(NonZero::get).unwrap_or(1)
-}
-
-pub(crate) fn get_available_ram() -> u64 {
-    let mut system = System::new_all();
-    system.refresh_memory_specifics(MemoryRefreshKind::everything());
-    system.free_memory() / 1024
-}
-
-pub(crate) fn get_available_disk_space() -> u64 {
-    let disks = Disks::new_with_refreshed_list();
-    disks[0].available_space() / 1024
-}
-
 pub fn format_command(command: &Command) -> String {
     let program = command.get_program().to_string_lossy();
 
@@ -288,22 +273,25 @@ pub fn format_command(command: &Command) -> String {
     format!("{} {}", program, args.join(" "))
 }
 
-pub(crate) fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
-    let mut slices = Vec::new();
-    let mut last_index = 0;
+static DISKS: LazyLock<Disks> = LazyLock::new(Disks::new_with_refreshed_list);
 
-    for (idx, _) in s.match_indices(delim) {
-        if last_index != idx {
-            slices.push((last_index, idx));
-        }
-        last_index = idx;
-    }
+static SYSTEM: LazyLock<System> = LazyLock::new(|| {
+    let mut system = System::new();
+    system.refresh_cpu_list(CpuRefreshKind::nothing());
+    system.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
+    system
+});
 
-    if last_index < s.len() {
-        slices.push((last_index, s.len()));
-    }
+pub(crate) fn get_processor_count() -> usize {
+    SYSTEM.cpus().iter().count()
+}
 
-    slices
+pub(crate) fn get_available_ram() -> u64 {
+    SYSTEM.free_memory() / 1024
+}
+
+pub(crate) fn get_available_disk_space() -> u64 {
+    DISKS[0].available_space() / 1024
 }
 
 #[cfg(test)]
