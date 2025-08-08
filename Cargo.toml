@@ -27,6 +27,7 @@ deno_media_type = { git = 'https://github.com/denoland/deno_media_type', tag = "
 commonwl = { path = "crates/cwl" }
 cwl-execution = { path = "crates/cwl-execution" }
 remote-execution = { path = "crates/remote-execution" }
+cwl-annotation = { path = "crates/cwl-annotation" }
 util = { path = "crates/util" }
 
 anyhow = { workspace = true }

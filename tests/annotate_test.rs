@@ -1,10 +1,10 @@
 #![allow(clippy::disallowed_macros)]
-use s4n::commands::*;
 use serde_yaml::Value;
 use serial_test::serial;
 use std::env;
 use std::fs;
 use tempfile::tempdir;
+use s4n::commands::*;
 
 const CWL_CONTENT: &str = r"
     class: CommandLineTool
@@ -56,45 +56,17 @@ const CWL_CONTENT_ANNOTATED: &str = r#"
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
     "#;
 
-const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
-const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf";
-const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
-const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
-
-#[test]
-#[serial]
-fn test_annotate_container() {
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-
-    env::set_current_dir(dir.path()).unwrap();
-
-    let temp_file_name = "test.cwl";
-    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
-
-    let result = annotate_container(temp_file_name, "docker://my-container:latest");
-
-    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
-    assert!(
-        updated_content.contains("docker://my-container:latest"),
-        "Expected container annotation to be added, but got: {updated_content}"
-    );
-
-    env::set_current_dir(current).unwrap();
-}
 
 #[tokio::test]
 #[serial]
 async fn test_annotate_new_container() {
     let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
+    let current = std::env::current_dir().unwrap();
 
-    env::set_current_dir(dir.path()).unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
 
     let temp_file_name = "test.cwl";
-    fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
+    std::fs::write(temp_file_name, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
 
     let command = AnnotateCommands::Container {
         cwl_name: temp_file_name.to_string(),
@@ -105,13 +77,13 @@ async fn test_annotate_new_container() {
 
     assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
-    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
+    let updated_content = std::fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
     assert!(
         updated_content.contains("docker://my-container:latest"),
         "Expected container annotation to be added, but got: {updated_content}"
     );
 
-    env::set_current_dir(current).unwrap();
+    std::env::set_current_dir(current).unwrap();
 }
 
 #[tokio::test]
@@ -262,37 +234,6 @@ async fn test_annotate_description() {
     );
 
     env::set_current_dir(current).unwrap();
-}
-
-#[tokio::test]
-#[serial]
-async fn test_annotate_license() {
-
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let cwl_name = "test_license.cwl";
-    fs::write(cwl_name, "class: CommandLineTool\n").unwrap();
-
-    let license = Some("MIT".to_string());
-    let result = annotate_license(cwl_name, &license).await;
-    assert!(result.is_ok());
-
-    let yaml = parse_cwl(cwl_name).unwrap();
-    if let Value::Mapping(ref mapping) = yaml {
-        assert!(mapping.contains_key(Value::String("s:license".to_string())));
-        assert_eq!(
-            mapping.get(Value::String("s:license".to_string())),
-            Some(Value::Sequence(vec![Value::String("MIT".to_string())])).as_ref()
-        );
-        assert!(mapping.contains_key(Value::String("$namespaces".to_string())));
-        assert!(mapping.contains_key(Value::String("$schemas".to_string())));
-    } else {
-        panic!("YAML root is not a mapping");
-    }
-
-    std::env::set_current_dir(current).unwrap();
 }
 
 #[tokio::test]
@@ -624,16 +565,16 @@ async fn test_annotate_process() {
 
     fs::write(cwl_file_name, CWL_CONTENT).expect("Failed to write CWL file");
 
-    let args = AnnotateProcessArgs {
+    let args = AnnotateCommands::Process(AnnotateProcessArgs {
         cwl_name: cwl_file_name.to_string(),
         name: "sequence1".to_string(),
         input: Some("input_data".to_string()),
         output: Some("output_data".to_string()),
         parameter: None,
         value: None,
-    };
+    });
 
-    let result = annotate_process_step(&args).await;
+    let result =  handle_annotate_commands(&args).await;
 
     assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
 
@@ -649,65 +590,6 @@ async fn test_annotate_process() {
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
-fn test_get_filename() {
-    use std::env;
-    use std::fs;
-    use tempfile::tempdir;
-
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    let base_name = "example";
-    let cwl_name = format!("{base_name}.cwl");
-    let workflows_dir = dir.path().join(format!("workflows/{base_name}"));
-    fs::create_dir_all(&workflows_dir).unwrap();
-    let file_in_current_dir = dir.path().join(cwl_name.clone());
-    let file_in_workflows_dir = workflows_dir.join(cwl_name);
-
-    // Create file in the current directory
-    fs::write(&file_in_current_dir, "").unwrap();
-
-    // Get the canonical paths
-    let file_in_current_dir_canonical = fs::canonicalize(&file_in_current_dir).unwrap();
-    let result = get_filename(base_name);
-
-    assert!(result.is_ok(), "Expected Ok(file path), got Err: {result:?}");
-    assert_eq!(
-        fs::canonicalize(result.unwrap()).unwrap(),
-        file_in_current_dir_canonical,
-        "File not correctly located in the current directory"
-    );
-
-    fs::remove_file(&file_in_current_dir).unwrap();
-
-    // Create file in the workflows directory
-    fs::write(&file_in_workflows_dir, "").unwrap();
-    let file_in_workflows_dir_canonical = fs::canonicalize(&file_in_workflows_dir).unwrap();
-    let result = get_filename(base_name);
-
-    assert!(result.is_ok(), "Expected Ok(file path), got Err: {result:?}");
-    assert_eq!(
-        fs::canonicalize(result.unwrap()).unwrap(),
-        file_in_workflows_dir_canonical,
-        "File not correctly located in the workflows directory"
-    );
-
-    fs::remove_file(&file_in_workflows_dir).unwrap();
-
-    // Test case where file is not found
-    let result = get_filename(base_name);
-    assert!(result.is_err(), "Expected Err(file not found), got Ok: {result:?}");
-    assert!(
-        result.unwrap_err().to_string().contains("CWL file 'example.cwl' not found"),
-        "Expected error message about missing file, but got different error"
-    );
-
-    env::set_current_dir(current).unwrap();
-}
-
 #[tokio::test]
 #[serial]
 async fn test_annotate_performer_add_to_existing_list() {
@@ -719,7 +601,7 @@ async fn test_annotate_performer_add_to_existing_list() {
 
     fs::write(cwl_filename, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
 
-    let args = PerformerArgs {
+    let args = AnnotateCommands::Performer(PerformerArgs {
         cwl_name: cwl_filename.to_string(),
         first_name: Some("Jane".to_string()),
         last_name: Some("Smith".to_string()),
@@ -730,10 +612,10 @@ async fn test_annotate_performer_add_to_existing_list() {
         mid_initials: None,
         phone: None,
         fax: None,
-    };
+    });
 
-    let result = annotate_performer(&args);
-    assert!(result.await.is_ok(), "annotate_performer failed");
+    let result =  handle_annotate_commands(&args).await;
+    assert!(result.is_ok(), "annotate_performer failed");
 
     let updated_content = fs::read_to_string(cwl_filename).expect("Failed to read updated CWL file");
 
@@ -745,9 +627,9 @@ async fn test_annotate_performer_add_to_existing_list() {
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn test_annotate_author_add_to_existing_list() {
+async fn test_annotate_author_add_to_existing_list() {
     let dir = tempdir().unwrap();
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
@@ -756,14 +638,14 @@ fn test_annotate_author_add_to_existing_list() {
 
     fs::write(cwl_filename, CWL_CONTENT_ANNOTATED).expect("Failed to write CWL file");
 
-    let args = PersonArgs {
+    let args = AnnotateCommands::Author(PersonArgs {
         cwl_name: cwl_filename.to_string(),
         name: "Jane Smith".to_string(),
         mail: Some("jane.smith@example.com".to_string()),
         id: Some("http://orcid.org/0000-0000-0000-0000".to_string()),
-    };
+    });
 
-    let result = annotate_person(&args, "author");
+    let result = handle_annotate_commands(&args).await;
 
     assert!(result.is_ok(), "Expected Ok, got {result:?}");
 
@@ -776,7 +658,7 @@ fn test_annotate_author_add_to_existing_list() {
         assert_eq!(new_author["s:email"], "mailto:jane.smith@example.com");
         assert_eq!(new_author["s:identifier"], "http://orcid.org/0000-0000-0000-0000");
     } else {
-        panic!("Expected 'arc:performer' to be a sequence.");
+        panic!("Expected 's:author' to be a sequence.");
     }
 
     env::set_current_dir(current).unwrap();
@@ -801,7 +683,7 @@ async fn test_annotate_performer_avoid_duplicate() {
 
     std::fs::write(cwl_filename, cwl_content).unwrap();
 
-    let args = PerformerArgs {
+    let args = AnnotateCommands::Performer(PerformerArgs {
         cwl_name: cwl_filename.to_string(),
         first_name: Some("Charlie".to_string()),
         last_name: Some("Davis".to_string()),
@@ -812,11 +694,11 @@ async fn test_annotate_performer_avoid_duplicate() {
         mid_initials: None,
         phone: None,
         fax: None,
-    };
+    });
 
-    let result = annotate_performer(&args);
+    let result =  handle_annotate_commands(&args).await;
 
-    assert!(result.await.is_ok(), "annotate_performer failed");
+    assert!(result.is_ok(), "annotate_performer failed");
 
     let updated_yaml: Value = serde_yaml::from_str(&std::fs::read_to_string(cwl_filename).unwrap()).unwrap();
 
@@ -844,7 +726,7 @@ async fn test_annotate_performer_invalid_root() {
 
     std::fs::write(cwl_filename, cwl_content).unwrap();
 
-    let args = PerformerArgs {
+    let args = AnnotateCommands::Performer(PerformerArgs {
         cwl_name: cwl_filename.to_string(),
         first_name: Some("David".to_string()),
         last_name: Some("Evans".to_string()),
@@ -855,199 +737,12 @@ async fn test_annotate_performer_invalid_root() {
         fax: None,
         affiliation: None,
         mail: None
-    };
+    });
 
-    let result = annotate_performer(&args);
+    let result =  handle_annotate_commands(&args).await;
 
-    assert!(result.await.is_err(), "annotate_performer expected to fail");
-
-    env::set_current_dir(current).unwrap();
-}
-
-#[tokio::test]
-#[serial]
-async fn test_contains_docker_requirement() {
-    use std::fs;
-    use tempfile::tempdir;
-
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    let file_with_docker = dir.path().join("with_docker.cwl");
-    let file_without_docker = dir.path().join("without_docker.cwl");
-    let empty_file = dir.path().join("empty.cwl");
-
-    fs::write(&file_with_docker, CWL_CONTENT).unwrap();
-    let result = contains_docker_requirement(file_with_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(true), but got Err: {result:?}");
-    assert!(result.unwrap(), "Expected DockerRequirement to be found");
-    let content_without_docker = r"
-class: CommandLineTool
-inputs: []
-outputs: []
-    ";
-    fs::write(&file_without_docker, content_without_docker).unwrap();
-    let result = contains_docker_requirement(file_without_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false), but got Err: {result:?}");
-    assert!(!result.unwrap(), "Expected false for file not containing 'DockerRequirement'");
-
-    fs::write(&empty_file, "").unwrap();
-    let result = contains_docker_requirement(empty_file.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {result:?}");
-    assert!(!result.unwrap(), "Expected DockerRequirement to be absent in empty file");
+    assert!(result.is_err(), "annotate_performer expected to fail");
 
     env::set_current_dir(current).unwrap();
 }
 
-#[test]
-#[serial]
-fn test_annotate_default() {
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    let tool_name = "test_tool";
-    let temp_file_name = format!("{tool_name}.cwl");
-
-    fs::write(&temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
-
-    let result = annotate_default(tool_name);
-    assert!(result.is_ok(), "Expected Ok(()), got: {result:?}");
-
-    // Read the updated file and check if annotations were added
-    let updated_content = fs::read_to_string(&temp_file_name).expect("Failed to read updated CWL file");
-    assert!(
-        updated_content.contains("$namespaces:")
-            && updated_content.contains("s:")
-            && updated_content.contains("$schemas:")
-            && updated_content.contains(SCHEMAORG_SCHEMA)
-            && updated_content.contains(SCHEMAORG_NAMESPACE),
-        "Expected annotations for schemaorg to be added, but got: {updated_content}"
-    );
-    assert!(
-        updated_content.contains("arc:") && updated_content.contains(ARC_SCHEMA) && updated_content.contains(ARC_NAMESPACE),
-        "Expected annotations for arc to be added, but got: {updated_content}"
-    );
-
-    env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_parse_cwl_valid_absolute_path() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let file_name = "valid_tool.cwl";
-    let cwl_path = dir.path().join(file_name);
-
-    fs::write(cwl_path, CWL_CONTENT).unwrap();
-
-    let result = parse_cwl(file_name);
-    assert!(result.is_ok(), "Expected Ok(Value), got Err: {result:?}");
-
-    let yaml = result.unwrap();
-    assert_eq!(yaml["class"], "CommandLineTool");
-    assert_eq!(yaml["baseCommand"], "echo");
-
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_parse_cwl_valid_relative_path() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let file_name = "valid_tool.cwl";
-
-    fs::write(file_name, CWL_CONTENT).unwrap();
-
-    let result = parse_cwl(file_name);
-    assert!(result.is_ok(), "Expected Ok(Value), got Err: {result:?}");
-
-    let yaml = result.unwrap();
-    assert_eq!(yaml["class"], "CommandLineTool");
-    assert_eq!(yaml["baseCommand"], "echo");
-
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_parse_cwl_file_not_found() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let file_name = "non_existent_tool.cwl";
-
-    let result = parse_cwl(file_name);
-    assert!(result.is_err(), "Expected Err for non-existent file, got: {result:?}");
-
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_parse_cwl_invalid_yaml() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let file_name = "invalid_tool.cwl";
-    let yaml_content = r#"
-        name: "example_tool
-        version: "1.0"
-    "#;
-    fs::write(file_name, yaml_content).unwrap();
-
-    let result = parse_cwl(file_name);
-    assert!(result.is_err(), "Expected Err for invalid YAML, got: {result:?}");
-
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_namespace_key_as_sequence() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-    let file_name = "valid_tool.cwl";
-    fs::write(file_name, CWL_CONTENT).unwrap();
-    let result = annotate(file_name, "namespace", Some("key"), None);
-    assert!(result.is_ok());
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_namespace_key_as_mapping() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-    let file_name = "valid_tool.cwl";
-    fs::write(file_name, CWL_CONTENT).unwrap();
-    let result = annotate(file_name, "namespace", Some("key"), Some("value"));
-    assert!(result.is_ok());
-    std::env::set_current_dir(current).unwrap();
-}
-
-#[test]
-#[serial]
-fn test_add_to_sequence() {
-    let dir = tempdir().unwrap();
-    let current = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let file_name = "valid_tool.cwl";
-
-    fs::write(file_name, CWL_CONTENT).unwrap();
-    let result = annotate(file_name, "namespace", Some("new_key"), None);
-    assert!(result.is_ok());
-    std::env::set_current_dir(current).unwrap();
-}

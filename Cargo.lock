@@ -1058,6 +1058,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "cwl-annotation"
+version = "0.7.0"
+dependencies = [
+ "dialoguer",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "serial_test",
+ "tempfile",
+ "test_utils",
+ "tokio",
+ "urlencoding",
+ "util",
+]
+
+[[package]]
 name = "cwl-execution"
 version = "0.7.0"
 dependencies = [
@@ -3973,6 +3990,7 @@ dependencies = [
  "colored",
  "commonwl",
  "configparser",
+ "cwl-annotation",
  "cwl-execution",
  "dialoguer",
  "fstest",

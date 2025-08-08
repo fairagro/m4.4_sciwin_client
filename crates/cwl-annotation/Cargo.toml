@@ -1,0 +1,24 @@
+[package]
+name = "cwl-annotation"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+util = { path = "../util" }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tempfile = { workspace = true }
+urlencoding = "2.1.3"
+dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
+tokio = { version = "1.47.1", features = ["macros"] }
+
+[dev-dependencies]
+serial_test = { workspace = true }
+test_utils = { workspace = true }
