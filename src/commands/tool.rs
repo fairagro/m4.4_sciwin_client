@@ -13,7 +13,7 @@ use commonwl::{
     format::format_cwl,
     requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
 };
-use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::run_command};
+use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
 use git2::Repository;
 use log::{error, info, warn};
 use prettytable::{Cell, Row, Table};

@@ -1,7 +1,7 @@
-use commonwl::{load_tool, CWLDocument, CommandLineTool, DefaultValue};
+use commonwl::{CWLDocument, CommandLineTool, DefaultValue, load_tool};
 use cwl_execution::{
     environment::RuntimeEnvironment,
-    runner::{run_command, run_tool},
+    runner::{command::run_command, tool::run_tool},
 };
 use serial_test::serial;
 use std::{collections::HashMap, fs, path::PathBuf};

@@ -20,7 +20,7 @@ use commonwl::{
 };
 use io::preprocess_path_join;
 use preprocess::preprocess_cwl;
-use runner::{run_tool, run_workflow};
+use runner::{tool::run_tool, workflow::run_workflow};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::{collections::HashMap, error::Error, fmt::Display, fs, path::Path, process::Command, sync::LazyLock};
