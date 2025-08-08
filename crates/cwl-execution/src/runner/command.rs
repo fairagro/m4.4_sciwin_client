@@ -110,7 +110,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
         args.push(cmd.to_string());
         //append rest of base command as args
         if let Command::Multiple(vec) = &tool.base_command {
-            args.extend(vec[1..].iter().cloned());
+            args.extend_from_slice(&vec[1..]);
         }
     }
 
@@ -189,10 +189,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
                 binding.value_from = Some(binding_str.replace("'", ""));
             }
             unset_self()?;
-            bindings.push(BoundBinding {
-                sort_key,
-                command: binding.clone(),
-            });
+            bindings.push(BoundBinding { sort_key, command: binding });
         }
     }
 
@@ -200,8 +197,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
     bindings.sort_by(|a, b| a.sort_key.cmp(&b.sort_key));
 
     //add bindings
-    let inputs: Vec<CommandLineBinding> = bindings.iter().map(|b| b.command.clone()).collect();
-    for input in &inputs {
+    for input in bindings.iter().map(|b| &b.command) {
         if let Some(prefix) = &input.prefix {
             args.push(prefix.to_string());
         }
@@ -279,13 +275,10 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use commonwl::load_tool;
-
-    use crate::set_container_engine;
-
     use super::*;
+    use crate::set_container_engine;
+    use commonwl::load_tool;
+    use std::collections::HashMap;
 
     #[test]
     fn test_build_command() {
