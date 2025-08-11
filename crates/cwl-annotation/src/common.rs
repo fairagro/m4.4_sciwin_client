@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     error::Error,
     fs::{self, File},
-    io::{self, Write},
+    io::Write,
     path::{Path, PathBuf},
     env,
 };
@@ -11,7 +11,8 @@ use reqwest::{get, Client};
 use serde_yaml::{Mapping, Value};
 use urlencoding::encode;
 use crate::container::{contains_docker_requirement, annotate_container};
-use crate::consts::{SCHEMAORG_NAMESPACE, SCHEMAORG_SCHEMA, ARC_NAMESPACE, ARC_SCHEMA, REST_URL_TS, TS_COLLECTION_ID};
+use crate::consts::{SCHEMAORG_NAMESPACE, SCHEMAORG_SCHEMA, ARC_NAMESPACE, ARC_SCHEMA, 
+    REST_URL_TS, TS_COLLECTION_ID, ORCID, SPDX};
 use util::is_cwl_file;
 
 
@@ -147,7 +148,6 @@ pub fn get_filename(name: &str) -> Result<String, Box<dyn Error>> {
 
 #[allow(clippy::disallowed_macros)]
 pub fn select_annotation(recommendations: &HashSet<(String, String, String)>, term: String) -> Result<(String, String, String), Box<dyn Error>> {
-    //println!("{}", format!("Available annotations for '{term}':"));
     // Collect elements into a vector for indexing
     let elements: Vec<&(String, String, String)> = recommendations.iter().collect();
     // Determine column widths
@@ -225,7 +225,7 @@ pub async fn ts_recommendations(
 
 pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error>> {
     // Fetch the SPDX license list
-    let response = get("https://spdx.org/licenses/licenses.json").await?;
+    let response = get(SPDX).await?;
     let json: serde_json::Value = response.json().await?;
 
     // Extract and format license entries
@@ -281,114 +281,83 @@ pub async fn annotate_license(cwl_name: &str, license: &Option<String>) -> Resul
 }
 
 #[allow(clippy::disallowed_macros)]
-pub async fn get_affiliation_and_orcid(first_name: &str, last_name: &str) -> (Option<String>, Option<String>, Option<String>) {
-    if first_name.is_empty() || last_name.is_empty() {
+pub async fn get_affiliation_and_orcid(first: &str, last: &str,) -> (Option<String>, Option<String>, Option<String>) {
+    if first.is_empty() || last.is_empty() {
         return (None, None, None);
     }
-
-    let query = format!(
-        "given-names:{} AND family-name:{}",
-        first_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
-            + first_name.chars().skip(1).collect::<String>().as_str(),
-        last_name.chars().next().map(|c| c.to_uppercase().collect::<String>()).unwrap_or_default()
-            + last_name.chars().skip(1).collect::<String>().as_str()
-    );
-    let search_url = format!("https://pub.orcid.org/v3.0/expanded-search/?q={query}");
+    let cap = |s: &str| {
+        s.chars()
+            .next()
+            .map(|c| c.to_uppercase().collect::<String>() + &s[1..])
+            .unwrap_or_default()
+    };
+    let field = |r: &serde_json::Value, k: &str| -> String {
+        r.get(k)
+            .and_then(|v| v.as_array().and_then(|a| a.first()).or(Some(v)))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
     let client = reqwest::Client::new();
-
-    let resp = client.get(&search_url).header("Accept", "application/json").send().await;
-    if let Ok(resp) = resp
-        && let Ok(json) = resp.json::<serde_json::Value>().await
-        && let Some(results) = json.get("expanded-result").and_then(|v| v.as_array())
-    {
-        let get_field = |result: &serde_json::Value, key: &str| {
-            result.get(key)
-                .and_then(|v| if v.is_array() { v.as_array().and_then(|arr| arr.first()).and_then(|f| f.as_str()) } else { v.as_str() })
-                .unwrap_or("").to_string()
-        };
-
-        let show_options = |results: &[serde_json::Value]| -> Option<(String, String, String)> {
-            println!("\nOther possible matches:");
-            let options: Vec<String> = results.iter().take(5).map(|result| {
-                let given_names = get_field(result, "given-names");
-                let family_name = get_field(result, "family-names");
-                let institution = get_field(result, "institution-name");
-                format!("{given_names} {family_name} ({institution})")
-            }).collect();
-
-            let selection = Select::new()
-                .with_prompt("Select the correct person, or Esc to skip")
-                .items(&options)
-                .default(0)
-                .interact_opt()
-                .unwrap_or(None);
-
-            if let Some(idx) = selection {
-                let selected = &results[idx];
-                Some((
-                    get_field(selected, "institution-name"),
-                    get_field(selected, "orcid-id"),
-                    get_field(selected, "email"),
-                ))
+    let url = format!(
+        "{ORCID}given-names:{} AND family-name:{}",
+        cap(first),
+        cap(last)
+    );
+    let response = client
+        .get(&url)
+        .header("Accept", "application/json")
+        .send()
+        .await;
+    let results = if let Ok(resp) = response {
+        if let Ok(json) = resp.json::<serde_json::Value>().await {
+            if let Some(arr) = json.get("expanded-result").and_then(|v| v.as_array()) {
+                arr.clone()
             } else {
-                None
+                Vec::new()
             }
-        };
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
 
-        if let Some(first_result) = results.first() {
-            let mut first_affiliation = get_field(first_result, "institution-name");
-            let mut first_orcid = get_field(first_result, "orcid-id");
-            let mut first_mail = get_field(first_result, "email");
-            println!(
-                "\nFirst ORCID search result:\n\
-                 ──────────────────────────────\n\
-                 Name       : {first_name} {last_name}\n\
-                 Affiliation: {first_affiliation}\n\
-                 ORCID      : {first_orcid}\n\
-                 Email      : {first_mail}\n",
-            );
-            let is_right_person = Confirm::new()
-                .with_prompt("Is this the correct person?")
-                .interact()
-                .unwrap_or(false);
-            if !is_right_person && let Some((aff, orcid, mail)) = show_options(results) {
-                first_affiliation = aff;
-                first_orcid = orcid;
-                first_mail = mail;
-            }
-            println!(
-                "\nPerson:\n\
-                ──────────────────────────────\n\
-                Name       : {first_name} {last_name}\n\
-                Email      : {first_mail}\n"
-            );
-            io::stdout().flush().ok();
-            // Allow user to edit fields if some of them are wrong
-            if Confirm::new()
-                .with_prompt("Do you want to edit any of these fields?")
-                .interact()
-                .unwrap_or(false)
-            {
-                //not possible to edit ORCID or name but mail and affiliation?
-                first_affiliation = Input::new()
-                    .with_prompt("Edit affiliation (leave blank to keep)")
-                    .default(first_affiliation.clone())
-                    .allow_empty(true)
-                    .interact_text()
-                    .unwrap_or(first_affiliation.clone());
-                first_mail = Input::new()
-                    .with_prompt("Edit email (leave blank to keep)")
-                    .default(first_mail.clone())
-                    .allow_empty(true)
-                    .interact_text()
-                    .unwrap_or(first_mail.clone());
-            }
-            return (
-                if !first_affiliation.is_empty() { Some(first_affiliation) } else { None },
-                if !first_orcid.is_empty() { Some(first_orcid) } else { None },
-                if !first_mail.is_empty() { Some(first_mail) } else { None },
-            );
+    if results.is_empty() {
+        return (None, None, None);
+    }
+    let mut aff = field(&results[0], "institution-name");
+    let mut orcid = field(&results[0], "orcid-id");
+    let mut mail = field(&results[0], "email");
+    println!(
+        "\nFirst match:\n──────────────\nName: {first} {last}\nAffiliation: {aff}\nORCID: {orcid}\nEmail: {mail}\n"
+    );
+    if !Confirm::new()
+        .with_prompt("Is this correct?")
+        .interact()
+        .unwrap_or(false)
+    {
+        let opts: Vec<String> = results.iter().take(5)
+            .map(|r| format!("{} {} ({})", field(r, "given-names"), field(r, "family-names"), field(r, "institution-name")))
+            .collect();
+
+        if let Some(i) = Select::new().with_prompt("Pick match").items(&opts).interact_opt().unwrap_or(None) {
+            aff = field(&results[i], "institution-name");
+            orcid = field(&results[i], "orcid-id");
+            mail = field(&results[i], "email");
         }
     }
-    (None, None, None)
+    if Confirm::new()
+        .with_prompt("Edit fields?")
+        .interact()
+        .unwrap_or(false)
+    {
+        aff = Input::new().with_prompt("Affiliation").default(aff.clone()).allow_empty(true).interact_text().unwrap_or(aff);
+        mail = Input::new().with_prompt("Email").default(mail.clone()).allow_empty(true).interact_text().unwrap_or(mail);
+    }
+    (
+        (!aff.is_empty()).then_some(aff),
+        (!orcid.is_empty()).then_some(orcid),
+        (!mail.is_empty()).then_some(mail),
+    )
 }
