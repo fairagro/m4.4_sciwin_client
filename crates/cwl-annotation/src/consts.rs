@@ -8,3 +8,4 @@ pub const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
 pub const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
 
 pub const MAX_RECOMMENDATIONS: usize = 10;
+pub const OLS_CREDIT: &str = "https://www.ebi.ac.uk/ols4/api/search?q=";
