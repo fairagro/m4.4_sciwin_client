@@ -1,10 +1,9 @@
 use std::error::Error;
 use dialoguer::{Input, Confirm};
 use serde_yaml::{Mapping, Value};
-use urlencoding::encode;
-use dialoguer::Select;
 use crate::common::{get_affiliation_and_orcid, annotate, parse_cwl};
-use crate::consts::{ARC_SCHEMA, ARC_NAMESPACE, MAX_RECOMMENDATIONS, OLS_CREDIT};
+use crate::consts::{ARC_SCHEMA, ARC_NAMESPACE};
+use crate::process::process_annotation_with_mapping;
 use crate::common::write_updated_yaml;
 
 #[derive(Debug, Clone)]
@@ -136,77 +135,14 @@ fn build_performer_info(args: &Performer) -> Result<Mapping, Box<dyn Error>> {
     Ok(info)
 }
 
-async fn add_role_to_performer(info: &mut Mapping, role: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // Query OLS for CRO term
-    let url = format!(
-        "{OLS_CREDIT}{}&ontology=cro&exact=true&rows={MAX_RECOMMENDATIONS}",
-        encode(role)
-    );
-
-    let client = reqwest::Client::new();
-    let resp: serde_json::Value = client
-        .get(&url)
-        .header("Accept", "application/json")
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    let docs = resp["response"]["docs"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-
-    let (label, iri) = if docs.is_empty() {
-        (role.to_string(), String::new())
-    } else if docs.len() == 1 {
-        // Single match
-        let doc = &docs[0];
-        (
-            doc["label"].as_str().unwrap_or(role).to_string(),
-            doc["iri"].as_str().unwrap_or("").to_string(),
-        )
-    } else {
-        // Multiple matches, user selection required
-        let options: Vec<String> = docs
-            .iter()
-            .map(|doc| {
-                format!(
-                    "{} ({})",
-                    doc["label"].as_str().unwrap_or("Unknown"),
-                    doc["iri"].as_str().unwrap_or("No IRI")
-                )
-            })
-            .collect();
-
-        let selection = Select::new()
-            .with_prompt("Multiple CRO roles found — please select one")
-            .items(&options)
-            .default(0)
-            .interact_opt()
-            .unwrap_or(None);
-
-        if let Some(idx) = selection {
-            let doc = &docs[idx];
-            (
-                doc["label"].as_str().unwrap_or(role).to_string(),
-                doc["iri"].as_str().unwrap_or("").to_string(),
-            )
-        } else {
-            (role.to_string(), String::new())
-        }
-    };
-
-    // Build mapping for arc:role
+/// Add role information to performer info
+async fn add_role_to_performer(info: &mut Mapping, role: &str) -> Result<(), Box<dyn Error>> {
     let mut role_mapping = Mapping::new();
     role_mapping.insert(str_val("class"), str_val("arc:role"));
-    role_mapping.insert(str_val("arc:label"), str_val(&label));
-    if !iri.is_empty() {
-        role_mapping.insert(str_val("arc:identifier"), str_val(&iri));
-    }
 
-    // Insert into performer mapping
+    let annotation_value = process_annotation_with_mapping(role, role_mapping.clone(), false).await?;
+    role_mapping.extend(annotation_value);
+
     let key = str_val("arc:has role");
     match info.get_mut(&key) {
         Some(Value::Sequence(seq)) => seq.push(Value::Mapping(role_mapping)),
@@ -214,7 +150,6 @@ async fn add_role_to_performer(info: &mut Mapping, role: &str) -> Result<(), Box
             info.insert(key, Value::Sequence(vec![Value::Mapping(role_mapping)]));
         }
     }
-
     Ok(())
 }
 

@@ -312,8 +312,7 @@ mod tests {
             class: "File".to_string(),
             nameext: Some(".txt".into()),
             nameroot: Some("file".into()),
-            //checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
-            checksum: None,
+            checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
             size: Some(4),
             path: Some(path.to_string_lossy().into_owned()),
             ..Default::default()
