@@ -6,15 +6,21 @@ use crate::arc_entities::{ArcWorkflow, ArcRun, WorkflowInvocation,
 use crate::api::get_reana_user;
 use crate::rocrate::get_or_prompt_credential;
 use walkdir::WalkDir;
+use serde_yaml::Value as YamlValue;
+use std::collections::HashSet;
+use std::path::Path;
+use std::{fs, io, time::SystemTime};
+ use std::os::unix::fs::MetadataExt;
 
-
-pub fn workflow_json_to_arc_workflow(json: &serde_json::Value) -> Option<ArcWorkflow> {
-    // cwl workflow file, e.g. "workflows/main/main.cwl"
-    let main_entity = json.get("workflow").and_then(|w| w.get("file"))
+pub fn workflow_json_to_arc_workflow(json: &Value) -> Option<ArcWorkflow> {
+    // Extract main_entity path string
+    let main_entity = json.get("workflow")
+        .and_then(|w| w.get("file"))
         .and_then(|f| f.as_str())
         .unwrap_or("")
         .to_string();
-    // path to folder where the workflow is located, e.g."workflows/main"
+
+    // Determine id (folder path of main_entity + "/")
     let id = {
         let mut parts: Vec<&str> = main_entity.split('/').collect();
         if parts.len() > 1 {
@@ -24,68 +30,24 @@ pub fn workflow_json_to_arc_workflow(json: &serde_json::Value) -> Option<ArcWork
             main_entity.clone()
         }
     };
-    // folder located under "workflows", e.g. "main"
+
+    // Determine identifier (last folder name before the file)
     let identifier = {
-            let mut parts: Vec<&str> = main_entity.split('/').collect();
-            if parts.len() > 1 {
-                parts.pop();
-                parts.last().copied().unwrap_or(main_entity.as_str())
-            } else {
-                main_entity.as_str()
-            }
-    }.to_string();
-    let additional_type = "Workflow".to_string();
-    let type_ = "Dataset".to_string();
-
-    // Try to read the main_entity file (if it exists) and extract label/name and doc from it if they exist
-    let (name, description) = if !main_entity.is_empty() && std::path::Path::new(&main_entity).exists() {
-        match std::fs::read_to_string(&main_entity) {
-            Ok(contents) => {
-                if let Ok(main_json) = serde_yaml::from_str::<serde_yaml::Value>(&contents) {
-                    let name = main_json.get("label")
-                        .or_else(|| main_json.get("name"))
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                    let description = main_json.get("doc")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                    (name, description)
-                } else {
-                    (None, None)
-                }
-            }
-            Err(_) => {
-                println!("Failed to read {main_entity} file");
-                (None, None)
-            }
-        }
-    } else {
-        println!("{main_entity} file not found");
-        (None, None)
-    };
-
-    // has_part: TODO, check if main_entity is using all subworkflows and compliance with Workflow Protocol profile
-    // has_part: all files in the workflows folder
-    let workflows_folder = "workflows";
-    let mut has_part = Vec::new();
-    if let Ok(entries) = WalkDir::new(workflows_folder).into_iter().collect::<Result<Vec<_>, _>>() {
-        for entry in entries {
-            let path = entry.path();
-            if path.is_file() {
-                // Store the path relative to the workflows folder
-                if let Ok(rel_path) = path.strip_prefix(workflows_folder) {
-                    let rel_path_str = rel_path.to_string_lossy();
-                    if !rel_path_str.is_empty() {
-                        has_part.push(format!("{workflows_folder}/{rel_path_str}"));
-                    }
-                }
-            }
+        let mut parts: Vec<&str> = main_entity.split('/').collect();
+        if parts.len() > 1 {
+            parts.pop();
+            parts.last().copied().unwrap_or(main_entity.as_str())
+        } else {
+            main_entity.as_str()
         }
     }
-    let has_part = if has_part.is_empty() { None } else { Some(has_part) };
+    .to_string();
 
-    // url: TODO
-    let url = None;
+    let additional_type = "ARC Workflow".to_string();
+    let type_ = "Dataset".to_string();
+
+    // Extract from YAML
+    let (name, description, has_part) = extract_name_description_has_part(&main_entity);
 
     Some(ArcWorkflow {
         id,
@@ -96,8 +58,115 @@ pub fn workflow_json_to_arc_workflow(json: &serde_json::Value) -> Option<ArcWork
         name,
         description,
         has_part,
-        url,
+        url: None,
     })
+}
+
+pub fn extract_s_comment(file_path: &str) -> Option<Vec<String>> {
+    if !Path::new(file_path).exists() {
+        eprintln!("{file_path} file not found");
+        return None;
+    }
+    let contents = match fs::read_to_string(file_path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to read {file_path}: {e}");
+            return None;
+        }
+    };
+    let yaml: YamlValue = match serde_yaml::from_str(&contents) {
+        Ok(y) => y,
+        Err(e) => {
+            eprintln!("Failed to parse YAML from {file_path}: {e}");
+            return None;
+        }
+    };
+    // Try to get the s:comment field as a string
+    yaml.get("s:comment")
+        .and_then(|val| val.as_str())
+        .map(|s| vec![s.to_string()])
+}
+
+fn extract_name_description_has_part(main_entity: &str) -> (Option<String>, Option<String>, Option<Vec<String>>) {
+    if main_entity.is_empty() || !Path::new(main_entity).exists() {
+        eprintln!("{main_entity} file not found");
+        return (None, None, None);
+    }
+    match std::fs::read_to_string(main_entity) {
+        Ok(contents) => {
+            if let Ok(main_yaml) = serde_yaml::from_str::<YamlValue>(&contents) {
+                // Extract name and description
+                let name = main_yaml.get("label")
+                    .or_else(|| main_yaml.get("name"))
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+
+                let description = main_yaml.get("doc")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+
+                // Gather all file parts
+                let mut files = HashSet::new();
+                files.insert(main_entity.to_string());
+
+                if main_yaml.get("class").and_then(|v| v.as_str()) == Some("Workflow") {
+                    if let Some(steps) = main_yaml.get("steps").and_then(|v| v.as_sequence()) {
+                        for step in steps {
+                            if let Some(run_val) = step.get("run").and_then(|v| v.as_str()) {
+                                let main_folder = Path::new(main_entity).parent().unwrap_or(Path::new(""));
+                                let run_path = main_folder.join(run_val)
+                                    .canonicalize()
+                                    .unwrap_or(main_folder.join(run_val));
+                                let run_path_str = run_path.to_string_lossy().to_string();
+                                files.insert(run_path_str.clone());
+
+                                // If run file exists, check for baseCommand
+                                if let Ok(run_contents) = std::fs::read_to_string(&run_path) {
+                                    if let Ok(run_yaml) = serde_yaml::from_str::<YamlValue>(&run_contents) {
+                                        if run_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool") {
+                                            if let Some(cmds) = run_yaml.get("baseCommand").and_then(|bc| bc.as_sequence()) {
+                                                for cmd in cmds {
+                                                    if let Some(cmd_str) = cmd.as_str() {
+                                                        if Path::new(cmd_str).exists() {
+                                                            files.insert(cmd_str.to_string());
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // Normalize paths
+                let has_part_vec: Vec<String> = files.into_iter().map(|f| {
+                    let f_norm = f.replace("\\", "/");
+                    let trimmed = if let Some(pos) = f_norm.find("workflows/") {
+                        &f_norm[pos..]
+                    } else {
+                        &f_norm[..]
+                    };
+                    let mut parts: Vec<&str> = trimmed.split('/').collect();
+                    if parts.len() > 3 && parts[1] == parts[2] {
+                        parts.remove(2);
+                    }
+                    parts.join("/")
+                }).collect();
+
+                let has_part = if has_part_vec.is_empty() { None } else { Some(has_part_vec) };
+
+                (name, description, has_part)
+            } else {
+                (None, None, None)
+            }
+        }
+        Err(_) => {
+            eprintln!("Failed to read {main_entity} file");
+            (None, None, None)
+        }
+    }
 }
 
 /// helper function to get affiliation and ORCID from the ORCID public API
@@ -147,7 +216,6 @@ fn get_affiliation_and_orcid(reana_user_name: &str) -> (Option<String>, Option<S
 
 
 pub fn workflow_json_to_arc_run(foldername: &str, graph: &mut Vec<Value>) -> Option<ArcRun> {
-
     let id = format!("runs/{foldername}/");
     let type_ = "Dataset".to_string();
     let additional_type = "Run".to_string();
@@ -291,7 +359,9 @@ pub fn workflow_json_to_arc_run(foldername: &str, graph: &mut Vec<Value>) -> Opt
         has_part: Some(has_part),
         measurement_method: None,
         measurement_technique: None,
-        conforms_to: Some(conforms_to),
+        conforms_to: Some(conforms_to.into_iter()
+            .map(|url| serde_json::json!({ "@id": url }))
+            .collect::<Vec<serde_json::Value>>()),
         url: None,
         variable_measured: None,
     })
@@ -326,7 +396,6 @@ pub fn workflow_json_to_invocation(json: &serde_json::Value, foldername: &str) -
             }
         }
     }
-
     if let Some(outputs) = json.get("outputs") {
         if let Some(files) = outputs.get("files").and_then(|f| f.as_array()) {
             for file in files {
@@ -336,7 +405,6 @@ pub fn workflow_json_to_invocation(json: &serde_json::Value, foldername: &str) -
             }
         }
     }
-
     // parameter_value: TODO
     let parameter_value = vec!["".to_string()];
 
@@ -354,97 +422,154 @@ pub fn workflow_json_to_invocation(json: &serde_json::Value, foldername: &str) -
     })
 }
 
+pub fn data_created(file_path: &str) -> io::Result<SystemTime> {
+    let path = Path::new(file_path);
+    let metadata = fs::metadata(path)?;
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::fs::MetadataExt;
+        let created = metadata.creation_time();
+        // Convert Windows FILETIME (100ns intervals since 1601) to SystemTime
+        let duration_since_windows_epoch = std::time::Duration::from_nanos(created * 100);
+        let windows_epoch = SystemTime::UNIX_EPOCH
+            .checked_sub(std::time::Duration::from_secs(11644473600))
+            .unwrap();
+        Ok(windows_epoch + duration_since_windows_epoch)
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // macOS supports created()
+        metadata.created()
+    }
 
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        // Linux and other Unices rarely support created()
+        // fallback to ctime (inode change time), which is *not* creation but close
+        let ctime = metadata.ctime();
+        if ctime > 0 {
+            Ok(SystemTime::UNIX_EPOCH + std::time::Duration::new(ctime as u64, 0))
+        } else {
+             Err(io::Error::other("Creation time not available"))
+        }
+    }
+}
 
 pub fn workflow_json_to_protocol(json: &serde_json::Value, graph: &mut Vec<Value>) -> Option<WorkflowProtocol> {
-    
     let _type = vec![
         "File".to_string(),
         "ComputationalWorkflow".to_string(),
         "SoftwareSourceCode".to_string(),
         "LabProtocol".to_string(),
     ];
-    let id = json.get("workflow")
+
+    let id = json
+        .get("workflow")
         .and_then(|w| w.get("file"))
         .and_then(|f| f.as_str())
         .unwrap_or("")
         .to_string();
 
-    let mut input: Option<Vec<serde_json::Value>> = None;
-    let mut output: Option<Vec<serde_json::Value>> = None;
+    let (input, output) = extract_io(json);
+    let input_ids = formal_parameter_ids(&input);
+    let output_ids = formal_parameter_ids(&output);
 
-    // Find the Workflow object in the $graph array with class == "Workflow" and file == id
-    if let Some(specification) = json.get("workflow")
+    add_file_parameters_to_graph(&input, &output, graph);
+
+    let (programming_language, computer_language_entity) = detect_language(&id);
+    if let Some(entity) = computer_language_entity {
+        graph.push(serde_json::to_value(entity).unwrap());
+    }
+
+    let date_created = match data_created(&id) {
+        Ok(time) => {
+            use chrono::{DateTime, Utc};
+            let datetime: DateTime<Utc> = time.into();
+            Some(datetime.to_rfc3339())
+        }
+        Err(_) => None,
+    };
+
+    let license = extract_license(&id);
+    let creator = extract_creator(&id, graph);
+    let (name, description, has_part) = extract_name_description_has_part(&id);
+    let comment = extract_s_comment(&id);
+    Some(WorkflowProtocol {
+        context: "ComputationalWorkflow".to_string(),
+        type_: _type,
+        additional_type: "WorkflowProtocol".to_string(),
+        id,
+        input: input_ids,
+        output: output_ids,
+        dct_conforms_to: Some("https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE".to_string()),
+        creator,
+        date_created,
+        license,
+        name,
+        programming_language: programming_language.map(|lang| vec![lang]),
+        sd_publisher: None,
+        url: None,
+        version: None,
+        description,
+        has_part,
+        intended_use: None,
+        comment,
+        computational_tool: None,
+    })
+}
+
+/// Extract inputs and outputs from the workflow JSON
+fn extract_io(json: &Value) -> (Option<Vec<Value>>, Option<Vec<Value>>) {
+    if let Some(specification) = json
+        .get("workflow")
         .and_then(|w| w.get("specification"))
         .and_then(|s| s.get("$graph"))
         .and_then(|g| g.as_array())
     {
-        // Find the workflow object with class == "Workflow" and file == id
-        let workflow_obj = specification.iter().find(|obj| {
-            obj.get("class").and_then(|c| c.as_str()) == Some("Workflow")
-        });
-
-        if let Some(wf) = workflow_obj {
-            // Extract inputs
-            if let Some(inputs) = wf.get("inputs").and_then(|v| v.as_array()) {
-                input = Some(inputs.clone());
-            }
-            // Extract outputs
-            if let Some(outputs) = wf.get("outputs").and_then(|v| v.as_array()) {
-                output = Some(outputs.clone());
-            }
+        if let Some(wf) = specification
+            .iter()
+            .find(|obj| obj.get("class").and_then(|c| c.as_str()) == Some("Workflow"))
+        {
+            let inputs = wf.get("inputs").and_then(|v| v.as_array()).cloned();
+            let outputs = wf.get("outputs").and_then(|v| v.as_array()).cloned();
+            return (inputs, outputs);
         }
     }
-    // Convert input/output to IDs of the form "#FormalParameter_{workflow_name}_{parameter_name}"
-    let input_ids = input.as_ref().map(|inputs| {
-        inputs
+    (None, None)
+}
+
+/// Convert input/output parameters to JSON-LD `@id` references
+fn formal_parameter_ids(params: &Option<Vec<Value>>) -> Option<Vec<Value>> {
+    params.as_ref().map(|items| {
+        items
             .iter()
-            .filter_map(|inp| inp.get("id").or_else(|| inp.get("name")).or_else(|| inp.get("label")))
+            .filter_map(|p| p.get("id").or_else(|| p.get("name")).or_else(|| p.get("label")))
             .filter_map(|v| v.as_str())
             .map(|param| {
                 let formatted = param.trim_start_matches('#').replace('/', "_");
                 serde_json::json!({ "@id": format!("#FormalParameter_{}", formatted) })
             })
-            .collect::<Vec<_>>()
-    });
+            .collect()
+    })
+}
 
-    let output_ids = output.as_ref().map(|outputs| {
-        outputs
-            .iter()
-            .filter_map(|out| out.get("id").or_else(|| out.get("name")).or_else(|| out.get("label")))
-            .filter_map(|v| v.as_str())
-            .map(|param| {
-                let formatted = param.trim_start_matches('#').replace('/', "_");
-                serde_json::json!({ "@id": format!("#FormalParameter_{}", formatted) })
-            })
-            .collect::<Vec<_>>()
-    });
-
-    // Combine input and output parameters, check for type File, and only add if type is File
+/// Add File-type parameters to the graph
+fn add_file_parameters_to_graph(input: &Option<Vec<Value>>, output: &Option<Vec<Value>>, graph: &mut Vec<Value>) {
     for param in input.as_ref().into_iter().chain(output.as_ref()) {
         for p in param {
-            // Check if type is File
             let is_file = match p.get("type") {
-                Some(ty) => {
-                    if ty.is_array() {
-                        ty.as_array().unwrap().iter().any(|t| t == "File")
-                    } else {
-                        ty == "File"
-                    }
-                }
+                Some(ty) if ty.is_array() => ty.as_array().unwrap().iter().any(|t| t == "File"),
+                Some(ty) => ty == "File",
                 None => false,
             };
             if is_file {
-                // Get id, name, or label for identifier
-                let id_val = p.get("id").or_else(|| p.get("name")).or_else(|| p.get("label"));
-                if let Some(id_str) = id_val.and_then(|v| v.as_str()) {
+                if let Some(id_str) = p.get("id").or_else(|| p.get("name")).or_else(|| p.get("label")).and_then(|v| v.as_str()) {
                     let formatted = match id_str.find('/') {
                         Some(pos) => id_str[pos + 1..].to_string(),
                         None => id_str.trim_start_matches('#').to_string(),
                     };
-                    let formal_id = format!("#FormalParameter_{formatted}");
                     let formal_param = crate::arc_entities::FormalParameterEntity {
-                        id: formal_id.clone(),
+                        id: format!("#FormalParameter_{formatted}"),
                         type_: "FormalParameter".to_string(),
                         additional_type: Some("File".to_string()),
                         name: Some(formatted),
@@ -455,8 +580,11 @@ pub fn workflow_json_to_protocol(json: &serde_json::Value, graph: &mut Vec<Value
             }
         }
     }
-    // Programming language currently only CWL, TODO add other languages that are used
-    let (programming_language, computer_language_entity) = if id.contains("cwl") {
+}
+
+/// Detect programming language from file extension
+fn detect_language(id: &str) -> (Option<String>, Option<crate::arc_entities::ComputerLanguageEntity>) {
+    if id.contains("cwl") {
         let lang_id = "https://w3id.org/workflowhub/workflow-ro-crate#cwl".to_string();
         let entity = crate::arc_entities::ComputerLanguageEntity {
             id: lang_id.clone(),
@@ -469,36 +597,113 @@ pub fn workflow_json_to_protocol(json: &serde_json::Value, graph: &mut Vec<Value
         (Some(lang_id), Some(entity))
     } else {
         (None, None)
-    };
-
-    if let Some(entity) = computer_language_entity {
-        graph.push(serde_json::to_value(entity).unwrap());
     }
-    //TODO
-    Some(WorkflowProtocol {
-        context: "".to_string(),
-        type_: _type,
-        additional_type: "WorkflowProtocol".to_string(),
-        id,
-        input: input_ids,
-        output: output_ids,
-        dct_conforms_to: None,
-        creator: None,
-        date_created: None,
-        license: None,
-        name: None,
-        programming_language: programming_language.map(|lang| vec![lang]),
-        sd_publisher: None,
-        url: None,
-        version: None,
-        description: None,
-        has_part: None,
-        intended_use: None,
-        comment: None,
-        computational_tool: None,
-    })
 }
 
+/// Extract license info from a CWL/YAML file
+fn extract_license(id: &str) -> Option<Vec<String>> {
+    if !Path::new(id).exists() {
+        return None;
+    }
+    if let Ok(contents) = std::fs::read_to_string(id) {
+        let mut licenses = Vec::new();
+        for line in contents.lines() {
+            if let Some(idx) = line.find(":license") {
+                let trimmed = line[idx + ":license".len()..].trim();
+                if !trimmed.is_empty() {
+                    licenses.push(trimmed.to_string());
+                }
+            }
+        }
+        if !licenses.is_empty() {
+            return Some(licenses);
+        }
+    }
+    None
+}
+
+/// Extract creator info from a CWL/YAML file and add PersonEntity to graph
+fn extract_creator(id: &str, graph: &mut Vec<serde_json::Value>) -> Option<Vec<serde_json::Value>> {
+    if !Path::new(id).exists() {
+        return None;
+    }
+    let contents = std::fs::read_to_string(id).ok()?;
+    let yaml: YamlValue = serde_yaml::from_str(&contents).ok()?;
+
+    // Force search for key regardless of how serde_yaml maps it
+    let top_map = match yaml {
+        YamlValue::Mapping(map) => map,
+        _ => return None,
+    };
+
+    // Try s:creator first, then s:author
+    let creator_val = top_map.get(YamlValue::String("s:creator".to_string()))
+        .or_else(|| top_map.get(YamlValue::String("s:author".to_string())))?;
+
+    let authors: Vec<YamlValue> = match creator_val.as_sequence() {
+        Some(seq) => seq.clone(),
+        None => vec![creator_val.clone()],
+    };
+
+    let mut creators = Vec::new();
+
+    for author in authors {
+        if let YamlValue::Mapping(a_map) = author {
+            let name = a_map.get(YamlValue::String("s:name".to_string()))
+                .or_else(|| a_map.get(YamlValue::String("name".to_string())))
+                .and_then(|v| v.as_str());
+
+            let email = a_map.get(YamlValue::String("s:email".to_string()))
+                .or_else(|| a_map.get(YamlValue::String("email".to_string())))
+                .and_then(|v| v.as_str())
+                .map(|s| s.strip_prefix("mailto:").unwrap_or(s).to_string());
+
+            let identifier = a_map.get(YamlValue::String("s:identifier".to_string()))
+                .or_else(|| a_map.get(YamlValue::String("identifier".to_string())))
+                .and_then(|v| v.as_str());
+
+            if let Some(name_str) = name {
+                let person_id = format!("#Person_{}", name_str.replace(' ', "_"));
+                creators.push(serde_json::json!({ "@id": person_id }));
+
+                let mut name_parts = name_str.split_whitespace();
+                let given_name = name_parts.next().map(|s| s.to_string());
+                let family_name = name_parts.next().map(|s| s.to_string());
+
+                let person_entity = crate::arc_entities::PersonEntity {
+                    id: person_id.clone(),
+                    type_: "Person".to_string(),
+                    given_name,
+                    family_name,
+                    additional_name: None,
+                    affiliation: None,
+                    email: email.clone(),
+                    job_title: None,
+                    address: None,
+                };
+                graph.push(serde_json::to_value(person_entity).unwrap());
+            } else if let Some(identifier_str) = identifier {
+                let person_id = format!("#Person_{}", identifier_str.replace([':', '/', '.'], "_"));
+                creators.push(serde_json::json!({ "@id": person_id }));
+
+                let person_entity = crate::arc_entities::PersonEntity {
+                    id: person_id.clone(),
+                    type_: "Person".to_string(),
+                    given_name: None,
+                    family_name: None,
+                    additional_name: None,
+                    affiliation: None,
+                    email: email.clone(),
+                    job_title: None,
+                    address: None,
+                };
+                graph.push(serde_json::to_value(person_entity).unwrap());
+            }
+        }
+    }
+
+    if creators.is_empty() { None } else { Some(creators) }
+}
 pub fn read_workflow_json(path: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let mut file = File::open(path)?;
     let mut contents = String::new();
@@ -508,18 +713,31 @@ pub fn read_workflow_json(path: &str) -> Result<Value, Box<dyn std::error::Error
 }
 
 pub fn workflow_json_to_arc_rocrate(json: &Value, folder_name: &str) -> ArcRoCrate {
-    // Context as array of Value, TODO extend and not hardcode
+    // Context
     let context = vec![
         serde_json::json!("https://w3id.org/ro/crate/1.1/context"),
         serde_json::json!({
+            "Sample": "https://bioschemas.org/Sample",
+            "additionalProperty": "http://schema.org/additionalProperty",
+            "intendedUse": "https://bioschemas.org/intendedUse",
+            "computationalTool": "https://bioschemas.org/computationalTool",
+            "labEquipment": "https://bioschemas.org/labEquipment",
+            "reagent": "https://bioschemas.org/reagent",
+            "LabProtocol": "https://bioschemas.org/LabProtocol",
+            "executesLabProtocol": "https://bioschemas.org/executesLabProtocol",
+            "parameterValue": "https://bioschemas.org/parameterValue",
+            "LabProcess": "https://bioschemas.org/LabProcess",
+            "measurementMethod": "http://schema.org/measurementMethod",
+            "FormalParameter": "https://bioschemas.org/FormalParameter",
             "ComputationalWorkflow": "https://bioschemas.org/ComputationalWorkflow",
             "SoftwareSourceCode": "http://schema.org/SoftwareSourceCode",
-            "LabProtocol": "https://bioschemas.org/LabProtocol"
+            "input": "https://bioschemas.org/input",
+            "output": "https://bioschemas.org/output"
         }),
     ];
     let mut graph: Vec<Value> = Vec::new();
 
-    // Generate entities, TODO: muliple entiies, e.g. workflow for each folder?
+    // Generate entities, TODO: multiple entities, e.g. workflow for each folder?
     // TODO remove option or think of case where entity cannot be created
     let workflow = workflow_json_to_arc_workflow(json);
 
@@ -559,7 +777,6 @@ pub fn workflow_json_to_arc_rocrate(json: &Value, folder_name: &str) -> ArcRoCra
         context,
         graph,
     };
-
 
     // Write to runs/{folder_name}/ro-crate-metadata.json
     let output_dir = format!("runs/{folder_name}");

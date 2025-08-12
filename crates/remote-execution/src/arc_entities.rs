@@ -52,7 +52,7 @@ pub struct WorkflowProtocol {
     pub output: Option<Vec<Value>>,
     #[serde(rename = "dct:conformsTo")]
     pub dct_conforms_to: Option<String>,
-    pub creator: Option<Vec<String>>,
+    pub creator: Option<Vec<Value>>,
     #[serde(rename = "dateCreated")]
     pub date_created: Option<String>,
     pub license: Option<Vec<String>>,
@@ -104,7 +104,7 @@ pub struct ArcRun {
     #[serde(rename = "measurementTechnique")]
     pub measurement_technique: Option<String>,
     #[serde(rename = "conformsTo")]
-    pub conforms_to: Option<Vec<String>>,
+    pub conforms_to: Option<Vec<Value>>,
 
     // Optional fields
     //schema.org/URL
