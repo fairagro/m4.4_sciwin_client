@@ -47,8 +47,8 @@ toml = { workspace = true }
 toml_edit = { workspace = true }
 uuid = { workspace = true }
 
-clap = { version = "4.5.43", features = ["derive", "wrap_help"] }
-clap_complete = "4.5.56"
+clap = { version = "4.5.44", features = ["derive", "wrap_help"] }
+clap_complete = "4.5.57"
 colored = "3.0.0"
 configparser = "3.1.0"
 prettytable-rs = "0.10.0"
@@ -93,7 +93,7 @@ authors = [
 ]
 
 [workspace.dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
 fancy-regex = "0.15.0"
 git2 = { version = "0.20.2", features = ["vendored-openssl"] }
@@ -120,7 +120,7 @@ toml_edit = { version = "0.23.3", features = ["serde"] }
 tempfile = "3.19.1"
 tokio = { version = "1.47.1", features = ["macros"] }
 urlencoding = "2.1.3"
-uuid = { version = "1.17.0", features = ["v4"] }
+uuid = { version = "1.18.0", features = ["v4"] }
 
 # dev dependencies
 test_utils = { path = "tests/test_utils" }
