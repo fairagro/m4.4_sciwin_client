@@ -15,7 +15,8 @@ export default defineConfig({
       title: 'SciWIn Client',
       favicon: '/favicon.png',
       logo: {
-        src: './src/assets/logo.png'
+        src: './src/assets/logo.svg',
+        replacesTitle: true
       },
       customCss: [
         '@fontsource/fira-sans/400.css',
