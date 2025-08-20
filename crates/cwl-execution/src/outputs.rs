@@ -272,6 +272,7 @@ mod tests {
     use commonwl::outputs::{CommandOutputBinding, CommandOutputParameter};
     use serial_test::serial;
     use tempfile::tempdir;
+    use test_utils::repository;
 
     #[test]
     #[serial]
@@ -302,12 +303,17 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_file_metadata() {
-        let path = env::current_dir().unwrap().join("../../tests").join("test_data").join("file.txt");
+        let dir = tempdir().unwrap();
+        let current = repository(dir.path())
+            .copy_file("../../tests/test_data/file.txt", "file.txt")
+            .finalize()
+            .enter();
+        let path = Path::new("file.txt");
         assert!(path.exists());
 
-        let result = get_file_metadata(path.clone(), None);
+        let result = get_file_metadata(path, None);
         let expected = File {
-            location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
+            location: Some(format!("file://{}", dir.path().join(path).to_string_lossy().into_owned())),
             basename: Some("file.txt".to_string()),
             class: "File".to_string(),
             nameext: Some(".txt".into()),
@@ -319,6 +325,7 @@ mod tests {
         };
 
         assert_eq!(result, expected);
+        env::set_current_dir(current).unwrap();
     }
 
     #[test]
