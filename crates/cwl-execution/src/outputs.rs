@@ -313,7 +313,7 @@ mod tests {
 
         let result = get_file_metadata(path, None);
         let expected = File {
-            location: Some(format!("file://{}", dir.path().join(path).to_string_lossy().into_owned())),
+            location: Some(format!("file://{}", env::current_dir().unwrap().join(path).to_string_lossy().into_owned())),
             basename: Some("file.txt".to_string()),
             class: "File".to_string(),
             nameext: Some(".txt".into()),
