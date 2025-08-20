@@ -6501,8 +6501,3 @@ dependencies = [
  "log",
  "simd-adler32",
 ]
-
-[[patch.unused]]
-name = "deno_media_type"
-version = "0.2.6"
-source = "git+https://github.com/denoland/deno_media_type?tag=0.2.6#86c7dd22da3602529ce686826ee4ce58975260be"
