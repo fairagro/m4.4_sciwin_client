@@ -77,7 +77,7 @@ serial_test = { workspace = true }
 members = ["crates/*", ".", "tests/test_utils"]
 
 [workspace.package]
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 repository = "https://github.com/fairagro/m4.4_sciwin_client"
 license = "MIT OR Apache-2.0"
