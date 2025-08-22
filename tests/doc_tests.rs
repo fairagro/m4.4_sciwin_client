@@ -538,7 +538,11 @@ pub fn test_example_project() {
     assert!(workflow.has_step_output("plot/o_results"));
 
     //workflow status
-    get_workflow_status(&create_args).expect("Could not print status");
+    handle_list_command(&ListCWLArgs {
+        file: Some(wf_path.clone()),
+        ..Default::default()
+    })
+    .expect("Could not print status");
 
     //remove outputs
     fs::remove_file("results.csv").unwrap();

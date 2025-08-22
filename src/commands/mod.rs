@@ -1,4 +1,4 @@
-use dialoguer::{theme::ColorfulTheme, Input};
+use dialoguer::{Input, theme::ColorfulTheme};
 use git2::Config;
 use log::warn;
 use std::error::Error;
@@ -6,14 +6,15 @@ use std::error::Error;
 mod annotate;
 mod execute;
 mod init;
+mod list;
 mod packages;
 mod tool;
 mod workflow;
-mod list;
 
 pub use annotate::*;
 pub use execute::*;
 pub use init::*;
+pub use list::*;
 pub use packages::*;
 pub use tool::*;
 pub use workflow::*;

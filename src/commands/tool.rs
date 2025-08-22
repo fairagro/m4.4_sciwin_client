@@ -1,5 +1,5 @@
 use crate::{
-    commands::list::{list_multiple, list_single_cwl},
+    commands::list::{ListCWLArgs, handle_list_command},
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_list,
@@ -28,8 +28,11 @@ use std::{
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args),
-        ToolCommands::List(args) => list_tools(args),
         ToolCommands::Remove(args) => remove_tool(args),
+        _ => {
+            error!("This command has been removed!");
+            Ok(())
+        }
     }
 }
 
@@ -37,8 +40,8 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
 pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
-    #[command(about = "Lists all tools", visible_alias = "ls")]
-    List(ListToolArgs),
+    #[command(about = "REMOVED!", visible_alias = "ls")]
+    List(ListCWLArgs),
     #[command(about = "Remove a tool, e.g. s4n tool rm toolname", visible_alias = "rm")]
     Remove(RemoveToolArgs),
 }
@@ -256,18 +259,8 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[allow(clippy::disallowed_macros)]
-pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
-    if let Some(name) = &args.name {
-        if name.exists() && name.is_file() {
-            list_single_cwl(name)?;
-        } else if name.is_dir() {
-            list_multiple(name, args.list_all)?;
-        }
-    } else {
-        list_multiple(env::current_dir()?, args.list_all)?;
-    }
-    Ok(())
+pub fn list_tools(args: &ListCWLArgs) -> anyhow::Result<()> {
+    handle_list_command(args)
 }
 
 pub fn remove_tool(args: &RemoveToolArgs) -> anyhow::Result<()> {

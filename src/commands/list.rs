@@ -1,11 +1,36 @@
+use clap::Args;
 use colored::Colorize;
 use commonwl::{DocumentBase, StringOrDocument, load_doc, load_tool, prelude::*};
 use ignore::WalkBuilder;
 use log::info;
 use prettytable::{Cell, Row, Table, row};
-use std::{fs::FileType, path::Path};
+use std::{
+    env,
+    fs::FileType,
+    path::{Path, PathBuf},
+};
 
-pub(crate) fn list_single_cwl(filename: impl AsRef<Path>) -> anyhow::Result<()> {
+#[derive(Args, Debug, Default)]
+pub struct ListCWLArgs {
+    pub file: Option<PathBuf>,
+    #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
+    pub list_all: bool,
+}
+
+pub fn handle_list_command(args: &ListCWLArgs) -> anyhow::Result<()> {
+    if let Some(file) = &args.file {
+        if file.exists() && file.is_file() {
+            list_single_cwl(file)?;
+        } else if file.is_dir() {
+            list_multiple(file, args.list_all)?;
+        }
+    } else {
+        list_multiple(env::current_dir()?, args.list_all)?;
+    }
+    Ok(())
+}
+
+fn list_single_cwl(filename: impl AsRef<Path>) -> anyhow::Result<()> {
     let filename = filename.as_ref();
     if !filename.exists() {
         info!("Tool does not exist: {}", filename.display());

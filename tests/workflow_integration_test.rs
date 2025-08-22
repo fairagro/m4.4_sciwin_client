@@ -48,7 +48,7 @@ pub fn test_remove_workflow() {
     let target = "workflows/test/test.cwl";
     assert!(fs::exists(target).unwrap());
 
-    list_workflows(&ListWorkflowArgs { list_all: true }).unwrap();
+    handle_list_command(&ListCWLArgs { file: None, list_all: true }).unwrap();
 
     remove_workflow(&RemoveWorkflowArgs {
         rm_workflow: vec![target.to_string()],

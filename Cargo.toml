@@ -61,7 +61,6 @@ syntect = { version = "5.2.0", default-features = false, features = [
 semver = { version = "1.0.26", features = ["serde"] }
 smart-default = "0.7.1"
 similar = "2.7.0"
-walkdir = "2.5.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.17"

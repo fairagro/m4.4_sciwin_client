@@ -3572,7 +3572,6 @@ dependencies = [
  "toml_edit 0.23.3",
  "util",
  "uuid",
- "walkdir",
 ]
 
 [[package]]
