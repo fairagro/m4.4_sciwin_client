@@ -478,8 +478,9 @@ pub fn test_example_project() {
     })
     .expect("Could not create plot tool");
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
-    //list tools
-    list_tools(&Default::default()).unwrap();
+
+    //list files
+    handle_list_command(&Default::default()).expect("Could not list cwl files");
 
     //create workflow
     let name = "test_workflow".to_string();
@@ -538,7 +539,11 @@ pub fn test_example_project() {
     assert!(workflow.has_step_output("plot/o_results"));
 
     //workflow status
-    get_workflow_status(&create_args).expect("Could not print status");
+    handle_list_command(&ListCWLArgs {
+        file: Some(wf_path.clone()),
+        ..Default::default()
+    })
+    .expect("Could not print status");
 
     //remove outputs
     fs::remove_file("results.csv").unwrap();

@@ -277,6 +277,7 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     let mut candidates: Vec<PathBuf> = vec![];
 
     //check if exists in workflows folder
+    let cwl_filename = cwl_filename.strip_suffix(".cwl").unwrap_or(cwl_filename);
     let path = format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename);
     let path = Path::new(&path);
     if path.exists() {

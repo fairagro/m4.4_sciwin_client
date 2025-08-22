@@ -1,11 +1,10 @@
 use clap::{CommandFactory, Parser};
 use cwl_execution::{CommandError, ExitCode};
-use log::{error, LevelFilter};
+use log::{LevelFilter, error};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
-        check_git_config, create_tool, handle_annotation_command, handle_execute_commands, handle_init_command, handle_tool_commands,
-        handle_workflow_commands, install_package, remove_package,
+        check_git_config, create_tool, handle_annotation_command, handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, handle_tool_commands, handle_workflow_commands, install_package, remove_package
     },
     util::LOGGER,
 };
@@ -39,5 +38,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Uninstall(args) => Ok(remove_package(&args.identifier)?),
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Completions { shell } => Ok(generate_completions(*shell, &mut Cli::command())?),
+        Commands::List(args) => Ok(handle_list_command(args)?),
+        Commands::Remove(args) => Ok(handle_remove_command(args)?)
     }
 }

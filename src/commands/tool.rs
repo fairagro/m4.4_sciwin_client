@@ -2,8 +2,10 @@ use crate::{
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_list,
-    util::get_qualified_filename,
-    util::repo::{commit, get_modified_files, stage_file},
+    util::{
+        get_qualified_filename,
+        repo::{commit, get_modified_files, stage_file},
+    },
 };
 use anyhow::anyhow;
 use clap::{Args, Subcommand};
@@ -16,20 +18,19 @@ use commonwl::{
 use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
 use git2::Repository;
 use log::{error, info, warn};
-use prettytable::{Cell, Row, Table};
-use serde_yaml::Value;
 use std::{
     env,
-    fs::{self, remove_file},
+    fs::remove_file,
     path::{Path, PathBuf},
 };
-use walkdir::WalkDir;
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args),
-        ToolCommands::List(args) => list_tools(args),
-        ToolCommands::Remove(args) => remove_tool(args),
+        _ => {
+            error!("This command has been removed!");
+            Ok(())
+        }
     }
 }
 
@@ -37,10 +38,10 @@ pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
 pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
-    #[command(about = "Lists all tools", visible_alias = "ls")]
-    List(ListToolArgs),
-    #[command(about = "Remove a tool, e.g. s4n tool rm toolname", visible_alias = "rm")]
-    Remove(RemoveToolArgs),
+    #[command(about = "REMOVED!", visible_alias = "ls")]
+    List,
+    #[command(about = "REMOVED!", visible_alias = "rm")]
+    Remove,
 }
 
 #[derive(Args, Debug, Default)]
@@ -86,18 +87,6 @@ pub struct CreateToolArgs {
     pub mount: Option<Vec<PathBuf>>,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct RemoveToolArgs {
-    #[arg(trailing_var_arg = true, help = "Remove a tool")]
-    pub tool_names: Vec<String>,
-}
-
-#[derive(Args, Debug, Default)]
-pub struct ListToolArgs {
-    #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
-    pub list_all: bool,
 }
 
 pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
@@ -252,111 +241,5 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
             Err(e) => return Err(anyhow!("Creation of File {path} failed: {e}")),
         }
     }
-    Ok(())
-}
-
-#[allow(clippy::disallowed_macros)]
-pub fn list_tools(args: &ListToolArgs) -> anyhow::Result<()> {
-    // Print the current working directory
-    let cwd = env::current_dir()?;
-    info!("📂 Available Tools in: {}", cwd.to_string_lossy().blue().bold());
-
-    // Build the path to the "workflows" folder
-    let folder_path = cwd.join("workflows");
-
-    // Create a table
-    let mut table = Table::new();
-
-    // Add table headers
-    table.add_row(Row::new(vec![
-        Cell::new("Tool").style_spec("bFg"),
-        Cell::new("Inputs").style_spec("bFg"),
-        Cell::new("Outputs").style_spec("bFg"),
-    ]));
-
-    // Walk recursively through all directories and subdirectories
-    for entry in WalkDir::new(&folder_path).into_iter().filter_map(Result::ok) {
-        if entry.file_type().is_file() {
-            let file_name = entry.file_name().to_string_lossy();
-
-            // Only process .cwl files
-            if let Some(tool_name) = file_name.strip_suffix(".cwl") {
-                let mut inputs_list = Vec::new();
-                let mut outputs_list = Vec::new();
-
-                // Read the contents of the file
-                let file_path = entry.path();
-                if let Ok(content) = fs::read_to_string(file_path) {
-                    // Parse content
-                    if let Ok(parsed_yaml) = serde_yaml::from_str::<Value>(&content)
-                        && parsed_yaml.get("class").and_then(|v| v.as_str()) == Some("CommandLineTool")
-                    {
-                        if args.list_all {
-                            // Extract inputs
-                            if let Some(inputs) = parsed_yaml.get("inputs") {
-                                for input in inputs.as_sequence().unwrap_or(&vec![]) {
-                                    if let Some(id) = input.get("id").and_then(|v| v.as_str()) {
-                                        inputs_list.push(format!("{tool_name}/{id}"));
-                                    }
-                                }
-                            }
-                            // Extract outputs
-                            if let Some(outputs) = parsed_yaml.get("outputs") {
-                                for output in outputs.as_sequence().unwrap_or(&vec![]) {
-                                    if let Some(id) = output.get("id").and_then(|v| v.as_str()) {
-                                        outputs_list.push(format!("{tool_name}/{id}"));
-                                    }
-                                }
-                            }
-                            // add row to the table
-                            table.add_row(Row::new(vec![
-                                Cell::new(tool_name).style_spec("bFg"),
-                                Cell::new(&inputs_list.join(", ")),
-                                Cell::new(&outputs_list.join(", ")),
-                            ]));
-                        } else {
-                            // Print only the tool name if not all details
-                            println!("📄 {}", tool_name.green().bold());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    // Print the table
-    if args.list_all {
-        table.printstd();
-    }
-    Ok(())
-}
-
-pub fn remove_tool(args: &RemoveToolArgs) -> anyhow::Result<()> {
-    if args.tool_names.is_empty() {
-        error!("No tool provided!");
-        return Err(anyhow!("No Tool provided!"));
-    }
-
-    let cwd = env::current_dir()?;
-    let repo = Repository::open(cwd)?;
-    let workflows_path = PathBuf::from("workflows");
-    for tool in &args.tool_names {
-        let mut tool_path = workflows_path.join(tool);
-        let file_path = PathBuf::from(tool);
-
-        if file_path.extension().is_some() {
-            // If it has an extension, remove it
-            let file_stem = file_path.file_stem().unwrap_or_default();
-            tool_path = workflows_path.join(file_stem);
-        }
-
-        if tool_path.exists() && tool_path.is_dir() {
-            fs::remove_dir_all(&tool_path)?;
-            info!("{} {}", "🗑️ Removed ".green(), tool_path.to_string_lossy().green());
-            commit(&repo, format!("🗑️ Removed `{tool}`").as_str()).unwrap();
-        } else {
-            error!("Tool '{}' does not exist.", tool_path.to_string_lossy().red());
-        }
-    }
-
     Ok(())
 }
