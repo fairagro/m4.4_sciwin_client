@@ -1,5 +1,4 @@
 use crate::{
-    commands::list::ListCWLArgs,
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_list,
@@ -40,9 +39,9 @@ pub enum ToolCommands {
     #[command(about = "Runs commandline string and creates a tool (\x1b[1msynonym\x1b[0m: s4n run)")]
     Create(CreateToolArgs),
     #[command(about = "REMOVED!", visible_alias = "ls")]
-    List(ListCWLArgs),
+    List,
     #[command(about = "REMOVED!", visible_alias = "rm")]
-    Remove(RemoveToolArgs),
+    Remove,
 }
 
 #[derive(Args, Debug, Default)]
@@ -88,19 +87,6 @@ pub struct CreateToolArgs {
     pub mount: Option<Vec<PathBuf>>,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
     pub command: Vec<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct RemoveToolArgs {
-    #[arg(trailing_var_arg = true, help = "Remove a tool")]
-    pub tool_names: Vec<String>,
-}
-
-#[derive(Args, Debug, Default)]
-pub struct ListToolArgs {
-    pub name: Option<PathBuf>,
-    #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
-    pub list_all: bool,
 }
 
 pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {

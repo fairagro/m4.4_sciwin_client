@@ -3,29 +3,18 @@ use git2::Repository;
 use s4n::commands::*;
 use s4n::util::repo::get_modified_files;
 use serial_test::serial;
-use std::env;
 use std::path::Path;
-use std::{fs, vec};
-use tempfile::tempdir;
 use test_utils::with_temp_repository;
 
 #[test]
 #[serial]
-fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
-    let temp_dir = tempdir()?;
-    let workflows_path = temp_dir.path().join("workflows");
-    let original_dir = env::current_dir()?;
-    fs::create_dir(&workflows_path)?;
-    //doesn't exist
+fn test_remove_non_existing_tool() {
     let args = RemoveCWLArgs {
         file: "non_existing_tool".to_string(),
     };
 
     let result = handle_remove_command(&args);
-
-    assert!(result.is_ok(), "Function should handle non-existing tool");
-    env::set_current_dir(&original_dir)?;
-    Ok(())
+    assert!(result.is_err());
 }
 
 #[test]

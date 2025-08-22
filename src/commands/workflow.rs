@@ -45,9 +45,9 @@ pub enum WorkflowCommands {
     #[command(about = "REMOVED!")]
     Status(CreateWorkflowArgs),
     #[command(about = "REMOVED!", visible_alias = "ls")]
-    List(ListWorkflowArgs),
+    List,
     #[command(about = "REMOVED!", visible_alias = "rm")]
-    Remove(RemoveWorkflowArgs),
+    Remove,
     #[command(about = "Creates a visual representation of a workflow")]
     Visualize(VisualizeWorkflowArgs),
 }
@@ -58,18 +58,6 @@ pub struct CreateWorkflowArgs {
     pub name: String,
     #[arg(short = 'f', long = "force", help = "Overwrites existing workflow")]
     pub force: bool,
-}
-
-#[derive(Args, Debug, Default)]
-pub struct ListWorkflowArgs {
-    #[arg(short = 'a', long = "all", help = "Outputs the tools with inputs and outputs")]
-    pub list_all: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct RemoveWorkflowArgs {
-    #[arg(trailing_var_arg = true, help = "Remove a workflow")]
-    pub rm_workflow: Vec<String>,
 }
 
 pub fn create_workflow(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
