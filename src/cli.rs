@@ -1,6 +1,8 @@
-use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, InstallPackageArgs, ListCWLArgs, PackageArgs, ToolCommands, WorkflowCommands};
+use crate::commands::{
+    AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, InstallPackageArgs, ListCWLArgs, PackageArgs, RemoveCWLArgs, ToolCommands, WorkflowCommands
+};
 use clap::{Command, Parser, Subcommand};
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use std::io;
 
 #[derive(Parser, Debug)]
@@ -33,6 +35,8 @@ pub enum Commands {
     },
     #[command(about = "Lists either all CWL Files or details to a given file", visible_alias = "ls")]
     List(ListCWLArgs),
+    #[command(about = "Removes a CWL File from the workflows Directory", visible_alias = "rm")]
+    Remove(RemoveCWLArgs),
     #[command(hide = true)]
     Run(CreateToolArgs),
     #[command(about = "Provides commands to create and work with CWL Workflows")]

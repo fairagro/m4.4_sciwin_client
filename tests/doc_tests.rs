@@ -478,8 +478,9 @@ pub fn test_example_project() {
     })
     .expect("Could not create plot tool");
     assert!(fs::exists("workflows/plot/plot.cwl").unwrap());
-    //list tools
-    list_tools(&Default::default()).unwrap();
+
+    //list files
+    handle_list_command(&Default::default()).expect("Could not list cwl files");
 
     //create workflow
     let name = "test_workflow".to_string();

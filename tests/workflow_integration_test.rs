@@ -49,11 +49,7 @@ pub fn test_remove_workflow() {
     assert!(fs::exists(target).unwrap());
 
     handle_list_command(&ListCWLArgs { file: None, list_all: true }).unwrap();
-
-    remove_workflow(&RemoveWorkflowArgs {
-        rm_workflow: vec![target.to_string()],
-    })
-    .unwrap();
+    handle_remove_command(&RemoveCWLArgs { file: target.to_string() }).unwrap();
 
     assert!(!fs::exists(target).unwrap());
     env::set_current_dir(current).unwrap();

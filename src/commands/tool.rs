@@ -1,5 +1,5 @@
 use crate::{
-    commands::list::{ListCWLArgs, handle_list_command},
+    commands::list::ListCWLArgs,
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_list,
@@ -21,14 +21,13 @@ use git2::Repository;
 use log::{error, info, warn};
 use std::{
     env,
-    fs::{self, remove_file},
+    fs::remove_file,
     path::{Path, PathBuf},
 };
 
 pub fn handle_tool_commands(subcommand: &ToolCommands) -> anyhow::Result<()> {
     match subcommand {
         ToolCommands::Create(args) => create_tool(args),
-        ToolCommands::Remove(args) => remove_tool(args),
         _ => {
             error!("This command has been removed!");
             Ok(())
@@ -42,7 +41,7 @@ pub enum ToolCommands {
     Create(CreateToolArgs),
     #[command(about = "REMOVED!", visible_alias = "ls")]
     List(ListCWLArgs),
-    #[command(about = "Remove a tool, e.g. s4n tool rm toolname", visible_alias = "rm")]
+    #[command(about = "REMOVED!", visible_alias = "rm")]
     Remove(RemoveToolArgs),
 }
 
@@ -256,40 +255,5 @@ pub fn create_tool(args: &CreateToolArgs) -> anyhow::Result<()> {
             Err(e) => return Err(anyhow!("Creation of File {path} failed: {e}")),
         }
     }
-    Ok(())
-}
-
-pub fn list_tools(args: &ListCWLArgs) -> anyhow::Result<()> {
-    handle_list_command(args)
-}
-
-pub fn remove_tool(args: &RemoveToolArgs) -> anyhow::Result<()> {
-    if args.tool_names.is_empty() {
-        error!("No tool provided!");
-        return Err(anyhow!("No Tool provided!"));
-    }
-
-    let cwd = env::current_dir()?;
-    let repo = Repository::open(cwd)?;
-    let workflows_path = PathBuf::from("workflows");
-    for tool in &args.tool_names {
-        let mut tool_path = workflows_path.join(tool);
-        let file_path = PathBuf::from(tool);
-
-        if file_path.extension().is_some() {
-            // If it has an extension, remove it
-            let file_stem = file_path.file_stem().unwrap_or_default();
-            tool_path = workflows_path.join(file_stem);
-        }
-
-        if tool_path.exists() && tool_path.is_dir() {
-            fs::remove_dir_all(&tool_path)?;
-            info!("{} {}", "🗑️ Removed ".green(), tool_path.to_string_lossy().green());
-            commit(&repo, format!("🗑️ Removed `{tool}`").as_str()).unwrap();
-        } else {
-            error!("Tool '{}' does not exist.", tool_path.to_string_lossy().red());
-        }
-    }
-
     Ok(())
 }

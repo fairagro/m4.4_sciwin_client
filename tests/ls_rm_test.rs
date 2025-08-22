@@ -20,26 +20,13 @@ fn test_remove_non_existing_tool() -> Result<(), Box<dyn std::error::Error>> {
     let original_dir = env::current_dir()?;
     fs::create_dir(&workflows_path)?;
     //doesn't exist
-    let args = RemoveToolArgs {
-        tool_names: vec!["non_existing_tool".to_string()],
+    let args = RemoveCWLArgs {
+        file: "non_existing_tool".to_string(),
     };
 
-    let result = remove_tool(&args);
+    let result = handle_remove_command(&args);
 
     assert!(result.is_ok(), "Function should handle non-existing tool");
-    env::set_current_dir(&original_dir)?;
-    Ok(())
-}
-
-#[test]
-#[serial]
-fn test_remove_empty_tool_list() -> Result<(), Box<dyn std::error::Error>> {
-    let args = RemoveToolArgs { tool_names: vec![] };
-    let original_dir = env::current_dir()?;
-    let output = std::panic::catch_unwind(|| {
-        remove_tool(&args).unwrap();
-    });
-    assert!(output.is_err(), "Function should handle empty tool list");
     env::set_current_dir(&original_dir)?;
     Ok(())
 }
@@ -62,11 +49,9 @@ pub fn tool_remove_test() {
         assert!(handle_tool_commands(&cmd_create).is_ok());
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
-        let tool_remove_args = RemoveToolArgs {
-            tool_names: vec!["echo".to_string()],
-        };
-        let cmd_remove = ToolCommands::Remove(tool_remove_args);
-        assert!(handle_tool_commands(&cmd_remove).is_ok());
+        let args = RemoveCWLArgs { file: "echo".to_string() };
+        let cmd_remove = handle_remove_command(&args);
+        assert!(cmd_remove.is_ok(), "Removing tool should succeed");
         assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
         let repo = Repository::open(dir.path()).unwrap();

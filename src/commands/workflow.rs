@@ -8,13 +8,12 @@ use crate::{
 };
 use anyhow::anyhow;
 use clap::{Args, Subcommand, ValueEnum};
-use colored::Colorize;
 use commonwl::{Workflow, format::format_cwl, load_workflow};
 use cwl_execution::io::create_and_write_file;
 use git2::Repository;
 use log::{error, info};
 use std::{
-    env, fs,
+    fs,
     io::Write,
     path::{Path, PathBuf},
 };
@@ -25,7 +24,6 @@ pub fn handle_workflow_commands(command: &WorkflowCommands) -> anyhow::Result<()
         WorkflowCommands::Connect(args) => connect_workflow_nodes(args),
         WorkflowCommands::Disconnect(args) => disconnect_workflow_nodes(args),
         WorkflowCommands::Save(args) => save_workflow(args),
-        WorkflowCommands::Remove(args) => remove_workflow(args),
         WorkflowCommands::Visualize(args) => visualize(&args.filename, &args.renderer, args.no_defaults),
         _ => {
             error!("This command has been removed!");
@@ -48,7 +46,7 @@ pub enum WorkflowCommands {
     Status(CreateWorkflowArgs),
     #[command(about = "REMOVED!", visible_alias = "ls")]
     List(ListWorkflowArgs),
-    #[command(about = "Remove a workflow", visible_alias = "rm")]
+    #[command(about = "REMOVED!", visible_alias = "rm")]
     Remove(RemoveWorkflowArgs),
     #[command(about = "Creates a visual representation of a workflow")]
     Visualize(VisualizeWorkflowArgs),
@@ -182,37 +180,6 @@ pub fn save_workflow(args: &CreateWorkflowArgs) -> anyhow::Result<()> {
     let msg = &format!("✅ Saved workflow {}", args.name);
     info!("{msg}");
     commit(&repo, msg)?;
-    Ok(())
-}
-
-/// Remove a workflow
-pub fn remove_workflow(args: &RemoveWorkflowArgs) -> anyhow::Result<()> {
-    let cwd = env::current_dir()?;
-    let repo = Repository::open(cwd)?;
-    let workflows_path = PathBuf::from("workflows");
-    for wf in &args.rm_workflow {
-        let mut wf_path = workflows_path.join(wf);
-        let file_path = PathBuf::from(wf);
-        // Check if the path has an extension
-        if file_path.extension().is_some() {
-            // If it has an extension, remove it
-            let file_stem = file_path.file_stem().unwrap_or_default();
-            wf_path = workflows_path.join(file_stem);
-        }
-        // Check if the directory exists
-        if wf_path.exists() && wf_path.is_dir() {
-            // Attempt to remove the directory
-            fs::remove_dir_all(&wf_path)?;
-            info!("{} {}", "Removed workflow:".green(), wf_path.display().to_string().green());
-            commit(&repo, format!("Deletion of `{}`", wf.as_str()).as_str()).unwrap();
-        } else {
-            error!("Workflow '{}' does not exist.", wf_path.display().to_string().red());
-        }
-    }
-    //we could also remove all tools if no wf is specified but maybe too dangerous
-    if args.rm_workflow.is_empty() {
-        error!("Please enter a tool or a list of workflows");
-    }
     Ok(())
 }
 
