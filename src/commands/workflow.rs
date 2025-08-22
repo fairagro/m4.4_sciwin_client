@@ -43,7 +43,7 @@ pub enum WorkflowCommands {
     #[command(about = "Saves a workflow")]
     Save(CreateWorkflowArgs),
     #[command(about = "REMOVED!")]
-    Status(CreateWorkflowArgs),
+    Status,
     #[command(about = "REMOVED!", visible_alias = "ls")]
     List,
     #[command(about = "REMOVED!", visible_alias = "rm")]
