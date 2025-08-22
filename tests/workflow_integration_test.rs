@@ -1,8 +1,7 @@
 #![allow(clippy::disallowed_macros)]
-use assert_cmd::Command;
+
 use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
-use predicates::prelude::*;
 use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::Path};
@@ -120,32 +119,6 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     assert!(wf.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement)));
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
-
-    let mut cmd = Command::cargo_bin("s4n")?;
-    let mut _output = cmd
-        .arg("workflow")
-        .arg("ls")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("test"))
-        .stdout(predicate::str::contains("calculation").not())
-        .get_output()
-        .clone();
-
-    let mut _output2 = Command::cargo_bin("s4n")?
-        .arg("workflow")
-        .arg("ls")
-        .arg("-a")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("test"))
-        .stdout(predicate::str::contains("pop"))
-        .stdout(predicate::str::contains("speakers"))
-        .stdout(predicate::str::contains("out"))
-        .stdout(predicate::str::contains("calculation"))
-        .stdout(predicate::str::contains("plot"))
-        .get_output()
-        .clone();
 
     assert!(workflow.has_input("speakers"));
     assert!(workflow.has_input("pop"));

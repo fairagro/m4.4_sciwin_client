@@ -1,8 +1,5 @@
 #![allow(clippy::disallowed_macros)]
-use assert_cmd::Command;
-use cwl_execution::io::create_and_write_file;
 use git2::Repository;
-use predicates::prelude::*;
 use s4n::commands::*;
 use s4n::util::repo::get_modified_files;
 use serial_test::serial;
@@ -94,74 +91,3 @@ pub fn tool_remove_test_extension() {
         assert!(get_modified_files(&repo).is_empty());
     });
 }
-
-const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
-
-cwlVersion: v1.2
-class: CommandLineTool
-
-requirements:
-- class: InitialWorkDirRequirement
-  listing:
-  - entryname: calculation.py
-    entry:
-      $include: ../../calculation.py
-
-inputs:
-- id: population
-  type: File
-  default:
-    class: File
-    location: ../../population.csv
-  inputBinding:
-    prefix: --population
-- id: speakers
-  type: File
-  default:
-    class: File
-    location: ../../speakers_revised.csv
-  inputBinding:
-    prefix: --speakers
-
-outputs:
-- id: results
-  type: File
-  outputBinding:
-    glob: results.csv
-
-baseCommand:
-- python
-- calculation.py
-";
-
-const PLOT_FILE: &str = r"#!/usr/bin/env cwl-runner
-
-cwlVersion: v1.2
-class: CommandLineTool
-
-requirements:
-- class: InitialWorkDirRequirement
-  listing:
-  - entryname: plot.py
-    entry:
-      $include: ../../plot.py
-
-inputs:
-- id: results
-  type: File
-  default:
-    class: File
-    location: ../../results.csv
-  inputBinding:
-    prefix: --results
-
-outputs:
-- id: results
-  type: File
-  outputBinding:
-    glob: results.svg
-
-baseCommand:
-- python
-- plot.py
-";

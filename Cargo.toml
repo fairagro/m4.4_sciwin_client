@@ -63,7 +63,6 @@ smart-default = "0.7.1"
 similar = "2.7.0"
 
 [dev-dependencies]
-assert_cmd = "2.0.17"
 calamine = "0.30.0"
 fstest = "0.2.4"
 predicates = "3.1.3"
