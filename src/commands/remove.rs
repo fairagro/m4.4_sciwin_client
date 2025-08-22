@@ -10,7 +10,11 @@ pub struct RemoveCWLArgs {
 }
 
 pub fn handle_remove_command(args: &RemoveCWLArgs) -> anyhow::Result<()> {
-    let filename = resolve_filename(&args.file).map_err(|e| anyhow::anyhow!("Could not resolve CWL File: {}", e))?;
+    let filename = if Path::new(&args.file).exists() {
+        args.file.to_string()
+    } else {
+        resolve_filename(&args.file).map_err(|e| anyhow::anyhow!("Could not resolve CWL File: {}", e))?
+    };
     remove_cwl_file(&filename)
 }
 
@@ -23,18 +27,16 @@ fn remove_cwl_file(filename: impl AsRef<Path>) -> anyhow::Result<()> {
         let folder = filename.parent().expect("Can not get parent dir");
         fs::remove_file(filename)?;
 
-        let mut iter = fs::read_dir(folder)?;
-        let next = iter.next();
-        eprintln!("{next:?}");
-        if next.is_none() {
+        if folder.read_dir()?.next().is_none() {
             fs::remove_dir_all(folder)?;
         }
 
         let message = format!("✔️  Removed CWL file: {}", filename.display());
         info!("{}", message);
         commit(&repo, &message)?;
+        Ok(())
     } else {
         warn!("File {} does not exist or is not a CWL file.", filename.display());
+        anyhow::bail!("File does not exist or is not a CWL file: {}", filename.display());
     }
-    Ok(())
 }

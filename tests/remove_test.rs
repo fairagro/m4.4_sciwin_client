@@ -52,6 +52,8 @@ pub fn tool_remove_test() {
         let args = RemoveCWLArgs { file: "echo".to_string() };
         let cmd_remove = handle_remove_command(&args);
         assert!(cmd_remove.is_ok(), "Removing tool should succeed");
+
+        assert!(!dir.path().join(Path::new("workflows/echo/echo.cwl")).exists());
         assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
         let repo = Repository::open(dir.path()).unwrap();
@@ -78,13 +80,13 @@ pub fn tool_remove_test_extension() {
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         // remove the tool
-        let tool_remove_args = RemoveToolArgs {
-            tool_names: vec!["echo.cwl".to_string()],
+        let tool_remove_args = RemoveCWLArgs {
+            file: "echo.cwl".to_string(),
         };
-        let cmd_remove = ToolCommands::Remove(tool_remove_args);
-        assert!(handle_tool_commands(&cmd_remove).is_ok());
+        assert!(handle_remove_command(&tool_remove_args).is_ok());
 
         // check if the tool was removed
+        assert!(!dir.path().join(Path::new("workflows/echo/echo.cwl")).exists());
         assert!(!dir.path().join(Path::new("workflows/echo")).exists());
 
         // check if there are no uncommitted changes after removal
@@ -93,52 +95,6 @@ pub fn tool_remove_test_extension() {
     });
 }
 
-#[test]
-#[serial]
-fn test_list_tools() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempdir().unwrap();
-    let original_cwd = env::current_dir().unwrap();
-
-    env::set_current_dir(dir.path()).unwrap();
-
-    create_and_write_file("workflows/calculation/calculation.cwl", CALCULATION_FILE).unwrap();
-    create_and_write_file("workflows/plot/plot.cwl", PLOT_FILE).unwrap();
-
-    let mut cmd = Command::cargo_bin("s4n")?;
-    let _output_all = cmd
-        .arg("tool")
-        .arg("ls")
-        .arg("-a")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("calculation"))
-        .stdout(predicate::str::contains("calculation/speakers"))
-        .stdout(predicate::str::contains("calculation/population"))
-        .stdout(predicate::str::contains("calculation/results"))
-        .stdout(predicate::str::contains("plot"))
-        .stdout(predicate::str::contains("plot/results"))
-        .get_output()
-        .clone();
-
-    let mut cmd = Command::cargo_bin("s4n")?;
-    let _output_tools = cmd
-        .arg("tool")
-        .arg("ls")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("calculation"))
-        .stdout(predicate::str::contains("plot"))
-        .stdout(predicate::str::contains("calculation/speakers").not())
-        .stdout(predicate::str::contains("calculation/population").not())
-        .stdout(predicate::str::contains("calculation/results").not())
-        .stdout(predicate::str::contains("plot/results").not())
-        .get_output()
-        .clone();
-
-    env::set_current_dir(original_cwd)?;
-
-    Ok(())
-}
 const CALCULATION_FILE: &str = r"#!/usr/bin/env cwl-runner
 
 cwlVersion: v1.2
