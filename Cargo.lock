@@ -710,9 +710,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.45"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc0e74a703892159f5ae7d3aac52c8e6c392f5ae5f359c70b5881d60aaac318"
+checksum = "2c5e4fcf9c21d2e544ca1ee9d8552de13019a42aa7dbf32747fa7aaf1df76e57"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -720,9 +720,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.44"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3e7f4214277f3c7aa526a59dd3fbe306a370daee1f8b7b8c987069cd8e888a8"
+checksum = "fecb53a0e6fcfb055f686001bc2e2592fa527efaf38dbe81a6a9563562e57d41"
 dependencies = [
  "anstream",
  "anstyle",
@@ -3254,7 +3254,7 @@ dependencies = [
  "serde_yaml",
  "tempfile",
  "toml",
- "toml_edit 0.23.3",
+ "toml_edit 0.23.4",
  "util",
  "uuid",
 ]
@@ -3444,9 +3444,9 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
 name = "rustyscript"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c4a76f354c46c4c3e537a712dfc34db490ff47279a05b72b1fa37a974cf4500"
+checksum = "d7022cabe11c65c8a34a3b0e92ca1d55a0add1f873cec4def14c5b82938003d6"
 dependencies = [
  "async-trait",
  "base64-simd",
@@ -3520,7 +3520,7 @@ dependencies = [
  "test_utils",
  "tokio",
  "toml",
- "toml_edit 0.23.3",
+ "toml_edit 0.23.4",
  "util",
  "uuid",
  "walkdir",
@@ -4736,9 +4736,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.23.3"
+version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17d3b47e6b7a040216ae5302712c94d1cf88c95b47efa80e2c59ce96c878267e"
+checksum = "7211ff1b8f0d3adae1663b7da9ffe396eabe1ca25f0b0bee42b0da29a9ddce93"
 dependencies = [
  "indexmap",
  "serde",
