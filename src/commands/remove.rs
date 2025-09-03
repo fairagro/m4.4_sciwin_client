@@ -5,6 +5,7 @@ use log::{info, warn};
 use std::{env, fs, path::Path};
 use ignore::WalkBuilder;
 use commonwl::{Workflow, load_workflow};
+use dialoguer::Confirm;
 
 #[derive(Args, Debug, Default)]
 pub struct RemoveCWLArgs {
@@ -28,7 +29,21 @@ fn remove_cwl_file(filename: impl AsRef<Path>) -> anyhow::Result<()> {
     if filename.exists() && filename.is_file() && filename.extension().is_some_and(|e| e == "cwl") { 
         let folder = filename.parent().expect("Can not get parent dir");
         let tool_name = filename.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-        check_tool_usage_in_workflows(&cwd, tool_name)?;
+        let workflows = check_tool_usage_in_workflows(&cwd, tool_name)?;
+        if !workflows.is_empty() {
+            warn!("Tool '{tool_name}' is used in the following workflows:");
+            for wf in &workflows {
+                warn!("{wf}");
+            }
+            let remove_anyway = Confirm::new()
+                .with_prompt(format!("Do you still want to remove '{tool_name}'?"))
+                .default(false)
+                .interact()?;
+            if !remove_anyway {
+                info!("Aborting removal of '{}'", filename.display());
+                return Ok(());
+            }
+        }
         fs::remove_file(filename)?;
 
         if folder.read_dir()?.next().is_none() {
@@ -45,7 +60,8 @@ fn remove_cwl_file(filename: impl AsRef<Path>) -> anyhow::Result<()> {
     }
 }
 
-pub fn check_tool_usage_in_workflows(cwd: impl AsRef<Path>, tool: &str) -> anyhow::Result<()> {
+pub fn check_tool_usage_in_workflows(cwd: impl AsRef<Path>, tool: &str) -> anyhow::Result<Vec<String>> {
+    let mut workflows = Vec::new();
     let tool_name = tool.strip_suffix(".cwl").unwrap_or(tool);
     for entry in WalkBuilder::new(cwd)
         .hidden(true)
@@ -62,18 +78,14 @@ pub fn check_tool_usage_in_workflows(cwd: impl AsRef<Path>, tool: &str) -> anyho
                 Ok(wf) => wf,
                 Err(_) => continue,
             };
-            for step in &workflow.steps {
-                if step.id == tool_name {
-                    warn!(
-                        "Tool '{}' is used as a step in workflow {:?} found under {}",
-                        tool_name,
-                        entry.file_name().to_string_lossy(),
-                        path.display()
-                    );
-                }
+             if workflow.steps.iter().any(|step| step.id == tool_name) {
+                workflows.push(format!(
+                    "{} ({})",
+                    entry.file_name().to_string_lossy(),
+                    path.display(),
+                ));
             }
         }
     }
-
-    Ok(())
+    Ok(workflows)
 }
