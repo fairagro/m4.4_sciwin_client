@@ -2,56 +2,31 @@ use clap::{Args, Subcommand};
 use log::error;
 use std::error::Error;
 use tokio::runtime::Builder;
-use cwl_annotation::common::{annotate_license, annotate_field, annotate, annotate_default};
+use cwl_annotation::common::{annotate_license, annotate_field, annotate_default};
 use cwl_annotation::process::{annotate_process_step, ProcessArgs};
-use cwl_annotation::person::{annotate_person};
-use cwl_annotation::container::annotate_container;
 use cwl_annotation::performer::{annotate_performer, annotate_performer_default};
-
-#[derive(Args, Debug)]
-pub struct PersonArgs {
-    pub cwl_name: String,
-
-    #[arg(short = 'n', long = "name", help = "Name of the person")]
-    pub name: String,
-
-    #[arg(short = 'm', long = "mail", help = "Email of the person")]
-    pub mail: Option<String>,
-
-    #[arg(short = 'i', long = "id", help = "Identifier of the person, e.g., ORCID")]
-    pub id: Option<String>,
-}
 
 /// Arguments for annotate performer command
 #[derive(Args, Debug)]
 pub struct PerformerArgs {
     #[arg(help = "Name of the CWL file")]
     pub cwl_name: String,
-
     #[arg(short = 'f', long = "first_name", help = "First name of the performer")]
     pub first_name: Option<String>,
-
     #[arg(short = 'l', long = "last_name", help = "Last name of the performer")]
     pub last_name: Option<String>,
-
     #[arg(short = 'm', long = "mid_initials", help = "Middle initials of the performer")]
     pub mid_initials: Option<String>,
-
     #[arg(short = 'e', long = "email", help = "Email of the performer")]
     pub mail: Option<String>,
-
     #[arg(short = 'a', long = "affiliation", help = "Affiliation of the performer")]
     pub affiliation: Option<String>,
-
     #[arg(short = 'd', long = "address", help = "Address of the performer")]
     pub address: Option<String>,
-
     #[arg(short = 'p', long = "phone", help = "Phone number of the performer")]
     pub phone: Option<String>,
-
     #[arg(short = 'x', long = "fax", help = "Fax number of the performer")]
     pub fax: Option<String>,
-
     #[arg(short = 'r', long = "role", help = "Role of the performer")]
     pub role: Option<String>,
 }
@@ -61,19 +36,14 @@ pub struct PerformerArgs {
 pub struct AnnotateProcessArgs {
     #[arg(help = "Name of the workflow process being annotated")]
     pub cwl_name: String,
-
     #[arg(short = 'n', long = "name", help = "Name of the process sequence step")]
     pub name: String,
-
     #[arg(short = 'i', long = "input", help = "Input file or directory, e.g., folder/input.txt")]
     pub input: Option<String>,
-
     #[arg(short = 'o', long = "output", help = "Output file or directory, e.g., folder/output.txt")]
     pub output: Option<String>,
-
     #[arg(short = 'p', long = "parameter", help = "Process step parameter")]
     pub parameter: Option<String>,
-
     #[arg(short = 'v', long = "value", help = "Process step value")]
     pub value: Option<String>,
 }
@@ -103,55 +73,14 @@ pub enum AnnotateCommands {
         #[arg(help = "License to annotate")]
         license: Option<String>,
     },
-    #[command(about = "Annotates schema of a tool or workflow")]
-    Schema {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Schema used for annotation")]
-        schema: String,
-    },
-    #[command(about = "Annotates namespace of a tool or workflow")]
-    Namespace {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Namespace to annotate")]
-        namespace: String,
-        #[arg(short = 's', long = "short", help = "Namespace abbreviation to annotate")]
-        short: Option<String>,
-    },
-    #[command(about = "Annotates author of a tool or workflow (schema.org)")]
-    Author(PersonArgs),
-
-    #[command(about = "Annotates contributor of a tool or workflow (schema.org)")]
-    Contributor(PersonArgs),
-
     #[command(about = "Annotates performer of a tool or workflow (arc ontology)")]
     Performer(PerformerArgs),
-
-    #[command(about = "Annotates a process arc ontolology")]
+    #[command(about = "Annotates a process arc ontology")]
     Process(AnnotateProcessArgs),
-
-    #[command(about = "Annotates container information of a tool or workflow")]
-    Container {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(short = 'c', long = "container", help = "Annotation value for the container")]
-        container: String,
-    },
-    #[command(about = "Annotates a CWL file with an custom field and value")]
-    Custom {
-        #[arg(help = "Name of the CWL file")]
-        cwl_name: String,
-        #[arg(help = "Field to annotate")]
-        field: String,
-        #[arg(help = "Value for the field")]
-        value: String,
-    },
 }
 
 pub fn handle_annotation_command(command: &Option<AnnotateCommands>, tool_name: &Option<String>) -> Result<(), Box<dyn Error>> {
     let runtime = Builder::new_current_thread().enable_all().build()?;
-
     if let Some(subcommand) = command {
         runtime.block_on(handle_annotate_commands(subcommand))?;
     } else if let Some(name) = tool_name {
@@ -167,16 +96,6 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
         AnnotateCommands::Name { cwl_name, name } => annotate_field(cwl_name, "label", name),
         AnnotateCommands::Description { cwl_name, description } => annotate_field(cwl_name, "doc", description),
         AnnotateCommands::License { cwl_name, license } => annotate_license(cwl_name, license).await,
-        AnnotateCommands::Schema { cwl_name, schema } => annotate(cwl_name, "$schemas", None, Some(schema)),
-        AnnotateCommands::Namespace { cwl_name, namespace, short } => {
-            annotate(cwl_name, "$namespaces", short.as_deref(), Some(namespace))
-        }
-        AnnotateCommands::Author(args) => {
-            annotate_person(&args.cwl_name, &args.name, args.mail.clone(), args.id.clone(), "s:author").await
-        }
-        AnnotateCommands::Contributor(args) => {
-            annotate_person(&args.cwl_name, &args.name, args.mail.clone(), args.id.clone(), "s:contributor").await
-        }
         AnnotateCommands::Performer(args) => {
             use cwl_annotation::performer::Performer;
             let performer = Performer {
@@ -209,7 +128,5 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
             };
             annotate_process_step(&process_args).await
         },
-        AnnotateCommands::Container { cwl_name, container } => annotate_container(cwl_name, container),
-        AnnotateCommands::Custom { cwl_name, field, value } => annotate_field(cwl_name, field, value),
     }
 }
