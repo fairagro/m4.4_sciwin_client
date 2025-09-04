@@ -1,7 +1,7 @@
 #![allow(clippy::disallowed_macros)]
 use git2::Repository;
 use s4n::commands::*;
-use s4n::util::repo::get_modified_files;
+use s4n::{util::repo::get_modified_files, cli::Commands};
 use serial_test::serial;
 use std::path::Path;
 use test_utils::with_temp_repository;
@@ -21,7 +21,7 @@ fn test_remove_non_existing_tool() {
 #[serial]
 pub fn tool_remove_test() {
     with_temp_repository(|dir| {
-        let tool_create_args = CreateToolArgs {
+        let tool_create_args = CreateArgs {
             name: Some("echo".to_string()),
             command: vec![
                 "python".to_string(),
@@ -31,8 +31,10 @@ pub fn tool_remove_test() {
             ],
             ..Default::default()
         };
-        let cmd_create = ToolCommands::Create(tool_create_args);
-        assert!(handle_tool_commands(&cmd_create).is_ok());
+        let cmd_create = Commands::Create(tool_create_args);
+        if let Commands::Create(ref args) = cmd_create {
+            assert!(handle_create_command(args).is_ok());
+        }
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         let args = RemoveCWLArgs { file: "echo".to_string() };
@@ -51,7 +53,7 @@ pub fn tool_remove_test() {
 #[serial]
 pub fn tool_remove_test_extension() {
     with_temp_repository(|dir| {
-        let tool_create_args = CreateToolArgs {
+        let tool_create_args = CreateArgs {
             name: Some("echo".to_string()),
             command: vec![
                 "python".to_string(),
@@ -61,8 +63,10 @@ pub fn tool_remove_test_extension() {
             ],
             ..Default::default()
         };
-        let cmd_create = ToolCommands::Create(tool_create_args);
-        assert!(handle_tool_commands(&cmd_create).is_ok());
+        let cmd_create = Commands::Create(tool_create_args);
+        if let Commands::Create(ref args) = cmd_create {
+            assert!(handle_create_command(args).is_ok());
+        }
         assert!(dir.path().join(Path::new("workflows/echo")).exists());
 
         // remove the tool

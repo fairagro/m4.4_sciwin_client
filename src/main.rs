@@ -4,7 +4,7 @@ use log::{LevelFilter, error};
 use s4n::{
     cli::{generate_completions, Cli, Commands},
     commands::{
-        check_git_config, create_tool, handle_annotation_command, handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, handle_tool_commands, handle_workflow_commands, install_package, remove_package
+        check_git_config, save_workflow, handle_create_command, handle_annotation_command, handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, install_package, remove_package, connect_workflow_nodes, disconnect_workflow_nodes, visualize
     },
     util::LOGGER,
 };
@@ -30,15 +30,17 @@ fn run() -> Result<(), Box<dyn Error>> {
     check_git_config()?;
     match &args.command {
         Commands::Init(args) => Ok(handle_init_command(args)?),
-        Commands::Tool { command } => Ok(handle_tool_commands(command)?),
-        Commands::Run(args) => Ok(create_tool(args)?),
-        Commands::Workflow { command } => Ok(handle_workflow_commands(command)?),
         Commands::Execute { command } => handle_execute_commands(command),
         Commands::Install(args) => Ok(install_package(&args.identifier, &args.branch)?),
         Commands::Uninstall(args) => Ok(remove_package(&args.identifier)?),
         Commands::Annotate { command, tool_name } => handle_annotation_command(command, tool_name),
         Commands::Completions { shell } => Ok(generate_completions(*shell, &mut Cli::command())?),
         Commands::List(args) => Ok(handle_list_command(args)?),
-        Commands::Remove(args) => Ok(handle_remove_command(args)?)
+        Commands::Remove(args) => Ok(handle_remove_command(args)?),
+        Commands::Create(args) => Ok(handle_create_command(args)?),
+        Commands::Connect(args) => Ok(connect_workflow_nodes(args)?),
+        Commands::Disconnect(args) => Ok(disconnect_workflow_nodes(args)?),
+        Commands::Visualize(args) => Ok(visualize(&args.filename, &args.renderer, args.no_defaults)?),
+        Commands::Save(args) => Ok(save_workflow(args)?),
     }
 }

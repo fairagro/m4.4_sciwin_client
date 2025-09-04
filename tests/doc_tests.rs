@@ -42,7 +42,7 @@ pub fn test_wrapping_echo() {
 
     let command = &["echo", "\"Hello World\""];
 
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
     };
@@ -75,7 +75,7 @@ pub fn test_wrapping_echo_2() {
     let command = &["echo", "\"Hello World\"", ">", "hello.yaml"];
 
     let name = "echo2";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         name: Some(name.to_string()),
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
@@ -110,7 +110,7 @@ pub fn test_wrapping_python_script() {
     let command = &["python", "echo.py", "--message", "SciWIn rocks!", "--output-file", "out.txt"];
 
     let name = "echo_python";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         name: Some(name.to_string()),
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
@@ -144,7 +144,7 @@ pub fn test_wrapping_a_long_running_script() {
     let command = &["python", "sleep.py"];
 
     let name = "sleep";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         no_run: true,
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
@@ -178,7 +178,7 @@ pub fn test_wrapping_a_long_running_script2() {
     let command = &["python", "sleep.py"];
 
     let name = "sleep2";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         name: Some(name.to_string()),
         no_run: true,
         outputs: Some(vec!["sleep.txt".to_string()]),
@@ -216,7 +216,7 @@ pub fn test_implicit_inputs_hardcoded_files() {
     let command = &["python", "load.py"];
 
     let name = "load";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         inputs: Some(vec!["file.txt".to_string()]),
         outputs: Some(vec!["out.txt".to_string()]),
         command: command.iter().map(|&s| s.to_string()).collect(),
@@ -271,7 +271,7 @@ pub fn test_piping() {
     let command = &["cat", "speakers.csv", "|", "head", "-n", "5", ">", "speakers_5.csv"];
 
     let name = "cat";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
     };
@@ -315,7 +315,7 @@ pub fn test_pulling_containers() {
     ];
 
     let name = "calculation";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         container_image: Some("pandas/pandas:pip-all".to_string()),
         command: command.iter().map(|&s| s.to_string()).collect(),
         ..Default::default()
@@ -372,7 +372,7 @@ pub fn test_building_custom_containers() {
     ];
 
     let name = "calculation";
-    let args = &CreateToolArgs {
+    let args = &CreateArgs {
         container_image: Some("Dockerfile".to_string()),
         container_tag: Some("my-docker".to_string()),
         command: command.iter().map(|&s| s.to_string()).collect(),
@@ -447,7 +447,7 @@ pub fn test_example_project() {
     initialize_project(&None, false).expect("Could not init s4n");
 
     //create calculation tool
-    create_tool(&CreateToolArgs {
+    create_tool(&CreateArgs {
         command: [
             "python".to_string(),
             "workflows/calculation/calculation.py".to_string(),
@@ -464,7 +464,7 @@ pub fn test_example_project() {
     assert!(fs::exists("workflows/calculation/calculation.cwl").unwrap());
 
     //create calculation tool
-    create_tool(&CreateToolArgs {
+    create_tool(&CreateArgs {
         command: [
             "python".to_string(),
             "workflows/plot/plot.py".to_string(),
@@ -484,9 +484,21 @@ pub fn test_example_project() {
 
     //create workflow
     let name = "test_workflow".to_string();
-    let create_args = CreateWorkflowArgs {
-        name: name.clone(),
+    let create_args = CreateArgs {
+        name: Some(name.clone()),
         force: false,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        no_defaults: false,
+        enable_network: false,
+        inputs: None,
+        outputs: None,
+        mount: None,
+        command: vec![],
     };
     create_workflow(&create_args).expect("Could not create workflow");
 

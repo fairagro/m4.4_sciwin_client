@@ -333,7 +333,7 @@ pub fn highlight_cwl(yaml: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::{CreateToolArgs, create_tool};
+    use crate::commands::{CreateArgs, create_tool};
     use commonwl::{
         CWLType, Command, Dirent, File,
         inputs::CommandLineBinding,
@@ -349,7 +349,7 @@ mod tests {
 
     #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
     fn test_resolve_filename() {
-        create_tool(&CreateToolArgs {
+        create_tool(&CreateArgs {
             command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
             ..Default::default()
         })

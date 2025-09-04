@@ -9,8 +9,10 @@ mod init;
 mod list;
 mod packages;
 mod remove;
-mod tool;
-mod workflow;
+mod create;
+mod connect;
+mod visualize;
+mod save;
 
 pub use annotate::*;
 pub use execute::*;
@@ -18,8 +20,10 @@ pub use init::*;
 pub use list::*;
 pub use packages::*;
 pub use remove::*;
-pub use tool::*;
-pub use workflow::*;
+pub use create::*;
+pub use connect::*;
+pub use visualize::*;
+pub use save::*;
 
 pub fn check_git_config() -> Result<(), Box<dyn Error>> {
     let mut config = Config::open_default()?;
