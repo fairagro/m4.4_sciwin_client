@@ -2,13 +2,13 @@
 
 use super::{
     inputs::{CommandInputParameter, CommandLineBinding},
-    outputs::{deserialize_outputs, CommandOutputParameter},
+    outputs::{CommandOutputParameter, deserialize_outputs},
     requirements::Requirement,
     types::CWLType,
 };
 use crate::{
-    requirements::{DockerRequirement, FromRequirement},
     DocumentBase, Operation,
+    requirements::{DockerRequirement, FromRequirement},
 };
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -183,20 +183,12 @@ impl CommandLineTool {
 
     /// Gets the permanent fail code of the `CommandLineTool`
     pub fn get_error_code(&self) -> i32 {
-        if let Some(code) = &self.permanent_fail_codes {
-            code[0]
-        } else {
-            1
-        }
+        if let Some(code) = &self.permanent_fail_codes { code[0] } else { 1 }
     }
 
     /// Gets the success code of the `CommandLineTool`
     pub fn get_sucess_code(&self) -> i32 {
-        if let Some(code) = &self.success_codes {
-            code[0]
-        } else {
-            0
-        }
+        if let Some(code) = &self.success_codes { code[0] } else { 0 }
     }
 
     /// Checks whether the `CommandLineTool` has an Output of `CWLType` Stdout
@@ -229,6 +221,15 @@ pub enum Command {
 impl Default for Command {
     fn default() -> Self {
         Command::Single(String::new())
+    }
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Command::Single(cmd) => write!(f, "{}", cmd),
+            Command::Multiple(cmds) => write!(f, "{}", cmds.join(" ")),
+        }
     }
 }
 

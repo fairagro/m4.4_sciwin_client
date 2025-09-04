@@ -5,7 +5,6 @@ use std::env;
 use std::fs;
 use tempfile::tempdir;
 use cwl_annotation::{
-    container::{annotate_container, contains_docker_requirement},
     common::{annotate_license, parse_cwl, get_filename, annotate_default, annotate},
 };
 
@@ -23,32 +22,6 @@ const SCHEMAORG_NAMESPACE: &str = "https://schema.org/";
 const SCHEMAORG_SCHEMA: &str = "https://schema.org/version/latest/schemaorg-current-https.rdf";
 const ARC_NAMESPACE: &str = "https://github.com/nfdi4plants/ARC_ontology";
 const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl";
-
-#[test]
-#[serial]
-fn test_annotate_container() {
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-
-    env::set_current_dir(dir.path()).unwrap();
-
-    let temp_file_name = "test.cwl";
-    fs::write(temp_file_name, CWL_CONTENT).expect("Failed to write CWL file");
-
-    let result = annotate_container(temp_file_name, "docker://my-container:latest");
-
-    assert!(result.is_ok(), "Expected Ok(()), got {result:?}");
-
-    let updated_content = fs::read_to_string(temp_file_name).expect("Failed to read updated CWL file");
-    assert!(
-        updated_content.contains("docker://my-container:latest"),
-        "Expected container annotation to be added, but got: {updated_content}"
-    );
-
-    env::set_current_dir(current).unwrap();
-}
-
-
 
 #[tokio::test]
 #[serial]
@@ -137,42 +110,6 @@ fn test_get_filename() {
         result.unwrap_err().to_string().contains("CWL file 'example.cwl' not found"),
         "Expected error message about missing file, but got different error"
     );
-
-    env::set_current_dir(current).unwrap();
-}
-
-#[tokio::test]
-#[serial]
-async fn test_contains_docker_requirement() {
-    use std::fs;
-    use tempfile::tempdir;
-
-    let dir = tempdir().unwrap();
-    let current = env::current_dir().unwrap();
-    env::set_current_dir(dir.path()).unwrap();
-
-    let file_with_docker = dir.path().join("with_docker.cwl");
-    let file_without_docker = dir.path().join("without_docker.cwl");
-    let empty_file = dir.path().join("empty.cwl");
-
-    fs::write(&file_with_docker, CWL_CONTENT).unwrap();
-    let result = contains_docker_requirement(file_with_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(true), but got Err: {result:?}");
-    assert!(result.unwrap(), "Expected DockerRequirement to be found");
-    let content_without_docker = r"
-class: CommandLineTool
-inputs: []
-outputs: []
-    ";
-    fs::write(&file_without_docker, content_without_docker).unwrap();
-    let result = contains_docker_requirement(file_without_docker.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false), but got Err: {result:?}");
-    assert!(!result.unwrap(), "Expected false for file not containing 'DockerRequirement'");
-
-    fs::write(&empty_file, "").unwrap();
-    let result = contains_docker_requirement(empty_file.to_str().unwrap());
-    assert!(result.is_ok(), "Expected Ok(false) for empty file, but got Err: {result:?}");
-    assert!(!result.unwrap(), "Expected DockerRequirement to be absent in empty file");
 
     env::set_current_dir(current).unwrap();
 }

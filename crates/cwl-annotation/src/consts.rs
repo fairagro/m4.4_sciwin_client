@@ -9,3 +9,4 @@ pub const ARC_SCHEMA: &str = "https://raw.githubusercontent.com/nfdi4plants/ARC_
 
 pub const MAX_RECOMMENDATIONS: usize = 10;
 pub const OLS_CREDIT: &str = "https://www.ebi.ac.uk/ols4/api/search?q=";
+pub const SPDX: &str = "https://spdx.org/licenses/licenses.json";

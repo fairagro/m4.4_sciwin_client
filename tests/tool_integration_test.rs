@@ -9,6 +9,7 @@ use git2::Repository;
 use s4n::{
     commands::*,
     util::repo::{commit, get_modified_files, stage_all},
+    cli::Commands,
 };
 use std::{
     env,
@@ -19,12 +20,14 @@ use test_utils::os_path;
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     //check for files being present
     let output_paths = vec![Path::new("results.txt"), Path::new("workflows/echo/echo.cwl")];
@@ -49,14 +52,16 @@ pub fn tool_create_test_inputs_outputs() {
     let script = "echo_inline.py".to_string();
     let input = "data/input.txt".to_string();
 
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         inputs: Some(vec![input.clone()]),
         outputs: Some(vec!["results.txt".to_string()]),
         command: vec!["python".to_string(), script.clone()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     let tool_path = Path::new("workflows/echo_inline/echo_inline.cwl");
 
@@ -94,13 +99,15 @@ pub fn tool_create_test_inputs_outputs() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_is_raw() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         is_raw: true,
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     assert!(!Path::new("workflows/echo/echo.cwl").exists()); //no cwl file as it is outputted to stdout
     assert!(Path::new("results.txt").exists());
 
@@ -111,13 +118,15 @@ pub fn tool_create_test_is_raw() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_no_commit() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         no_commit: true, //look!
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     //check for files being present
     let output_paths = vec![Path::new("results.txt"), Path::new("workflows/echo/echo.cwl")];
@@ -131,13 +140,15 @@ pub fn tool_create_test_no_commit() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_no_run() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         no_run: true,
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     assert!(Path::new("workflows/echo/echo.cwl").exists());
 
     //no uncommitted left?
@@ -147,14 +158,16 @@ pub fn tool_create_test_no_run() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py", "tests/test_data/data.bin"])]
 pub fn tool_create_test_no_run_explicit_inputs() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         no_run: true,
         inputs: Some(vec!["data.bin".to_string()]),
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     assert!(Path::new("workflows/echo/echo.cwl").exists());
 
     let tool = load_tool("workflows/echo/echo.cwl").unwrap();
@@ -167,14 +180,16 @@ pub fn tool_create_test_no_run_explicit_inputs() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_no_run_explicit_inputs_string() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         no_run: true,
         inputs: Some(vec!["wurstbrot".to_string()]),
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     assert!(Path::new("workflows/echo/echo.cwl").exists());
 
     let tool = load_tool("workflows/echo/echo.cwl").unwrap();
@@ -187,13 +202,15 @@ pub fn tool_create_test_no_run_explicit_inputs_string() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_is_clean() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         is_clean: true,
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     assert!(Path::new("workflows/echo/echo.cwl").exists());
     assert!(!Path::new("results.txt").exists()); //no result is left as it is cleaned
 
@@ -204,13 +221,15 @@ pub fn tool_create_test_is_clean() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_container_image() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         container_image: Some("python".to_string()),
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     //read file
     let cwl_file = Path::new("workflows/echo/echo.cwl");
@@ -236,15 +255,16 @@ pub fn tool_create_test_container_image() {
 
 #[fstest(repo = true, files = ["tests/test_data/Dockerfile", "tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_dockerfile() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         container_image: Some("Dockerfile".to_string()),
         container_tag: Some("sciwin-client".to_string()),
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
-
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
     //read file
     let cwl_file = Path::new("workflows/echo/echo.cwl");
     let cwl_contents = read_to_string(cwl_file).expect("Could not read CWL File");
@@ -271,7 +291,7 @@ pub fn tool_create_test_dockerfile() {
 #[fstest(repo = true)]
 pub fn test_tool_magic_outputs() {
     let str = "touch output.txt";
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         no_commit: true,
         is_clean: true,
         command: shlex::split(str).unwrap(),
@@ -291,7 +311,7 @@ pub fn test_tool_magic_outputs() {
 #[fstest(repo = true, files = ["tests/test_data/input.txt"])]
 pub fn test_tool_magic_stdout() {
     let str = "wc input.txt \\> input.txt";
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         no_commit: true,
         is_clean: true,
         command: shlex::split(str).unwrap(),
@@ -307,7 +327,7 @@ pub fn test_tool_magic_stdout() {
 #[fstest(repo = true, files = ["tests/test_data/input.txt"])]
 pub fn test_tool_magic_arguments(_dir: &Path) {
     let str = "cat input.txt | grep -f input.txt";
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         no_commit: true,
         is_clean: true,
         command: shlex::split(str).unwrap(),
@@ -328,7 +348,7 @@ pub fn test_tool_magic_arguments(_dir: &Path) {
 pub fn test_tool_output_is_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
@@ -346,7 +366,7 @@ pub fn test_tool_output_is_dir() {
 pub fn test_tool_output_complete_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         outputs: Some(vec![".".into()]), //
         command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
@@ -377,7 +397,7 @@ pub fn test_shell_script() {
 
     let name = "script";
     let command = &["./script.sh"];
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         command: command.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
         ..Default::default()
     };
@@ -405,7 +425,7 @@ pub fn test_shell_script() {
 pub fn test_tool_uncommitted_no_run() {
     let root = env!("CARGO_MANIFEST_DIR");
     fs::copy(format!("{root}/tests/test_data/input.txt"), "input.txt").unwrap(); //repo is not in a clean state now!
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         command: ["echo".to_string(), "Hello World".to_string()].to_vec(),
         no_run: true,
         ..Default::default()
@@ -417,7 +437,7 @@ pub fn test_tool_uncommitted_no_run() {
 #[fstest(repo = true, files = ["tests/test_data/subfolders.py"])]
 /// see Issue [#88](https://github.com/fairagro/m4.4_sciwin_client/issues/88)
 pub fn test_tool_output_subfolders() {
-    let args = CreateToolArgs {
+    let args = CreateArgs {
         command: ["python".to_string(), "subfolders.py".to_string()].to_vec(),
         ..Default::default()
     };
@@ -428,15 +448,17 @@ pub fn test_tool_output_subfolders() {
 #[fstest(repo = true)]
 #[cfg(target_os = "linux")]
 pub fn tool_create_remote_file() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec![
             "wget".to_string(),
             "https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client/refs/heads/main/README.md".to_string(),
         ],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     //check file
     assert!(Path::new("README.md").exists());
@@ -450,14 +472,16 @@ pub fn tool_create_remote_file() {
 
 #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
 pub fn tool_create_test_network() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
         container_image: Some("python".to_string()),
         enable_network: true,
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     let tool_path = Path::new("workflows/echo/echo.cwl");
     let tool = load_tool(tool_path).unwrap();
@@ -467,12 +491,14 @@ pub fn tool_create_test_network() {
 
 #[fstest(repo = true)]
 pub fn tool_create_same_inout() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec!["echo".to_string(), "message".to_string(), ">".to_string(), "message".to_string()],
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     let tool_path = Path::new("workflows/echo/echo.cwl");
     let tool = load_tool(tool_path).unwrap();
@@ -494,13 +520,15 @@ pub fn tool_create_mount() {
     stage_all(&repo).unwrap();
     commit(&repo, "message").unwrap();
 
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec!["ls".to_string(), ".".to_string(), ">".to_string(), "folder-list.txt".to_string()],
         mount: Some(vec!["test_dir".into()]),
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     let tool_path = Path::new("workflows/ls/ls.cwl");
     let tool = load_tool(tool_path).unwrap();
@@ -512,12 +540,14 @@ pub fn tool_create_mount() {
 
 #[fstest(repo = true)]
 pub fn tool_create_typehint() {
-    let tool_create_args = CreateToolArgs {
+    let tool_create_args = CreateArgs {
         command: vec!["ls".to_string(), "s:.".to_string()], //. would normally be a directory type. we enforce string here
         ..Default::default()
     };
-    let cmd = ToolCommands::Create(tool_create_args);
-    assert!(handle_tool_commands(&cmd).is_ok());
+    let cmd = Commands::Create(tool_create_args);
+    if let Commands::Create(ref args) = cmd {
+        assert!(handle_create_command(args).is_ok());
+    }
 
     let tool_path = Path::new("workflows/ls/ls.cwl");
     let tool = load_tool(tool_path).unwrap();

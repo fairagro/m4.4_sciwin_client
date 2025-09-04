@@ -1,8 +1,7 @@
 #![allow(clippy::disallowed_macros)]
-use assert_cmd::Command;
+
 use commonwl::{load_workflow, requirements::Requirement};
 use cwl_execution::io::create_and_write_file;
-use predicates::prelude::*;
 use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::Path};
@@ -16,9 +15,21 @@ pub fn test_create_workflow() {
     let current = env::current_dir().unwrap();
 
     env::set_current_dir(dir.path()).unwrap();
-    let args = CreateWorkflowArgs {
-        name: "test".to_string(),
-        force: false,
+    let args = CreateArgs {
+      name: Some("test".to_string()),
+      force: false,
+      container_image: None,
+      container_tag: None,
+      is_raw: false,
+      no_commit: false,
+      no_run: false,
+      is_clean: false,
+      no_defaults: false,
+      enable_network: false,
+      inputs: None,
+      outputs: None,
+      mount: None,
+      command: vec![],
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());
@@ -39,21 +50,29 @@ pub fn test_remove_workflow() {
     env::set_current_dir(dir.path()).unwrap();
 
     initialize_project(&None, false).unwrap();
-    create_workflow(&CreateWorkflowArgs {
-        name: "test".to_string(),
+    create_workflow(&CreateArgs {
+        name: Some("test".to_string()),
         force: false,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        no_defaults: false,
+        enable_network: false,
+        inputs: None,
+        outputs: None,
+        mount: None,
+        command: vec![],
     })
     .unwrap();
 
     let target = "workflows/test/test.cwl";
     assert!(fs::exists(target).unwrap());
 
-    list_workflows(&ListWorkflowArgs { list_all: true }).unwrap();
-
-    remove_workflow(&RemoveWorkflowArgs {
-        rm_workflow: vec![target.to_string()],
-    })
-    .unwrap();
+    handle_list_command(&ListCWLArgs { file: None, list_all: true }).unwrap();
+    handle_remove_command(&RemoveCWLArgs { file: target.to_string() }).unwrap();
 
     assert!(!fs::exists(target).unwrap());
     env::set_current_dir(current).unwrap();
@@ -71,9 +90,21 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     create_and_write_file("workflows/calculation/calculation.cwl", CALCULATION_FILE).unwrap();
     create_and_write_file("workflows/plot/plot.cwl", PLOT_FILE).unwrap();
 
-    let args = CreateWorkflowArgs {
-        name: "test".to_string(),
+    let args = CreateArgs {
+        name: Some("test".to_string()),
         force: false,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        no_defaults: false,
+        enable_network: false,
+        inputs: None,
+        outputs: None,
+        mount: None,
+        command: vec![],        
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());
@@ -107,9 +138,21 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     //connect to another dummy workflow to check subworkflows work
-    create_workflow(&CreateWorkflowArgs {
-        name: "dummy".to_string(),
+    create_workflow(&CreateArgs {
+        name: Some("dummy".to_string()),
         force: false,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        no_defaults: false,
+        enable_network: false,
+        inputs: None,
+        outputs: None,
+        mount: None,
+        command: vec![],
     })?;
 
     let dummy_connect_args = ConnectWorkflowArgs {
@@ -124,32 +167,6 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     assert!(wf.requirements.iter().any(|r| matches!(r, Requirement::SubworkflowFeatureRequirement)));
 
     let workflow = load_workflow("workflows/test/test.cwl").unwrap();
-
-    let mut cmd = Command::cargo_bin("s4n")?;
-    let mut _output = cmd
-        .arg("workflow")
-        .arg("ls")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("test"))
-        .stdout(predicate::str::contains("calculation").not())
-        .get_output()
-        .clone();
-
-    let mut _output2 = Command::cargo_bin("s4n")?
-        .arg("workflow")
-        .arg("ls")
-        .arg("-a")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("test"))
-        .stdout(predicate::str::contains("pop"))
-        .stdout(predicate::str::contains("speakers"))
-        .stdout(predicate::str::contains("out"))
-        .stdout(predicate::str::contains("calculation"))
-        .stdout(predicate::str::contains("plot"))
-        .get_output()
-        .clone();
 
     assert!(workflow.has_input("speakers"));
     assert!(workflow.has_input("pop"));
