@@ -10,7 +10,7 @@ use remote_execution::{
     },
     parser::generate_workflow_json_from_cwl,
     rocrate::create_ro_crate,
-    arc_rocrate::workflow_json_to_arc_rocrate,
+    arc_rocrate::{workflow_cwl_to_arc_rocrate},
 };
 use serde_yaml::{Number, Value};
 use std::fs::OpenOptions;
@@ -28,7 +28,8 @@ pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<d
                 rocrate,
                 watch,
                 logout,
-            } => execute_remote_start(file, input_file, *rocrate, *watch, *logout),
+                arc,
+            } => execute_remote_start(file, input_file, *rocrate, *watch, *logout, *arc),
             RemoteSubcommands::Status { workflow_name } => check_remote_status(workflow_name),
             RemoteSubcommands::Download { workflow_name, output_dir } => download_remote_results(workflow_name, output_dir),
             RemoteSubcommands::Rocrate { workflow_name, output_dir, arc } => export_rocrate(workflow_name, output_dir, *arc),
@@ -66,6 +67,8 @@ pub struct LocalExecuteArgs {
     pub file: PathBuf,
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
     pub args: Vec<String>,
+    #[arg(long = "rocrate", help = "Package execution as a local RO-Crate")]
+    pub rocrate: bool,
 }
 
 #[derive(Debug, Args)]
@@ -88,6 +91,8 @@ pub enum RemoteSubcommands {
         logout: bool,
         #[arg(long = "watch", help = "Wait for workflow execution to finish and download result")]
         watch: bool,
+        #[arg(short = 'a', long = "arc", help = "Export RO-Crate in ARC format")]
+        arc: bool,
     },
     #[command(about = "Get the status of Execution on REANA")]
     Status {
@@ -128,10 +133,29 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     } else {
         set_container_engine(ContainerEngine::Docker);
     }
+    let _ = execute_cwlfile(&args.file, &args.args, args.out_dir.clone());
+    if args.rocrate {
+        let cwl_contents = std::fs::read_to_string(&args.file)
+            .unwrap_or_else(|e| panic!("Failed to read CWL file {}: {}", args.file.display(), e));
+        let cwl_yaml: serde_yaml::Value = serde_yaml::from_str(&cwl_contents)
+            .unwrap_or_else(|e| panic!("Failed to parse CWL file as YAML: {e}"));
+        let current_dir = std::env::current_dir()?;
+        let cwl_abs_path = if args.file.is_absolute() {
+            args.file.clone()
+        } else {
+            current_dir.join(&args.file).canonicalize().unwrap_or_else(|_| current_dir.join(&args.file))
+        };
+        workflow_cwl_to_arc_rocrate(
+            &cwl_abs_path,  
+            &args.file,  
+            &args.args,
+            args.out_dir.as_deref().unwrap_or("runs/Out"),
+            &cwl_yaml
+        );
+    }
 
-    execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
+    Ok(())
 }
-
 /// Check status for either single workflow or all of "unwatched" remote workflows
 pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
@@ -210,6 +234,7 @@ pub fn download_remote_results(workflow_name: &str, output_dir: &Option<String>)
 }
 
 pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>, arc: bool) -> Result<(), Box<dyn Error>> {
+
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
     // Get workflow status, only export if finished?
@@ -239,7 +264,25 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>, arc: b
                 .map(|array| array.iter().filter_map(|item| item.get("name")?.as_str().map(String::from)).collect())
                 .unwrap_or_default();
             if arc {
-                workflow_json_to_arc_rocrate(specification,ro_crate_dir.as_deref().unwrap_or("run"));
+                let workflow_file = specification
+                    .get("workflow")
+                    .and_then(|w| w.get("file"))
+                    .and_then(|f| f.as_str())
+                    .unwrap_or_else(|| panic!("❌ Missing workflow file in JSON"));
+                let file_path =  &PathBuf::from(workflow_file);
+                let cwl_contents = std::fs::read_to_string(file_path)
+                    .unwrap_or_else(|e| panic!("Failed to read CWL file {}: {}", file_path.display(), e));
+                let cwl_yaml: serde_yaml::Value = serde_yaml::from_str(&cwl_contents)
+                    .unwrap_or_else(|e| panic!("Failed to parse CWL file as YAML: {e}"));
+                let current_dir = std::env::current_dir()?;
+                let cwl_abs_path = current_dir.join(file_path);
+                workflow_cwl_to_arc_rocrate(
+                    &cwl_abs_path,
+                    file_path,
+                    &[],
+                    ro_crate_dir.as_deref().unwrap_or("runs/Out"),
+                    &cwl_yaml,
+                );
             } else {
                 create_ro_crate(
                     specification,
@@ -342,7 +385,7 @@ pub fn analyze_workflow_logs(logs_str: &str) {
     }
 }
 
-pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
+pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate: bool, watch: bool, logout: bool, arc: bool) -> Result<(), Box<dyn Error>> {
     const POLL_INTERVAL_SECS: u64 = 5;
     const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
     let config_path = PathBuf::from("workflow.toml");
@@ -385,7 +428,7 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<String>, rocrate
                             eprintln!("Error downloading remote results: {e}");
                         }
                         if rocrate {
-                            if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string()), false) {
+                            if let Err(e) = export_rocrate(workflow_name, &Some("rocrate".to_string()), arc) {
                                 eprintln!("Error trying to create a Provenance RO-Crate: {e}");
                             }
                         }

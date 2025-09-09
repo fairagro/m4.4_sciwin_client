@@ -22,6 +22,8 @@ pub struct ArcWorkflow {
 
     // Optional fields
     pub url: Option<String>,
+    //?
+    pub creator: Option<Vec<Value>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,7 +60,7 @@ pub struct WorkflowProtocol {
     pub license: Option<Vec<String>>,
     pub name: Option<String>,
     #[serde(rename = "programmingLanguage")]
-    pub programming_language: Option<Vec<String>>,
+    pub programming_language: Option<Vec<Value>>,
     #[serde(rename = "sdPublisher")]
     pub sd_publisher: Option<String>,
     pub url: Option<String>,
@@ -95,10 +97,10 @@ pub struct ArcRun {
     pub about: Option<Value>,
     pub mentions: Option<Value>,
     //People objects defined in the RUN PERFORMERS section of the isa.run.xlsx file
-    pub creator: Option<Vec<String>>,
+    pub creator: Option<Vec<Value>>,
     //Colletion of all data entities defined in the Annotation Tables of the isa.run.xlsx file
     #[serde(rename = "hasPart")]
-    pub has_part: Option<Vec<String>>,
+    pub has_part: Option<Vec<Value>>,
     #[serde(rename = "measurementMethod")]
     pub measurement_method: Option<String>,
     #[serde(rename = "measurementTechnique")]
@@ -315,6 +317,8 @@ pub struct FormalParameterEntity {
 pub struct FileEntity {
     #[serde(rename = "@id")]
     pub id: String,
+    #[serde(rename = "@type")]
+    pub type_: String,
     pub name: Option<String>,
     #[serde(rename = "exampleOfWork")]
     pub example_of_work: Option<Value>,
@@ -326,6 +330,8 @@ pub struct FileEntity {
 pub struct PropertyValueEntity {
     #[serde(rename = "@id")]
     pub id: String,
+    #[serde(rename = "@type")]
+    pub type_: String,
     #[serde(rename = "@additionalType")]
     pub additional_type: Option<String>,
     pub name: Option<String>,
@@ -357,4 +363,14 @@ pub struct RootDataEntity {
     #[serde(rename = "conformsTo")]
     pub conforms_to: Option<Vec<Value>>,
     pub about: Option<Value>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct RoleEntity {
+    #[serde(rename = "@id")]
+    pub id: String,
+    #[serde(rename = "@type")]
+    pub type_: String, 
+    pub name: String,
+    pub term_code: String,
 }

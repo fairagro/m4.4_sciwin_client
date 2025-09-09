@@ -19,6 +19,7 @@ toml = { workspace = true }
 toml_edit = { workspace = true }
 keyring = { workspace = true }
 walkdir = { workspace = true}
+git2 = { workspace = true}
 
 uuid = { version = "1.17.0", features = ["v4"] }
 chrono = { version = "0.4.41" }
