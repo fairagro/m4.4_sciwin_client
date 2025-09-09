@@ -15,9 +15,11 @@ pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Re
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
             // if tool has a docker pull not necessary to inject a docker pull?
-             if !has_docker_pull(tool) {
+            if !has_docker_pull(tool) {
                 publish_docker_ephemeral(tool)?;
-                inject_docker_pull(tool)?;
+                if !has_docker_pull(tool) {
+                    inject_docker_pull(tool)?;
+                }
             }
         }
     }
