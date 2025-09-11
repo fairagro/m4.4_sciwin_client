@@ -48,11 +48,11 @@ fn prompt(message: &str) -> Option<String> {
     if s.is_empty() { None } else { Some(s.to_string()) }
 }
 
-fn normalize_path(path: &Path) -> String {
+fn normalize(path: &Path) -> String {
     path.to_string_lossy().replace("\\", "/")
 }
 
-fn ensure_person(graph: &mut Vec<serde_json::Value>, person: PersonEntity) -> serde_json::Value {
+fn ensure_person(graph: &mut Vec<serde_json::Value>, person: &PersonEntity) -> serde_json::Value {
     if !graph.iter().any(|v| v.get("@id").and_then(|x| x.as_str()) == Some(&person.id)) {
         // Add affiliation if present
         if let Some(aff) = &person.affiliation {
@@ -67,11 +67,10 @@ fn ensure_person(graph: &mut Vec<serde_json::Value>, person: PersonEntity) -> se
             }
         }
         // Push the person entity itself
-        graph.push(serde_json::to_value(&person).unwrap());
+        graph.push(serde_json::to_value(person).unwrap());
     }
     serde_json::json!({ "@id": person.id })
 }
-
 
 pub fn extract_persons(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>,
     keys: &[&str], class_filter: Option<&str>) -> Option<Vec<serde_json::Value>> {
@@ -87,9 +86,19 @@ pub fn extract_persons(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>,
         let get_str = |keys: &[&str]| keys.iter()
             .find_map(|k| map.get(YamlValue::String(k.to_string())))
             .and_then(|v| v.as_str().map(|s| s.trim().trim_matches('"').to_string()));
-        let given = get_str(&["arc:first name"]);
-        let family = get_str(&["arc:last name"]);
         let name = get_str(&["s:name","name"]);
+        let mut given = get_str(&["arc:first name"]);
+        let mut family = get_str(&["arc:last name"]);
+        // If name exists but given/family do not, try to split name
+        if name.is_some() && given.is_none() && family.is_none() {
+            let parts: Vec<&str> = name.as_ref().unwrap().split_whitespace().collect();
+            if parts.len() >= 2 {
+            given = Some(parts[0].to_string());
+            family = Some(parts[1..].join(" "));
+            } else if parts.len() == 1 {
+            given = Some(parts[0].to_string());
+            }
+        }
         let email = get_str(&["s:email","email","arc:email"])
             .map(|s| s.strip_prefix("mailto:").unwrap_or(&s).to_string());
         let address = get_str(&["arc:address"]);
@@ -123,7 +132,7 @@ pub fn extract_persons(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>,
         let pid = name.as_ref()
             .map(|n| format!("#Person_{}", n.replace(' ', "_")))
             .unwrap_or_else(|| format!("#Person_{}_{}", given.clone().unwrap_or_default(), family.clone().unwrap_or_default()).replace(' ', "_"));
-        refs.push(ensure_person(graph, PersonEntity {
+        refs.push(ensure_person(graph, &PersonEntity {
             id: pid, type_: "Person".into(),
             given_name: given, family_name: family,
             additional_name: None, email,
@@ -134,7 +143,7 @@ pub fn extract_persons(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>,
 }
 
 pub fn extract_creator(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>) -> Option<Vec<serde_json::Value>> {
-    extract_persons(yaml, graph, &["s:creator", "creator", "s:author", "author", "arc:performer"], None)
+    extract_persons(yaml, graph, &["s:creator", "creator", "s:author", "author"], None)
 }
 
 pub fn extract_performer(yaml: &YamlValue, graph: &mut Vec<serde_json::Value>) -> Option<Vec<serde_json::Value>> {
@@ -157,7 +166,7 @@ fn git_creator(graph: &mut Vec<serde_json::Value>) -> Option<Vec<serde_json::Val
                 job_title: None,
                 address: None,
             };
-            return Some(vec![ensure_person(graph, person_entity)]);
+            return Some(vec![ensure_person(graph, &person_entity)]);
         }
     }
     None
@@ -201,37 +210,51 @@ pub fn extract_parameter_values(yaml: &YamlValue, graph: &mut Vec<Value>) -> Vec
     ids
 }
 
-fn extract_has_part(cwl_path: &Path, yaml: &serde_yaml::Value) -> Option<Vec<String>> {
+fn normalize_path(base: &Path, relative: &str) -> PathBuf {
+    let mut components: Vec<&str> = base.components()
+        .map(|c| c.as_os_str().to_str().unwrap())
+        .collect();
+
+    for part in relative.split('/') {
+        match part {
+            ".." => { components.pop(); },
+            "." => {},
+            p => components.push(p),
+        }
+    }
+
+    components.iter().collect()
+}
+
+fn extract_has_part(cwl_path: &Path, yaml: &YamlValue) -> Option<Vec<String>> {
     let mut files: HashSet<String> = HashSet::new();
-    files.insert(cwl_path.to_string_lossy().to_string());
+    files.insert(cwl_path.to_string_lossy().replace("\\", "/"));
+
     if yaml.get("class").and_then(|v| v.as_str()) == Some("Workflow") {
         if let Some(steps) = yaml.get("steps").and_then(|v| v.as_sequence()) {
             let main_folder = cwl_path.parent().unwrap_or(Path::new(""));
-            steps.iter()
-                .filter_map(|step| step.get("run").and_then(|v| v.as_str()))
-                .for_each(|run_val| {
-                    let run_path = main_folder.join(run_val)
-                        .canonicalize()
-                        .unwrap_or_else(|_| main_folder.join(run_val));
-                    files.insert(run_path.to_string_lossy().to_string());
-                });
+
+            for step in steps {
+                if let Some(run_val) = step.get("run").and_then(|v| v.as_str()) {
+                    let run_path = normalize_path(main_folder, run_val);
+                    files.insert(run_path.to_string_lossy().replace("\\", "/"));
+                }
+            }
         }
     }
-    let has_part_vec: Vec<String> = files.into_iter().map(|f| {
-        let f_norm = f.replace("\\", "/");
-        let start_pos = f_norm.find("workflows/").unwrap_or(0);
-        let trimmed = &f_norm[start_pos..];
-        let mut parts: Vec<&str> = trimmed.split('/').collect();
-        if parts.len() > 3 && parts[1] == parts[2] {
-            parts.remove(2);
-        }
-        parts.join("/")
+
+    let mut has_part_vec: Vec<String> = files.into_iter().map(|f| {
+        let start_pos = f.find("workflows/").unwrap_or(0);
+        let trimmed = &f[start_pos..];
+        trimmed.to_string()
     }).collect();
+
+    has_part_vec.sort();
     (!has_part_vec.is_empty()).then_some(has_part_vec)
 }
 
 pub fn cwl_to_arc_workflow(cwl_path: &Path, graph: &mut Vec<Value>,yaml: &YamlValue) -> Option<ArcWorkflow> {
-    let main_entity = normalize_path(cwl_path);
+    let main_entity = normalize(cwl_path);
     let identifier = Path::new(&main_entity).file_stem()?.to_string_lossy().to_string();
     let creator: Vec<serde_json::Value> = 
         extract_creator(yaml, graph).into_iter().flatten()
@@ -270,7 +293,7 @@ pub fn cwl_to_arc_run(cwl_path: &Path, cwl_rel_path: &Path, raw_inputs: &[String
         .and_then(|s| s.to_str())
         .unwrap_or("Workflow")
         .to_string();
-    let mut has_part = vec![normalize_path(cwl_rel_path)];
+    let mut has_part = vec![normalize(cwl_rel_path)];
     let base_dir = cwl_path.parent().unwrap_or(Path::new("")).to_path_buf();
     let collected_inputs = extract_inputs(raw_inputs, cwl_path, yaml);
     let mut dataset_id = String::new();
@@ -284,7 +307,7 @@ pub fn cwl_to_arc_run(cwl_path: &Path, cwl_rel_path: &Path, raw_inputs: &[String
             has_part.push(rel);
         }
         if let Some(parent) = input_path.parent() {
-            let parent_str = normalize_path(parent);
+            let parent_str = normalize(parent);
             if !graph.iter().any(|v| v.get("@id").and_then(|s| s.as_str()) == Some(&parent_str)) {
                 let identifier = parent.file_name().and_then(|s| s.to_str()).unwrap_or("");
                 let latest_modified = fs::read_dir(parent)
@@ -318,7 +341,6 @@ pub fn cwl_to_arc_run(cwl_path: &Path, cwl_rel_path: &Path, raw_inputs: &[String
             }
         }
     });
-    // Add Investigation Dataset to graph?
     let investigation_entity = json!({
         "@id": "./",
         "@type": "Dataset",
@@ -357,7 +379,6 @@ pub fn cwl_to_arc_run(cwl_path: &Path, cwl_rel_path: &Path, raw_inputs: &[String
         variable_measured: None,
     })
 }
-
 
 pub fn extract_inputs(raw_inputs: &[String], cwl_path: &Path,yaml: &serde_yaml::Value) -> Vec<String> {
     // Collect workflow input IDs
@@ -714,197 +735,595 @@ pub fn write_arc_rocrate_metadata(rocrate: &ArcRoCrate, path: &str) -> Result<()
     Ok(())
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_yaml::Value as YamlValue;
-    use serde_json::Value as JsonValue;
+    use serde_json::json;
+    use git2::Repository;
+    use tempfile::{tempdir, NamedTempFile};
+    use std::fs;
     use std::path::Path;
+    use std::time::Duration;
 
-    fn sample_yaml_person() -> YamlValue {
-        serde_yaml::from_str(r#"
-s:creator:
-  - s:name: "Alice Example"
-    s:email: "mailto:alice@example.com"
-    s:affiliation: "Example Org"
-    arc:has role:
-      - arc:term accession: "R1"
-        arc:annotation value: "Researcher"
-"#).unwrap()
+    #[test]
+    fn test_cwl_to_workflow_protocol() {
+        let temp_cwl = NamedTempFile::new().unwrap();
+        let cwl_path = temp_cwl.path();
+        let cwl_rel_path = Path::new("workflows/test_workflow.cwl");
+        let args = vec!["--population".to_string(), "data/population.csv".to_string()];
+
+        let yaml_str = r#"
+        #!/usr/bin/env cwl-runner
+        cwlVersion: v1.2
+        class: Workflow
+        inputs:
+        - id: population
+          type: File
+        - id: speakers
+          type: File
+        outputs:
+        - id: out
+          type: File
+          outputSource: plot/results
+
+        steps:
+        - id: calculation
+          in:
+            population: population
+            speakers: speakers
+          run: '../calculation/calculation.cwl'
+          out:
+          - results
+        - id: plot
+          in:
+            results: calculation/results
+          run: '../plot/plot.cwl'
+          out:
+          - results
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let mut graph: Vec<Value> = Vec::new();
+        let workflow_opt = cwl_to_workflow_protocol(cwl_path, cwl_rel_path, &args, &mut graph, &yaml);
+        assert!(workflow_opt.is_some());
+        let workflow = workflow_opt.unwrap();
+        assert_eq!(workflow.context, "ComputationalWorkflow");
+        assert_eq!(workflow.additional_type, "WorkflowProtocol");
+        assert_eq!(workflow.id, cwl_rel_path.to_string_lossy());
+
+        let input_ids: Vec<String> = workflow.input.unwrap()
+            .iter()
+            .filter_map(|v| v.get("@id").and_then(|s| s.as_str()).map(|s| s.to_string()))
+            .collect();
+        assert!(input_ids.iter().any(|id| id.contains("population")));
+
+        let formal_params: Vec<&Value> = graph.iter()
+            .filter(|v| v.get("@type").and_then(|t| t.as_str()) == Some("FormalParameter"))
+            .collect();
+        assert!(!formal_params.is_empty());
+
+        assert!(workflow.programming_language.is_some());
+        let lang_id = &workflow.programming_language.unwrap()[0]["@id"];
+        assert_eq!(lang_id, "https://w3id.org/workflowhub/workflow-ro-crate#cwl");
     }
 
-    fn sample_yaml_workflow() -> YamlValue {
-        serde_yaml::from_str(r#"
-label: "Test Workflow"
-doc: "A test workflow description."
-class: "Workflow"
-steps:
-  - id: "step1"
-    run: "tool.cwl"
+    #[test]
+    fn test_cwl_to_invocation_with_yaml_only() {
+        let temp_cwl = NamedTempFile::new().unwrap();
+        let cwl_path = temp_cwl.path();
+        let cwl_rel_path = std::path::Path::new("workflows/test_workflow/test_workflow.cwl");
+        let mut temp_inputs = NamedTempFile::new().unwrap();
+        write!(
+            temp_inputs,
+            r#"
+input1:
+  default:
+    location: file1.txt
+input2:
+  default:
+    location: file2.txt
+"#
+        )
+        .unwrap();
+        let raw_inputs = vec!["--input1".to_string(), "file1.txt".to_string(),
+                              "--input2".to_string(), "file2.txt".to_string()];
+        let yaml_str = r#"
 inputs:
-  - id: "#input1"
+- id: input1
+- id: input2
+
 outputs:
-  - id: "out1"
-    outputSource: "step1/out"
-"#).unwrap()
+- id: output1
+  type: File
+  outputSource: plot/output1
+- id: output2
+  type: File
+  outputSource: plot/output2
+"#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let foldername = "run1";
+        let mut graph: Vec<Value> = Vec::new();
+        let invocation = cwl_to_invocation(cwl_path, cwl_rel_path, &yaml, foldername, &raw_inputs, &mut graph)
+            .expect("WorkflowInvocation creation failed");
+        assert_eq!(invocation.name, "run1");
+        assert_eq!(invocation.id, "#WorkflowInvocation_run1_test_workflow_0");
+        assert_eq!(invocation.additional_type, "WorkflowInvocation");
+        let input_ids: Vec<String> = invocation.object.iter()
+            .filter_map(|v| v.get("@id").and_then(|s| s.as_str()).map(String::from))
+            .collect();
+        assert!(input_ids.contains(&"file1.txt".to_string()));
+        assert!(input_ids.contains(&"file2.txt".to_string()));
+        let graph_ids: Vec<String> = graph.iter()
+            .filter_map(|v| v.get("@id").and_then(|s| s.as_str()).map(String::from))
+            .collect();
+        println!("Graph IDs: {:?}", graph_ids);
+        assert!(graph_ids.contains(&"file1.txt".to_string()));
+        assert!(graph_ids.contains(&"file2.txt".to_string()));
+    }
+
+    #[test]
+    fn test_detect_language_cwl() {
+        let id = "workflows/my_workflow.cwl";
+        let (lang_id_opt, entity_opt) = detect_language(id);
+        assert!(lang_id_opt.is_some());
+        let lang_id = lang_id_opt.unwrap();
+        assert_eq!(lang_id, "https://w3id.org/workflowhub/workflow-ro-crate#cwl");
+        assert!(entity_opt.is_some());
+        let entity = entity_opt.unwrap();
+        assert_eq!(entity.id, lang_id);
+        assert_eq!(entity.type_, "ComputerLanguage");
+        assert_eq!(entity.name.unwrap(), "Common Workflow Language");
+        assert_eq!(entity.alternate_name.unwrap(), "CWL");
+        assert_eq!(
+            entity.identifier.unwrap(),
+            json!({ "@id": "https://w3id.org/cwl/v1.2/" })
+        );
+        assert_eq!(
+            entity.url.unwrap(),
+            json!({ "@id": "https://www.commonwl.org/" })
+        );
+    }
+
+    #[test]
+    fn test_data_created_returns_valid_time() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path_str = temp_file.path().to_string_lossy();
+        let created_time = data_created(&path_str).expect("Failed to get creation time");
+        let now = SystemTime::now();
+        assert!(created_time <= now, "Creation time is in the future");
+        assert!(
+            now.duration_since(created_time).unwrap() < Duration::from_secs(20),
+            "Creation time is too far in the past"
+        );
+    }
+
+    #[test]
+    fn test_data_created_nonexistent_file() {
+        let result = data_created("this_file_should_not_exist.txt");
+        assert!(result.is_err(), "Expected error for nonexistent file");
+    }
+
+    #[test]
+    fn test_extract_inputs_from_cli_flags() {
+        let workflow_yaml: YamlValue = serde_yaml::from_str(
+            r#"
+inputs:
+  - id: input1
+  - id: input2
+steps: []
+"#,
+        )
+        .unwrap();
+        let raw_inputs = vec![
+            "--input1".to_string(),
+            "cli_file1.txt".to_string(),
+            "--input2".to_string(),
+            "cli_file2.txt".to_string(),
+        ];
+
+        let temp_file = NamedTempFile::new().unwrap();
+        let result = extract_inputs(&raw_inputs, temp_file.path(), &workflow_yaml);
+        assert_eq!(result, vec!["cli_file1.txt", "cli_file2.txt"]);
+    }
+
+    #[test]
+    fn test_cwl_to_arc_run_basic() {
+        let cwl_path = Path::new("/home/user/project/workflows/main/main.cwl");
+        let cwl_rel_path = Path::new("workflows/main/main.cwl");
+        let tmp_dir = tempdir().unwrap();
+        let data_dir = tmp_dir.path().join("data");
+        fs::create_dir_all(&data_dir).unwrap();
+
+        let population = data_dir.join("population.csv");
+        let speakers = data_dir.join("speakers.csv");
+        fs::File::create(&population).unwrap();
+        fs::File::create(&speakers).unwrap();
+
+        fs::create_dir_all(cwl_path.parent().unwrap()).unwrap();
+        fs::File::create(&cwl_path).unwrap();
+
+        let raw_inputs = vec![
+            "--population".to_string(), population.to_string_lossy().to_string(),
+            "--speakers".to_string(), speakers.to_string_lossy().to_string()
+    ];
+        let foldername = "run1";
+        let yaml_str = r#"
+        #!/usr/bin/env cwl-runner
+        cwlVersion: v1.2
+        class: Workflow
+        inputs:
+        - id: population
+          type: File
+        - id: speakers
+          type: File
+        outputs:
+        - id: out
+          type: File
+          outputSource: plot/results
+
+        steps:
+        - id: calculation
+          in:
+            population: population
+            speakers: speakers
+          run: '../calculation/calculation.cwl'
+          out:
+          - results
+        - id: plot
+          in:
+            results: calculation/results
+          run: '../plot/plot.cwl'
+          out:
+          - results
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let mut graph: Vec<Value> = Vec::new();
+        let arc_run_opt = cwl_to_arc_run(&cwl_path, cwl_rel_path, &raw_inputs, foldername, &yaml, &mut graph);
+        assert!(arc_run_opt.is_some());
+        let arc_run = arc_run_opt.unwrap();
+        assert_eq!(arc_run.id, "runs/run1/");
+        assert_eq!(arc_run.type_, "Dataset");
+        assert_eq!(arc_run.additional_type, "Run");
+        assert_eq!(arc_run.identifier, "run1");
+        let has_part_ids: Vec<String> = arc_run.has_part.unwrap().iter()
+            .filter_map(|v| v.get("@id").and_then(|s| s.as_str()).map(String::from))
+            .collect();
+        assert!(has_part_ids.contains(&"workflows/main/main.cwl".to_string()));
+        assert!(has_part_ids.contains(&population.to_string_lossy().to_string()));
+        assert!(has_part_ids.contains(&speakers.to_string_lossy().to_string()));
+        let investigation = graph.iter()
+            .find(|v| v.get("@type").and_then(|t| t.as_str()) == Some("Dataset")
+                && v.get("additionalType").and_then(|at| at.as_str()) == Some("Investigation"));
+        assert!(investigation.is_some());
+    }
+
+     #[test]
+    fn test_cwl_to_arc_workflow() {
+        let yaml_str = r#"
+        class: Workflow
+        label: Example Workflow
+        doc: This is a test workflow.
+        s:creator:
+          - class: s:Person
+            s:name: Jane Doe
+            s:email: mailto:jane@example.com
+        arc:performer:
+          - class: arc:Person
+            arc:first name: John
+            arc:last name: Doe
+            arc:email: john@example.com
+        steps:
+          - id: step1
+            run: ../tool1/tool1.cwl
+            out: [output1]
+          - id: step2
+            run: ../tool2/tool2.cwl
+            out: [output2]
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let cwl_path = Path::new("/home/user/project/workflows/main/main.cwl");
+        let mut graph: Vec<Value> = Vec::new();
+        let workflow_opt = cwl_to_arc_workflow(cwl_path, &mut graph, &yaml);
+        assert!(workflow_opt.is_some());
+        let workflow = workflow_opt.unwrap();
+        assert_eq!(workflow.main_entity.id, "/home/user/project/workflows/main/main.cwl");
+        assert_eq!(workflow.identifier, "main");
+        assert_eq!(workflow.name.unwrap(), "Example Workflow");
+        assert_eq!(workflow.description.unwrap(), "This is a test workflow.");
+        let has_part = workflow.has_part.unwrap();
+        assert!(has_part.contains(&"workflows/main/main.cwl".to_string()));
+        assert!(has_part.contains(&"workflows/tool1/tool1.cwl".to_string()));
+        assert!(has_part.contains(&"workflows/tool2/tool2.cwl".to_string()));
+        let ids: Vec<String> = graph.iter().filter_map(|v| v.get("@id").and_then(|s| s.as_str()).map(String::from)).collect();
+        assert!(ids.iter().any(|id| id.contains("Jane_Doe")));
+        assert!(ids.iter().any(|id| id.contains("John_Doe")));
+    }
+
+    #[test]
+    fn test_extract_has_part_with_steps() {
+        let yaml_str = r#"
+        class: Workflow
+        steps:
+        - id: shuffleseq
+          in:
+          - id: sequence
+            source: sequence
+          run: ../shuffleseq/shuffleseq.cwl
+          out:
+          - Yeast_shuffled
+        - id: fasta_to_tabular
+          in:
+          - id: yeast_shuffled_fasta
+            source: shuffleseq/Yeast_shuffled
+          run: ../fasta_to_tabular/fasta_to_tabular.cwl
+          out:
+          - Yeast_shuffled
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let main_path = Path::new("/home/user/project/workflows/main/main.cwl");
+        let result = super::extract_has_part(main_path, &yaml).unwrap();
+        let mut normalized: Vec<String> = result.iter().map(|s| s.replace("\\", "/")).collect();
+        normalized.sort();
+        assert!(normalized.iter().any(|p| p.ends_with("workflows/main/main.cwl")));
+        assert!(normalized.iter().any(|p| p.ends_with("workflows/shuffleseq/shuffleseq.cwl")));
+        assert!(normalized.iter().any(|p| p.ends_with("workflows/fasta_to_tabular/fasta_to_tabular.cwl")));
+    }
+
+    #[test]
+    fn test_extract_has_part_no_steps_non_workflow() {
+        let yaml_str = r#"
+        class: CommandLineTool
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let main_path = Path::new("workflows/tool/tool.cwl");
+        let result = super::extract_has_part(main_path, &yaml).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("workflows/tool/tool.cwl"));
+    }
+
+    #[test]
+    fn test_extract_has_part_removes_duplicate_folder_segment() {
+        let yaml_str = r#"
+        class: Workflow
+        steps: []
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let main_path = Path::new("workflows/main/main.cwl");
+        let result = super::extract_has_part(main_path, &yaml).unwrap();
+        assert_eq!(result[0], "workflows/main/main.cwl");
+    }
+
+    #[test]
+    fn test_extract_parameter_values() {
+        let yaml_str = r#"
+            arc:has process sequence:
+            - class: arc:process sequence
+              arc:name: "script.fsx"
+              arc:has parameter value: 
+                - class: arc:process parameter value
+                  arc:has parameter:
+                    - class: arc:protocol parameter
+                      arc:has parameter name: 
+                      - class: arc:parameter name
+                        arc:term accession: "http://purl.obolibrary.org/obo/NCIT_C43582"
+                        arc:term source REF: "NCIT"
+                        arc:annotation value: "Data Transformation"
+                  arc:value: 
+                    - class: arc:ontology annotation
+                      arc:term accession: "http://purl.obolibrary.org/obo/NCIT_C64911"
+                      arc:term source REF: "NCIT"
+                      arc:annotation value: "Addition"
+            "#;
+
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let mut graph: Vec<Value> = Vec::new();
+        let ids = super::extract_parameter_values(&yaml, &mut graph);
+        assert_eq!(ids.len(), 1);
+        assert_eq!(ids[0], "#ParameterValue_data_transformation_Addition");
+        let entity = graph.iter().find(|v| v["@id"] == ids[0]).unwrap();
+        assert_eq!(entity["@type"], "PropertyValue");
+        assert_eq!(entity["@additionalType"], "ParameterValue");
+        assert_eq!(entity["name"], "data transformation");
+        assert_eq!(entity["value"], "Addition");
+        assert_eq!(entity["propertyID"], "http://purl.obolibrary.org/obo/NCIT_C43582");
+        assert_eq!(entity["valueReference"], "http://purl.obolibrary.org/obo/NCIT_C64911");
+    }
+
+    #[test]
+    fn test_git_creator_uses_local_config() {
+        let dir = tempdir().unwrap();
+        let repo_path = dir.path();
+        let repo = Repository::init(repo_path).unwrap();
+        {
+            let mut config = repo.config().unwrap();
+            config.set_str("user.name", "Test User").unwrap();
+            config.set_str("user.email", "test@example.com").unwrap();
+        }
+        let orig_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(repo_path).unwrap();
+        let mut graph: Vec<Value> = Vec::new();
+        let result = super::git_creator(&mut graph);
+        std::env::set_current_dir(orig_dir).unwrap();
+        assert!(result.is_some());
+        let persons = result.unwrap();
+        assert_eq!(persons.len(), 1);
+        let person = &persons[0];
+        assert_eq!(person["@id"], "#Person_Test_User");
+        let found = graph.iter().any(|v| v["@id"] == "#Person_Test_User");
+        assert!(found, "Graph should contain the Test User person entity");
+    }
+   
+    #[test]
+    fn test_extract_creator_with_author() {
+        let yaml_str = r#"
+            s:author:
+            - class: s:Person
+              s:identifier: "https://orcid.org/0000-0000-0000-0000"
+              s:email: "mailto:doe@mail.com"
+              s:name: "Jane Doe"
+            "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let mut graph: Vec<serde_json::Value> = Vec::new();
+        let refs = extract_creator(&yaml, &mut graph).expect("Should extract creator");
+        let expected_id = "#Person_Jane_Doe";
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0]["@id"], expected_id);
+        let person = graph.iter().find(|v| v["@id"] == expected_id).unwrap();
+        assert_eq!(person["@type"], "Person");
+        assert_eq!(person["givenName"], "Jane");
+        assert_eq!(person["familyName"], "Doe");
+        assert_eq!(person["email"], "doe@mail.com");
+        assert_eq!(person["@id"], "#Person_Jane_Doe");
+        assert!(person["affiliation"].is_null());
+        assert!(person["jobTitle"].is_null());
+    }
+
+    #[test]
+    fn test_extract_performer_full_entry() {
+        let yaml_str = r#"
+        arc:performer:
+        - class: arc:Person
+          arc:first name: "John"
+          arc:last name: "Doe"
+          arc:email: "doe@mail.de "
+          arc:affiliation: "Institute xy"
+          arc:has role:
+          - class: arc:role
+            arc:term accession: "https://credit.niso.org/contributor-roles/formal-analysis/"
+            arc:annotation value: "Formal analysis"
+        "#;
+        let yaml: YamlValue = serde_yaml::from_str(yaml_str).unwrap();
+        let mut graph = Vec::new();
+        let result = extract_performer(&yaml, &mut graph).unwrap();
+        assert_eq!(result.len(), 1);
+        let person_id = "#Person_John_Doe";
+        let person = graph.iter().find(|v| v["@id"] == person_id).unwrap();
+        assert_eq!(person["givenName"], "John");
+        assert_eq!(person["familyName"], "Doe");
+        assert_eq!(person["email"], "doe@mail.de");
+        assert_eq!(person["@type"], "Person");
+        let org_id = "#Organization_Institute_xy";
+        let org = graph.iter().find(|v| v["@id"] == org_id).unwrap();
+        assert_eq!(org["@type"], "Organization");
+        assert_eq!(org["name"], "Institute xy");
+        let role_id = "https://credit.niso.org/contributor-roles/formal-analysis/";
+        let role = graph.iter().find(|v| v["@id"] == role_id).unwrap();
+        assert_eq!(role["@type"], "DefinedTerm");
+        assert_eq!(role["name"], "Formal analysis");
+        assert_eq!(role["term_code"], role_id);
+    }
+
+    #[test]
+    fn test_add_person_without_affiliation() {
+        let mut graph = Vec::new();
+        let person = PersonEntity {
+            id: "person:123".to_string(),
+            type_: "Person".to_string(),
+            given_name: Some("Alice".to_string()),
+            family_name: Some("Wonderland".to_string()),
+            additional_name: None,
+            email: Some("alice@example.com".to_string()),
+            affiliation: None,
+            job_title: None,
+            address: None,
+        };
+        let result = ensure_person(&mut graph, &person);
+        assert_eq!(result, json!({ "@id": "person:123" }));
+        assert_eq!(graph.len(), 1);
+        assert_eq!(graph[0]["@id"], "person:123");
+        assert_eq!(graph[0]["@type"], "Person");
+        assert_eq!(graph[0]["givenName"], "Alice");
+        assert_eq!(graph[0]["familyName"], "Wonderland");
+        assert_eq!(graph[0]["email"], "alice@example.com");
+    }
+
+    #[test]
+    fn test_add_person_with_affiliation() {
+        let mut graph = Vec::new();
+        let affiliation = json!({
+            "@id": "org:999",
+            "name": "Institution xz"
+        });
+        let person = PersonEntity {
+            id: "person:456".to_string(),
+            type_: "Person".to_string(),
+            given_name: Some("Bob".to_string()),
+            family_name: Some("Smith".to_string()),
+            affiliation: Some(affiliation),
+            additional_name: None,
+            email: Some("bob@example.com".to_string()),
+            job_title: None,
+            address: None,
+        };
+        ensure_person(&mut graph, &person);
+        let ids: Vec<_> = graph.iter().map(|v| v["@id"].as_str().unwrap()).collect();
+        assert!(ids.contains(&"org:999"));
+        assert!(ids.contains(&"person:456"));
+        let org = graph.iter().find(|v| v["@id"] == "org:999").unwrap();
+        assert_eq!(org["@type"], "Organization");
+        assert_eq!(org["name"], "Institution xz");
+        let bob = graph.iter().find(|v| v["@id"] == "person:456").unwrap();
+        assert_eq!(bob["@type"], "Person");
+        assert_eq!(bob["givenName"], "Bob");
+        assert_eq!(bob["familyName"], "Smith");
+        assert_eq!(bob["email"], "bob@example.com");
+    }
+
+    #[test]
+    fn test_no_duplicates_when_person_exists() {
+        let mut graph = Vec::new();
+        let person = PersonEntity {
+            id: "person:789".to_string(),
+            type_: "Person".to_string(),
+            given_name: Some("Charlie".to_string()),
+            family_name: Some("Brown".to_string()),
+            additional_name: None,
+            email: None,
+            affiliation: None,
+            job_title: None,
+            address: None,
+        };
+        ensure_person(&mut graph, &person);
+        let len_after_first = graph.len();
+        ensure_person(&mut graph, &person);
+        assert_eq!(graph.len(), len_after_first, "Graph should not grow with duplicates");
+        let count = graph.iter().filter(|v| v["@id"] == "person:789").count();
+        assert_eq!(count, 1);
     }
 
     #[test]
     fn test_ensure_creativeworks_adds_missing_entities() {
         let mut graph = Vec::new();
         let ids = ensure_creativeworks(&mut graph);
-        assert_eq!(ids.len(), CREATIVE_WORKS.len());
-        for id in ids {
-            assert!(graph.iter().any(|v| v["@id"] == id["@id"]));
-        }
-    }
-
-    #[test]
-    fn test_ensure_person_adds_person_and_affiliation() {
-        let mut graph = Vec::new();
-        let person_id = "#Person_Alice".to_string();
-        let person_ref = ensure_person(
-            &mut graph,
-            person_id.clone(),
-            Some("Alice".to_string()),
-            Some("Example".to_string()),
-            Some("alice@example.com".to_string()),
-            Some("Example Org".to_string()),
-            None,
-            Some("123 Street".to_string()),
+        assert_eq!(
+            ids,
+            vec![
+                json!({"@id": "https://w3id.org/ro/wfrun/process/0.1"}),
+                json!({"@id": "https://w3id.org/ro/wfrun/workflow/0.1"}),
+                json!({"@id": "https://w3id.org/workflowhub/workflow-ro-crate/1.0"})
+            ]
         );
-
-        assert_eq!(person_ref["@id"], person_id);
-        assert!(graph.iter().any(|v| v["@id"] == person_id));
-        assert!(graph.iter().any(|v| v["@id"].as_str().unwrap().starts_with("#Organization_")));
+        assert_eq!(graph.len(), 3);
+        let process_run = graph.iter().find(|v| v["@id"] == "https://w3id.org/ro/wfrun/process/0.1").unwrap();
+        assert_eq!(process_run["@type"], "CreativeWork");
+        assert_eq!(process_run["name"], "Process Run Crate");
+        assert_eq!(process_run["version"], "0.1");
     }
 
     #[test]
-    fn test_extract_creator_returns_person_ref() {
-        let yaml = sample_yaml_person();
-        let mut graph = Vec::new();
-        let creators = extract_creator(&yaml, &mut graph).unwrap();
-        assert_eq!(creators.len(), 1);
-        assert!(graph.iter().any(|v| v["@id"] == creators[0]["@id"]));
-    }
-
-    #[test]
-    fn test_extract_performer_filters_class() {
-        let yaml = sample_yaml_person();
-        let mut graph = Vec::new();
-        let performers = extract_performer(&yaml, &mut graph);
-        assert!(performers.is_none()); // class is not "arc:Person", so should be skipped
-    }
-
-    #[test]
-    fn test_extract_parameter_values_creates_entities() {
-        let yaml: YamlValue = serde_yaml::from_str(r#"
-arc:has process sequence:
-  - arc:has parameter value:
-      - arc:has parameter:
-          - arc:has parameter name:
-              - arc:annotation value: "param1"
-                arc:term accession: "PV1"
-        arc:value:
-          - arc:annotation value: "value1"
-"#).unwrap();
-
-        let mut graph = Vec::new();
-        let ids = extract_parameter_values(&yaml, &mut graph);
-        assert_eq!(ids.len(), 1);
-        assert!(graph.iter().any(|v| v["@id"] == ids[0]));
-    }
-
-    #[test]
-    fn test_cwl_to_arc_workflow_creates_workflow() {
-        let yaml = sample_yaml_workflow();
-        let mut graph = Vec::new();
-        let workflow = cwl_to_arc_workflow(Path::new("workflows/test.cwl"), &mut graph, &yaml).unwrap();
-        assert_eq!(workflow.identifier, "test");
-        assert_eq!(workflow.name.as_deref(), Some("Test Workflow"));
-        assert_eq!(workflow.description.as_deref(), Some("A test workflow description."));
-    }
-
-
-    #[test]
-    fn test_workflow_cwl_to_arc_rocrate_creates_graph() {
-        let yaml = sample_yaml_workflow();
-        let folder = "test_rocrate";
-        let raw_inputs: Vec<String> = vec![];
-        let rocrate = workflow_cwl_to_arc_rocrate(Path::new("workflows/test.cwl"), "contents", Path::new("workflows/test.cwl"), &raw_inputs, folder, &yaml);
-        // The RO-Crate should contain @graph
-        assert!(!rocrate.graph.is_empty());
-        // Should include the RootDataEntity
-        assert!(rocrate.graph.iter().any(|v| v.get("@id").map(|id| id == "ro-crate-metadata.json").unwrap_or(false)));
-    }
-
-     fn sample_cwl_yaml() -> YamlValue {
-        serde_yaml::from_str(r#"
-class: Workflow
-label: "Test Workflow"
-doc: "A workflow for testing."
-steps:
-  - id: "step1"
-    run: "tool.cwl"
-inputs:
-  - id: "#input1"
-outputs:
-  - id: "out1"
-    outputSource: "step1/out"
-"#).unwrap()
-    }
-
-    #[test]
-    fn test_cwl_to_arc_run_creates_run_entity() {
-        let yaml = sample_cwl_yaml();
-        let cwl_path = Path::new("workflows/test.cwl");
-        let cwl_rel_path = Path::new("workflows/test.cwl");
-        let raw_inputs = vec!["--input1".to_string(), "file1.txt".to_string()];
-        let foldername = "run_test";
-        let mut graph: Vec<JsonValue> = Vec::new();
-
-        let run = cwl_to_arc_run(cwl_path, cwl_rel_path, &raw_inputs, foldername, &yaml, &mut graph)
-            .expect("Failed to create ArcRun");
-
-        // Check basic properties
-        assert_eq!(run.id, format!("runs/{}/", foldername));
-        assert_eq!(run.type_, "Dataset");
-        assert_eq!(run.additional_type, "Run");
-
-        // The has_part should contain at least the CWL file
-        assert!(run.has_part.as_ref().unwrap().iter()
-            .any(|v| v["@id"].as_str().unwrap().contains("workflows/test.cwl")));
-
-        // The conforms_to field should contain all three creative works
-        let conforms = run.conforms_to.as_ref().unwrap();
-        assert_eq!(conforms.len(), CREATIVE_WORKS.len());
-    }
-
-    #[test]
-    fn test_cwl_to_invocation_creates_invocation_entity() {
-        let yaml = sample_cwl_yaml();
-        let cwl_path = Path::new("workflows/test.cwl");
-        let cwl_rel_path = Path::new("workflows/test.cwl");
-        let raw_inputs = vec!["--input1".to_string(), "file1.txt".to_string()];
-        let foldername = "inv_test";
-        let mut graph: Vec<JsonValue> = Vec::new();
-
-        let invocation = cwl_to_invocation(cwl_path, cwl_rel_path, &yaml, foldername, &raw_inputs, &mut graph)
-            .expect("Failed to create WorkflowInvocation");
-
-        // Check id and type
-        assert!(invocation.id.contains("WorkflowInvocation"));
-        assert!(invocation.type_.contains(&"LabProcess".to_string()));
-
-        // The result and object arrays should contain file references
-        assert!(!invocation.result.is_empty());
-        assert!(!invocation.object.is_empty());
-
-        // Parameter values should be included if defined
-        let param_values = invocation.parameter_value.as_ref().unwrap();
-        assert!(!param_values.is_empty());
+    fn test_ensure_creativeworks_does_not_duplicate() {
+        let mut graph = vec![json!({
+            "@id": "https://w3id.org/ro/wfrun/process/0.1",
+            "@type": "CreativeWork",
+            "name": "Process Run Crate",
+            "version": "0.1"
+        })];
+        let initial_len = graph.len();
+        ensure_creativeworks(&mut graph);
+        assert_eq!(graph.len(), initial_len + 2);
+        let count = graph.iter().filter(|v| v["@id"] == "https://w3id.org/ro/wfrun/process/0.1").count();
+        assert_eq!(count, 1);
     }
 
 }
-    */
+    
