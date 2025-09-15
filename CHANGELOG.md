@@ -1,4 +1,6 @@
 # Unreleased
+## 🚀 Features
+- Restructured CLI Commands #158 #151
 
 # v0.8.0
 ## 🚀 Features
