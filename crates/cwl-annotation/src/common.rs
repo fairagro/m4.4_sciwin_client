@@ -10,8 +10,8 @@ use dialoguer::{Select, FuzzySelect, Confirm, Input};
 use reqwest::{get, Client};
 use serde_yaml::{Mapping, Value};
 use urlencoding::encode;
-use crate::container::{contains_docker_requirement, annotate_container};
-use crate::consts::{SCHEMAORG_NAMESPACE, SCHEMAORG_SCHEMA, ARC_NAMESPACE, ARC_SCHEMA, REST_URL_TS, TS_COLLECTION_ID};
+use crate::consts::{SCHEMAORG_NAMESPACE, SCHEMAORG_SCHEMA, ARC_NAMESPACE, ARC_SCHEMA, 
+    REST_URL_TS, TS_COLLECTION_ID, SPDX};
 use util::is_cwl_file;
 
 
@@ -20,11 +20,6 @@ pub fn annotate_default(tool_name: &str) -> Result<(), Box<dyn Error>> {
     annotate(tool_name, "$schemas", None, Some(SCHEMAORG_SCHEMA))?;
     annotate(tool_name, "$namespaces", Some("arc"), Some(ARC_NAMESPACE))?;
     annotate(tool_name, "$schemas", None, Some(ARC_SCHEMA))?;
-    let filename = get_filename(tool_name)?;
-
-    if contains_docker_requirement(&filename)? {
-        annotate_container(tool_name, "Docker Container")?;
-    }
     Ok(())
 }
 
@@ -225,7 +220,7 @@ pub async fn ts_recommendations(
 
 pub async fn ask_for_license() -> Result<Option<(String, String)>, Box<dyn Error>> {
     // Fetch the SPDX license list
-    let response = get("https://spdx.org/licenses/licenses.json").await?;
+    let response = get(SPDX).await?;
     let json: serde_json::Value = response.json().await?;
 
     // Extract and format license entries

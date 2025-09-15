@@ -1,6 +1,8 @@
-use crate::commands::{AnnotateCommands, CreateToolArgs, ExecuteCommands, InitArgs, InstallPackageArgs, PackageArgs, ToolCommands, WorkflowCommands};
+use crate::commands::{
+    AnnotateCommands, ExecuteCommands, InitArgs, InstallPackageArgs, ListCWLArgs, PackageArgs, RemoveCWLArgs, CreateArgs, ConnectWorkflowArgs, VisualizeWorkflowArgs
+};
 use clap::{Command, Parser, Subcommand};
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use std::io;
 
 #[derive(Parser, Debug)]
@@ -26,18 +28,20 @@ pub struct Cli {
 pub enum Commands {
     #[command(about = "Initializes project folder structure and repository")]
     Init(InitArgs),
-    #[command(about = "Provides commands to create and work with CWL CommandLineTools")]
-    Tool {
-        #[command(subcommand)]
-        command: ToolCommands,
-    },
-    #[command(hide = true)]
-    Run(CreateToolArgs),
-    #[command(about = "Provides commands to create and work with CWL Workflows")]
-    Workflow {
-        #[command(subcommand)]
-        command: WorkflowCommands,
-    },
+    #[command(about = "Lists either all CWL Files or details to a given file", visible_alias = "ls")]
+    List(ListCWLArgs),
+    #[command(about = "Removes a CWL File from the workflows Directory", visible_alias = "rm")]
+    Remove(RemoveCWLArgs),
+    #[command(about = "Creates a new CWL File or Workflow")]
+    Create(CreateArgs),
+    #[command(about = "Connects a workflow node")]
+    Connect(ConnectWorkflowArgs),
+    #[command(about = "Disconnects a workflow node")]
+    Disconnect(ConnectWorkflowArgs),
+    #[command(about = "Visualizes a workflow")]
+    Visualize(VisualizeWorkflowArgs),
+    #[command(about = "Saves a workflow")]
+    Save(CreateArgs),
     #[command(about = "Installs a workflow as submodule", visible_alias = "i")]
     Install(InstallPackageArgs),
     #[command(about = "Removes an installed workflow")]
@@ -51,7 +55,6 @@ pub enum Commands {
     Annotate {
         #[command(subcommand)]
         command: Option<AnnotateCommands>,
-        /// Name of the tool or workflow to annotate
         #[arg(value_name = "TOOL_NAME", required = false)]
         tool_name: Option<String>,
     },
