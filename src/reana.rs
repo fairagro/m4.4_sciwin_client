@@ -14,11 +14,27 @@ pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Re
     for item in &mut workflow_json.workflow.specification.graph {
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
-            publish_docker_ephemeral(tool)?;
-            inject_docker_pull(tool)?;
+            // if tool has a docker pull not necessary to inject a docker pull?
+            if !has_docker_pull(tool) {
+                publish_docker_ephemeral(tool)?;
+                if !has_docker_pull(tool) {
+                    inject_docker_pull(tool)?;
+                }
+            }
         }
     }
     Ok(())
+}
+
+///checks if tool has a docker pull already
+fn has_docker_pull(tool: &CommandLineTool) -> bool {
+    tool.requirements.iter().any(|req| {
+        if let Requirement::DockerRequirement(docker_req) = req {
+            docker_req.docker_pull.is_some()
+        } else {
+            false
+        }
+    })
 }
 
 /// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>

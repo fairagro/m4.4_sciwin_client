@@ -9,8 +9,7 @@ use serde_yaml::{Number, Value};
 use std::{
     collections::HashMap,
     error::Error,
-    fs::{self, OpenOptions},
-    io::{BufRead, BufReader, Write},
+    fs::self,
     path::PathBuf,
     thread,
     time::Duration,
@@ -128,7 +127,6 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
 }
 
-/// Check status for either single workflow or all of "unwatched" remote workflows
 pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn Error>> {
     let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
     let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
@@ -137,17 +135,12 @@ pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn
     if let Some(name) = workflow_name {
         evaluate_workflow_status(&reana, name, true)?;
     } else {
-        let file_path = status_file_path();
-        if !file_path.exists() {
-            return Err(format!("Workflow status file not found at path: {file_path:?}").into());
+        let workflows = get_saved_workflows(&reana_instance);
+        if workflows.is_empty() {
+            return Err(format!("No workflows saved for REANA instance '{reana_instance}'").into());
         }
-        let file = fs::File::open(&file_path)?;
-        let reader = BufReader::new(file);
-        for line in reader.lines().map_while(Result::ok) {
-            let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                evaluate_workflow_status(&reana, trimmed, false)?;
-            }
+        for name in workflows {
+            evaluate_workflow_status(&reana, &name, false)?;
         }
     }
     Ok(())
@@ -274,15 +267,35 @@ pub fn export_rocrate(workflow_name: &str, ro_crate_dir: &Option<String>) -> Res
 }
 
 fn status_file_path() -> PathBuf {
-    std::env::temp_dir().join("workflow_status_list.txt")
+    std::env::temp_dir().join("workflow_status_list.json")
 }
 
-fn save_workflow_name(name: &str) -> std::io::Result<()> {
+fn save_workflow_name(instance_url: &str, name: &str) -> std::io::Result<()> {
     let file_path = status_file_path();
-    let mut file = OpenOptions::new().create(true).append(true).open(&file_path)?;
-    writeln!(file, "{name}")?;
+    let mut workflows: HashMap<String, Vec<String>> = if file_path.exists() {
+        let content = fs::read_to_string(&file_path)?;
+        serde_json::from_str(&content).unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
+    let entry = workflows.entry(instance_url.to_string()).or_default();
+    if !entry.contains(&name.to_string()) {
+        entry.push(name.to_string());
+    }
+    fs::write(&file_path, serde_json::to_string_pretty(&workflows)?)?;
     Ok(())
 }
+
+fn get_saved_workflows(instance_url: &str) -> Vec<String> {
+    let file_path = status_file_path();
+    if !file_path.exists() {
+        return vec![];
+    }
+    let content = fs::read_to_string(&file_path).unwrap_or_default();
+    let workflows: HashMap<String, Vec<String>> = serde_json::from_str(&content).unwrap_or_default();
+    workflows.get(instance_url).cloned().unwrap_or_default()
+}
+
 
 fn get_or_prompt_credential(service: &str, key: &str, prompt: &str) -> Result<String, Box<dyn Error>> {
     let entry = Entry::new(service, key)?;
@@ -407,7 +420,8 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
             thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
         }
     } else {
-        save_workflow_name(workflow_name)?;
+        //save_workflow_name(workflow_name)?;
+        save_workflow_name(&reana_instance, workflow_name)?;
     }
     if logout && let Err(e) = logout_reana() {
         eprintln!("Error logging out of reana instance: {e}");
