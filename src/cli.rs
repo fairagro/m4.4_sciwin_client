@@ -28,12 +28,12 @@ pub struct Cli {
 pub enum Commands {
     #[command(about = "Initializes project folder structure and repository")]
     Init(InitArgs),
+    #[command(about = "Creates a new CWL File or Workflow")]
+    Create(CreateArgs),
     #[command(about = "Lists either all CWL Files or details to a given file", visible_alias = "ls")]
     List(ListCWLArgs),
     #[command(about = "Removes a CWL File from the workflows Directory", visible_alias = "rm")]
     Remove(RemoveCWLArgs),
-    #[command(about = "Creates a new CWL File or Workflow")]
-    Create(CreateArgs),
     #[command(about = "Connects a workflow node")]
     Connect(ConnectWorkflowArgs),
     #[command(about = "Disconnects a workflow node")]
