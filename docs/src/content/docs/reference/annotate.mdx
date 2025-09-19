@@ -1,5 +1,7 @@
 --- 
-title: Annotate command reference
+title: annotate
+sidebar:
+  order: 11
 ---
 
 The `s4n annotate` command is used to annotate CWL files with metadata (see [CWL documentation: Metadata and Authorship](https://www.commonwl.org/user_guide/topics/metadata-and-authorship.html) and [ARC CWL Metadata](https://nfdi4plants.github.io/nfdi4plants.knowledgebase/cwl/cwl-metadata/)). It is recommended to annotate CWL files with minimal information.
@@ -13,18 +15,15 @@ The `s4n annotate` command is used to annotate CWL files with metadata (see [CWL
       name         Annotates name of a tool or workflow
       description  Annotates description of a tool or workflow
       license      Annotates license of a tool or workflow
-      schema       Annotates schema of a tool or workflow
-      namespace    Annotates namespace of a tool or workflow
-      author       Annotates author of a tool or workflow (schema.org)
-      contributor  Annotates contributor of a tool or workflow (schema.org)
       performer    Annotates performer of a tool or workflow (arc ontology)
-      process      Annotates a process (arc ontolology)
-      container    Annotates container information of a tool or workflow
-      custom       Annotates a CWL file with an custom field and value
+      process      Annotates a process arc ontology
       help         Print this message or the help of the given subcommand(s)
 
-      Arguments:
-        [TOOL_NAME]  Name of the tool or workflow to annotate
+    Arguments:
+      [TOOL_NAME]  
+
+    Options:
+      -h, --help  Print help
     ```
 
 ## `annotate name`
@@ -128,160 +127,6 @@ The `s4n annotate license` command annotates a CWL file with a license.
     ```  
 :::
 
-## `annotate schema`
-
-The `s4n annotate schema` command annotates a CWL file with a schema.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates schema of a tool or workflow
-
-    Usage: s4n annotate schema --schema <SCHEMA> <CWL_NAME>
-
-    Arguments:
-      <CWL_NAME>  Name of the CWL file
-
-    Options:
-      -s, --schema <SCHEMA>  Schema to annotate
-      -h, --help             Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate schema main -s "https://schema.org/version/latest/schemaorg-current-https.rdf"
-    ```
-    The command will annotate main.cwl with the schema.org schema.
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    $schemas:
-      - https://schema.org/version/latest/schemaorg-current-https.rdf
-    ```  
-:::
-   
-## `annotate namespace`
-
-The `s4n annotate namespace` command annotates a CWL file with a namespace.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates schema of a tool or workflow
-
-    Usage: s4n annotate namespace [OPTIONS] --namespace <NAMESPACE> <CWL_NAME>
-
-    Arguments:
-      <CWL_NAME>  Name of the CWL file
-
-    Options:
-      -n, --namespace <NAMESPACE>  Namespace to annotate
-      -s, --short <SHORT>          Namespace abbreviation to annotate
-      -h, --help                   Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate namespace main -n "http://edamontology.org/" -s "edam"
-    ```
-    The command will annotate main.cwl with the edam namespace.
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    $namespaces:
-      edam: http://edamontology.org/
-    ``` 
-:::
-
-## `annotate author`
-
-The `s4n annotate author` command annotates a CWL file with author information (based on schema.org). The minimum requirement is providing a name for the author, the other fields are optional. If the schema.org namespace and schema are not yet present, they are added to the CWL file.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates author of a tool or workflow (schema.org)
-
-    Usage: s4n annotate author [OPTIONS] --name <NAME> <CWL_NAME>
-
-    Arguments:
-      <CWL_NAME>  Name of the CWL file
-
-    Options:
-      -n, --name <NAME>  Name of the person 
-      -m, --mail <MAIL>  Email of the person
-      -i, --id <ID>      Identifier of the person, e.g., ORCID
-      -h, --help         Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate author main -n "Jane Doe" -m "doe@mail.de" -i "https://orcid.org/0000-0000-0000-0000"
-    ```
-    The command will annotate main.cwl with author Jane Doe.
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    s:author:
-      - class: s:Person
-        s:identifier: https://orcid.org/0000-0000-0000-0000
-        s:email: mailto:doe@mail.de
-        s:name: Jane Doe
-
-    $namespaces:
-      s: https://schema.org/
-
-    $schemas:
-      - https://schema.org/version/latest/schemaorg-current-https.rdf
-    ``` 
-:::
-
-## `annotate contributor`
-
-The `s4n annotate contributor` command annotates a CWL file with contributor information (based on schema.org). The fields are similar to the author fields. If the schema.org namespace and schema are not yet present, they are added to the CWL file.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates author of a tool or workflow (schema.org)
-
-    Usage: s4n annotate contributor [OPTIONS] --name <NAME> <CWL_NAME>
-
-    Arguments:
-      <CWL_NAME>  Name of the CWL file
-
-    Options:
-      -n, --name <NAME>  Name of the person 
-      -m, --mail <MAIL>  Email of the person
-      -i, --id <ID>      Identifier of the person, e.g., ORCID
-      -h, --help         Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate contributor main -n "John Doe" -m "jdoe@mail.de" -i "http://orcid.org/0000-0000-0000-0001"
-    ```
-    The command will annotate main.cwl with contributor John Doe.
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    s:contributor:
-      - class: s:Person
-        s:identifier: https://orcid.org/0000-0000-0000-0001
-        s:email: mailto:jdoe@mail.de
-        s:name: John Doe
-
-    $namespaces:
-    s: https://schema.org/
-
-    $schemas:
-      - https://schema.org/version/latest/schemaorg-current-https.rdf
-    ``` 
-:::
 ## `annotate performer`
 
 The `s4n annotate performer` command annotates a CWL file with performer information (based on ARC schema). A performer can be an individual or team behind the development or execution of the workflow. The minimum requirement is providing a first and a last name for the performer, the other fields are optional. The role field can be annotated with an ontology. If the ARC namespace and schema are not yet present, they are added to the CWL file.
@@ -394,79 +239,5 @@ The `s4n annotate process` command annotates a CWL file with a process sequence 
 
     $schemas:
       - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
-    ``` 
-:::
-
-## `annotate container`
-
-The `s4n annotate container` command annotates a CWL file with container information.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates container information of a tool or workflow
-
-    Usage: s4n annotate container --container <CONTAINER> <CWL_NAME>
-
-    Arguments:
-      <CWL_NAME> Name of the CWL file
-
-    Options:
-      -c, --container <CONTAINER>  Annotation value for the container
-      -h, --help                   Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate container main -c "Docker container" 
-    ```
-    The command will annotate main.cwl with the container annotation "Docker container".
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    arc:has technology type:
-    - class: arc:technology type
-      arc:annotation value: Docker container
-
-    $namespaces:
-      arc: https://github.com/nfdi4plants/ARC_ontology
-
-    $schemas:
-      - https://raw.githubusercontent.com/nfdi4plants/ARC_ontology/main/ARC_v2.0.owl
-    ``` 
-:::
-
-
-## `annotate custom`
-
-The `s4n annotate custom` command annotates a CWL file with a custom field and value.
-
-    ```txt frame="terminal" title="Usage"
-    Annotates a CWL file with an custom field and value
-
-    Usage: s4n annotate custom <CWL_NAME> <FIELD> <VALUE>
-
-    Arguments:
-      <CWL_NAME>  Name of the CWL file
-      <FIELD>     Field to annotate
-      <VALUE>     Value for the field
-
-    Options:
-      -h, --help  Print help
-    ```
-
-:::tip[Example]
-    ```bash
-     s4n annotate custom main "s:programmingLanguage" "python"
-    ```
-    The command will annotate main.cwl with programmingLanguage python.
-    ```yaml
-    #!/usr/bin/env cwl-runner
-
-    cwlVersion: v1.2
-    class: CommandLineTool
-
-    s:programmingLanguage: python
     ``` 
 :::

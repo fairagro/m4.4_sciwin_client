@@ -2,7 +2,7 @@
 title: Tool creation
 ---
 
-CWL command line tools can be created easily using `s4n`. The simplest approach is to just add the `s4n tool create` or `s4n run` as prefix to the command.
+CWL command line tools can be created easily using `s4n`. The simplest approach is to just add the `s4n create` as prefix to the command.
 
 A command line tool consists of a `baseCommand` which is usually any kind of executable which accepts `inputs` and writes `outputs`. In- and Outputs can be of multiple kinds of value type but Files are generally the most used kind. The `baseCommand` can be a single term like `echo` or a list like `[python, script.py]`. All of this is handle by SciWIn Client.
 
@@ -10,9 +10,9 @@ A command line tool consists of a `baseCommand` which is usually any kind of exe
     The following examples assume that they are being executed in a git repository with clean status. If there is no repository yet, use `s4n init` to create an environment.
 
 ## Wrapping `echo`
-A common example is to wrap the `echo` command for its simplicity. To create the tool `echo "Hello World"` is prefixed with `s4n tool create`.
+A common example is to wrap the `echo` command for its simplicity. To create the tool `echo "Hello World"` is prefixed with `s4n create`.
     ```bash title="Command"
-    s4n tool create echo "Hello World"
+    s4n create echo "Hello World"
     ```
     ```yaml title="echo.cwl"
     #!/usr/bin/env cwl-runner
@@ -38,7 +38,7 @@ message: "Hello World"
 ```
 The usual command would be `echo 'message: "Hello World"' > hello.yaml`. To create the command line tool the command will be
     ```bash title="Command"
-    s4n tool create --name echo2 echo 'message: "Hello World"' \> hello.yaml
+    s4n create --name echo2 echo 'message: "Hello World"' \> hello.yaml
     ```
     ```yaml title="echo2.cwl"
     #!/usr/bin/env cwl-runner
@@ -70,7 +70,7 @@ The `stdout` part will tell the tool to redirect output to the file called `hell
 A common usecase is to wrap a script in an interpreted language like python or R. Wrapping a python script follows the same principles like shown in the previous example where the `echo` command was wrapped.
 
     ```bash title="Command"
-    s4n tool create --name echo_python python echo.py --message "SciWIn rocks!" --output-file out.txt
+    s4n create --name echo_python python echo.py --message "SciWIn rocks!" --output-file out.txt
     ```
     ```python title="echo.py"
     import argparse;
@@ -125,11 +125,11 @@ A common usecase is to wrap a script in an interpreted language like python or R
 As shown in `echo_python.cwl` the `outputBinding` for the output file is set to `$(inputs.outputfile)` and therefore automatically gets the name given in the input. `s4n` also automatically detects the usage of `python` and adds the used script as an `InitialWorkDirRequirement` which makes the script available for the execution engine.
 
 ## Wrapping a long running script
-Sometimes it is neccessary to run a highly complicated script on a remote environment because it would take to long on a simple machine. But how to get the CWL file than? In the example python file the script will sleep for 1 minute and then writes a file. One could use the `s4n tool create` command as shown above and just wait 60 seconds. But what if the calculation takes a week? This is possible for example in quantum chemical calculations like DFT.
+Sometimes it is neccessary to run a highly complicated script on a remote environment because it would take to long on a simple machine. But how to get the CWL file than? In the example python file the script will sleep for 1 minute and then writes a file. One could use the `s4n create` command as shown above and just wait 60 seconds. But what if the calculation takes a week? This is possible for example in quantum chemical calculations like DFT.
 There is the `--no-run` flag which tells `s4n` to not run the script. However this will not create an output and therefore can not detect any output files.
 
     ``` bash title="Command"
-    s4n tool create --no-run python sleep.py
+    s4n create --no-run python sleep.py
     ```
     ```python title="sleep.py"
     from time import sleep
@@ -162,7 +162,7 @@ There is the `--no-run` flag which tells `s4n` to not run the script. However th
 For this cases there is the possibility to specify outputs via the commandline using the `-o` or `--outputs` argument which tells the parser to add a output slot.
 
     ``` bash title="Command"
-    s4n tool create --name sleep2 --no-run -o sleep.txt python sleep.py
+    s4n create --name sleep2 --no-run -o sleep.txt python sleep.py
     ```
     ```yaml title="sleep2.cwl"
     #!/usr/bin/env cwl-runner
@@ -195,7 +195,7 @@ This CWL file can then be executed remotely by using any runner e.g. `cwltool` a
 Like shown in the above example there is also the possibility to specify inputs explictly. This is needed e.g. if the scripts loads a hardcoded file like in the following example.
 
     ```bash title="Command"
-    s4n tool create -i file.txt -o out.txt python load.py
+    s4n create -i file.txt -o out.txt python load.py
     ```
     ```python title="load.py"
     with open('file.txt', 'r') as file:
@@ -235,7 +235,7 @@ Like shown in the above example there is also the possibility to specify inputs 
 Using the pipe operator `|` is a common usecase when using the commandline. Let's assume the first 5 lines of a file are needed e.g `cat speakers.csv | head -n 5 > speakers_5.csv`
 
     ```bash title="Command"
-    s4n tool create cat speakers.csv \| head -n 5 \> speakers_5.csv
+    s4n create cat speakers.csv \| head -n 5 \> speakers_5.csv
     ```
     ```yaml title="cat.cwl"
        #!/usr/bin/env cwl-runner
@@ -280,11 +280,11 @@ Using the pipe operator `|` is a common usecase when using the commandline. Let'
 
 
 ## Pulling containers
-For full reproducibility it is recommended to use containers e.g. `docker` as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n tool create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
+For full reproducibility it is recommended to use containers e.g. `docker` as requirement inside of the CWL files. Adding an existing container image is quite easy. The `s4n create` command needs to be called using `-c` or `--container-image` argument. For testing a python script using `pandas` is used together with the `pandas/pandas` container.
 
 
     ```bash title="Command"
-    s4n tool create -c pandas/pandas:pip-all python calculation.py --population population.csv --speakers speakers_revised.csv
+    s4n create -c pandas/pandas:pip-all python calculation.py --population population.csv --speakers speakers_revised.csv
     ```
     ```python title="calculation.py"
     import pandas as pd
@@ -356,7 +356,7 @@ Using a complex research environments a custom container is may needed. The same
 This can be achieved by using the `-c` argument with a path to a `Dockerfile`. A tag can be specified by using `-t`.
 
     ```bash title="Command"
-    s4n tool create -c Dockerfile -t my-docker python calculation.py --population population.csv --speakers speakers_revised.csv
+    s4n create -c Dockerfile -t my-docker python calculation.py --population population.csv --speakers speakers_revised.csv
     ```
     ```yaml title="calculation.cwl"
     #!/usr/bin/env cwl-runner

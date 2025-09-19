@@ -9,10 +9,10 @@ import execute from "../assets/commands/s4n_ex.txt?raw";
 
 const commands = [
     "s4n --help",
-    "s4n tool create python calculation.py --population population.csv --speakers speakers.csv",
-    "s4n run python plot.py --results results.csv",
-    "s4n workflow create main",
-    "s4n workflow connect main --from @inputs/speakers --to calculation/speakers",
+    "s4n create python calculation.py --population population.csv --speakers speakers.csv",
+    "s4n create python plot.py --results results.csv",
+    "s4n create --name main",
+    "s4n connect main --from @inputs/speakers --to calculation/speakers",
     "s4n execute local workflows/main/main.cwl inputs.yml"
 ];
 
@@ -150,7 +150,7 @@ const codeFiles = [
 }
 @media (min-width: 50rem) {
     .code-slide { 
-        width: 82ch
+        width: 84ch
     }
     .code-wrapper {        
         height: 94ch;

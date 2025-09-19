@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
 To run the tool creation command the changes need to be committed beforehand. The shell script usually would be called with the command `python workflows/calculation/calculation.py --speakers data/speakers_revised.csv --population data/population.csv \> results.csv`. To create a CommandLineTool this only needs to be prefixed with `s4n tool create` or `s4n run`. However the `>` operator needs to be escaped using a backslash.
 ```bash 
-s4n tool create python workflows/calculation/calculation.py --speakers data/speakers_revised.csv --population data/population.csv \> results.csv
+s4n create python workflows/calculation/calculation.py --speakers data/speakers_revised.csv --population data/population.csv \> results.csv
 # 📂 The current working directory is /home/ubuntu/test_project
 # ⏳ Executing Command: `python workflows/calculation/calculation.py --speakers data/speakers_revised.csv --population data/population.csv`
 # 📜 Found changes:
@@ -137,7 +137,7 @@ baseCommand:
 - workflows/calculation/calculation.py
 ```
 
-The `tool create` command created a description of the script which can be used to build workflows. In this example a second script will be used to have a linear two-step-workflow at the end (`matplotlib` needs to be installed beforehand!)
+The `create` command created a description of the script which can be used to build workflows. In this example a second script will be used to have a linear two-step-workflow at the end (`matplotlib` needs to be installed beforehand!)
 
 ```python
 import argparse
@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
 To create the tool for this script the following command can be used to create the CWL definition. SciWIn client automatically determines that `figure.png` shall be listed as an output for this tool.
 ```bash
-s4n tool create python workflows/plot/plot.py --data results.csv
+s4ncreate python workflows/plot/plot.py --data results.csv
 # 📂 The current working directory is /home/ubuntu/test_project
 # ⏳ Executing Command: `python workflows/plot/plot.py --data results.csv`
 # 📜 Found changes:
@@ -228,7 +228,7 @@ baseCommand:
 ## Combining Tools to Workflows
 To check that all has been created correctly the `list` command can be used to visualize tools and their in- and outputs.
 ```bash
-s4n tool list -a
+s4n list -a
 # 📂 Scanning for tools in: /home/ubuntu/test_project
 # +-------------+----------------------------------------------+---------------------+
 # | Tool        | Inputs                                       | Outputs             |
@@ -241,22 +241,22 @@ s4n tool list -a
 
 To execute those tools and to really benefit from using CWL a workflow can be created connecting the tools. To create a blank workflow file the 
 ```bash
-s4n workflow create main
+s4n create --name main
 # 📄 Created new Workflow file: workflows/main/main.cwl
 ```
 
 Connections between tools and in- and outputs can be created by the `connect` command. There are the two arguments `--from` and `--to` which creates a line from one node to another. Furthermore a workflow needs inputs and outputs to process its steps. The slot names can be copied from the aforementioned `s4n tool list` command, a connection to in. and outputs needs to be prefixed with `@` and will result in creation of a new in- oder output slot.
 
 ```bash
-s4n workflow connect main --from @inputs/speakers --to calculation/speakers
+s4n connect main --from @inputs/speakers --to calculation/speakers
 # ➕ Added step calculation to workflow
 # ➕ Added or updated connection from inputs.speakers to calculation/speakers in workflow
 # ✔️  Updated Workflow workflows/main/main.cwl!
 ```
 
-A report of the current status of the workflow can be received by using the `status` command. Doing this now will result in the following table. As it states there currently is no output and one input (`speakers`). The only step is the calculation step, which has the input connected to its `speakers` slot. The `population` slot would use its default value and nothing is done with the steps output `results`.
+A report of the current status of the workflow can be received by using the `list` command. Doing this now will result in the following table. As it states there currently is no output and one input (`speakers`). The only step is the calculation step, which has the input connected to its `speakers` slot. The `population` slot would use its default value and nothing is done with the steps output `results`.
 ```bash
-s4n workflow status main
+s4n list main
 # Status report for Workflow workflows/main/main.cwl
 # +--------------------------------+------------------+---------------+
 # | Tool                           | Inputs           | Outputs       |
@@ -273,14 +273,14 @@ s4n workflow status main
 
 To connect another input to the `population` slot the above command can be reused with the neccessary adjustments. The stdout will be one line shorter now, as the step will not be created a second time.
 ```bash
-s4n workflow connect main --from @inputs/population --to calculation/population
+s4n connect main --from @inputs/population --to calculation/population
 # ➕ Added or updated connection from inputs.population to calculation/population in workflow
 # ✔️  Updated Workflow workflows/main/main.cwl!
 ```
 
 As done before the result of the calculation step shall be used in the plot script. Therefore a connection between both steps is needed. The `s4n tool ls -a` command can be used to to copy and paste the slot names for this connection.
 ```bash
-s4n workflow connect main --from calculation/results --to plot/data
+s4n connect main --from calculation/results --to plot/data
 # 🔗 Found step calculation in workflow. Not changing that!
 # ➕ Added step plot to workflow
 # ✔️  Updated Workflow workflows/main/main.cwl!
@@ -288,14 +288,14 @@ s4n workflow connect main --from calculation/results --to plot/data
 
 To complete the workflow a connection to an output is needed. Otherwise no file will be copied back after running the workflow.
 ```bash
-s4n workflow connect main --from plot/figure --to @outputs/image
+s4n connect main --from plot/figure --to @outputs/image
 # ➕ Added or updated connection from plot/figure to outputs.image in workflow!
 # ✔️  Updated Workflow workflows/main/main.cwl!
 ```
 
 Running the status command again will show that everything is fine now!
 ```bash
-s4n workflow status main
+s4n list main
 # Status report for Workflow workflows/main/main.cwl
 # +--------------------------------+------------------+---------------+
 # | Tool                           | Inputs           | Outputs       |
@@ -349,7 +349,7 @@ steps:
 
 Use the save command to commit the workflow
 ```bash
-s4n workflow save main
+s4n save main
 ```
 
 ![Workflow](../../../assets/simple_workflow.svg)
