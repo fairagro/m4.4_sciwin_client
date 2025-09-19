@@ -1,6 +1,5 @@
 use crate::split_vec_at;
 use commonwl::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::fs;
 
 mod inputs;
