@@ -15,12 +15,6 @@ pub(crate) static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
-#[derive(Serialize, Deserialize, Debug)]
-struct FileEntry {
-    class: String,
-    path: String,
-}
-
 pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let base_command = get_base_command(commands);
 
