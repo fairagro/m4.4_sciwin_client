@@ -1,18 +1,14 @@
 use crate::{
+    commands::{CreateArgs, create_workflow},
     cwl::Connectable,
     print_diff,
-    util::{
-        get_workflows_folder,
-    },
+    util::get_workflows_folder,
 };
 use anyhow::anyhow;
 use clap::Args;
 use commonwl::{format::format_cwl, load_workflow};
 use log::info;
-use std::{
-    fs,
-    io::Write,
-};
+use std::{fs, io::Write, path::Path};
 
 #[derive(Args, Debug)]
 pub struct ConnectWorkflowArgs {
@@ -27,6 +23,13 @@ pub struct ConnectWorkflowArgs {
 pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
     //get workflow
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
+    if !Path::new(&filename).exists() {
+        let args = CreateArgs {
+            name: Some(args.name.clone()),
+            ..Default::default()
+        };
+        create_workflow(&args)?;
+    }
     let mut workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();

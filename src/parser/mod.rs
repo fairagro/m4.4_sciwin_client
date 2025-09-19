@@ -1,6 +1,5 @@
 use crate::split_vec_at;
 use commonwl::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::fs;
 
 mod inputs;
@@ -14,12 +13,6 @@ pub use postprocess::post_process_cwl;
 pub(crate) static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
-
-#[derive(Serialize, Deserialize, Debug)]
-struct FileEntry {
-    class: String,
-    path: String,
-}
 
 pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let base_command = get_base_command(commands);
