@@ -14,10 +14,10 @@ dialoguer = { workspace = true }
 reqwest = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-tempfile = { workspace = true }
 urlencoding = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
 test_utils = { workspace = true }
 tokio = { workspace = true }
+tempfile = { workspace = true }
