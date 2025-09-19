@@ -97,38 +97,43 @@ s4n init -a -p <FOLDER/PROJECT NAME>
 ```
 
 ### Creation of CWL CommandLineTools
-To create [CWL](https://www.commonwl.org/) CommandLineTools which can be combined to workflows later a prefix command can be used. `s4n tool create` which has `s4n run` as a synonym will execute any given command and creates a CWL CommandLineTool accordingly.
+To create [CWL](https://www.commonwl.org/) CommandLineTools which can be combined to workflows later a prefix command can be used. `s4n create` will execute any given command and creates a CWL CommandLineTool accordingly.
 ```bash
-s4n tool create <COMMAND> [ARGUMENTS]
+s4n create <COMMAND> [ARGUMENTS]
 ```
 The command comes with a lot of different options on how to handle the CWL creation specifically.
 ```
-Usage: s4n tool create [OPTIONS] [COMMAND]...
+Creates a new CWL File or Workflow
+
+Usage: s4n create [OPTIONS] [COMMAND]...
 
 Arguments:
   [COMMAND]...  Command line call e.g. python script.py [ARGUMENTS]
 
 Options:
-  -n, --name <NAME>                        A name to be used for this tool
+  -n, --name <NAME>                        A name to be used for this workflow or tool
   -c, --container-image <CONTAINER_IMAGE>  An image to pull from e.g. docker hub or path to a Dockerfile
   -t, --container-tag <CONTAINER_TAG>      The tag for the container when using a Dockerfile
   -r, --raw                                Outputs the raw CWL contents to terminal
       --no-commit                          Do not commit at the end of tool creation
       --no-run                             Do not run given command
       --clean                              Deletes created outputs after usage
+      --no-defaults                        Removes default values from inputs
+      --net                                Enables network in container
+  -i, --inputs <INPUTS>                    Force values to be considered as an input.
+  -o, --outputs <OUTPUTS>                  Force values to be considered as an output.
+  -m, --mount <MOUNT>                      Mounts a directory into the working directory
+  -f, --force                              Overwrites existing workflow
+  -h, --help                               Print help
+
 ```
 
 ### Creation of CWL Workflows
-CWL Workflows can be created semi-automatically using `s4n workflow` commands. First of all a workflow needs to be created.
+CWL Workflows can be created semi-automatically using `s4n connect` commands. Connections to In- or Outputs are added using either `@inputs` or `@outputs` as file identifier.
 ```bash
-s4n workflow create <NAME>
+s4n connect <NAME> --from [FILE]/[SLOT] --to [FILE/SLOT]
 ```
-After execution of this command a file called `workflows/<NAME>/<NAME>.cwl` will be created. 
-Workflow Steps and Connections can be added using the `s4n workflow connect` command. Connections to In- or Outputs are added using either `@inputs` or `@outputs` as file identifier.
-```bash
-s4n workflow connect <NAME> --from [FILE]/[SLOT] --to [FILE/SLOT]
-```
-For example: `s4n workflow connect demo --from @inputs/speakers --to calculation/speakers` - The Step `calculation` will be added pointing to `workflows/calculation/calculation.cwl`, which will use the newly created input `speakers` as input for its `speakers` input.
+For example: `s4n connect demo --from @inputs/speakers --to calculation/speakers` - The Step `calculation` will be added pointing to `workflows/calculation/calculation.cwl`, which will use the newly created input `speakers` as input for its `speakers` input.
 
 ### Execution of CWL Files
 SciWIn-Client comes with its custom CWL Runner (which does not support all `cwltool` can do, yet!) to run Workflows and CommandLineTools. The command `s4n execute local` can also be triggered using `s4n ex l`.
