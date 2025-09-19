@@ -76,7 +76,6 @@ def main():
     try:
         total_population = calculate_total_population(args.population)
         percentages = calculate_speaker_percentages(args.speakers, total_population)
-        print(percentages)
     except FileNotFoundError as e:
         print(f"Error: File not found: {e.filename}")
         return
