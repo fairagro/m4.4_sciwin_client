@@ -75,7 +75,7 @@ def main():
     args = parser.parse_args()
     try:
         total_population = calculate_total_population(args.population)
-        percentages = calculate_speaker_percentages(args.speakers, total_population)
+        calculate_speaker_percentages(args.speakers, total_population)
     except FileNotFoundError as e:
         print(f"Error: File not found: {e.filename}")
         return
