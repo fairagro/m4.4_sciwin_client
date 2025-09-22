@@ -22,6 +22,8 @@ pub struct InitArgs {
     arc: bool,
 }
 
+const GITIGNORE_CONTENT: &str = include_str!("../../resources/default.gitignore");
+
 pub fn handle_init_command(args: &InitArgs) -> anyhow::Result<()> {
     if let Err(e) = initialize_project(&args.project, args.arc) {
         git_cleanup(args.project.clone());
@@ -118,7 +120,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
-        File::create(&gitignore_path)?;
+        fs::write(&gitignore_path, GITIGNORE_CONTENT)?;
     }
 
     //append .s4n folder to .gitignore, whatever it may contains
