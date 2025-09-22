@@ -1,6 +1,22 @@
 # Unreleased
 ## 🚀 Features
 - Restructured CLI Commands #158 #151
+    > [!IMPORTANT]
+    > The commands have changed in v1.0.0 (**Breaking Change**). The mapping is as follows:
+    > | Old Command               | New Command            |
+    >  |---------------------------|------------------------|
+    >  | s4n tool create           | s4n create             |
+    >  | s4n tool list             | s4n list               |
+    >  | s4n tool remove           | s4n remove             |
+    >  | s4n workflow create       | s4n create --name      |
+    >  | s4n workflow list         | s4n list               |
+    >  | s4n workflow remove       | s4n remove             |
+    >  | s4n workflow status       | s4n list [WORKFLOW_NAME]|
+    >  | s4n workflow connect      | s4n connect            |
+    >  | s4n workflow disconnect   | s4n disconnect         |
+    >  | s4n workflow visualize    | s4n visualize          |
+    >  | s4n workflow save         | s4n save               |
+
 
 # v0.8.0
 ## 🚀 Features
