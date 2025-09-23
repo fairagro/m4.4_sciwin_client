@@ -6,6 +6,7 @@ sidebar:
 
 ## `connect` and `disconnect`
 The `connect` and ` disconnect` commands can be used to connect CWL CommandLineTools, workflow inputs and workflow outputs forming a directed acyclic graph. The connect command establishes a connection and adds in-, outputs and steps if they are not present in the current workflow. The names of the steps slots can be copied from the output of `s4n tool ls`. For connections to in- or outputs a `@` has to be used es prefix e.g. `@inputs/my-file`. The name of the node is constructed by using the tool's name and the name of the tool's node separated by a forward slash: `mytool/my-input`. Connections are made using the `--from` and `--to` arguments together with the name of the workflow.
+If the Workflow does not exist when creating the first connection, the workflow will be created automatically.
 
     ```txt frame="terminal" title="Usage"
     Connects a workflow node
