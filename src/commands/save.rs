@@ -4,18 +4,22 @@ use crate::{
         repo::{commit, stage_file},
     },
 };
-use anyhow::anyhow;
+use clap::Args;
 use git2::Repository;
 use log::info;
-use crate::commands::CreateArgs;
 
-pub fn save_workflow(args: &CreateArgs) -> anyhow::Result<()> {
-     let name = args.name.as_deref().ok_or_else(|| anyhow!("❌ Workflow name is required"))?;
+#[derive(Args, Debug)]
+pub struct SaveArgs {
+    #[arg(help = "Name of the workflow to be saved", value_name = "WORKFLOW_NAME")]
+    pub name: String,
+}
+
+pub fn save_workflow(args: &SaveArgs) -> anyhow::Result<()> {
     //get workflow
-    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), name, name);
+    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
     let repo = Repository::open(".")?;
     stage_file(&repo, &filename)?;
-    let msg = &format!("✅ Saved workflow {name}");
+    let msg = &format!("✅ Saved workflow {}", args.name);
     info!("{msg}");
     commit(&repo, msg)?;
     Ok(())

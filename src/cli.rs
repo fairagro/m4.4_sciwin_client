@@ -1,5 +1,5 @@
 use crate::commands::{
-    AnnotateCommands, ExecuteCommands, InitArgs, InstallPackageArgs, ListCWLArgs, PackageArgs, RemoveCWLArgs, CreateArgs, ConnectWorkflowArgs, VisualizeWorkflowArgs
+    AnnotateCommands, ConnectWorkflowArgs, CreateArgs, ExecuteCommands, InitArgs, InstallPackageArgs, ListCWLArgs, PackageArgs, RemoveCWLArgs, SaveArgs, VisualizeWorkflowArgs
 };
 use clap::{Command, Parser, Subcommand};
 use clap_complete::{Generator, Shell, generate};
@@ -41,7 +41,7 @@ pub enum Commands {
     #[command(about = "Visualizes a workflow")]
     Visualize(VisualizeWorkflowArgs),
     #[command(about = "Saves a workflow")]
-    Save(CreateArgs),
+    Save(SaveArgs),
     #[command(about = "Installs a workflow as submodule", visible_alias = "i")]
     Install(InstallPackageArgs),
     #[command(about = "Removes an installed workflow")]

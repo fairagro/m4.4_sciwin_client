@@ -417,7 +417,7 @@ pub fn test_building_custom_containers() {
 
 #[test]
 #[serial]
-///see https://fairagro.github.io/m4.4_sciwin_client/getting-started/example/
+/// see https://fairagro.github.io/m4.4_sciwin_client/getting-started/example/
 //docker not working on MacOS Github Actions
 #[cfg_attr(target_os = "macos", ignore)]
 pub fn test_example_project() {
@@ -527,14 +527,15 @@ pub fn test_example_project() {
 
     //connect output
     connect_workflow_nodes(&ConnectWorkflowArgs {
-        name,
+        name: name.clone(),
         from: "plot/o_results".to_string(),
         to: "@outputs/out".to_string(),
     })
     .expect("Could not add input to output/out");
 
+    let save_args = SaveArgs { name };
     //save workflow
-    save_workflow(&create_args).expect("Could not save workflow");
+    save_workflow(&save_args).expect("Could not save workflow");
     let wf_path = PathBuf::from("workflows/test_workflow/test_workflow.cwl");
     assert!(fs::exists(&wf_path).unwrap());
 

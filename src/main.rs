@@ -41,6 +41,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Connect(args) => Ok(connect_workflow_nodes(args)?),
         Commands::Disconnect(args) => Ok(disconnect_workflow_nodes(args)?),
         Commands::Visualize(args) => Ok(visualize(&args.filename, &args.renderer, args.no_defaults)?),
-        Commands::Save(args) => Ok(save_workflow(args)?),
+        Commands::Save(name) => Ok(save_workflow(name)?),
     }
 }
