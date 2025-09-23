@@ -27,6 +27,9 @@
 - [Lightning Talk: Boosting Scientific Reusability](https://doi.org/10.5281/zenodo.12743569), FAIRagro Community Summit 2024
 - [Poster: Boosting Scientific Reusability](https://doi.org/10.5281/zenodo.11619214), FAIRagro Comminity Summit 2024
 
+or the FAIRagro Blogpost:
+[SciWIn-Client – what is it actually?](https://fairagro.net/en/sciwin-client-what-is-it-actually/)
+
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
 - [🏗️ How to Build and Test](#️-how-to-build-and-test)
