@@ -48,14 +48,14 @@ const { hasSidebar } = Astro.locals.starlightRoute;
                     <ul class="list-none">
                         <li class="py-2">
                             <a
-                                class="text-white decoration-green-500 underline-offset-3"
+                                class="text-white decoration-green-500 underline-offset-3 decoration-3"
                                 href="https://github.com/fairagro"
                                 ><Icon name="github" /> FAIRagro on GitHub</a
                             >
                         </li>
                         <li class="py-2">
                             <a
-                                class="text-white decoration-green-500 underline-offset-3"
+                                class="text-white decoration-green-500 underline-offset-3 decoration-3"
                                 href="https://zenodo.org/communities/nfdi-fairagro"
                                 ><Image src={ze} alt="zenodo" width={16} /> FAIRagro
                                 Community on Zenodo</a
@@ -74,6 +74,30 @@ const { hasSidebar } = Astro.locals.starlightRoute;
                         <Image src={nfdi} alt="nfdi" width={250} class="mt-3" />
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="gradient w-full">
+            <div class="sl-container text-right">
+                <ul class="list-none inline-flex gap-5">
+                    <li>
+                        <a
+                            class="text-black no-underline hover:underline hover:decoration-green-500 underline-offset-3 decoration-3"
+                            href="https://fairagro.net/en/legal-notice/"
+                            >Legal notice</a>
+                    </li>
+                    <li>
+                        <a
+                            class="text-black no-underline hover:underline hover:decoration-green-500 underline-offset-3 decoration-3"
+                            href="https://fairagro.net/en/privacy-policy/"
+                            >Privacy Policy</a>
+                    </li>
+                    <li>
+                        <a
+                            class="text-black no-underline hover:underline hover:decoration-green-500 underline-offset-3 decoration-3"
+                            href="https://fairagro.net/en/accessibility/"
+                            >Accessibility</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </footer>
@@ -109,6 +133,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
         .sl-container {
             margin-inline: var(--sl-content-margin-inline, auto);
             max-width: var(--sl-content-width);
+        }
+
+        .gradient {
+            background: linear-gradient(30deg, #0f9884, #9acb4e 35%);
         }
 
         .sidebar-pane {
