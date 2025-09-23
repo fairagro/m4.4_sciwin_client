@@ -1,0 +1,163 @@
+---
+import MobileMenuToggle from "virtual:starlight/components/MobileMenuToggle";
+import { Image } from "astro:assets";
+import { Icon } from "@astrojs/starlight/components";
+import fairagro from "../assets/fairagro.png";
+import dfg from "../assets/dfg.png";
+import nfdi from "../assets/nfdi.png";
+import ze from "../assets/zenodo-icon-white.png";
+
+const { hasSidebar } = Astro.locals.starlightRoute;
+---
+
+<div class="page sl-flex">
+    <header class="header"><slot name="header" /></header>
+    {
+        hasSidebar && (
+            <nav
+                class="sidebar print:hidden"
+                aria-label={Astro.locals.t("sidebarNav.accessibleLabel")}
+            >
+                <MobileMenuToggle />
+                <div id="starlight__sidebar" class="sidebar-pane">
+                    <div class="sidebar-content sl-flex">
+                        <slot name="sidebar" />
+                    </div>
+                </div>
+            </nav>
+        )
+    }
+    <div class="main-frame"><slot /></div>
+    <footer class="footer bg-[#20312e] text-white">
+        <div class="sl-container py-6 px-8 lg:px-0">
+            <div class="lg:grid lg:grid-cols-3">
+                <div>
+                    <a class="kudos sl-flex" href="https://fairagro.net">
+                        <Image src={fairagro} alt="fairagro" width={250} />
+                    </a>
+                    <div class="my-5">
+                        <p>Spokesperson: Prof. Dr. Frank Ewert</p>
+                        <p>
+                            Leibniz Centre for Agricultural Landscape Research
+                            (ZALF)
+                        </p>
+                        <p>Email: info@fairagro.net</p>
+                    </div>
+                </div>
+                <div>
+                    <ul class="list-none">
+                        <li class="py-2">
+                            <a
+                                class="text-white decoration-green-500 underline-offset-3"
+                                href="https://github.com/fairagro"
+                                ><Icon name="github" /> FAIRagro on GitHub</a
+                            >
+                        </li>
+                        <li class="py-2">
+                            <a
+                                class="text-white decoration-green-500 underline-offset-3"
+                                href="https://zenodo.org/communities/nfdi-fairagro"
+                                ><Image src={ze} alt="zenodo" width={16} /> FAIRagro
+                                Community on Zenodo</a
+                            >
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <div>
+                        <p>Funded by</p>
+                        <Image src={dfg} alt="dfg" width={250} class="mt-3" />
+                        <p>DFG project number 501899475</p>
+                    </div>
+                    <div class="mt-12">
+                        <p>In cooperation with</p>
+                        <Image src={nfdi} alt="nfdi" width={250} class="mt-3" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<style>
+    @layer starlight.core {
+        .page {
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            z-index: var(--sl-z-index-navbar);
+            position: fixed;
+            inset-inline-start: 0;
+            inset-block-start: 0;
+            width: 100%;
+            height: var(--sl-nav-height);
+            border-bottom: 1px solid var(--sl-color-hairline-shade);
+            padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+            padding-inline-end: var(--sl-nav-pad-x);
+            background-color: var(--sl-color-bg-nav);
+        }
+
+        :global([data-has-sidebar]) .header {
+            padding-inline-end: calc(
+                var(--sl-nav-gap) + var(--sl-nav-pad-x) +
+                    var(--sl-menu-button-size)
+            );
+        }
+
+        .sl-container {
+            margin-inline: var(--sl-content-margin-inline, auto);
+            max-width: var(--sl-content-width);
+        }
+
+        .sidebar-pane {
+            visibility: var(--sl-sidebar-visibility, hidden);
+            position: fixed;
+            z-index: var(--sl-z-index-menu);
+            inset-block: var(--sl-nav-height) 0;
+            inset-inline-start: 0;
+            width: 100%;
+            background-color: var(--sl-color-black);
+            overflow-y: auto;
+        }
+
+        :global([aria-expanded="true"]) ~ .sidebar-pane {
+            --sl-sidebar-visibility: visible;
+        }
+
+        .sidebar-content {
+            height: 100%;
+            min-height: max-content;
+            padding: 1rem var(--sl-sidebar-pad-x) 0;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 50rem) {
+            .sidebar-content::after {
+                content: "";
+                padding-bottom: 1px;
+            }
+        }
+
+        .main-frame {
+            padding-top: calc(
+                var(--sl-nav-height) + var(--sl-mobile-toc-height)
+            );
+            padding-inline-start: var(--sl-content-inline-start);
+        }
+
+        @media (min-width: 50rem) {
+            :global([data-has-sidebar]) .header {
+                padding-inline-end: var(--sl-nav-pad-x);
+            }
+            .sidebar-pane {
+                --sl-sidebar-visibility: visible;
+                width: var(--sl-sidebar-width);
+                background-color: var(--sl-color-bg-sidebar);
+                border-inline-end: 1px solid var(--sl-color-hairline-shade);
+            }
+        }
+    }
+</style>
