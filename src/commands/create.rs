@@ -29,7 +29,7 @@ use std::{
 
 pub fn handle_create_command(args: &CreateArgs) -> anyhow::Result<()> {
     if args.command.is_empty() && args.name.is_some() {
-        info!("Workflow creation is optional. Creation will be triggered by adding the first connection, too!");
+        info!("ℹ️  Workflow creation is optional. Creation will be triggered by adding the first connection, too!");
         create_workflow(args)
     }
     else {
