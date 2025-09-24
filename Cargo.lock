@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "commonwl"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "rstest",
  "serde",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "cwl-annotation"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "dialoguer",
  "reqwest",
@@ -987,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "cwl-execution"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "commonwl",
  "fancy-regex 0.15.0",
@@ -3253,7 +3253,7 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "remote-execution"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3496,7 +3496,7 @@ checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
 
 [[package]]
 name = "s4n"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "calamine",
@@ -4515,7 +4515,7 @@ dependencies = [
 
 [[package]]
 name = "test_utils"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "copy_dir",
  "git2",
@@ -5015,7 +5015,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "util"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "wait-timeout",
 ]

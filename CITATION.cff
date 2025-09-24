@@ -3,31 +3,34 @@
 
 cff-version: 1.2.0
 title: >-
-  SciWIn Client: Reproducible computational Workflows made
-  easy! 
+  SciWIn Client
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
 type: software
 authors:
-  - orcid: 'https://orcid.org/0000-0001-6242-5846'
+  - orcid: "https://orcid.org/0000-0001-6242-5846"
     given-names: Jens
     family-names: Krumsieck
     affiliation: Johann Heinrich von Thünen Institute
-  - orcid: 'https://orcid.org/0009-0007-1765-0527'
+  - orcid: "https://orcid.org/0009-0007-1765-0527"
     given-names: Antonia
     family-names: Leidel
     affiliation: Leibniz Institute of Plant Genetics and Crop Plant Research
-  - orcid: 'https://orcid.org/0000-0002-8948-6793'
+  - orcid: "https://orcid.org/0000-0002-8948-6793"
     given-names: Patrick
     family-names: König
     affiliation: Leibniz Institute of Plant Genetics and Crop Plant Research
-  - orcid: 'https://orcid.org/0000-0003-4800-2833'
+  - orcid: "https://orcid.org/0009-0005-3274-122X"
+    given-names: Xaver
+    family-names: Stiensmeier
+    affiliation: Uni Bielefeld
+  - orcid: "https://orcid.org/0000-0003-4800-2833"
     given-names: Harald
     family-names: von Waldow
     affiliation: Johann Heinrich von Thünen Institute
-repository-code: 'https://github.com/fairagro/m4.4_sciwin_client'
-url: 'https://fairagro.github.io/m4.4_sciwin_client/'
+repository-code: "https://github.com/fairagro/m4.4_sciwin_client"
+url: "https://fairagro.github.io/m4.4_sciwin_client/"
 abstract: >-
   Computational workflows, which describe complex,
   multi-step procedures for automated execution, are

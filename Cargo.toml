@@ -6,13 +6,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 authors.workspace = true
-keywords = [
-    "cwl",
-    "common workflow language",
-    "SciWIn",
-    "workflow",
-    "fairagro",
-]
+keywords = ["cwl", "common workflow language", "SciWIn", "workflow", "fairagro"]
 categories = ["science"]
 
 [lints]
@@ -75,7 +69,7 @@ serial_test = { workspace = true }
 members = ["crates/*", ".", "tests/test_utils"]
 
 [workspace.package]
-version = "0.8.0"
+version = "1.0.0"
 edition = "2024"
 repository = "https://github.com/fairagro/m4.4_sciwin_client"
 license = "MIT OR Apache-2.0"
@@ -84,6 +78,7 @@ authors = [
     "Antonia Leidel",
     "Harald von Waldow",
     "Patrick König",
+    "Xaver Stiensmeier",
 ]
 
 [workspace.dependencies]
