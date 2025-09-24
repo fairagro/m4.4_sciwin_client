@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
 To create the tool for this script the following command can be used to create the CWL definition. SciWIn client automatically determines that `figure.png` shall be listed as an output for this tool.
 ```bash
-s4ncreate python workflows/plot/plot.py --data results.csv
+s4n create python workflows/plot/plot.py --data results.csv
 # 📂 The current working directory is /home/ubuntu/test_project
 # ⏳ Executing Command: `python workflows/plot/plot.py --data results.csv`
 # 📜 Found changes:
@@ -255,7 +255,7 @@ s4n connect main --from @inputs/speakers --to calculation/speakers
 
 A report of the current status of the workflow can be received by using the `list` command. Doing this now will result in the following table. As it states there currently is no output and one input (`speakers`). The only step is the calculation step, which has the input connected to its `speakers` slot. The `population` slot would use its default value and nothing is done with the steps output `results`.
 ```bash
-s4n list main
+s4n list workflows/main/main.cwl
 # Status report for Workflow workflows/main/main.cwl
 # +--------------------------------+------------------+---------------+
 # | Tool                           | Inputs           | Outputs       |
