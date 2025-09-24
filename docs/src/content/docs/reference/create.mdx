@@ -87,7 +87,7 @@ The two container options `--container-image` and `--container-tag` can be used 
 
 With the `--raw` flag no CWL file will be written to disk. Instead the raw cwl will be outputted to the command prompt (stdout) to process it further.
 
-As `tool create` needs all changes to be commited beforehand it will create a commit after it completed the tool creation. To prevent that because e.g. manual changes to the CWL file have to be made before committing the `--no-commit` flag can be used.
+As `create` needs all changes to be commited beforehand it will create a commit after it completed the tool creation. To prevent that because e.g. manual changes to the CWL file have to be made before committing the `--no-commit` flag can be used.
 
 Some scripts tend to run for a very long time - e.g. quantum chemistry calculations. To prevent the tool from running the `--no-run` flag can be used. If this flag is set the parser will just use information from the command line to create the tool, outputs need to be set manually.
 
