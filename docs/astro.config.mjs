@@ -30,7 +30,7 @@ export default defineConfig({
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/m4.4_sciwin_client' }],
       components: {
         Hero: './src/components/Hero.astro',
-        Footer: './src/components/Footer.astro',
+        PageFrame: './src/components/PageFrame.astro',
       },
       plugins: [
         starlightSidebarTopics([
