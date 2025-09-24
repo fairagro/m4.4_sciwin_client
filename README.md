@@ -181,6 +181,13 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 |Xaver Stiensmeier|[:octocat: @XaverStiensmeier](https://github.com/XaverStiensmeier)|[ORCID: 0009-0005-3274-122X](https://orcid.org/0009-0005-3274-122X)|
 |Harald von Waldow|[:octocat: @hvwaldow](https://github.com/hvwaldow)|[ORCID: 0000-0003-4800-2833](https://orcid.org/0000-0003-4800-2833)|
 
+---
+**Funded by**
+
+![dfg](docs/src/assets/dfg.png)
+
+DFG project number 501899475
+
 ## ⚖️ License
 
 This work is dual-licensed under Apache 2.0 and MIT .
