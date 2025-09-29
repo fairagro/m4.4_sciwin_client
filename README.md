@@ -19,7 +19,7 @@
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/m4.4_sciwin_client)
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/m4.4_sciwin_client](https://github.com/fairagro/m4.4_sciwin_client))
 
-📖 Read the **[Documentation](https://fairagro.github.io/m4.4_sciwin_client/)** to get started! 🚀
+📖 Read the **[Documentation](https://fairagro.github.io/m4.4_sciwin_client/)** to get started or take a look at some [examples](https://github.com/fairagro/m4.4_sciwin_client_examples)! 🚀
 
 🦀 Take a look at our latest publications 👀
 - [Easy creation of reproducible computational workflows with SciWIn-Client](https://doi.org/10.5281/zenodo.17119086), CoRDI 2025
