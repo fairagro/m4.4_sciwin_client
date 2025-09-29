@@ -15,6 +15,11 @@ To install latests binaries you can use the following scripts:
 curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
 ```
 
+if `curl` responds with Code 429 you can try to use `wget` instead. 
+```bash
+wget -qO- https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+```
+
 ### Windows:
 ```powershell
 powershell -ExecutionPolicy Bypass -c "irm https://fairagro.github.io/m4.4_sciwin_client/get_s4n.ps1 | iex"
