@@ -61,11 +61,19 @@
             "inputs": [
                 {
                     "id": "#main/population",
-                    "type": "File"
+                    "type": "File",
+                    "default": {
+                        "class": "File",
+                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/population.csv"
+                    }
                 },
                 {
                     "id": "#main/speakers",
-                    "type": "File"
+                    "type": "File",
+                    "default": {
+                        "class": "File",
+                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/speakers_revised.csv"
+                    }
                 }
             ],
             "outputs": [
@@ -77,33 +85,33 @@
             ],
             "steps": [
                 {
-                    "id": "#main/calculation",
-                    "in": [
-                        {
-                            "source": "#main/population",
-                            "id": "#main/calculation/population"
-                        },
-                        {
-                            "source": "#main/speakers",
-                            "id": "#main/calculation/speakers"
-                        }
-                    ],
-                    "run": "#calculation.cwl",
-                    "out": [
-                        "#main/calculation/results"
-                    ]
-                },
-                {
                     "id": "#main/plot",
                     "in": [
                         {
-                            "source": "#main/calculation/results",
-                            "id": "#main/plot/results"
+                            "id": "#main/plot/results",
+                            "source": "#main/calculation/results"
                         }
                     ],
                     "run": "#plot.cwl",
                     "out": [
                         "#main/plot/o_results"
+                    ]
+                },
+                {
+                    "id": "#main/calculation",
+                    "in": [
+                        {
+                            "id": "#main/calculation/population",
+                            "source": "#main/population"
+                        },
+                        {
+                            "id": "#main/calculation/speakers",
+                            "source": "#main/speakers"
+                        }
+                    ],
+                    "run": "#calculation.cwl",
+                    "out": [
+                        "#main/calculation/results"
                     ]
                 }
             ],
