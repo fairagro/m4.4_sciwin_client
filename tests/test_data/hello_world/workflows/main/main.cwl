@@ -6,8 +6,14 @@ class: Workflow
 inputs:
 - id: population
   type: File
+  default:
+    class: File
+    location: ../../data/population.csv
 - id: speakers
   type: File
+  default:
+    class: File
+    location: ../../data/speakers_revised.csv
 
 outputs:
 - id: out
@@ -15,16 +21,19 @@ outputs:
   outputSource: plot/o_results
 
 steps:
-- id: calculation
-  in:
-    population: population
-    speakers: speakers
-  run: ../calculation/calculation.cwl
-  out:
-  - results
 - id: plot
   in:
-    results: calculation/results
+  - id: results
+    source: calculation/results
   run: ../plot/plot.cwl
   out:
   - o_results
+- id: calculation
+  in:
+  - id: population
+    source: population
+  - id: speakers
+    source: speakers
+  run: ../calculation/calculation.cwl
+  out:
+  - results

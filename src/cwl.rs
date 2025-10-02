@@ -101,8 +101,9 @@ impl Connectable for Workflow {
 
         //register input
         if !self.has_input(from_input) {
-            self.inputs
-                .push(CommandInputParameter::default().with_id(from_input).with_type(to_slot.type_.clone()));
+            let mut input = CommandInputParameter::default().with_id(from_input).with_type(to_slot.type_.clone());
+            input.default = to_slot.default.clone();
+            self.inputs.push(input);
         }
 
         self.add_new_step_if_not_exists(to_parts[0], &to_filename, &to_cwl);

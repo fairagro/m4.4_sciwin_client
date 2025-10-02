@@ -6,14 +6,7 @@ use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
 use remote_execution::prelude::*;
 use serde_yaml::{Number, Value};
-use std::{
-    collections::HashMap,
-    error::Error,
-    fs::self,
-    path::PathBuf,
-    thread,
-    time::Duration,
-};
+use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -296,7 +289,6 @@ fn get_saved_workflows(instance_url: &str) -> Vec<String> {
     workflows.get(instance_url).cloned().unwrap_or_default()
 }
 
-
 fn get_or_prompt_credential(service: &str, key: &str, prompt: &str) -> Result<String, Box<dyn Error>> {
     let entry = Entry::new(service, key)?;
     match entry.get_password() {
@@ -432,26 +424,34 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
 
 #[allow(clippy::disallowed_macros)]
 pub fn make_template(filename: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(filename)?;
-    let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
-
-    let template = &cwl
-        .inputs
-        .iter()
-        .map(|i| {
-            let id = &i.id;
-            let dummy_value = match &i.type_ {
-                CWLType::Optional(cwltype) => default_values(cwltype),
-                CWLType::Array(cwltype) => DefaultValue::Any(Value::Sequence(vec![defaults(cwltype), defaults(cwltype)])),
-                cwltype => default_values(cwltype),
-            };
-            (id, dummy_value)
-        })
-        .collect::<HashMap<_, _>>();
+    let template = make_template_impl(filename)?;
     let yaml = serde_yaml::to_string(&template)?;
 
     println!("{yaml}");
     Ok(())
+}
+
+fn make_template_impl(filename: &PathBuf) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+    let contents = fs::read_to_string(filename)?;
+    let cwl: CWLDocument = serde_yaml::from_str(&contents)?;
+
+    Ok(cwl
+        .inputs
+        .iter()
+        .map(|i| {
+            let id = &i.id;
+            let dummy_value = if i.default.is_some() {
+                return (id.clone(), i.default.clone().unwrap());
+            } else {
+                match &i.type_ {
+                    CWLType::Optional(cwltype) => default_values(cwltype),
+                    CWLType::Array(cwltype) => DefaultValue::Any(Value::Sequence(vec![defaults(cwltype), defaults(cwltype)])),
+                    cwltype => default_values(cwltype),
+                }
+            };
+            (id.clone(), dummy_value)
+        })
+        .collect::<HashMap<_, _>>())
 }
 
 fn default_values(cwltype: &CWLType) -> DefaultValue {
@@ -498,5 +498,23 @@ mod tests {
             DefaultValue::Directory(Directory::from_location("./path/to/dir"))
         );
         assert_eq!(default_values(&CWLType::String), DefaultValue::Any(Value::String("Hello World".into())));
+    }
+
+    #[test]
+    fn test_make_template_impl() {
+        let path = PathBuf::from("tests/test_data/hello_world/workflows/main/main.cwl");
+        let template = make_template_impl(&path).unwrap();
+        let expected = HashMap::from([
+            (
+                "population".to_string(),
+                DefaultValue::File(File::from_location("../../data/population.csv")),
+            ),
+            (
+                "speakers".to_string(),
+                DefaultValue::File(File::from_location("../../data/speakers_revised.csv")),
+            ),
+        ]);
+
+        assert_eq!(template, expected);
     }
 }
