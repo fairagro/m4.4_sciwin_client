@@ -1,4 +1,7 @@
 # Unreleased
+## 🐛 Bugfixes
+- default values are used on input connections
+
 # v1.0.0
 ## 🚀 Features
 - Restructured CLI Commands #158 #151
