@@ -2,10 +2,10 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod cwl;
-pub mod parser;
 pub mod logger;
-mod repo;
+pub mod parser;
 mod reana;
+mod repo;
 
 use colored::Colorize;
 use log::info;
@@ -27,7 +27,6 @@ pub(crate) fn remove_ini_section<P: AsRef<Path>>(file: P, name: &str) -> Result<
     config.write(&file)?;
     Ok(())
 }
-
 
 pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
     let slice = vec.as_ref();
