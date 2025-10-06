@@ -7,7 +7,7 @@ use std::process::{Command as SystemCommand, Stdio};
 use std::{env, fs, path::Path};
 use util::{handle_process, is_docker_installed};
 
-use crate::parser::SCRIPT_EXECUTORS;
+use s4n_core::parser::SCRIPT_EXECUTORS;
 
 /// Performs some compatibility adjustments on workflow json for the exeuction using REANA.
 pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Result<()> {

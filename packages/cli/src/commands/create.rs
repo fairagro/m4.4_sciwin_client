@@ -1,6 +1,5 @@
 use crate::{
     cwl::{Saveable, highlight_cwl},
-    parser::{self, post_process_cwl},
     print_diff, print_list,
     repo::{commit, get_modified_files, stage_file},
 };
@@ -16,6 +15,7 @@ use commonwl::{
 use git2::Repository;
 use log::{error, info, warn};
 use s4n_core::io::{get_qualified_filename, get_workflows_folder};
+use s4n_core::parser::{self, post_process_cwl};
 use std::{
     env,
     fs::remove_file,

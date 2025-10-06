@@ -3,7 +3,6 @@ pub mod commands;
 pub mod config;
 pub mod cwl;
 pub mod logger;
-pub mod parser;
 mod reana;
 mod repo;
 
@@ -28,16 +27,6 @@ pub(crate) fn remove_ini_section<P: AsRef<Path>>(file: P, name: &str) -> Result<
     Ok(())
 }
 
-pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
-    let slice = vec.as_ref();
-    if let Some(index) = slice.iter().position(|x| x == split_at) {
-        let lhs = slice[..index].to_vec();
-        let rhs = slice[index + 1..].to_vec();
-        (lhs, rhs)
-    } else {
-        (slice.to_vec(), vec![])
-    }
-}
 struct Line(Option<usize>);
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
