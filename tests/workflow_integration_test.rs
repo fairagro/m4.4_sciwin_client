@@ -1,7 +1,7 @@
 #![allow(clippy::disallowed_macros)]
 
+use commonwl::execution::io::create_and_write_file;
 use commonwl::{load_workflow, requirements::Requirement};
-use cwl_execution::io::create_and_write_file;
 use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::Path};
@@ -16,20 +16,20 @@ pub fn test_create_workflow() {
 
     env::set_current_dir(dir.path()).unwrap();
     let args = CreateArgs {
-      name: Some("test".to_string()),
-      force: false,
-      container_image: None,
-      container_tag: None,
-      is_raw: false,
-      no_commit: false,
-      no_run: false,
-      is_clean: false,
-      no_defaults: false,
-      enable_network: false,
-      inputs: None,
-      outputs: None,
-      mount: None,
-      command: vec![],
+        name: Some("test".to_string()),
+        force: false,
+        container_image: None,
+        container_tag: None,
+        is_raw: false,
+        no_commit: false,
+        no_run: false,
+        is_clean: false,
+        no_defaults: false,
+        enable_network: false,
+        inputs: None,
+        outputs: None,
+        mount: None,
+        command: vec![],
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());
@@ -104,7 +104,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
         inputs: None,
         outputs: None,
         mount: None,
-        command: vec![],        
+        command: vec![],
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());

@@ -1,5 +1,5 @@
 use crate::{InputObject, environment::RuntimeEnvironment};
-use commonwl::{Entry, prelude::*, requirements::WorkDirItem};
+use cwl_core::{Entry, prelude::*, requirements::WorkDirItem};
 use rustyscript::static_runtime;
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -296,7 +296,7 @@ fn split_ranges(s: &str, delim: char) -> Vec<(usize, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::StringOrNumber;
+    use cwl_core::StringOrNumber;
 
     #[test]
     fn test_expression() {

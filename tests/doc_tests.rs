@@ -4,7 +4,7 @@ use commonwl::{
     Command, Entry, load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
 };
-use cwl_execution::io::copy_dir;
+use commonwl::execution::io::copy_dir;
 use s4n::commands::*;
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};

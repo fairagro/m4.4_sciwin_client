@@ -7,7 +7,7 @@ use crate::{
     staging::stage_required_files,
     validate::set_placeholder_values,
 };
-use commonwl::{prelude::*, requirements::StringOrInclude};
+use cwl_core::{prelude::*, requirements::StringOrInclude};
 use log::info;
 use std::{
     collections::HashMap,

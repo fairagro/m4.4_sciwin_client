@@ -3,7 +3,7 @@ use crate::{
     environment::RuntimeEnvironment,
     io::{copy_dir, copy_file, create_and_write_file, get_random_filename, make_relative_to},
 };
-use commonwl::{
+use cwl_core::{
     CWLDocument, CWLType, DefaultValue, Directory, Entry, File, PathItem,
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
@@ -402,7 +402,7 @@ fn handle_filename(value: &DefaultValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::{Directory, File, StringOrNumber, requirements::InitialWorkDirRequirement};
+    use cwl_core::{Directory, File, StringOrNumber, requirements::InitialWorkDirRequirement};
     use serial_test::serial;
     use std::{collections::HashMap, path::PathBuf, vec};
     use tempfile::tempdir;

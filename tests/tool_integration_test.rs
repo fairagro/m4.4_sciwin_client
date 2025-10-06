@@ -3,7 +3,7 @@ use commonwl::{
     Argument, CWLType, CommandLineTool, Entry, load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
 };
-use cwl_execution::io::copy_dir;
+use commonwl::execution::io::copy_dir;
 use fstest::fstest;
 use git2::Repository;
 use s4n::{

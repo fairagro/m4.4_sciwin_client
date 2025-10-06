@@ -1,7 +1,7 @@
 use crate::{config, reana};
 use clap::{Args, Subcommand};
 use commonwl::prelude::*;
-use cwl_execution::{ContainerEngine, execute_cwlfile, set_container_engine};
+use commonwl::execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
 use remote_execution::prelude::*;

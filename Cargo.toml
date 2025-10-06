@@ -13,10 +13,8 @@ categories = ["science"]
 workspace = true
 
 [dependencies]
-commonwl = { path = "crates/cwl" }
-cwl-execution = { path = "crates/cwl-execution" }
+commonwl = { path = "crates/cwl", features = ["execution", "annotation"] }
 remote-execution = { path = "crates/remote-execution" }
-cwl-annotation = { path = "crates/cwl-annotation" }
 util = { path = "crates/util" }
 
 anyhow = { workspace = true }

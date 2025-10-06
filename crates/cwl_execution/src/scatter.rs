@@ -1,4 +1,4 @@
-use commonwl::{DefaultValue, ScatterMethod};
+use cwl_core::{DefaultValue, ScatterMethod};
 use std::{collections::HashMap, error::Error};
 
 use crate::InputObject;

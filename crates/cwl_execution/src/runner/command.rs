@@ -7,7 +7,7 @@ use crate::{
     inputs::{evaluate_input, evaluate_input_as_string},
     io::{create_and_write_file_forced, get_random_filename, get_shell_command},
 };
-use commonwl::{StringOrNumber, prelude::*};
+use cwl_core::{StringOrNumber, prelude::*};
 use log::{info, warn};
 use serde_yaml::Value;
 use std::process::Command as SystemCommand;
@@ -277,7 +277,7 @@ fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result
 mod tests {
     use super::*;
     use crate::set_container_engine;
-    use commonwl::load_tool;
+    use cwl_core::load_tool;
     use std::collections::HashMap;
 
     #[test]

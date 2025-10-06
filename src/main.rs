@@ -1,10 +1,12 @@
 use clap::{CommandFactory, Parser};
-use cwl_execution::{CommandError, ExitCode};
+use commonwl::execution::{CommandError, ExitCode};
 use log::{LevelFilter, error};
 use s4n::{
-    cli::{generate_completions, Cli, Commands},
+    cli::{Cli, Commands, generate_completions},
     commands::{
-        check_git_config, save_workflow, handle_create_command, handle_annotation_command, handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, install_package, remove_package, connect_workflow_nodes, disconnect_workflow_nodes, visualize
+        check_git_config, connect_workflow_nodes, disconnect_workflow_nodes, handle_annotation_command, handle_create_command,
+        handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, install_package, remove_package, save_workflow,
+        visualize,
     },
     util::LOGGER,
 };

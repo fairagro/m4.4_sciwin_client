@@ -1,5 +1,5 @@
 [package]
-name = "cwl-execution"
+name = "cwl_execution"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-commonwl = { path = "../cwl" }
+cwl_core = { path = "../cwl_core" }
 util = { path = "../util" }
 
 fancy-regex = { workspace = true }

@@ -769,13 +769,9 @@ dependencies = [
 name = "commonwl"
 version = "1.0.0"
 dependencies = [
- "rstest",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha1",
- "test_utils",
- "url",
+ "cwl_annotation",
+ "cwl_core",
+ "cwl_execution",
 ]
 
 [[package]]
@@ -970,7 +966,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cwl-annotation"
+name = "cwl_annotation"
 version = "1.0.0"
 dependencies = [
  "dialoguer",
@@ -986,10 +982,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "cwl-execution"
+name = "cwl_core"
 version = "1.0.0"
 dependencies = [
- "commonwl",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha1",
+ "test_utils",
+ "url",
+]
+
+[[package]]
+name = "cwl_execution"
+version = "1.0.0"
+dependencies = [
+ "cwl_core",
  "fancy-regex 0.15.0",
  "glob",
  "log",
@@ -3505,8 +3514,6 @@ dependencies = [
  "colored",
  "commonwl",
  "configparser",
- "cwl-annotation",
- "cwl-execution",
  "dialoguer",
  "fstest",
  "git2",

@@ -2,9 +2,9 @@ use clap::{Args, Subcommand};
 use log::error;
 use std::error::Error;
 use tokio::runtime::Builder;
-use cwl_annotation::common::{annotate_license, annotate_field, annotate_default};
-use cwl_annotation::process::{annotate_process_step, ProcessArgs};
-use cwl_annotation::performer::{annotate_performer, annotate_performer_default};
+use commonwl::annotation::common::{annotate_license, annotate_field, annotate_default};
+use commonwl::annotation::process::{annotate_process_step, ProcessArgs};
+use commonwl::annotation::performer::{annotate_performer, annotate_performer_default};
 
 /// Arguments for annotate performer command
 #[derive(Args, Debug)]
@@ -97,7 +97,7 @@ pub async fn handle_annotate_commands(command: &AnnotateCommands) -> Result<(), 
         AnnotateCommands::Description { cwl_name, description } => annotate_field(cwl_name, "doc", description),
         AnnotateCommands::License { cwl_name, license } => annotate_license(cwl_name, license).await,
         AnnotateCommands::Performer(args) => {
-            use cwl_annotation::performer::Performer;
+            use commonwl::annotation::performer::Performer;
             let performer = Performer {
                     cwl_name: args.cwl_name.clone(),
                     first_name: args.first_name.clone(),

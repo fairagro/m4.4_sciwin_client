@@ -1,5 +1,5 @@
 [package]
-name = "cwl-annotation"
+name = "cwl_annotation"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

@@ -13,7 +13,7 @@ mod validate;
 
 pub use docker::{ContainerEngine, container_engine, set_container_engine};
 
-use commonwl::{
+use cwl_core::{
     CWLDocument, CWLType, DefaultValue, Directory, File, PathItem, guess_type,
     packed::{PackedCWL, unpack_workflow},
     requirements::{FromRequirement, Requirement},
@@ -297,7 +297,7 @@ pub(crate) fn get_available_disk_space() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::{EnviromentDefs, requirements::EnvVarRequirement};
+    use cwl_core::{EnviromentDefs, requirements::EnvVarRequirement};
 
     #[test]
     fn test_add_requirement() {

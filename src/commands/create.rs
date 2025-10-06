@@ -18,7 +18,7 @@ use commonwl::{
     requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
     Workflow
 };
-use cwl_execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
+use commonwl::execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
 use git2::Repository;
 use log::{error, info, warn};
 use std::{

@@ -6,7 +6,7 @@ use crate::{
     outputs::{copy_output_dir, get_file_metadata},
     scatter::{self},
 };
-use commonwl::{PathItem, ScatterMethod, SingularPlural, StringOrDocument, inputs::LinkMerge, prelude::*};
+use cwl_core::{PathItem, ScatterMethod, SingularPlural, StringOrDocument, inputs::LinkMerge, prelude::*};
 use log::info;
 use std::{
     collections::HashMap,
@@ -254,7 +254,7 @@ pub fn run_workflow(
 }
 
 fn execute_step(
-    step: &commonwl::WorkflowStep,
+    step: &cwl_core::WorkflowStep,
     input_values: &InputObject,
     path: &Option<PathBuf>,
     workflow_folder: &Path,

@@ -1,6 +1,5 @@
-
 [package]
-name = "commonwl"
+name = "cwl_core"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -25,12 +24,13 @@ categories = ["science"]
 [lints]
 workspace = true
 
-[features]
-default = []
-execution = ["cwl_execution"]
-annotation = ["cwl_annotation"]
-
 [dependencies]
-cwl_core = { path = "../cwl_core" }
-cwl_execution = { path = "../cwl_execution", optional = true}
-cwl_annotation = { path = "../cwl_annotation", optional = true}
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+sha1 = "0.10.6"
+url = "2.5.4"
+
+[dev-dependencies]
+rstest = { workspace = true }
+test_utils = { workspace = true }

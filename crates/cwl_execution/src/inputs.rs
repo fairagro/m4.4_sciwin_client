@@ -1,4 +1,4 @@
-use commonwl::{CWLType, DefaultValue, inputs::CommandInputParameter};
+use cwl_core::{CWLType, DefaultValue, inputs::CommandInputParameter};
 use serde_yaml::Value;
 use std::{collections::HashMap, error::Error};
 
@@ -44,7 +44,7 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::inputs::CommandLineBinding;
+    use cwl_core::inputs::CommandLineBinding;
     use serde_yaml::{Value, value};
 
     #[test]

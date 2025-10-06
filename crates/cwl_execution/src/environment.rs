@@ -1,7 +1,7 @@
 use crate::{
     InputObject, get_available_disk_space, get_available_ram, get_processor_count, inputs::evaluate_input, validate::set_placeholder_values_in_string,
 };
-use commonwl::{
+use cwl_core::{
     CWLDocument, DefaultValue, EnviromentDefs, StringOrNumber,
     inputs::CommandInputParameter,
     requirements::{EnvVarRequirement, NetworkAccess, ResourceRequirement, ToolTimeLimit},
@@ -173,7 +173,7 @@ pub(crate) fn collect_inputs(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use commonwl::requirements::{EnvVarRequirement, Requirement};
+    use cwl_core::requirements::{EnvVarRequirement, Requirement};
 
     #[test]
     fn test_requirements_overwrite_hints() {
