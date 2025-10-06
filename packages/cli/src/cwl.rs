@@ -348,7 +348,7 @@ mod tests {
     };
     use test_utils::os_path;
 
-    #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+    #[fstest(repo = true, files = ["../../tests/test_data/input.txt", "../../tests/test_data/echo.py"])]
     fn test_resolve_filename() {
         create_tool(&CreateArgs {
             command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
@@ -361,7 +361,7 @@ mod tests {
         assert_eq!(path, format!("{}{name}/{name}.cwl", get_workflows_folder()));
     }
 
-    #[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+    #[fstest(repo = true, files = ["../../tests/test_data/input.txt", "../../tests/test_data/echo.py"])]
     fn test_resolve_filename_in_submodule() {
         let repo = Repository::open(env::current_dir().unwrap()).unwrap();
         let mut module = repo
