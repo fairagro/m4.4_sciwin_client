@@ -3554,6 +3554,9 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "commonwl",
+ "pathdiff",
+ "rstest",
+ "serde_yaml",
  "util",
 ]
 

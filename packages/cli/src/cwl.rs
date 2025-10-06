@@ -1,4 +1,4 @@
-use crate::util::{get_workflows_folder, repo::get_submodule_paths, resolve_path};
+use crate::util::repo::get_submodule_paths;
 use commonwl::{
     CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, Workflow,
     requirements::{Requirement, WorkDirItem},
@@ -6,6 +6,7 @@ use commonwl::{
 use dialoguer::{Select, theme::ColorfulTheme};
 use git2::Repository;
 use log::info;
+use s4n_core::io::{get_workflows_folder, resolve_path};
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -214,6 +215,7 @@ mod tests {
         requirements::{DockerRequirement, InitialWorkDirRequirement},
     };
     use fstest::fstest;
+    use s4n_core::io::get_workflows_folder;
     use serde_yaml::Value;
     use std::{
         env,

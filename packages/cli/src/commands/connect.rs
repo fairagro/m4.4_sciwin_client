@@ -2,12 +2,12 @@ use crate::{
     commands::{CreateArgs, create_workflow},
     cwl::Connectable,
     print_diff,
-    util::get_workflows_folder,
 };
 use anyhow::anyhow;
 use clap::Args;
 use commonwl::{format::format_cwl, load_workflow};
 use log::info;
+use s4n_core::io::get_workflows_folder;
 use std::{fs, io::Write, path::Path};
 
 #[derive(Args, Debug)]

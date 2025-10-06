@@ -1,4 +1,4 @@
-use crate::util::get_filename_without_extension;
+use s4n_core::io::get_filename_without_extension;
 use commonwl::{
     outputs::{CommandOutputBinding, CommandOutputParameter},
     CWLType,

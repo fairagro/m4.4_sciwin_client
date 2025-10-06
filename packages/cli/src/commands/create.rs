@@ -1,29 +1,24 @@
 use crate::{
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
-    print_list,
-    util::{
-        get_qualified_filename,
-        get_workflows_folder,
-        repo::{commit, get_modified_files, stage_file},
-    },
-    print_diff,
+    print_diff, print_list,
+    util::repo::{commit, get_modified_files, stage_file},
 };
 use anyhow::anyhow;
 use clap::Args;
 use colored::Colorize;
+use commonwl::execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
 use commonwl::{
     DefaultValue, Directory,
     format::format_cwl,
     requirements::{DockerRequirement, InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
-    Workflow
 };
-use commonwl::execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command::run_command};
 use git2::Repository;
 use log::{error, info, warn};
+use s4n_core::io::{get_qualified_filename, get_workflows_folder};
 use std::{
     env,
-    fs::{remove_file, self},
+    fs::remove_file,
     path::{Path, PathBuf},
 };
 
@@ -31,8 +26,7 @@ pub fn handle_create_command(args: &CreateArgs) -> anyhow::Result<()> {
     if args.command.is_empty() && args.name.is_some() {
         info!("ℹ️  Workflow creation is optional. Creation will be triggered by adding the first connection, too!");
         create_workflow(args)
-    }
-    else {
+    } else {
         create_tool(args)
     }
 }
@@ -85,23 +79,12 @@ pub struct CreateArgs {
 }
 
 pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
-    let wf = Workflow::default();
-
-    let mut yaml = serde_yaml::to_string(&wf)?;
-    yaml = format_cwl(&yaml).map_err(|e| anyhow!("Could not formal yaml: {e}"))?;
-    let name = args.name.as_deref().ok_or_else(|| anyhow!("❌ Workflow name is required"))?;
-
+    let Some(name) = &args.name else {
+        return Err(anyhow!("❌ Workflow name is required"));
+    };
+    //check if workflow already exists
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), name, name);
-
-    //removes file first if exists and force is given
-    if args.force {
-        let path = Path::new(&filename);
-        if path.exists() {
-            fs::remove_file(path)?;
-        }
-    }
-
-    create_and_write_file(&filename, &yaml).map_err(|e| anyhow!("❌ Could not create workflow {} at {}: {}", name, filename, e))?;
+    let yaml = s4n_core::workflow::create_workflow(&filename, args.force)?;
     info!("📄 Created new Workflow file: {filename}");
     print_diff("", &yaml);
 
@@ -111,7 +94,9 @@ pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
 pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
     // Parse input string
     if args.command.is_empty() {
-        return Err(anyhow!("No commandline string given! Please provide a name for the workflow or a command to run."));
+        return Err(anyhow!(
+            "No commandline string given! Please provide a name for the workflow or a command to run."
+        ));
     }
     let command = args.command.iter().map(String::as_str).collect::<Vec<_>>();
 

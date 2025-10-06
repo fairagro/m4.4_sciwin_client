@@ -11,6 +11,11 @@ commonwl = { path = "../cwl", features = ["execution", "annotation"] }
 util = { path = "../util" }
 
 anyhow.workspace = true
+pathdiff.workspace = true
+serde_yaml.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
 
 [lints]
 workspace = true

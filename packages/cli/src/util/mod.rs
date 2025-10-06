@@ -1,12 +1,10 @@
 use std::path::Path;
 
-mod io;
 mod log;
 mod render;
 pub mod repo;
 
 use configparser::ini::Ini;
-pub use io::*;
 pub use log::*;
 pub use render::*;
 

@@ -1,5 +1,29 @@
 use anyhow::{Context, Result};
-use commonwl::{StringOrDocument, load_doc, prelude::*};
+use commonwl::{StringOrDocument, execution::io::create_and_write_file, format::format_cwl, load_doc, prelude::*};
+use std::{fs, path::Path};
+
+pub fn create_workflow(filename: &str, force: bool) -> Result<String> {
+    let wf = Workflow::default();
+
+    let mut yaml = serde_yaml::to_string(&wf)?;
+    yaml = format_cwl(&yaml).map_err(|e| anyhow::anyhow!("Could not formal yaml: {e}"))?;
+
+    //removes file first if exists and force is given
+    if force {
+        let path = Path::new(&filename);
+        if path.exists() {
+            fs::remove_file(path)?;
+        }
+    }
+
+    let name = Path::new(&filename)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .context("Could not determine workflow name from filename")?;
+
+    create_and_write_file(filename, &yaml).map_err(|e| anyhow::anyhow!("❌ Could not create workflow {} at {}: {}", name, filename, e))?;
+    Ok(yaml)
+}
 
 pub fn add_new_step_if_not_exists(workflow: &mut Workflow, name: &str, path: &str, doc: &CWLDocument) {
     if !workflow.has_step(name) {
