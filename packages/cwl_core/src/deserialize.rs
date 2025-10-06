@@ -16,8 +16,8 @@ pub trait Identifiable {
 /// use serde::{Deserialize, Serialize};
 /// use std::fmt::Debug;
 /// use std::collections::HashMap;
-/// use commonwl::deserialize::Identifiable;
-/// use commonwl::deserialize::deserialize_list;
+/// use cwl_core::deserialize::Identifiable;
+/// use cwl_core::deserialize::deserialize_list;
 ///
 /// #[derive(Debug, Deserialize)]
 /// struct ItemBag {
