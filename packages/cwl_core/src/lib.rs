@@ -40,7 +40,7 @@ use crate::outputs::CommandOutputParameter;
 /// # Examples
 ///
 /// ```
-/// use commonwl::CWLDocument;
+/// use cwl_core::CWLDocument;
 /// use serde_yaml;
 ///
 /// let yaml = r#"---
@@ -216,7 +216,7 @@ impl fmt::Display for StringOrNumber {
 ///
 /// # Examples
 /// ```
-/// use commonwl::load_doc;
+/// use cwl_core::load_doc;
 ///
 /// let tool = load_doc("../../tests/test_data/default.cwl");
 /// assert!(tool.is_ok());
@@ -245,7 +245,7 @@ pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<
 ///
 /// # Examples
 /// ```
-/// use commonwl::load_tool;
+/// use cwl_core::load_tool;
 ///
 /// let tool = load_tool("../../tests/test_data/default.cwl");
 /// assert!(tool.is_ok());
@@ -274,7 +274,7 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
 ///
 /// # Examples
 /// ```
-/// use commonwl::load_expression_tool;
+/// use cwl_core::load_expression_tool;
 ///
 /// let expr_tool = load_expression_tool("../../tests/test_data/test_expr.cwl");
 /// assert!(expr_tool.is_ok());
@@ -303,7 +303,7 @@ pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<Expre
 ///
 /// # Examples
 /// ```
-/// use commonwl::load_workflow;
+/// use cwl_core::load_workflow;
 ///
 /// let workflow = load_workflow("../../tests/test_data/wf_inout.cwl");
 /// assert!(workflow.is_ok());
