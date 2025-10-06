@@ -3528,6 +3528,7 @@ dependencies = [
  "reqwest",
  "rstest",
  "rust_xlsxwriter",
+ "s4n_core",
  "semver",
  "serde",
  "serde_json",
@@ -3545,6 +3546,15 @@ dependencies = [
  "toml_edit 0.23.3",
  "util",
  "uuid",
+]
+
+[[package]]
+name = "s4n_core"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "commonwl",
+ "util",
 ]
 
 [[package]]

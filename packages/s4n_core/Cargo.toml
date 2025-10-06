@@ -1,0 +1,16 @@
+[package]
+name = "s4n_core"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+commonwl = { path = "../cwl", features = ["execution", "annotation"] }
+util = { path = "../util" }
+
+anyhow.workspace = true
+
+[lints]
+workspace = true
