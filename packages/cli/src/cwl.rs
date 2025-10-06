@@ -1,4 +1,4 @@
-use crate::util::repo::get_submodule_paths;
+use crate::repo::get_submodule_paths;
 use commonwl::{
     CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, Workflow,
     requirements::{Requirement, WorkDirItem},

@@ -2,7 +2,7 @@ use crate::{
     cwl::{Saveable, highlight_cwl},
     parser::{self, post_process_cwl},
     print_diff, print_list,
-    util::repo::{commit, get_modified_files, stage_file},
+    repo::{commit, get_modified_files, stage_file},
 };
 use anyhow::anyhow;
 use clap::Args;

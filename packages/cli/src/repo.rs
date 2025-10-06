@@ -1,12 +1,12 @@
 use colored::Colorize;
-use git2::{build::RepoBuilder, Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
+use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions, build::RepoBuilder};
 use log::info;
 use std::{
     env, fs, iter,
     path::{Path, PathBuf},
 };
 
-use crate::util::remove_ini_section;
+use crate::remove_ini_section;
 
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
@@ -125,7 +125,11 @@ mod tests {
     fn test_add_remove_submodule() {
         initialize_project(&None, false).unwrap();
 
-        let result = add_submodule("https://github.com/JensKrumsieck/PorphyStruct", &Some("docs".to_string()), Path::new("ps"));
+        let result = add_submodule(
+            "https://github.com/JensKrumsieck/PorphyStruct",
+            &Some("docs".to_string()),
+            Path::new("ps"),
+        );
         assert!(result.is_ok());
 
         //check whether a file is present

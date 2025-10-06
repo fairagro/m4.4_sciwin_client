@@ -1,4 +1,4 @@
-use crate::util::repo::{add_submodule, remove_submodule};
+use crate::repo::{add_submodule, remove_submodule};
 use clap::Args;
 use colored::Colorize;
 use log::info;

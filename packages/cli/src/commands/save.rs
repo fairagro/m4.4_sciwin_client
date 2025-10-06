@@ -1,4 +1,4 @@
-use crate::util::repo::{commit, stage_file};
+use crate::repo::{commit, stage_file};
 use clap::Args;
 use git2::Repository;
 use log::info;

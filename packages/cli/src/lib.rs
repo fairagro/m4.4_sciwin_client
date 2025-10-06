@@ -3,19 +3,31 @@ pub mod commands;
 pub mod config;
 pub mod cwl;
 pub mod parser;
-pub mod util;
+pub mod logger;
+mod repo;
 mod reana;
 
 use colored::Colorize;
 use log::info;
 use similar::{ChangeTag, TextDiff};
-use std::fmt;
+use std::{fmt, path::Path};
 
 pub fn print_list(list: &Vec<String>) {
     for item in list {
         info!("\t- {item}");
     }
 }
+
+use configparser::ini::Ini;
+
+pub(crate) fn remove_ini_section<P: AsRef<Path>>(file: P, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut config = Ini::new();
+    config.load(&file)?;
+    config.remove_section(name);
+    config.write(&file)?;
+    Ok(())
+}
+
 
 pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
     let slice = vec.as_ref();

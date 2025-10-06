@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    util::repo::{commit, get_modified_files, initial_commit, stage_all},
+    repo::{commit, get_modified_files, initial_commit, stage_all},
 };
 use anyhow::anyhow;
 use clap::Args;
