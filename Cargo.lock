@@ -3261,7 +3261,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
-name = "remote-execution"
+name = "remote_execution"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -3524,7 +3524,7 @@ dependencies = [
  "predicates",
  "prettytable-rs",
  "rand 0.9.2",
- "remote-execution",
+ "remote_execution",
  "reqwest",
  "rstest",
  "rust_xlsxwriter",

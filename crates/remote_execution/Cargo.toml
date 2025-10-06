@@ -1,5 +1,5 @@
 [package]
-name = "remote-execution"
+name = "remote_execution"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

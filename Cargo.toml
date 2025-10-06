@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 commonwl = { path = "crates/cwl", features = ["execution", "annotation"] }
-remote-execution = { path = "crates/remote-execution" }
+remote_execution = { path = "crates/remote_execution" }
 util = { path = "crates/util" }
 
 anyhow = { workspace = true }
