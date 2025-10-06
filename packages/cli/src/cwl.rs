@@ -65,7 +65,7 @@ impl Saveable for CommandLineTool {
 
 impl Connectable for Workflow {
     fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument) {
-        s4n_core::workflow::add_new_step_if_not_exists(self, name, path, doc);
+        s4n_core::workflow::add_workflow_step(self, name, path, doc);
         info!("➕ Added step {name} to workflow");
     }
 
@@ -74,7 +74,7 @@ impl Connectable for Workflow {
         let to_parts = to.split('/').collect::<Vec<_>>();
         let to_filename = resolve_filename(to_parts[0])?;
 
-        s4n_core::workflow::add_input_connection(self, from_input, to_parts[0], to_parts[1], &to_filename)?;
+        s4n_core::workflow::add_workflow_input_connection(self, from_input, to_parts[0], to_parts[1], &to_filename)?;
         info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
         Ok(())
@@ -85,7 +85,7 @@ impl Connectable for Workflow {
         let from_parts = from.split('/').collect::<Vec<_>>();
         let from_filename = resolve_filename(from_parts[0])?;
 
-        s4n_core::workflow::add_output_connection(self, from_parts[0], from_parts[1], &from_filename, to_output)?;
+        s4n_core::workflow::add_workflow_output_connection(self, from_parts[0], from_parts[1], &from_filename, to_output)?;
         info!("➕ Added or updated connection from {from} to outputs.{to_output} in workflow!");
 
         Ok(())
@@ -100,7 +100,7 @@ impl Connectable for Workflow {
         let to_parts = to.split('/').collect::<Vec<_>>();
         let to_filename = resolve_filename(to_parts[0])?;
 
-        s4n_core::workflow::add_step_connection(self, &from_filename, from_parts[0], from_parts[1], &to_filename, to_parts[0], to_parts[1])?;
+        s4n_core::workflow::add_workflow_step_connection(self, &from_filename, from_parts[0], from_parts[1], &to_filename, to_parts[0], to_parts[1])?;
         info!("🔗 Added connection from {from} to {to} in workflow!");
 
         Ok(())
@@ -120,7 +120,7 @@ impl Connectable for Workflow {
             return Err(format!("Step {} not found!", to_parts[0]).into());
         }
 
-        s4n_core::workflow::remove_step_connection(self, to_parts[0], to_parts[1])?;
+        s4n_core::workflow::remove_workflow_step_connection(self, to_parts[0], to_parts[1])?;
         info!("➖ Removed connection from {from} to {to} in workflow!");
         Ok(())
     }
@@ -132,7 +132,7 @@ impl Connectable for Workflow {
             return Err(format!("Invalid 'to' format for input connection: {from_input} to:{to}").into());
         }
 
-        s4n_core::workflow::remove_input_connection(self, from_input, to_parts[0], to_parts[1])?;
+        s4n_core::workflow::remove_workflow_input_connection(self, from_input, to_parts[0], to_parts[1])?;
         info!("➖ Removed connection from inputs.{from_input} to {to} in workflow");
         Ok(())
     }
@@ -141,7 +141,7 @@ impl Connectable for Workflow {
     fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
         let from_parts = from.split('/').collect::<Vec<_>>();
 
-        s4n_core::workflow::remove_output_connection(self, from_parts[0], from_parts[1], to_output)?;
+        s4n_core::workflow::remove_workflow_output_connection(self, from_parts[0], from_parts[1], to_output)?;
         info!("➖ Removed connection to {to_output} from workflow!");
         Ok(())
     }

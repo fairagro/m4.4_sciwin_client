@@ -25,7 +25,7 @@ pub fn create_workflow(filename: &str, force: bool) -> Result<String> {
     Ok(yaml)
 }
 
-pub fn add_new_step_if_not_exists(workflow: &mut Workflow, name: &str, path: &str, doc: &CWLDocument) {
+pub fn add_workflow_step(workflow: &mut Workflow, name: &str, path: &str, doc: &CWLDocument) {
     if !workflow.has_step(name) {
         let path = if path.starts_with("workflows") {
             path.replace("workflows", "..")
@@ -52,7 +52,7 @@ pub fn add_new_step_if_not_exists(workflow: &mut Workflow, name: &str, path: &st
 }
 
 /// Adds a connection between an input and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow input will be added.
-pub fn add_input_connection(workflow: &mut Workflow, from_input: &str, to_filename: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
+pub fn add_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_filename: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
     let to_cwl = load_doc(to_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
     let to_slot = to_cwl.inputs.iter().find(|i| i.id == to_slot_id).expect("No slot");
 
@@ -63,7 +63,7 @@ pub fn add_input_connection(workflow: &mut Workflow, from_input: &str, to_filena
         workflow.inputs.push(input);
     }
 
-    add_new_step_if_not_exists(workflow, to_name, to_filename, &to_cwl);
+    add_workflow_step(workflow, to_name, to_filename, &to_cwl);
     //add input in step
     workflow
         .steps
@@ -80,10 +80,16 @@ pub fn add_input_connection(workflow: &mut Workflow, from_input: &str, to_filena
 }
 
 /// Adds a connection between an output and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow output will be added.
-pub fn add_output_connection(workflow: &mut Workflow, from_name: &str, from_slot_id: &str, from_filename: &str, to_output: &str) -> Result<()> {
+pub fn add_workflow_output_connection(
+    workflow: &mut Workflow,
+    from_name: &str,
+    from_slot_id: &str,
+    from_filename: &str,
+    to_output: &str,
+) -> Result<()> {
     let from_cwl = load_doc(from_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
     let from_type = from_cwl.get_output_type(from_slot_id).context("No slot")?;
-    add_new_step_if_not_exists(workflow, from_name, from_filename, &from_cwl);
+    add_workflow_step(workflow, from_name, from_filename, &from_cwl);
 
     if !workflow.has_output(to_output) {
         workflow.outputs.push(WorkflowOutputParameter::default().with_id(to_output).clone());
@@ -97,7 +103,7 @@ pub fn add_output_connection(workflow: &mut Workflow, from_name: &str, from_slot
 }
 
 /// Adds a connection between two `CommandLineTools`. The tools will be registered as step if registered not already.
-pub fn add_step_connection(
+pub fn add_workflow_step_connection(
     workflow: &mut Workflow,
     from_filename: &str,
     from_name: &str,
@@ -120,13 +126,13 @@ pub fn add_step_connection(
         }
 
         //create step
-        add_new_step_if_not_exists(workflow, from_name, from_filename, &from_cwl);
+        add_workflow_step(workflow, from_name, from_filename, &from_cwl);
     }
 
     //check if step exists
     if !workflow.has_step(to_name) {
         let to_cwl = load_doc(to_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
-        add_new_step_if_not_exists(workflow, to_name, to_filename, &to_cwl);
+        add_workflow_step(workflow, to_name, to_filename, &to_cwl);
     }
 
     let step = workflow.steps.iter_mut().find(|s| s.id == to_name).unwrap(); //safe here!
@@ -140,7 +146,7 @@ pub fn add_step_connection(
 }
 
 /// Removes a connection between two `CommandLineTools` by removing input from `tool_y` that is also output of `tool_x`.
-pub fn remove_step_connection(workflow: &mut Workflow, to_name: &str, to_slot_id: &str) -> Result<()> {
+pub fn remove_workflow_step_connection(workflow: &mut Workflow, to_name: &str, to_slot_id: &str) -> Result<()> {
     let step = workflow.steps.iter_mut().find(|s| s.id == to_name);
     // If the step is found, try to remove the connection by removing input from `tool_y` that uses output of `tool_x`
     // Input is empty, change that?
@@ -155,7 +161,7 @@ pub fn remove_step_connection(workflow: &mut Workflow, to_name: &str, to_slot_id
 }
 
 /// Removes an input from inputs and removes it from `CommandLineTool` input.
-pub fn remove_input_connection(workflow: &mut Workflow, from_input: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
+pub fn remove_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
     if let Some(index) = workflow.inputs.iter().position(|s| s.id == *from_input.to_string()) {
         workflow.inputs.remove(index);
     }
@@ -172,7 +178,7 @@ pub fn remove_input_connection(workflow: &mut Workflow, from_input: &str, to_nam
 }
 
 /// Removes a connection between an output and a `CommandLineTool`.
-pub fn remove_output_connection(workflow: &mut Workflow, from_name: &str, from_slot_id: &str, to_output: &str) -> Result<()> {
+pub fn remove_workflow_output_connection(workflow: &mut Workflow, from_name: &str, from_slot_id: &str, to_output: &str) -> Result<()> {
     if let Some(index) = workflow.outputs.iter().position(|o| o.id == to_output) {
         // Remove the output connection
         workflow.outputs.remove(index);
