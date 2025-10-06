@@ -5,12 +5,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "CWL Rust library, intended to be used for YAML parsing with serde"
-authors = [
-    "Jens Krumsieck",
-    "Antonia Leidel",
-    "Harald von Waldow",
-    "Patrick König",
-]
+authors.workspace = true
 keywords = [
     "cwl",
     "common workflow language",
