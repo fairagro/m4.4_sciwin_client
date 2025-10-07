@@ -147,16 +147,16 @@ class: CommandLineTool
 requirements:
 - class: InitialWorkDirRequirement
   listing:
-  - entryname: tests/test_data/echo.py
+  - entryname: testdata/echo.py
     entry:
-      $include: ../../tests/test_data/echo.py
+      $include: ../../testdata/echo.py
 
 inputs:
 - id: test
   type: File
   default:
     class: File
-    location: ../../tests/test_data/input.txt
+    location: ../../testdata/input.txt
   inputBinding:
     prefix: '--test'
 
@@ -168,7 +168,7 @@ outputs:
 
 baseCommand:
 - python
-- tests/test_data/echo.py
+- testdata/echo.py
 ";
 
     let mut tool: CWLDocument = serde_yaml::from_str(cwl).expect("Tool parsing failed");
@@ -186,7 +186,7 @@ baseCommand:
 #[serial]
 pub fn test_run_commandlinetool_array_glob() {
     let dir = tempdir().unwrap();
-    let mut tool = CWLDocument::CommandLineTool(load_tool("../../tests/test_data/array_test.cwl").expect("Tool parsing failed"));
+    let mut tool = CWLDocument::CommandLineTool(load_tool("../../testdata/array_test.cwl").expect("Tool parsing failed"));
     let result = run_tool(
         &mut tool,
         &Default::default(),

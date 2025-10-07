@@ -734,10 +734,10 @@ mod tests {
         use serde_yaml::Value;
 
         let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let input_yaml_path = base_dir.join("tests/test_data/hello_world/inputs.yml");
+        let input_yaml_path = base_dir.join("testdata/hello_world/inputs.yml");
         assert!(input_yaml_path.exists(), "Test input file does not exist");
 
-        let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let cwl_path = base_dir.join("testdata/hello_world/workflows/main/main.cwl");
         assert!(cwl_path.exists(), "Test cwl file does not exist");
 
         let result = build_inputs_yaml(&cwl_path.to_string_lossy(), &input_yaml_path);
@@ -1145,7 +1145,7 @@ mod tests {
         use std::collections::HashSet;
 
         let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let cwl_input_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let cwl_input_path = base_dir.join("testdata/hello_world/workflows/main/main.cwl");
         assert!(cwl_input_path.exists(), "Test CWL file does not exist");
 
         let result = build_inputs_cwl(&cwl_input_path.to_string_lossy(), None);
@@ -1167,10 +1167,10 @@ mod tests {
         use serde_yaml::Value;
 
         let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let cwl_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let cwl_path = base_dir.join("testdata/hello_world/workflows/main/main.cwl");
         assert!(cwl_path.exists(), "Test CWL file does not exist");
 
-        let input = base_dir.join("tests/test_data/hello_world/inputs.yml");
+        let input = base_dir.join("testdata/hello_world/inputs.yml");
         assert!(input.exists(), "Test input file does not exist");
 
         let cwl_path_str = cwl_path.to_string_lossy().into_owned();
@@ -1222,7 +1222,7 @@ mod tests {
     #[test]
     fn test_get_all_outputs_with_existing_file() {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let workflow_file_path = base_dir.join("tests/test_data/hello_world/workflows/main/main.cwl");
+        let workflow_file_path = base_dir.join("testdata/hello_world/workflows/main/main.cwl");
         let workflow = load_workflow(&workflow_file_path).unwrap();
         assert!(workflow_file_path.exists(), "CWL file not found at: {workflow_file_path:?}");
         let result = get_all_outputs(&workflow, &workflow_file_path);

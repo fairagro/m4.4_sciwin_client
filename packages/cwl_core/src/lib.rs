@@ -218,7 +218,7 @@ impl fmt::Display for StringOrNumber {
 /// ```
 /// use cwl_core::load_doc;
 ///
-/// let tool = load_doc("../../tests/test_data/default.cwl");
+/// let tool = load_doc("../../testdata/default.cwl");
 /// assert!(tool.is_ok());
 /// ```
 pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<dyn Error>> {
@@ -247,7 +247,7 @@ pub fn load_doc<P: AsRef<Path> + Debug>(filename: P) -> Result<CWLDocument, Box<
 /// ```
 /// use cwl_core::load_tool;
 ///
-/// let tool = load_tool("../../tests/test_data/default.cwl");
+/// let tool = load_tool("../../testdata/default.cwl");
 /// assert!(tool.is_ok());
 /// ```
 pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool, Box<dyn Error>> {
@@ -276,7 +276,7 @@ pub fn load_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<CommandLineTool,
 /// ```
 /// use cwl_core::load_expression_tool;
 ///
-/// let expr_tool = load_expression_tool("../../tests/test_data/test_expr.cwl");
+/// let expr_tool = load_expression_tool("../../testdata/test_expr.cwl");
 /// assert!(expr_tool.is_ok());
 /// ```
 pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<ExpressionTool, Box<dyn Error>> {
@@ -305,7 +305,7 @@ pub fn load_expression_tool<P: AsRef<Path> + Debug>(filename: P) -> Result<Expre
 /// ```
 /// use cwl_core::load_workflow;
 ///
-/// let workflow = load_workflow("../../tests/test_data/wf_inout.cwl");
+/// let workflow = load_workflow("../../testdata/wf_inout.cwl");
 /// assert!(workflow.is_ok());
 /// ```
 pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Box<dyn Error>> {
@@ -331,11 +331,11 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case("../../tests/test_data/default.cwl")]
-    #[case("../../tests/test_data/echo.cwl")]
-    #[case("../../tests/test_data/mkdir.cwl")]
-    #[case("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl")]
-    #[case("../../tests/test_data/hello_world/workflows/plot/plot.cwl")]
+    #[case("../../testdata/default.cwl")]
+    #[case("../../testdata/echo.cwl")]
+    #[case("../../testdata/mkdir.cwl")]
+    #[case("../../testdata/hello_world/workflows/calculation/calculation.cwl")]
+    #[case("../../testdata/hello_world/workflows/plot/plot.cwl")]
 
     fn test_load_multiple_tools(#[case] filename: &str) {
         let tool = load_tool(filename);
@@ -349,13 +349,13 @@ mod tests {
     }
 
     #[rstest]
-    #[case("../../tests/test_data/mkdir_wf.cwl")]
-    #[case("../../tests/test_data/test-wf.cwl")]
-    #[case("../../tests/test_data/test-wf_features.cwl")]
-    #[case("../../tests/test_data/wf_inout.cwl")]
-    #[case("../../tests/test_data/wf_inout_dir.cwl")]
-    #[case("../../tests/test_data/wf_inout_file.cwl")]
-    #[case("../../tests/test_data/hello_world/workflows/main/main.cwl")]
+    #[case("../../testdata/mkdir_wf.cwl")]
+    #[case("../../testdata/test-wf.cwl")]
+    #[case("../../testdata/test-wf_features.cwl")]
+    #[case("../../testdata/wf_inout.cwl")]
+    #[case("../../testdata/wf_inout_dir.cwl")]
+    #[case("../../testdata/wf_inout_file.cwl")]
+    #[case("../../testdata/hello_world/workflows/main/main.cwl")]
     fn test_load_multiple_wfs(#[case] filename: &str) {
         let workflow = load_workflow(filename);
         assert!(workflow.is_ok());

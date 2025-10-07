@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     fn test_make_template_impl() {
-        let path = PathBuf::from("../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let path = PathBuf::from("../../testdata/hello_world/workflows/main/main.cwl");
         let template = make_template_impl(&path).unwrap();
         let expected = HashMap::from([
             (

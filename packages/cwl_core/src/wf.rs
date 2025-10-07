@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_workflow_steps() {
-        let contents = include_str!("../../../tests/test_data/hello_world/workflows/main/main.cwl");
+        let contents = include_str!("../../../testdata/hello_world/workflows/main/main.cwl");
         let workflow: Workflow = serde_yaml::from_str(contents).unwrap();
 
         assert!(workflow.has_step("calculation"));

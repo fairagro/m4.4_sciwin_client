@@ -23,7 +23,7 @@
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/population.csv"
+                        "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/population.csv"
                     },
                     "inputBinding": {
                         "prefix": "--population"
@@ -34,7 +34,7 @@
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/speakers_revised.csv"
+                        "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/speakers_revised.csv"
                     },
                     "inputBinding": {
                         "prefix": "--speakers"
@@ -64,7 +64,7 @@
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/population.csv"
+                        "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/population.csv"
                     }
                 },
                 {
@@ -72,7 +72,7 @@
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/speakers_revised.csv"
+                        "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/speakers_revised.csv"
                     }
                 }
             ],
@@ -141,7 +141,7 @@
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/results.csv"
+                        "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/results.csv"
                     },
                     "inputBinding": {
                         "prefix": "--results"

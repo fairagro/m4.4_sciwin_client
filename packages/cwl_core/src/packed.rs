@@ -370,7 +370,7 @@ mod tests {
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
 
-        let file_path = base_dir.join("tests/test_data/hello_world/workflows/calculation");
+        let file_path = base_dir.join("testdata/hello_world/workflows/calculation");
         pack_input(&mut input, "#calculation.cwl", file_path).unwrap();
 
         let json = serde_json::json!(&input);
@@ -379,7 +379,7 @@ mod tests {
                     "type": "File",
                     "default": {
                         "class": "File",
-                        "location": "file://XXX/tests/test_data/hello_world/data/population.csv"
+                        "location": "file://XXX/testdata/hello_world/data/population.csv"
                     },
                     "inputBinding": {
                         "prefix": "--population"
@@ -483,11 +483,11 @@ mod tests {
             ]);
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
-        let file_path = base_dir.join("tests/test_data/hello_world/workflows/calculation/calculation.cwl");
+        let file_path = base_dir.join("testdata/hello_world/workflows/calculation/calculation.cwl");
         pack_tool(&mut tool, file_path, Some("#main")).unwrap();
         let mut json = serde_json::json!(&tool);
 
-        let reference_json = include_str!("../../../tests/test_data/packed/calculation_packed.cwl")
+        let reference_json = include_str!("../../../testdata/packed/calculation_packed.cwl")
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
             .replace("//?", "");
         let mut value: Value = serde_json::from_str(&reference_json).unwrap();
@@ -498,14 +498,14 @@ mod tests {
 
     #[test]
     fn test_pack_workflow() {
-        let file = "../../tests/test_data/hello_world/workflows/main/main.cwl";
+        let file = "../../testdata/hello_world/workflows/main/main.cwl";
         let wf = load_workflow(file).unwrap();
 
         let packed = pack_workflow(&wf, file, None).unwrap();
         let mut json = serde_json::json!(&packed);
 
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
-        let reference_json = include_str!("../../../tests/test_data/packed/main_packed.cwl")
+        let reference_json = include_str!("../../../testdata/packed/main_packed.cwl")
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
             .replace("//?", "");
         let mut value: Value = serde_json::from_str(&reference_json).unwrap();
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn test_unpack_workflow() {
         let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
-        let pack = include_str!("../../../tests/test_data/packed/main_packed.cwl")
+        let pack = include_str!("../../../testdata/packed/main_packed.cwl")
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"));
 
         let pack: PackedCWL = serde_json::from_str(&pack).unwrap();

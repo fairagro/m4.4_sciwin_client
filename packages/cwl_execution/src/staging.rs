@@ -413,7 +413,7 @@ mod tests {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
 
-        let test_file = "tests/test_data/input.txt";
+        let test_file = "testdata/input.txt";
 
         let requirement = Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(test_file));
         let list = stage_requirements(&[requirement], Path::new("../../"), tmp_dir.path()).unwrap();
@@ -476,7 +476,7 @@ mod tests {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
 
-        let test_file = "tests/test_data/input.txt";
+        let test_file = "testdata/input.txt";
 
         let value = DefaultValue::File(File::from_location(test_file));
         let input = CommandInputParameter::default().with_id("test").with_type(CWLType::File);
@@ -502,7 +502,7 @@ mod tests {
         //create tmp_dir
         let tmp_dir = tempdir().unwrap();
 
-        let test_files = ["tests/test_data/input.txt", "tests/test_data/input2.txt"];
+        let test_files = ["testdata/input.txt", "testdata/input2.txt"];
         let value = test_files.map(|p| DefaultValue::File(File::from_location(p)));
         let input = CommandInputParameter::default()
             .with_id("test")
@@ -530,8 +530,8 @@ mod tests {
     fn test_stage_secondary_files() {
         let tmp_dir = tempdir().unwrap();
 
-        let test_file = "../../tests/test_data/input.txt";
-        let secondary_file = "../../tests/test_data/echo.py";
+        let test_file = "../../testdata/input.txt";
+        let secondary_file = "../../testdata/echo.py";
         let mut file = File::from_location(test_file);
         file.secondary_files = Some(vec![DefaultValue::File(File::from_location(secondary_file))]);
         let data = DefaultValue::File(file);

@@ -1005,9 +1005,9 @@ mod tests {
     #[test]
     fn test_workflow_structure_similarity() -> Result<(), Box<dyn std::error::Error>> {
         let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let workflow_path = base_dir.join("tests/test_data/workflow.json");
-        let logs_path = base_dir.join("tests/test_data/reana_logs.txt");
-        let expected_json_path = base_dir.join("tests/test_data/ro-crate-metadata.json");
+        let workflow_path = base_dir.join("testdata/workflow.json");
+        let logs_path = base_dir.join("testdata/reana_logs.txt");
+        let expected_json_path = base_dir.join("testdata/ro-crate-metadata.json");
         assert!(workflow_path.exists());
         assert!(logs_path.exists());
         assert!(expected_json_path.exists());
