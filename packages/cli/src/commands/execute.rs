@@ -1,10 +1,11 @@
-use crate::{config, reana};
+use crate::reana;
 use clap::{Args, Subcommand};
-use commonwl::prelude::*;
 use commonwl::execution::{ContainerEngine, execute_cwlfile, set_container_engine};
+use commonwl::prelude::*;
 use dialoguer::{Input, theme::ColorfulTheme};
 use keyring::Entry;
 use remote_execution::prelude::*;
+use s4n_core::config;
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
 

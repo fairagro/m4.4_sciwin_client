@@ -3,6 +3,7 @@
 use commonwl::execution::io::create_and_write_file;
 use commonwl::{load_workflow, requirements::Requirement};
 use s4n::commands::*;
+use s4n_core::project::initialize_project;
 use serial_test::serial;
 use std::{env, fs, path::Path};
 use tempfile::tempdir;
@@ -49,7 +50,7 @@ pub fn test_remove_workflow() {
     let current = env::current_dir().unwrap();
     env::set_current_dir(dir.path()).unwrap();
 
-    initialize_project(&None, false).unwrap();
+    initialize_project(&None).unwrap();
     create_workflow(&CreateArgs {
         name: Some("test".to_string()),
         force: false,
@@ -85,7 +86,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let current = env::current_dir().unwrap();
 
     env::set_current_dir(dir.path()).unwrap();
-    initialize_project(&None, false).unwrap();
+    initialize_project(&None).unwrap();
 
     create_and_write_file("workflows/calculation/calculation.cwl", CALCULATION_FILE).unwrap();
     create_and_write_file("workflows/plot/plot.cwl", PLOT_FILE).unwrap();

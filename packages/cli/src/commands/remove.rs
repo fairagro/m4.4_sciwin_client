@@ -1,10 +1,11 @@
-use crate::{cwl::resolve_filename, repo::commit};
+use crate::cwl::resolve_filename;
 use clap::Args;
 use commonwl::{Workflow, load_workflow};
 use dialoguer::Confirm;
 use git2::Repository;
 use ignore::WalkBuilder;
 use log::{info, warn};
+use s4n_core::repo::commit;
 use std::{env, fs, path::Path};
 
 #[derive(Args, Debug, Default)]

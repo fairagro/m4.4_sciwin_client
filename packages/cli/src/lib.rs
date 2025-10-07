@@ -1,30 +1,18 @@
 pub mod cli;
 pub mod commands;
-pub mod config;
 pub mod cwl;
 pub mod logger;
 mod reana;
-pub mod repo;
 
 use colored::Colorize;
 use log::info;
 use similar::{ChangeTag, TextDiff};
-use std::{fmt, path::Path};
+use std::{fmt};
 
 pub fn print_list(list: &Vec<String>) {
     for item in list {
         info!("\t- {item}");
     }
-}
-
-use configparser::ini::Ini;
-
-pub(crate) fn remove_ini_section<P: AsRef<Path>>(file: P, name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut config = Ini::new();
-    config.load(&file)?;
-    config.remove_section(name);
-    config.write(&file)?;
-    Ok(())
 }
 
 struct Line(Option<usize>);

@@ -1,4 +1,4 @@
-use crate::repo::{commit, stage_file};
+use s4n_core::repo::{commit, stage_file};
 use clap::Args;
 use git2::Repository;
 use log::info;

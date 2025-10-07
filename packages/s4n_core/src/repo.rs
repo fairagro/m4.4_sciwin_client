@@ -1,6 +1,4 @@
-use colored::Colorize;
 use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions, build::RepoBuilder};
-use log::info;
 use std::{
     env, fs, iter,
     path::{Path, PathBuf},
@@ -72,7 +70,6 @@ pub fn add_submodule(url: &str, branch: &Option<String>, path: &Path) -> Result<
 
     let repo = Repository::open(&current_dir)?;
     //clone and initialize submodule
-    info!("Downloading files from {}...", url.italic());
     if let Some(branch) = branch {
         RepoBuilder::new().branch(branch).clone(url, path)?;
     } else {
@@ -101,7 +98,6 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
     let module = repo.find_submodule(name)?;
     let path = module.path();
 
-    info!("Removing files from {}...", path.to_string_lossy().italic());
     fs::remove_dir_all(path).ok();
 
     //remove ksubmodule config
@@ -118,12 +114,12 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::initialize_project;
+    use crate::project::initialize_project;
     use fstest::fstest;
 
     #[fstest(repo = true)]
     fn test_add_remove_submodule() {
-        initialize_project(&None, false).unwrap();
+        initialize_project(&None).unwrap();
 
         let result = add_submodule(
             "https://github.com/JensKrumsieck/PorphyStruct",

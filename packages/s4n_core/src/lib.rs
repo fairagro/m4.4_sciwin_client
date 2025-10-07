@@ -1,7 +1,12 @@
 pub mod io;
 pub mod parser;
+pub mod project;
+pub mod repo;
 pub mod visualize;
+pub mod config;
 pub mod workflow;
+use configparser::ini::Ini;
+use std::path::Path;
 
 pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
     let slice = vec.as_ref();
@@ -12,4 +17,12 @@ pub fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -
     } else {
         (slice.to_vec(), vec![])
     }
+}
+
+pub(crate) fn remove_ini_section<P: AsRef<Path>>(file: P, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut config = Ini::new();
+    config.load(&file)?;
+    config.remove_section(name);
+    config.write(&file)?;
+    Ok(())
 }

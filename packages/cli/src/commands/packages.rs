@@ -1,8 +1,8 @@
-use crate::repo::{add_submodule, remove_submodule};
 use clap::Args;
 use colored::Colorize;
 use log::info;
 use reqwest::Url;
+use s4n_core::repo::{add_submodule, remove_submodule};
 use std::path::Path;
 
 #[derive(Args, Debug)]

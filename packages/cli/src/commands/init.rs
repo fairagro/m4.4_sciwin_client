@@ -1,92 +1,31 @@
-use crate::{
-    config::Config,
-    repo::{commit, get_modified_files, initial_commit, stage_all},
-};
 use anyhow::anyhow;
 use clap::Args;
-use git2::Repository;
-use log::{error, info, warn};
+use log::{info, warn};
 use rust_xlsxwriter::Workbook;
 use std::{
     env,
     fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 #[derive(Args, Debug, Default)]
 pub struct InitArgs {
     #[arg(short = 'p', long = "project", help = "Name of the project")]
-    project: Option<String>,
+    pub project: Option<String>,
     #[arg(short = 'a', long = "arc", help = "Option to create basic arc folder structure")]
-    arc: bool,
+    pub arc: bool,
 }
 
-const GITIGNORE_CONTENT: &str = include_str!("../../resources/default.gitignore");
-
 pub fn handle_init_command(args: &InitArgs) -> anyhow::Result<()> {
-    if let Err(e) = initialize_project(&args.project, args.arc) {
+    if args.arc {
+        create_arc_folder_structure(args.project.as_deref()).map_err(|e| anyhow::anyhow!("Could not create ARC folder structure: {e}"))?;
+    }
+    if let Err(e) = s4n_core::project::initialize_project(&args.project) {
         git_cleanup(args.project.clone());
         return Err(anyhow!("Could not initialize Project: {e}"));
     }
+    info!("📂 Project Initialization successful");
     Ok(())
-}
-
-pub fn initialize_project(folder_name: &Option<String>, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
-    let folder = folder_name.as_deref();
-    let repo = if is_git_repo(folder) {
-        Repository::open(folder.unwrap_or("."))?
-    } else {
-        init_git_repo(folder)?
-    };
-    if arc {
-        create_arc_folder_structure(folder)?;
-    } else {
-        create_minimal_folder_structure(folder, false)?;
-    }
-
-    write_config(folder)?;
-
-    let files = get_modified_files(&repo);
-    if files.is_empty() {
-        error!("Nothing to commit");
-    } else {
-        stage_all(&repo)?;
-        if repo.head().is_ok() {
-            commit(&repo, "🚀 Initialized Project")?;
-        } else {
-            initial_commit(&repo)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn write_config(folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    // create workflow toml
-    let mut cfg = Config::default();
-    let dir = if let Some(folder) = folder {
-        PathBuf::from(folder)
-    } else {
-        env::current_dir().unwrap_or_default()
-    };
-    cfg.workflow.name = dir.file_stem().unwrap_or_default().to_string_lossy().into_owned();
-    fs::write(dir.join("workflow.toml"), toml::to_string_pretty(&cfg)?)?;
-
-    Ok(())
-}
-
-fn is_git_repo(path: Option<&str>) -> bool {
-    // Determine the base directory from the provided path or use the current directory
-    let base_dir = match path {
-        Some(folder) => Path::new(folder).to_path_buf(),
-        None => {
-            // Get the current working directory
-            env::current_dir().expect("Failed to get current directory")
-        }
-    };
-
-    Repository::open(&base_dir).is_ok()
 }
 
 pub fn git_cleanup(folder_name: Option<String>) {
@@ -109,55 +48,7 @@ pub fn git_cleanup(folder_name: Option<String>) {
     }
 }
 
-pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn std::error::Error>> {
-    let base_dir = match base_folder {
-        Some(folder) => PathBuf::from(folder),
-        None => env::current_dir()?,
-    };
-
-    fs::create_dir_all(&base_dir)?;
-    let repo = Repository::init(&base_dir)?;
-
-    let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
-    if !gitignore_path.exists() {
-        fs::write(&gitignore_path, GITIGNORE_CONTENT)?;
-    }
-
-    //append .s4n folder to .gitignore, whatever it may contains
-    let mut gitignore = fs::OpenOptions::new().append(true).open(gitignore_path)?;
-    writeln!(gitignore, "\n.s4n")?;
-
-    Ok(repo)
-}
-
-pub fn create_minimal_folder_structure(base_folder: Option<&str>, silent: bool) -> Result<(), Box<dyn std::error::Error>> {
-    let base_dir = match base_folder {
-        Some(folder) => PathBuf::from(folder),
-        None => env::current_dir()?,
-    };
-
-    // Create the base directory
-    if !base_dir.exists() {
-        fs::create_dir_all(&base_dir)?;
-    }
-
-    // Check and create subdirectories
-    let workflows_dir = base_dir.join("workflows");
-    if !workflows_dir.exists() {
-        fs::create_dir_all(&workflows_dir)?;
-    }
-    File::create(workflows_dir.join(".gitkeep"))?;
-
-    if !silent {
-        info!("📂 Project Initialization successful:");
-        info!("{} (Base)", base_dir.display());
-        info!("  ├── workflows");
-    }
-
-    Ok(())
-}
-
-pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = match base_folder {
         Some(folder) => PathBuf::from(folder),
         None => env::current_dir()?,
@@ -178,20 +69,11 @@ pub fn create_arc_folder_structure(base_folder: Option<&str>) -> Result<(), Box<
         }
         File::create(dir.join(".gitkeep"))?;
     }
-    //create workflows folder
-    create_minimal_folder_structure(base_folder, true)?;
-
-    info!("📂 Project Initialization successful:");
-    info!("{} (Base)", base_dir.display());
-    info!("  ├── assays");
-    info!("  ├── studies");
-    info!("  ├── workflows");
-    info!("  └── runs");
 
     Ok(())
 }
 
-pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Construct the full path for the Excel file
     let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
 
@@ -261,50 +143,155 @@ pub fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn st
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
+    use calamine::{Reader, Xlsx, open_workbook};
+    use s4n_core::project::init_git_repo;
     use serial_test::serial;
-    use tempfile::tempdir;
+    use tempfile::{Builder, NamedTempFile, tempdir};
+    use test_utils::check_git_user;
 
     #[test]
     #[serial]
-    fn test_init_git_repo() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let base_folder = temp_dir.path().join("my_repo");
+    fn test_create_investigation_excel_file() {
+        //create directory
+        let temp_dir = Builder::new().prefix("investigation_excel_test_").tempdir().unwrap();
+        let directory = temp_dir.path().to_str().unwrap();
 
-        let result = init_git_repo(Some(base_folder.to_str().unwrap()));
+        //call the function
+        assert!(
+            create_investigation_excel_file(directory).is_ok(),
+            "Unexpected function create_investigation_excel fail"
+        );
+
+        //verify file exists
+        let excel_path = PathBuf::from(directory).join("isa_investigation.xlsx");
+        assert!(excel_path.exists(), "Excel file does not exist");
+
+        let workbook: Xlsx<_> = open_workbook(excel_path).expect("Cannot open file");
+
+        let sheets = workbook.sheet_names();
+
+        //verify sheet name
+        assert_eq!(sheets[0], "isa_investigation", "Worksheet name is incorrect");
+    }
+
+    #[test]
+    #[serial]
+    fn test_create_arc_folder_structure() {
+        let temp_dir = Builder::new().prefix("arc_folder_test").tempdir().unwrap();
+
+        let base_folder = Some(temp_dir.path().to_str().unwrap());
+
+        let result = create_arc_folder_structure(base_folder);
+
         assert!(result.is_ok(), "Expected successful initialization");
 
-        // Verify that the .git directory was created
-        let git_dir = base_folder.join(".git");
+        let expected_dirs = vec!["assays", "studies", "workflows", "runs"];
+        //assert that folders are created
+        for dir in &expected_dirs {
+            let full_path = PathBuf::from(temp_dir.path()).join(dir);
+            assert!(full_path.exists(), "Directory {dir} does not exist");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_create_arc_folder_structure_invalid() {
+        //this test only gives create_arc_folder_structure a file instead of a directory
+        let temp_file = NamedTempFile::new().unwrap();
+        let base_path = Some(temp_file.path().to_str().unwrap());
+
+        let result = create_arc_folder_structure(base_path);
+        //result should not be okay because of invalid input
+        assert!(result.is_err(), "Expected failed initialization");
+    }
+
+    #[test]
+    #[serial]
+    fn test_cleanup_no_folder() {
+        let temp_dir = tempdir().expect("Failed to create a temporary directory");
+        eprintln!("Temporary directory: {temp_dir:?}");
+        check_git_user().unwrap();
+        // Create a subdirectory in the temporary directory
+        std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
+
+        // Change to the temporary directory
+        env::set_current_dir(&temp_dir).unwrap();
+        eprintln!("Current directory changed to: {}", env::current_dir().unwrap().display());
+
+        let git_folder = ".git";
+        std::fs::create_dir(git_folder).unwrap();
+        assert!(Path::new(git_folder).exists());
+
+        git_cleanup(None);
+        assert!(!Path::new(git_folder).exists());
+    }
+
+    #[test]
+    #[serial]
+    fn test_init_s4n_without_folder_with_arc() {
+        //create a temp dir
+        let temp_dir = tempdir().expect("Failed to create a temporary directory");
+        eprintln!("Temporary directory: {:?}", temp_dir.path());
+        check_git_user().unwrap();
+
+        // Change current dir to the temporary directory to not create workflow folders etc in sciwin-client dir
+        env::set_current_dir(temp_dir.path()).unwrap();
+        eprintln!("Current directory changed to: {}", env::current_dir().unwrap().display());
+
+        // test method without folder name and do not create arc folders
+        let folder_name: Option<String> = None;
+        let arc = true;
+
+        let result = handle_init_command(&InitArgs { project: folder_name, arc });
+
+        // Assert results is ok and folders exist/ do not exist
+        assert!(result.is_ok());
+
+        assert!(PathBuf::from("workflows").exists());
+        assert!(PathBuf::from(".git").exists());
+        assert!(PathBuf::from("assays").exists());
+        assert!(PathBuf::from("studies").exists());
+        assert!(PathBuf::from("runs").exists());
+    }
+
+    #[test]
+    #[serial]
+    fn test_cleanup_failed_init() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let test_folder = temp_dir.path().join("my_repo");
+        let result = init_git_repo(Some(test_folder.to_str().unwrap()));
+        assert!(result.is_ok(), "Expected successful initialization");
+        assert!(Path::new(&test_folder).exists());
+        let git_dir = test_folder.join(".git");
         assert!(git_dir.exists(), "Expected .git directory to be created");
+        git_cleanup(Some(test_folder.display().to_string()));
+        assert!(!Path::new(&test_folder).exists());
+        assert!(!git_dir.exists(), "Expected .git directory to be deleted");
     }
 
     #[test]
     #[serial]
-    fn test_is_git_repo() {
-        let repo_dir = tempdir().unwrap();
-        let repo_dir_str = repo_dir.path().to_str().unwrap();
-        let repo_dir_string = String::from(repo_dir_str);
+    fn test_init_s4n_with_arc() {
+        let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
+        check_git_user().unwrap();
+        let arc = true;
 
-        let _ = init_git_repo(Some(&repo_dir_string));
-        let result = is_git_repo(Some(&repo_dir_string));
-        // Assert that directory is a git repo
-        assert!(result, "Expected directory to be a git repo true, got false");
-    }
+        let base_folder = Some(temp_dir.path().to_str().unwrap().to_string());
 
-    #[test]
-    #[serial]
-    fn test_is_not_git_repo() {
-        //create directory that is not a git repo
-        let no_repo = tempdir().unwrap();
+        //call method with temp dir
+        let result = handle_init_command(&InitArgs { project: base_folder, arc });
 
-        let no_repo_str = no_repo.path().to_str().unwrap();
-        let no_repo_string = String::from(no_repo_str);
+        assert!(result.is_ok(), "Expected successful initialization");
 
-        // call is_git repo_function
-        let result = is_git_repo(Some(&no_repo_string));
+        //check if directories were created
+        let expected_dirs = vec!["workflows", "assays", "studies", "runs"];
 
-        // assert that it is not a git repo
-        assert!(!result, "Expected directory to not be a git repo");
+        for dir in &expected_dirs {
+            let full_path = PathBuf::from(temp_dir.path()).join(dir);
+            assert!(full_path.exists(), "Directory {dir} does not exist");
+        }
     }
 }
