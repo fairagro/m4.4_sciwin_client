@@ -4,7 +4,7 @@ pub mod config;
 pub mod cwl;
 pub mod logger;
 mod reana;
-mod repo;
+pub mod repo;
 
 use colored::Colorize;
 use log::info;

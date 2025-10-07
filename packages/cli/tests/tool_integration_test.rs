@@ -1,15 +1,15 @@
 #![allow(clippy::disallowed_macros)]
+use commonwl::execution::io::copy_dir;
 use commonwl::{
     Argument, CWLType, CommandLineTool, Entry, load_tool,
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
 };
-use commonwl::execution::io::copy_dir;
 use fstest::fstest;
 use git2::Repository;
 use s4n::{
-    commands::*,
-    util::repo::{commit, get_modified_files, stage_all},
     cli::Commands,
+    commands::*,
+    repo::{commit, get_modified_files, stage_all},
 };
 use std::{
     env,
@@ -389,7 +389,7 @@ pub fn test_tool_output_complete_dir() {
 #[fstest(repo= true, files=["../../testdata/script.sh"])]
 #[cfg(target_os = "linux")]
 pub fn test_shell_script() {
-    use s4n::util::repo::stage_all;
+    use s4n::repo::stage_all;
 
     std::fs::set_permissions("script.sh", <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
     let repo = Repository::open(".").unwrap();
