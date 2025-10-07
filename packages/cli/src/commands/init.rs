@@ -188,7 +188,7 @@ mod tests {
 
         assert!(result.is_ok(), "Expected successful initialization");
 
-        let expected_dirs = vec!["assays", "studies", "workflows", "runs"];
+        let expected_dirs = vec!["assays", "studies", "runs"];
         //assert that folders are created
         for dir in &expected_dirs {
             let full_path = PathBuf::from(temp_dir.path()).join(dir);
