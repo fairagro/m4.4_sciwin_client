@@ -186,6 +186,7 @@ pub fn test_execute_local_workflow() {
 
 #[test]
 #[serial]
+#[cfg(not(target_os = "windows"))] //file system issues with windows
 pub fn test_execute_local_tool_default_cwl() {
     let path = PathBuf::from("../../testdata/default.cwl");
     let dir = tempdir().unwrap();
@@ -239,6 +240,7 @@ pub fn test_execute_local_workflow_no_steps() {
 
 #[test]
 #[serial]
+#[cfg(not(target_os = "windows"))] //file system issues with windows
 pub fn test_execute_local_workflow_in_param() {
     let path = PathBuf::from("../../testdata/test-wf_features.cwl");
     let dir = tempdir().unwrap();
