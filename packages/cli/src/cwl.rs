@@ -73,8 +73,8 @@ impl Connectable for Workflow {
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
         let to_filename = resolve_filename(to_parts[0])?;
-
-        s4n_core::workflow::add_workflow_input_connection(self, from_input, to_parts[0], to_parts[1], &to_filename)?;
+        
+        s4n_core::workflow::add_workflow_input_connection(self, from_input, &to_filename,  to_parts[0], to_parts[1])?;
         info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
         Ok(())
