@@ -18,7 +18,7 @@ use std::{
 };
 use test_utils::os_path;
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test() {
     let tool_create_args = CreateArgs {
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
@@ -40,7 +40,7 @@ pub fn tool_create_test() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo_inline.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo_inline.py"])]
 pub fn tool_create_test_inputs_outputs() {
     fs::create_dir_all("data").unwrap();
     fs::copy("input.txt", "data/input.txt").unwrap(); //copy to data folder
@@ -97,7 +97,7 @@ pub fn tool_create_test_inputs_outputs() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_is_raw() {
     let tool_create_args = CreateArgs {
         is_raw: true,
@@ -116,7 +116,7 @@ pub fn tool_create_test_is_raw() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_no_commit() {
     let tool_create_args = CreateArgs {
         no_commit: true, //look!
@@ -138,7 +138,7 @@ pub fn tool_create_test_no_commit() {
     assert_eq!(get_modified_files(&repo).len(), 2);
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_no_run() {
     let tool_create_args = CreateArgs {
         no_run: true,
@@ -156,7 +156,7 @@ pub fn tool_create_test_no_run() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py", "tests/test_data/data.bin"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py", "../../testdata/data.bin"])]
 pub fn tool_create_test_no_run_explicit_inputs() {
     let tool_create_args = CreateArgs {
         no_run: true,
@@ -178,7 +178,7 @@ pub fn tool_create_test_no_run_explicit_inputs() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_no_run_explicit_inputs_string() {
     let tool_create_args = CreateArgs {
         no_run: true,
@@ -200,7 +200,7 @@ pub fn tool_create_test_no_run_explicit_inputs_string() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_is_clean() {
     let tool_create_args = CreateArgs {
         is_clean: true,
@@ -219,7 +219,7 @@ pub fn tool_create_test_is_clean() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_container_image() {
     let tool_create_args = CreateArgs {
         container_image: Some("python".to_string()),
@@ -253,7 +253,7 @@ pub fn tool_create_test_container_image() {
     assert!(get_modified_files(&repo).is_empty());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/Dockerfile", "tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/Dockerfile", "../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_dockerfile() {
     let tool_create_args = CreateArgs {
         container_image: Some("Dockerfile".to_string()),
@@ -308,7 +308,7 @@ pub fn test_tool_magic_outputs() {
     );
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt"])]
 pub fn test_tool_magic_stdout() {
     let str = "wc input.txt \\> input.txt";
     let args = CreateArgs {
@@ -324,7 +324,7 @@ pub fn test_tool_magic_stdout() {
     assert!(tool.stdout.unwrap() == *"$(inputs.input_txt.path)");
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt"])]
 pub fn test_tool_magic_arguments(_dir: &Path) {
     let str = "cat input.txt | grep -f input.txt";
     let args = CreateArgs {
@@ -344,7 +344,7 @@ pub fn test_tool_magic_arguments(_dir: &Path) {
     }
 }
 
-#[fstest(repo = true, files = ["tests/test_data/create_dir.py"])]
+#[fstest(repo = true, files = ["../../testdata/create_dir.py"])]
 pub fn test_tool_output_is_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
@@ -362,7 +362,7 @@ pub fn test_tool_output_is_dir() {
     assert_eq!(tool.outputs[0].type_, CWLType::Directory);
 }
 
-#[fstest(repo = true, files = ["tests/test_data/create_dir.py"])]
+#[fstest(repo = true, files = ["../../testdata/create_dir.py"])]
 pub fn test_tool_output_complete_dir() {
     let name = "create_dir";
     let command = &["python", "create_dir.py"];
@@ -386,7 +386,7 @@ pub fn test_tool_output_complete_dir() {
     println!("{:#?}", tool.outputs);
 }
 
-#[fstest(repo= true, files=["tests/test_data/script.sh"])]
+#[fstest(repo= true, files=["../../testdata/script.sh"])]
 #[cfg(target_os = "linux")]
 pub fn test_shell_script() {
     use s4n::util::repo::stage_all;
@@ -424,7 +424,7 @@ pub fn test_shell_script() {
 /// see Issue [#89](https://github.com/fairagro/m4.4_sciwin_client/issues/89)
 pub fn test_tool_uncommitted_no_run() {
     let root = env!("CARGO_MANIFEST_DIR");
-    fs::copy(format!("{root}/tests/test_data/input.txt"), "input.txt").unwrap(); //repo is not in a clean state now!
+    fs::copy(format!("{root}/../../testdata/input.txt"), "input.txt").unwrap(); //repo is not in a clean state now!
     let args = CreateArgs {
         command: ["echo".to_string(), "Hello World".to_string()].to_vec(),
         no_run: true,
@@ -434,7 +434,7 @@ pub fn test_tool_uncommitted_no_run() {
     assert!(create_tool(&args).is_ok());
 }
 
-#[fstest(repo = true, files = ["tests/test_data/subfolders.py"])]
+#[fstest(repo = true, files = ["../../testdata/subfolders.py"])]
 /// see Issue [#88](https://github.com/fairagro/m4.4_sciwin_client/issues/88)
 pub fn test_tool_output_subfolders() {
     let args = CreateArgs {
@@ -470,7 +470,7 @@ pub fn tool_create_remote_file() {
     assert_eq!(tool.inputs[0].type_, CWLType::File);
 }
 
-#[fstest(repo = true, files = ["tests/test_data/input.txt", "tests/test_data/echo.py"])]
+#[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
 pub fn tool_create_test_network() {
     let tool_create_args = CreateArgs {
         command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
@@ -515,7 +515,7 @@ pub fn tool_create_same_inout() {
 #[fstest(repo = true)]
 pub fn tool_create_mount() {
     //copy a dir we can mount to the working directory
-    copy_dir(format!("{}/tests/test_data/test_dir", env!("CARGO_MANIFEST_DIR")), "test_dir").unwrap();
+    copy_dir(format!("{}/../../testdata/test_dir", env!("CARGO_MANIFEST_DIR")), "test_dir").unwrap();
     let repo = Repository::open(".").unwrap();
     stage_all(&repo).unwrap();
     commit(&repo, "message").unwrap();

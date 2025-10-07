@@ -236,7 +236,7 @@ outputs:
         input_values.insert("newname".to_string(), DefaultValue::Any(Value::String("neuer_name.txt".to_string())));
         input_values.insert(
             "srcfile".to_string(),
-            DefaultValue::File(File::from_location("tests/test_data/input.txt")),
+            DefaultValue::File(File::from_location("testdata/input.txt")),
         );
 
         let runtime = RuntimeEnvironment {
@@ -256,7 +256,7 @@ outputs:
     #[test]
     pub fn test_set_placeholder_values_in_string() {
         let text = "Searching for file $(inputs.infile.path)";
-        let file = "tests/test_data/input.txt";
+        let file = "testdata/input.txt";
         let runtime = Default::default();
         let inputs = vec![
             CommandInputParameter::default()
@@ -274,7 +274,7 @@ outputs:
     #[test]
     pub fn test_set_placeholder_values_in_string_size() {
         let text = "File has size $(inputs.infile.size)";
-        let file = "../../tests/test_data/input.txt";
+        let file = "../../testdata/input.txt";
         let size = get_file_size(file).unwrap();
         let runtime = Default::default();
         let inputs = vec![
@@ -293,7 +293,7 @@ outputs:
     #[test]
     pub fn test_set_placeholder_values_in_string_contents() {
         let text = "Greeting: $(inputs.infile)";
-        let file = "tests/test_data/input.txt";
+        let file = "testdata/input.txt";
         let runtime = Default::default();
         let inputs = vec![
             CommandInputParameter::default()
@@ -303,7 +303,7 @@ outputs:
         ];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
-        let expected = "Greeting: tests/test_data/input.txt";
+        let expected = "Greeting: testdata/input.txt";
 
         assert_eq!(result, expected);
     }
@@ -311,7 +311,7 @@ outputs:
     #[test]
     pub fn test_set_placeholder_values_in_string_input_values() {
         let text = "Greeting: $(inputs.infile)";
-        let file = "tests/test_data/input.txt";
+        let file = "testdata/input.txt";
 
         let mut values: HashMap<String, DefaultValue> = HashMap::new();
         values.insert("infile".to_string(), DefaultValue::File(File::from_location(file)));
@@ -322,7 +322,7 @@ outputs:
         let inputs = vec![CommandInputParameter::default().with_id("infile").with_type(CWLType::File)];
 
         let result = set_placeholder_values_in_string(text, &runtime, &inputs);
-        let expected = "Greeting: tests/test_data/input.txt";
+        let expected = "Greeting: testdata/input.txt";
 
         assert_eq!(result, expected);
     }

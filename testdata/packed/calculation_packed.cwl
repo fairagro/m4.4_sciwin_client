@@ -21,7 +21,7 @@
             "type": "File",
             "default": {
                 "class": "File",
-                "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/population.csv"
+                "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/population.csv"
             },
             "inputBinding": {
                 "prefix": "--population"
@@ -32,7 +32,7 @@
             "type": "File",
             "default": {
                 "class": "File",
-                "location": "file:///mnt/m4.4_sciwin_client/tests/test_data/hello_world/data/speakers_revised.csv"
+                "location": "file:///mnt/m4.4_sciwin_client/testdata/hello_world/data/speakers_revised.csv"
             },
             "inputBinding": {
                 "prefix": "--speakers"

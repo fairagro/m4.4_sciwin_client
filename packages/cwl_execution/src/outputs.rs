@@ -284,12 +284,12 @@ mod tests {
             .with_id("out")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: Some("tests/test_data/file.txt".to_string()),
+                glob: Some("testdata/file.txt".to_string()),
                 ..Default::default()
             });
 
-        fs::create_dir_all(dir.path().join("tests/test_data")).expect("Could not create folders");
-        fs::copy("../../tests/test_data/file.txt", dir.path().join("tests/test_data/file.txt")).expect("Unable to copy file");
+        fs::create_dir_all(dir.path().join("testdata")).expect("Could not create folders");
+        fs::copy("../../testdata/file.txt", dir.path().join("testdata/file.txt")).expect("Unable to copy file");
         env::set_current_dir(dir.path()).unwrap();
 
         let tool = CommandLineTool::default().with_outputs(vec![output]);
@@ -305,7 +305,7 @@ mod tests {
     pub fn test_get_file_metadata() {
         let dir = tempdir().unwrap();
         let current = repository(dir.path())
-            .copy_file("../../tests/test_data/file.txt", "file.txt")
+            .copy_file("testdata/file.txt", "file.txt")
             .finalize()
             .enter();
         let path = Path::new("file.txt");
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     #[serial]
     pub fn test_get_directory_metadata() {
-        let path = env::current_dir().unwrap().join("../../tests/test_data");
+        let path = env::current_dir().unwrap().join("../../testdata");
         let result = get_diretory_metadata(path.clone());
         let expected = Directory {
             location: Some(format!("file://{}", path.to_string_lossy().into_owned())),
@@ -346,8 +346,8 @@ mod tests {
     #[serial]
     pub fn test_copy_output_dir() {
         let dir = tempdir().unwrap();
-        let stage = dir.path().join("tests").join("test_data").join("test_dir");
-        let current = env::current_dir().unwrap().join("../../tests").join("test_data").join("test_dir");
+        let stage = dir.path().join("testdata").join("test_dir");
+        let current = env::current_dir().unwrap().join("../../testdata").join("test_dir");
         let cwd = current.to_str().unwrap();
         copy_dir(cwd, stage.to_str().unwrap()).unwrap();
 

@@ -191,13 +191,13 @@ mod tests {
 
     #[test]
     pub fn test_parse_redirect() {
-        let tool = parse_command("cat tests/test_data/input.txt \\> output.txt");
+        let tool = parse_command("cat testdata/input.txt \\> output.txt");
         assert!(tool.stdout == Some("output.txt".to_string()));
     }
 
     #[test]
     pub fn test_parse_redirect_stderr() {
-        let tool = parse_command("cat tests/test_data/inputtxt 2\\> err.txt");
+        let tool = parse_command("cat testdata/inputtxt 2\\> err.txt");
         assert!(tool.stderr == Some("err.txt".to_string()));
     }
 

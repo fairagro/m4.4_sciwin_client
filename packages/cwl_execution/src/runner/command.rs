@@ -371,7 +371,7 @@ stdout: output.txt"#;
     fn test_build_command_docker() {
         set_container_engine(crate::ContainerEngine::Docker);
         //tool has docker requirement
-        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let tool = load_tool("../../testdata/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
                 ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),
@@ -391,7 +391,7 @@ stdout: output.txt"#;
         set_container_engine(crate::ContainerEngine::Podman);
 
         //tool has docker requirement
-        let tool = load_tool("../../tests/test_data/hello_world/workflows/calculation/calculation.cwl").unwrap();
+        let tool = load_tool("../../testdata/hello_world/workflows/calculation/calculation.cwl").unwrap();
         let runtime = RuntimeEnvironment {
             runtime: HashMap::from([
                 ("outdir".to_string(), StringOrNumber::String("testdir".to_string())),

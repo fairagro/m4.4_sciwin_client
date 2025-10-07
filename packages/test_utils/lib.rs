@@ -60,13 +60,15 @@ impl Repo<'_> {
     }
 
     pub fn copy_file<P: AsRef<Path>>(&self, file: P, path: P) -> &Self {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../");
+        let root = root.canonicalize().unwrap();
         fs::copy(root.join(file), self.0.join(path)).unwrap();
         self
     }
 
     pub fn copy_dir<P: AsRef<Path>>(&self, dir: P, path: P) -> &Self {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../");
+        let root = root.canonicalize().unwrap();
         copy_dir(root.join(dir), self.0.join(path)).unwrap();
 
         self
@@ -100,19 +102,19 @@ fn set_up_repository() -> TempDir {
     repository(dir.path())
         .dir("scripts")
         .dir("data")
-        .copy_file("../test_data/echo.py", "scripts/echo.py")
-        .copy_file("../test_data/echo2.py", "scripts/echo2.py")
-        .copy_file("../test_data/echo3.py", "scripts/echo3.py")
-        .copy_file("../test_data/script_test.py", "scripts/script_test.py")
-        .copy_file("../test_data/echo_inline.py", "scripts/echo_inline.py")
-        .copy_file("../test_data/input.txt", "data/input.txt")
-        .copy_file("../test_data/input2.txt", "data/input2.txt")
-        .copy_file("../test_data/Dockerfile", "Dockerfile")
+        .copy_file("testdata/echo.py", "scripts/echo.py")
+        .copy_file("testdata/echo2.py", "scripts/echo2.py")
+        .copy_file("testdata/echo3.py", "scripts/echo3.py")
+        .copy_file("testdata/script_test.py", "scripts/script_test.py")
+        .copy_file("testdata/echo_inline.py", "scripts/echo_inline.py")
+        .copy_file("testdata/input.txt", "data/input.txt")
+        .copy_file("testdata/input2.txt", "data/input2.txt")
+        .copy_file("testdata/Dockerfile", "Dockerfile")
         .finalize();
     dir
 }
 
-/// Sets up a repository with the files in `tests/test_data` in tmp folder.
+/// Sets up a repository with the files in `testdata` in tmp folder.
 /// You *must* specify `#[serial]` for those tests
 pub fn with_temp_repository<F>(test: F)
 where

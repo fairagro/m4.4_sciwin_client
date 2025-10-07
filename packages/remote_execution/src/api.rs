@@ -517,7 +517,7 @@ mod tests {
 
         let base_dir = tempdir().unwrap();
         let data_dir = base_dir.path().join("data");
-        let wf_dir = base_dir.path().join("tests/test_data/hello_world/workflows");
+        let wf_dir = base_dir.path().join("testdata/hello_world/workflows");
 
         create_dir_all(&data_dir).unwrap();
         create_dir_all(&wf_dir).unwrap();

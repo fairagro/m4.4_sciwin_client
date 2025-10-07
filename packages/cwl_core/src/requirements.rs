@@ -284,17 +284,17 @@ mod tests {
 
     #[test]
     pub fn test_initial_workdir_requirement() {
-        let req = InitialWorkDirRequirement::from_file("../../tests/test_data/echo.py");
+        let req = InitialWorkDirRequirement::from_file("../../testdata/echo.py");
         assert_eq!(req.listing.len(), 1);
         assert!(matches!(req.listing[0], WorkDirItem::Dirent(_)));
         if let WorkDirItem::Dirent(dirent) = &req.listing[0] {
-            assert_eq!(dirent.entryname, Some("../../tests/test_data/echo.py".to_string()));
+            assert_eq!(dirent.entryname, Some("../../testdata/echo.py".to_string()));
         }
     }
 
     #[test]
     pub fn test_initial_workdir_requirement_multiple() {
-        let req = InitialWorkDirRequirement::from_files(&["../../tests/test_data/file.txt", "../../tests/test_data/input_alt.txt"]);
+        let req = InitialWorkDirRequirement::from_files(&["../../testdata/file.txt", "../../testdata/input_alt.txt"]);
         assert_eq!(req.listing.len(), 2);
     }
 }

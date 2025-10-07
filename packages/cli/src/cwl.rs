@@ -348,7 +348,7 @@ mod tests {
     };
     use test_utils::os_path;
 
-    #[fstest(repo = true, files = ["../../tests/test_data/input.txt", "../../tests/test_data/echo.py"])]
+    #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
     fn test_resolve_filename() {
         create_tool(&CreateArgs {
             command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
@@ -361,7 +361,7 @@ mod tests {
         assert_eq!(path, format!("{}{name}/{name}.cwl", get_workflows_folder()));
     }
 
-    #[fstest(repo = true, files = ["../../tests/test_data/input.txt", "../../tests/test_data/echo.py"])]
+    #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
     fn test_resolve_filename_in_submodule() {
         let repo = Repository::open(env::current_dir().unwrap()).unwrap();
         let mut module = repo
@@ -396,7 +396,7 @@ mod tests {
         let inputs = vec![
             CommandInputParameter::default()
                 .with_id("positional1")
-                .with_default_value(DefaultValue::File(File::from_location("test_data/input.txt")))
+                .with_default_value(DefaultValue::File(File::from_location("testdata/input.txt")))
                 .with_type(CWLType::String)
                 .with_binding(CommandLineBinding::default().with_position(0)),
             CommandInputParameter::default()
@@ -419,7 +419,7 @@ mod tests {
 
         assert_eq!(
             clt.inputs[0].default,
-            Some(DefaultValue::File(File::from_location(&os_path("../../test_data/input.txt"))))
+            Some(DefaultValue::File(File::from_location(&os_path("../../testdata/input.txt"))))
         );
         let requirements = &clt.requirements;
         let req_0 = &requirements[0];

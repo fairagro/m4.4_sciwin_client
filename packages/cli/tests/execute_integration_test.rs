@@ -16,9 +16,9 @@ use test_utils::repository;
 pub fn test_execute_local() {
     let dir = tempdir().unwrap();
     let current = repository(dir.path())
-        .copy_file("../test_data/echo.cwl", "echo.cwl")
-        .copy_file("../test_data/echo.py", "echo.py")
-        .copy_file("../test_data/input.txt", "input.txt")
+        .copy_file("testdata/echo.cwl", "echo.cwl")
+        .copy_file("testdata/echo.py", "echo.py")
+        .copy_file("testdata/input.txt", "input.txt")
         .finalize()
         .enter();
 
@@ -34,7 +34,7 @@ pub fn test_execute_local() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = include_str!("test_data/input.txt");
+    let expected = include_str!("../../../testdata/input.txt");
 
     assert_eq!(contents, expected);
     env::set_current_dir(current).unwrap();
@@ -45,9 +45,9 @@ pub fn test_execute_local() {
 pub fn test_execute_local_with_args() {
     let dir = tempdir().unwrap();
     let current = repository(dir.path())
-        .copy_file("../test_data/echo.cwl", "echo.cwl")
-        .copy_file("../test_data/echo.py", "echo.py")
-        .copy_file("../test_data/input_alt.txt", "input_alt.txt")
+        .copy_file("testdata/echo.cwl", "echo.cwl")
+        .copy_file("testdata/echo.py", "echo.py")
+        .copy_file("testdata/input_alt.txt", "input_alt.txt")
         .finalize()
         .enter();
 
@@ -64,7 +64,7 @@ pub fn test_execute_local_with_args() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = include_str!("test_data/input_alt.txt");
+    let expected = include_str!("../../../testdata/input_alt.txt");
 
     assert_eq!(contents, expected);
     env::set_current_dir(current).unwrap();
@@ -75,10 +75,10 @@ pub fn test_execute_local_with_args() {
 pub fn test_execute_local_with_file() {
     let dir = tempdir().unwrap();
     let current = repository(dir.path())
-        .copy_file("../test_data/echo.cwl", "echo.cwl")
-        .copy_file("../test_data/echo.py", "echo.py")
-        .copy_file("../test_data/echo-job.yml", "echo-job.yml")
-        .copy_file("../test_data/input_alt.txt", "input_alt.txt")
+        .copy_file("testdata/echo.cwl", "echo.cwl")
+        .copy_file("testdata/echo.py", "echo.py")
+        .copy_file("testdata/echo-job.yml", "echo-job.yml")
+        .copy_file("testdata/input_alt.txt", "input_alt.txt")
         .finalize()
         .enter();
 
@@ -95,7 +95,7 @@ pub fn test_execute_local_with_file() {
 
     //check file validity
     let contents = fs::read_to_string(file).unwrap();
-    let expected = include_str!("test_data/input_alt.txt");
+    let expected = include_str!("../../../testdata/input_alt.txt");
 
     assert_eq!(contents, expected);
     env::set_current_dir(current).unwrap();
@@ -106,9 +106,9 @@ pub fn test_execute_local_with_file() {
 pub fn test_execute_local_outdir() {
     let dir = tempdir().unwrap();
     let current = repository(dir.path())
-        .copy_file("../test_data/echo.cwl", "echo.cwl")
-        .copy_file("../test_data/echo.py", "echo.py")
-        .copy_file("../test_data/input.txt", "input.txt")
+        .copy_file("testdata/echo.cwl", "echo.cwl")
+        .copy_file("testdata/echo.py", "echo.py")
+        .copy_file("testdata/input.txt", "input.txt")
         .finalize()
         .enter();
 
@@ -132,9 +132,9 @@ pub fn test_execute_local_outdir() {
 pub fn test_execute_local_is_quiet() {
     let dir = tempdir().unwrap();
     let current = repository(dir.path())
-        .copy_file("../test_data/echo.cwl", "echo.cwl")
-        .copy_file("../test_data/echo.py", "echo.py")
-        .copy_file("../test_data/input.txt", "input.txt")
+        .copy_file("testdata/echo.cwl", "echo.cwl")
+        .copy_file("testdata/echo.py", "echo.py")
+        .copy_file("testdata/input.txt", "input.txt")
         .finalize()
         .enter();
 
@@ -158,7 +158,7 @@ pub fn test_execute_local_is_quiet() {
 //docker not working on MacOS Github Actions
 #[cfg_attr(target_os = "macos", ignore)]
 pub fn test_execute_local_workflow() {
-    let folder = "./tests/test_data/hello_world";
+    let folder = "../../testdata/hello_world";
 
     let dir = tempdir().unwrap();
     let dir_str = &dir.path().to_string_lossy();
@@ -187,7 +187,7 @@ pub fn test_execute_local_workflow() {
 #[test]
 #[serial]
 pub fn test_execute_local_tool_default_cwl() {
-    let path = PathBuf::from("tests/test_data/default.cwl");
+    let path = PathBuf::from("../../testdata/default.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_file = format!("{}/file.wtf", &out_dir);
@@ -198,11 +198,12 @@ pub fn test_execute_local_tool_default_cwl() {
         file: path.clone(),
         ..Default::default()
     };
+    let override_path = PathBuf::from("../../testdata/input.txt").canonicalize().unwrap();
     let args_override = LocalExecuteArgs {
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec!["--file1".to_string(), "tests/test_data/input.txt".to_string()],
+        args: vec!["--file1".to_string(), override_path.to_string_lossy().into_owned()],
         ..Default::default()
     };
 
@@ -210,7 +211,7 @@ pub fn test_execute_local_tool_default_cwl() {
     assert!(fs::exists(&out_file).unwrap());
     let contents = fs::read_to_string(&out_file).unwrap();
     assert_eq!(contents, "File".to_string());
-
+    
     assert!(execute_local(&args_override).is_ok());
     assert!(fs::exists(&out_file).unwrap());
     let contents = fs::read_to_string(&out_file).unwrap();
@@ -221,7 +222,7 @@ pub fn test_execute_local_tool_default_cwl() {
 #[serial]
 pub fn test_execute_local_workflow_no_steps() {
     //has no steps, do not complain!
-    let path = PathBuf::from("tests/test_data/wf_inout.cwl");
+    let path = PathBuf::from("../../testdata/wf_inout.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
 
@@ -238,16 +239,18 @@ pub fn test_execute_local_workflow_no_steps() {
 #[test]
 #[serial]
 pub fn test_execute_local_workflow_in_param() {
-    let path = PathBuf::from("tests/test_data/test-wf_features.cwl");
+    let path = PathBuf::from("../../testdata/test-wf_features.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_file = format!("{}/file.wtf", &out_dir);
 
+    
+    let input_file_path = PathBuf::from("../../testdata/input.txt").canonicalize().unwrap();
     let args = LocalExecuteArgs {
         out_dir: Some(out_dir),
         is_quiet: true,
         file: path,
-        args: vec!["--pop".to_string(), "tests/test_data/input.txt".to_string()],
+        args: vec!["--pop".to_string(), input_file_path.to_string_lossy().into_owned()],
         ..Default::default()
     };
 
@@ -261,7 +264,7 @@ pub fn test_execute_local_workflow_in_param() {
 #[serial]
 pub fn test_execute_local_workflow_dir_out() {
     //has no steps, do not complain!
-    let path = PathBuf::from("tests/test_data/wf_inout_dir.cwl");
+    let path = PathBuf::from("../../testdata/wf_inout_dir.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/test_dir", &out_dir);
@@ -282,7 +285,7 @@ pub fn test_execute_local_workflow_dir_out() {
 #[serial]
 pub fn test_execute_local_workflow_file_out() {
     //has no steps, do not complain!
-    let path = PathBuf::from("tests/test_data/wf_inout_file.cwl");
+    let path = PathBuf::from("../../testdata/wf_inout_file.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{out_dir}/file.txt");
@@ -301,7 +304,7 @@ pub fn test_execute_local_workflow_file_out() {
 #[test]
 #[serial]
 pub fn test_execute_local_workflow_directory_out() {
-    let path = PathBuf::from("tests/test_data/mkdir_wf.cwl");
+    let path = PathBuf::from("../../testdata/mkdir_wf.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
 
@@ -319,7 +322,7 @@ pub fn test_execute_local_workflow_directory_out() {
 #[test]
 #[serial]
 pub fn test_execute_local_with_binary_input() {
-    let path = PathBuf::from("tests/test_data/read_bin.cwl");
+    let path = PathBuf::from("../../testdata/read_bin.cwl");
     let dir = tempdir().unwrap();
     let out_dir = dir.path().to_string_lossy().into_owned();
     let out_path = format!("{}/output.txt", &out_dir);

@@ -15,7 +15,7 @@ fn setup() -> (PathBuf, TempDir) {
     let dir = tempdir().unwrap();
 
     //copy docs dit to tmp
-    let test_folder = "tests/test_data/docs";
+    let test_folder = "../../testdata/docs";
     copy_dir(test_folder, dir.path()).unwrap();
 
     let current = env::current_dir().unwrap();
@@ -424,7 +424,7 @@ pub fn test_example_project() {
     //set up environment
     let dir = tempdir().unwrap();
     let dir_str = &dir.path().to_string_lossy();
-    let test_folder = "tests/test_data/hello_world";
+    let test_folder = "../../testdata/hello_world";
     copy_dir(test_folder, dir.path()).unwrap();
 
     //delete all cwl files as we want to generate
