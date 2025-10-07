@@ -198,7 +198,8 @@ pub fn test_execute_local_tool_default_cwl() {
         file: path.clone(),
         ..Default::default()
     };
-    let override_path = PathBuf::from("../../testdata/input.txt").canonicalize().unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let override_path = root.join("../../testdata/input.txt");
     let args_override = LocalExecuteArgs {
         out_dir: Some(out_dir),
         is_quiet: true,
@@ -245,7 +246,8 @@ pub fn test_execute_local_workflow_in_param() {
     let out_file = format!("{}/file.wtf", &out_dir);
 
     
-    let input_file_path = PathBuf::from("../../testdata/input.txt").canonicalize().unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let input_file_path = root.join("../../testdata/input.txt");
     let args = LocalExecuteArgs {
         out_dir: Some(out_dir),
         is_quiet: true,
