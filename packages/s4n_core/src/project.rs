@@ -68,6 +68,7 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
         Some(folder) => PathBuf::from(folder),
         None => env::current_dir()?,
     };
+    let base_dir = if base_dir.is_symlink() { fs::read_link(&base_dir)? } else { base_dir };
 
     if !base_dir.exists() {
         fs::create_dir_all(&base_dir)?;
@@ -91,6 +92,7 @@ pub fn create_minimal_folder_structure(base_folder: Option<&str>) -> Result<(), 
         Some(folder) => PathBuf::from(folder),
         None => env::current_dir()?,
     };
+    let base_dir = if base_dir.is_symlink() { fs::read_link(&base_dir)? } else { base_dir };
 
     // Create the base directory
     if !base_dir.exists() {
