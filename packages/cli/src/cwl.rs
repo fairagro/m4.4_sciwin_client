@@ -1,12 +1,9 @@
-use s4n_core::repo::get_submodule_paths;
-use commonwl::{
-    CWLDocument, CommandLineTool, DefaultValue, Entry, PathItem, Workflow,
-    requirements::{Requirement, WorkDirItem},
-};
+use commonwl::{CWLDocument, Workflow};
 use dialoguer::{Select, theme::ColorfulTheme};
 use git2::Repository;
 use log::info;
-use s4n_core::io::{get_workflows_folder, resolve_path};
+use s4n_core::io::get_workflows_folder;
+use s4n_core::repo::get_submodule_paths;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -28,41 +25,6 @@ pub trait Connectable {
     fn remove_step_connection(&mut self, from: &str, to: &str) -> Result<(), Box<dyn Error>>;
 }
 
-pub trait Saveable {
-    fn prepare_save(&mut self, path: &str) -> String;
-}
-
-impl Saveable for CommandLineTool {
-    fn prepare_save(&mut self, path: &str) -> String {
-        //rewire paths to new location
-        for input in &mut self.inputs {
-            if let Some(DefaultValue::File(value)) = &mut input.default {
-                value.location = Some(resolve_path(value.get_location(), path));
-            }
-            if let Some(DefaultValue::Directory(value)) = &mut input.default {
-                value.location = Some(resolve_path(value.get_location(), path));
-            }
-        }
-
-        for requirement in &mut self.requirements {
-            if let Requirement::DockerRequirement(docker) = requirement {
-                if let Some(Entry::Include(include)) = &mut docker.docker_file {
-                    include.include = resolve_path(&include.include, path);
-                }
-            } else if let Requirement::InitialWorkDirRequirement(iwdr) = requirement {
-                for listing in &mut iwdr.listing {
-                    if let WorkDirItem::Dirent(dirent) = listing
-                        && let Entry::Include(include) = &mut dirent.entry
-                    {
-                        include.include = resolve_path(&include.include, path);
-                    }
-                }
-            }
-        }
-        self.to_string()
-    }
-}
-
 impl Connectable for Workflow {
     fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument) {
         s4n_core::workflow::add_workflow_step(self, name, path, doc);
@@ -73,8 +35,8 @@ impl Connectable for Workflow {
     fn add_input_connection(&mut self, from_input: &str, to: &str) -> Result<(), Box<dyn Error>> {
         let to_parts = to.split('/').collect::<Vec<_>>();
         let to_filename = resolve_filename(to_parts[0])?;
-        
-        s4n_core::workflow::add_workflow_input_connection(self, from_input, &to_filename,  to_parts[0], to_parts[1])?;
+
+        s4n_core::workflow::add_workflow_input_connection(self, from_input, &to_filename, to_parts[0], to_parts[1])?;
         info!("➕ Added or updated connection from inputs.{from_input} to {to} in workflow");
 
         Ok(())
@@ -209,19 +171,12 @@ pub fn highlight_cwl(yaml: &str) {
 mod tests {
     use super::*;
     use crate::commands::{CreateArgs, create_tool};
-    use commonwl::{
-        CWLType, Command, Dirent, File,
-        inputs::{CommandInputParameter, CommandLineBinding},
-        requirements::{DockerRequirement, InitialWorkDirRequirement},
-    };
     use fstest::fstest;
     use s4n_core::io::get_workflows_folder;
-    use serde_yaml::Value;
     use std::{
         env,
         path::{MAIN_SEPARATOR, Path},
     };
-    use test_utils::os_path;
 
     #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
     fn test_resolve_filename() {
@@ -263,59 +218,6 @@ mod tests {
                 module.path().to_string_lossy(),
                 get_workflows_folder()
             )
-        );
-    }
-
-    #[test]
-    pub fn test_cwl_save() {
-        let inputs = vec![
-            CommandInputParameter::default()
-                .with_id("positional1")
-                .with_default_value(DefaultValue::File(File::from_location("testdata/input.txt")))
-                .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_position(0)),
-            CommandInputParameter::default()
-                .with_id("option1")
-                .with_type(CWLType::String)
-                .with_binding(CommandLineBinding::default().with_prefix("--option1"))
-                .with_default_value(DefaultValue::Any(Value::String("value1".to_string()))),
-        ];
-        let mut clt = CommandLineTool::default()
-            .with_base_command(Command::Multiple(vec!["python".to_string(), "test/script.py".to_string()]))
-            .with_inputs(inputs)
-            .with_requirements(vec![
-                Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("test/script.py")),
-                Requirement::DockerRequirement(DockerRequirement::from_file("test/data/Dockerfile", "test")),
-            ]);
-
-        clt.prepare_save("workflows/tool/tool.cwl");
-
-        //check if paths are rewritten upon tool saving
-
-        assert_eq!(
-            clt.inputs[0].default,
-            Some(DefaultValue::File(File::from_location(&os_path("../../testdata/input.txt"))))
-        );
-        let requirements = &clt.requirements;
-        let req_0 = &requirements[0];
-        let req_1 = &requirements[1];
-        assert_eq!(
-            *req_0,
-            Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement {
-                listing: vec![WorkDirItem::Dirent(Dirent {
-                    entry: Entry::from_file(&os_path("../../test/script.py")),
-                    entryname: Some("test/script.py".to_string()),
-                    ..Default::default()
-                })]
-            })
-        );
-        assert_eq!(
-            *req_1,
-            Requirement::DockerRequirement(DockerRequirement {
-                docker_file: Some(Entry::from_file(&os_path("../../test/data/Dockerfile"))),
-                docker_image_id: Some("test".to_string()),
-                ..Default::default()
-            })
         );
     }
 }

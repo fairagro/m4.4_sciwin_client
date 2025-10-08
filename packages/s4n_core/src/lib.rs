@@ -1,9 +1,10 @@
+pub mod config;
 pub mod io;
 pub mod parser;
 pub mod project;
 pub mod repo;
+pub mod tool;
 pub mod visualize;
-pub mod config;
 pub mod workflow;
 use configparser::ini::Ini;
 use std::path::Path;
