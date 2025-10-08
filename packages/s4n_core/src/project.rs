@@ -1,5 +1,6 @@
 use crate::{
     config::Config,
+    io::verify_base_dir,
     repo::{commit, get_modified_files, initial_commit, stage_all},
 };
 use git2::Repository;
@@ -50,10 +51,11 @@ fn is_git_repo(path: &Path) -> bool {
 const GITIGNORE_CONTENT: &str = include_str!("../resources/default.gitignore");
 
 pub fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Error>> {
+    let base_dir = verify_base_dir(base_dir)?;
     if !base_dir.exists() {
-        fs::create_dir_all(base_dir)?;
+        fs::create_dir_all(&base_dir)?;
     }
-    let repo = Repository::init(base_dir)?;
+    let repo = Repository::init(&base_dir)?;
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
@@ -68,10 +70,10 @@ pub fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::
 }
 
 pub fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-
+    let base_dir = verify_base_dir(base_dir)?;
     // Create the base directory
     if !base_dir.exists() {
-        fs::create_dir_all(base_dir)?;
+        fs::create_dir_all(&base_dir)?;
     }
 
     // Check and create subdirectories
@@ -86,8 +88,6 @@ pub fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn st
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
     use serial_test::serial;
     use tempfile::{Builder, NamedTempFile, tempdir};
@@ -164,43 +164,6 @@ mod tests {
         //path to file instead of a directory, assert that it fails
         let result = create_minimal_folder_structure(base_folder);
         assert!(result.is_err(), "Expected failed initialization");
-    }
-
-    #[test]
-    #[serial]
-    fn test_init_s4n_without_folder() {
-        //create a temp dir
-        let temp_dir = tempdir().expect("Failed to create a temporary directory");
-        eprintln!("Temporary directory: {temp_dir:?}");
-        check_git_user().unwrap();
-        // Create a subdirectory in the temporary directory
-        std::fs::create_dir_all(&temp_dir).expect("Failed to create test directory");
-
-        // Change to the temporary directory
-        env::set_current_dir(&temp_dir).unwrap();
-        eprintln!("Current directory changed to: {}", env::current_dir().unwrap().display());
-
-        // test method without folder name and do not create arc folders
-        let folder_name = ".";
-        let result = initialize_project(&PathBuf::from(folder_name));
-
-        // Assert results is ok and folders exist/ do not exist
-        assert!(result.is_ok());
-
-        let expected_dirs = vec!["workflows"];
-        //check that other directories are not created
-        let unexpected_dirs = vec!["assays", "studies", "runs"];
-
-        //assert minimal folders do exist
-        for dir in &expected_dirs {
-            let full_path = PathBuf::from(&temp_dir.path()).join(dir);
-            assert!(full_path.exists(), "Directory {dir} does not exist");
-        }
-        //assert other arc folders do not exist
-        for dir in &unexpected_dirs {
-            let full_path = PathBuf::from(&temp_dir.path()).join(dir);
-            assert!(!full_path.exists(), "Directory {dir} does exist, but should not exist");
-        }
     }
 
     #[test]

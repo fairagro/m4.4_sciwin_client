@@ -1,6 +1,7 @@
 use commonwl::Command;
 use util::is_cwl_file;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use anyhow::Result;
 
 pub fn get_filename_without_extension(relative_path: impl AsRef<Path>) -> String {
     let filename = relative_path
@@ -49,6 +50,16 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     filename.push_str(".cwl");
 
     format!("{}{foldername}/{filename}", get_workflows_folder())
+}
+
+pub fn verify_base_dir(folder: &Path) -> Result<PathBuf> {
+    if let Some(parent) = folder.parent() {
+        let parent = parent.canonicalize()?;
+        let foldername = folder.file_name().unwrap_or_default();
+        Ok(parent.join(foldername))
+    } else {
+        Err(anyhow::anyhow!("Folder has no parent"))
+    }
 }
 
 #[cfg(test)]
