@@ -21,9 +21,11 @@ pub(crate) fn normalize_path<P: AsRef<Path>>(input: P) -> std::io::Result<PathBu
 
 #[cfg(test)]
 mod tests{
+    use serial_test::serial;
     use super::*;
 
     #[test]
+    #[serial]
     fn test_normalize_path(){
         let res = normalize_path("../../some/../path/or/what/../new_file").unwrap();
 
@@ -33,6 +35,7 @@ mod tests{
     }
 
     #[test]
+    #[serial]
     fn test_normalize_path_with_dot() {
         let cwd = env::current_dir().unwrap();
 
@@ -44,6 +47,7 @@ mod tests{
     }
 
     #[test]
+    #[serial]
     fn test_normalize_path_with_trailing_parent() {
         let cwd = env::current_dir().unwrap();
 

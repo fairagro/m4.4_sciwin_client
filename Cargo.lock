@@ -989,6 +989,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "serial_test",
  "sha1",
  "test_utils",
  "url",
