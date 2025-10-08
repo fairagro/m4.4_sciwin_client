@@ -305,21 +305,21 @@ mod tests {
     pub fn test_get_file_metadata() {
         let dir = tempdir().unwrap();
         let current = repository(dir.path())
-            .copy_file("testdata/file.txt", "file.txt")
+            .copy_file("testdata/meta.json", "meta.json")
             .finalize()
             .enter();
-        let path = Path::new("file.txt");
+        let path = Path::new("meta.json");
         assert!(path.exists());
 
         let result = get_file_metadata(path, None);
         let expected = File {
             location: Some(format!("file://{}", env::current_dir().unwrap().join(path).to_string_lossy().into_owned())),
-            basename: Some("file.txt".to_string()),
+            basename: Some("meta.json".to_string()),
             class: "File".to_string(),
-            nameext: Some(".txt".into()),
-            nameroot: Some("file".into()),
-            checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
-            size: Some(4),
+            nameext: Some(".json".into()),
+            nameroot: Some("meta".into()),
+            checksum: Some("sha1$faed00e801e19bfbbdc453608b2e2bf1ccfcec41".to_string()),
+            size: Some(284),
             path: Some(path.to_string_lossy().into_owned()),
             ..Default::default()
         };

@@ -69,7 +69,9 @@ pub fn init_git_repo(base_folder: Option<&str>) -> Result<Repository, Box<dyn st
         None => env::current_dir()?,
     };
 
-    fs::create_dir_all(&base_dir)?;
+    if !base_dir.exists() {
+        fs::create_dir_all(&base_dir)?;
+    }
     let repo = Repository::init(&base_dir)?;
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
