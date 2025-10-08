@@ -49,13 +49,8 @@ fn is_git_repo(path: &Path) -> bool {
 
 const GITIGNORE_CONTENT: &str = include_str!("../resources/default.gitignore");
 
-pub fn init_git_repo(base_dir: &PathBuf) -> Result<Repository, Box<dyn std::error::Error>> {
-    let base_dir = if base_dir.is_symlink() {
-        fs::read_link(base_dir)?
-    } else {
-        base_dir.clone()
-    };
-
+pub fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Error>> {
+    let base_dir = base_dir.canonicalize()?;
     if !base_dir.exists() {
         fs::create_dir_all(&base_dir)?;
     }
@@ -73,12 +68,8 @@ pub fn init_git_repo(base_dir: &PathBuf) -> Result<Repository, Box<dyn std::erro
     Ok(repo)
 }
 
-pub fn create_minimal_folder_structure(base_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let base_dir = if base_dir.is_symlink() {
-        fs::read_link(base_dir)?
-    } else {
-        base_dir.clone()
-    };
+pub fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let base_dir = base_dir.canonicalize()?;
 
     // Create the base directory
     if !base_dir.exists() {
@@ -124,7 +115,7 @@ mod tests {
         let repo_dir = tempdir().unwrap();
         let repo_dir_pa = repo_dir.path();
 
-        let _ = init_git_repo(&repo_dir_pa.to_path_buf());
+        let _ = init_git_repo(repo_dir_pa);
         let result = is_git_repo(repo_dir_pa);
         // Assert that directory is a git repo
         assert!(result, "Expected directory to be a git repo true, got false");
@@ -151,7 +142,7 @@ mod tests {
 
         let base_folder = temp_dir.path();
 
-        let result = create_minimal_folder_structure(&base_folder.to_path_buf());
+        let result = create_minimal_folder_structure(base_folder);
 
         //test if result is ok
         assert!(result.is_ok(), "Expected successful initialization");
@@ -173,7 +164,7 @@ mod tests {
 
         eprintln!("Base folder path: {base_folder:?}");
         //path to file instead of a directory, assert that it fails
-        let result = create_minimal_folder_structure(&base_folder.to_path_buf());
+        let result = create_minimal_folder_structure(base_folder);
         assert!(result.is_err(), "Expected failed initialization");
     }
 
