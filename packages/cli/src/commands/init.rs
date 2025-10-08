@@ -17,10 +17,15 @@ pub struct InitArgs {
 }
 
 pub fn handle_init_command(args: &InitArgs) -> anyhow::Result<()> {
+    let base_dir = match &args.project {
+        Some(folder) => PathBuf::from(folder),
+        None => env::current_dir()?,
+    };
+
     if args.arc {
         create_arc_folder_structure(args.project.as_deref()).map_err(|e| anyhow::anyhow!("Could not create ARC folder structure: {e}"))?;
     }
-    if let Err(e) = s4n_core::project::initialize_project(&args.project) {
+    if let Err(e) = s4n_core::project::initialize_project(&base_dir) {
         git_cleanup(args.project.clone());
         return Err(anyhow!("Could not initialize Project: {e}"));
     }
@@ -262,7 +267,7 @@ mod tests {
     fn test_cleanup_failed_init() {
         let temp_dir = tempfile::tempdir().unwrap();
         let test_folder = temp_dir.path().join("my_repo");
-        let result = init_git_repo(Some(test_folder.to_str().unwrap()));
+        let result = init_git_repo(&test_folder);
         assert!(result.is_ok(), "Expected successful initialization");
         assert!(Path::new(&test_folder).exists());
         let git_dir = test_folder.join(".git");
