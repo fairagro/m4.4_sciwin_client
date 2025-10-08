@@ -148,12 +148,11 @@ fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::e
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use super::*;
     use calamine::{Reader, Xlsx, open_workbook};
     use s4n_core::project::init_git_repo;
     use serial_test::serial;
+    use std::path::Path;
     use tempfile::{Builder, NamedTempFile, tempdir};
     use test_utils::check_git_user;
 
@@ -268,6 +267,9 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let test_folder = temp_dir.path().join("my_repo");
         let result = init_git_repo(&test_folder);
+        if let Err(e) = &result {
+            eprintln!("Error initializing git repo: {}", e);
+        }
         assert!(result.is_ok(), "Expected successful initialization");
         assert!(Path::new(&test_folder).exists());
         let git_dir = test_folder.join(".git");
@@ -275,6 +277,7 @@ mod tests {
         git_cleanup(Some(test_folder.display().to_string()));
         assert!(!Path::new(&test_folder).exists());
         assert!(!git_dir.exists(), "Expected .git directory to be deleted");
+        temp_dir.close().unwrap();
     }
 
     #[test]
