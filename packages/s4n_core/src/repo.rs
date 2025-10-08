@@ -119,7 +119,8 @@ mod tests {
 
     #[fstest(repo = true)]
     fn test_add_remove_submodule() {
-        initialize_project(&PathBuf::from(".")).unwrap();
+        let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
+        initialize_project(&current_dir).unwrap();
 
         let result = add_submodule(
             "https://github.com/JensKrumsieck/PorphyStruct",
