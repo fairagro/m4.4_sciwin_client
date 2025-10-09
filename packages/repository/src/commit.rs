@@ -1,3 +1,7 @@
+use std::{iter, path::Path};
+
+use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions};
+
 pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);

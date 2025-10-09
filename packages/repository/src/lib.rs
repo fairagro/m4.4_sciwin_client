@@ -1,5 +1,3 @@
-use git2::{Commit, Error, IndexAddOption, Status, StatusOptions};
-use std::{iter, path::Path};
 mod commit;
 mod ini;
 pub mod submodule;
