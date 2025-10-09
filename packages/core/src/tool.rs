@@ -1,4 +1,5 @@
-use crate::{io::resolve_path, parser, repo};
+use crate::{io::resolve_path, parser};
+use repository::{self, Repository};
 use anyhow::Result;
 use commonwl::{
     Entry, PathItem,
@@ -7,7 +8,6 @@ use commonwl::{
     prelude::*,
     requirements::WorkDirItem,
 };
-use git2::Repository;
 use std::{
     env,
     fs::remove_file,
@@ -33,7 +33,7 @@ pub fn create_tool(
 
     //check for modified files and fail if there are any
     let repo = Repository::open(&current_working_dir)?;
-    let modified = repo::get_modified_files(&repo);
+    let modified = repository::get_modified_files(&repo);
 
     if !no_run && !modified.is_empty() {
         anyhow::bail!("Uncommitted changes detected: {:?}", modified);
@@ -51,7 +51,7 @@ pub fn create_tool(
         command::run_command(&cwl, &mut RuntimeEnvironment::default())
             .map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
-        let mut files = repo::get_modified_files(&repo);
+        let mut files = repository::get_modified_files(&repo);
         files.retain(|f| !modified.contains(f)); //remove files that were changed before run
 
         if cleanup {
@@ -71,11 +71,11 @@ pub fn create_tool(
                             let entry = entry?;
                             let file_path = entry.path();
                             if file_path.is_file() {
-                                repo::stage_file(&repo, file_path.to_str().unwrap())?;
+                                repository::stage_file(&repo, file_path.to_str().unwrap())?;
                             }
                         }
                     } else {
-                        repo::stage_file(&repo, file.as_str())?;
+                        repository::stage_file(&repo, file.as_str())?;
                     }
                 }
             }
@@ -158,8 +158,8 @@ pub fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: b
     match create_and_write_file(path, yaml) {
         Ok(()) => {
             if commit {
-                repo::stage_file(repo, path)?;
-                repo::commit(repo, &format!("🪄 Creation of `{path}`"))?;
+                repository::stage_file(repo, path)?;
+                repository::commit(repo, &format!("🪄 Creation of `{path}`"))?;
             }
         }
         Err(e) => anyhow::bail!("Creation of File {path} failed: {e}"),

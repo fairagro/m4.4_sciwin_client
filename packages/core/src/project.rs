@@ -1,9 +1,6 @@
-use crate::{
-    config::Config,
-    io::verify_base_dir,
-    repo::{commit, get_modified_files, initial_commit, stage_all},
-};
-use git2::Repository;
+use crate::{config::Config, io::verify_base_dir};
+use repository::Repository;
+use repository::{commit, get_modified_files, initial_commit, stage_all};
 use std::{
     fs,
     path::{Path, PathBuf},

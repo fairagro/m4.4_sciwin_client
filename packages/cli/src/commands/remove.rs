@@ -5,7 +5,7 @@ use dialoguer::Confirm;
 use git2::Repository;
 use ignore::WalkBuilder;
 use log::{info, warn};
-use s4n_core::repo::commit;
+use repository::commit;
 use std::{env, fs, path::Path};
 
 #[derive(Args, Debug, Default)]

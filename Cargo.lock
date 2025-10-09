@@ -3285,6 +3285,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "repository"
+version = "1.0.0"
+dependencies = [
+ "configparser",
+ "fstest",
+ "git2",
+ "serial_test",
+]
+
+[[package]]
 name = "reqwest"
 version = "0.12.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3525,6 +3535,7 @@ dependencies = [
  "prettytable-rs",
  "rand 0.9.2",
  "remote_execution",
+ "repository",
  "reqwest",
  "rstest",
  "rust_xlsxwriter",
@@ -3550,11 +3561,10 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "commonwl",
- "configparser",
  "fstest",
- "git2",
  "pathdiff",
  "rand 0.9.2",
+ "repository",
  "rstest",
  "semver",
  "serde",

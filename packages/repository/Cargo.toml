@@ -1,0 +1,18 @@
+[package]
+name = "repository"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+git2.workspace = true
+configparser = "3.1.0"
+
+[dev-dependencies]
+fstest = { workspace = true }
+serial_test = { workspace = true }
+
+[lints]
+workspace = true

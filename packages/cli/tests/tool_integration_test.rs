@@ -7,7 +7,7 @@ use commonwl::{
 use fstest::fstest;
 use git2::Repository;
 use s4n::{cli::Commands, commands::*};
-use s4n_core::repo::{commit, get_modified_files, stage_all};
+use repository::{commit, get_modified_files, stage_all};
 use std::{
     env,
     fs::{self, read_to_string},
@@ -386,7 +386,7 @@ pub fn test_tool_output_complete_dir() {
 #[fstest(repo= true, files=["../../testdata/script.sh"])]
 #[cfg(target_os = "linux")]
 pub fn test_shell_script() {
-    use s4n_core::repo::stage_all;
+    use repository::stage_all;
 
     std::fs::set_permissions("script.sh", <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755)).unwrap();
     let repo = Repository::open(".").unwrap();

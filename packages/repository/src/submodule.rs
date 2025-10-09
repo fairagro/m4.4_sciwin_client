@@ -1,70 +1,19 @@
-use git2::{Commit, Error, IndexAddOption, Repository, Status, StatusOptions, build::RepoBuilder};
+use git2::{Error, Repository, build::RepoBuilder};
 use std::{
-    env, fs, iter,
+    env, fs,
     path::{Path, PathBuf},
 };
 
-use crate::remove_ini_section;
+use crate::{commit, ini, stage_all};
 
-pub fn get_modified_files(repo: &Repository) -> Vec<String> {
-    let mut opts = StatusOptions::new();
-    opts.include_untracked(true);
-
-    let mut files = vec![];
-
-    match repo.statuses(Some(&mut opts)) {
-        Ok(statuses) => {
-            // Print the status of the repository
-            for entry in statuses.iter() {
-                let status = entry.status();
-                let path = entry.path().unwrap_or("unknown").to_owned();
-                if status.contains(Status::WT_MODIFIED) || status.contains(Status::WT_NEW) {
-                    files.push(path);
-                }
-            }
-        }
-        Err(e) => panic!("❌ Failed to get repository status: {e}"),
-    }
-    files
-}
-
-pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
-    let mut index = repo.index()?;
-    index.add_path(Path::new(path))?;
-    index.write()
-}
-
-pub fn stage_all(repo: &Repository) -> Result<(), Error> {
-    let mut index = repo.index()?;
-    index.add_all(iter::once(&"*"), IndexAddOption::DEFAULT, None)?;
-    index.write()
-}
-
-pub fn commit(repo: &Repository, message: &str) -> Result<(), Error> {
-    let head = repo.head()?;
-    let parent = repo.find_commit(head.target().unwrap())?;
-    commit_impl(repo, message, &[&parent])
-}
-
-pub fn initial_commit(repo: &Repository) -> Result<(), Error> {
-    commit_impl(repo, "Initial Commit", &[])
-}
-
-fn commit_impl(repo: &Repository, message: &str, parents: &[&Commit<'_>]) -> Result<(), Error> {
-    let mut index = repo.index()?;
-    let new_oid = index.write_tree()?;
-    let new_tree = repo.find_tree(new_oid)?;
-    let author = repo.signature()?;
-    repo.commit(Some("HEAD"), &author, &author, message, &new_tree, parents)?;
-    Ok(())
-}
-
+/// Returns a list of paths of all submodules in the repository.
 pub fn get_submodule_paths(repo: &Repository) -> Result<Vec<PathBuf>, Error> {
     let submodules = repo.submodules()?;
     let paths = submodules.iter().map(|s| s.path().to_path_buf()).collect();
     Ok(paths)
 }
 
+/// Adds a submodule to the current repository, stages the changes, and commits them.
 pub fn add_submodule(url: &str, branch: &Option<String>, path: &Path) -> Result<(), Error> {
     let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
 
@@ -91,6 +40,7 @@ pub fn add_submodule(url: &str, branch: &Option<String>, path: &Path) -> Result<
     Ok(())
 }
 
+/// Removes a submodule from the current repository, stages the changes, and commits them.
 pub fn remove_submodule(name: &str) -> Result<(), Error> {
     let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
     let repo = Repository::open(&current_dir)?;
@@ -102,8 +52,8 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
 
     //remove ksubmodule config
     let prefix = format!("submodule \"{name}\"");
-    remove_ini_section(current_dir.join(".git/config"), &prefix).map_err(|_| git2::Error::from_str("Could not delete config entry"))?;
-    remove_ini_section(current_dir.join(".gitmodules"), &prefix).map_err(|_| git2::Error::from_str("Could not delete .gitmodulesg entry"))?;
+    ini::remove_section(current_dir.join(".git/config"), &prefix).map_err(|_| git2::Error::from_str("Could not delete config entry"))?;
+    ini::remove_section(current_dir.join(".gitmodules"), &prefix).map_err(|_| git2::Error::from_str("Could not delete .gitmodulesg entry"))?;
 
     //stage and commit
     stage_all(&repo)?;
@@ -113,14 +63,14 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
-    use crate::project::initialize_project;
     use fstest::fstest;
 
     #[fstest(repo = true)]
     fn test_add_remove_submodule() {
         let current_dir = env::current_dir().unwrap_or(PathBuf::from("."));
-        initialize_project(&current_dir).unwrap();
+        Repository::init(&current_dir).unwrap();
 
         let result = add_submodule(
             "https://github.com/JensKrumsieck/PorphyStruct",

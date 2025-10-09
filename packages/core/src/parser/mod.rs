@@ -14,7 +14,7 @@ pub static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
-pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
+pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let base_command = get_base_command(commands);
 
     let remainder = match &base_command {
@@ -60,7 +60,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     tool
 }
 
-pub fn get_base_command(command: &[&str]) -> Command {
+pub(crate) fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
         return Command::Single(String::new());
     }

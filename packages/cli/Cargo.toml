@@ -14,6 +14,7 @@ workspace = true
 
 [dependencies]
 s4n_core = { path = "../core" }
+repository = { path = "../repository" }
 commonwl = { path = "../cwl", features = ["execution", "annotation"] }
 remote_execution = { path = "../remote_execution" }
 util = { path = "../util" }

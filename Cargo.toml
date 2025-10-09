@@ -7,6 +7,7 @@ members = [
     "packages/cwl_core",
     "packages/cwl_execution",
     "packages/remote_execution",
+    "packages/repository",
     "packages/util",
     "packages/test_utils",
 ]

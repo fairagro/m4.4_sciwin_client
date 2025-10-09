@@ -2,7 +2,7 @@
 use git2::Repository;
 use s4n::cli::Commands;
 use s4n::commands::*;
-use s4n_core::repo::get_modified_files;
+use repository::get_modified_files;
 use serial_test::serial;
 use std::path::Path;
 use test_utils::with_temp_repository;
