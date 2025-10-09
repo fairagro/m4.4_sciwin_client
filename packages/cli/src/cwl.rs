@@ -1,7 +1,7 @@
 use commonwl::{CWLDocument, Workflow};
 use dialoguer::{Select, theme::ColorfulTheme};
-use git2::Repository;
 use log::info;
+use repository::Repository;
 use repository::submodule::get_submodule_paths;
 use s4n_core::io::get_workflows_folder;
 use std::{

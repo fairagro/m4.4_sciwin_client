@@ -21,13 +21,9 @@ util = { path = "../util" }
 
 anyhow = { workspace = true }
 dialoguer = { workspace = true }
-git2 = { workspace = true }
 keyring = { workspace = true }
 log = { workspace = true }
-pathdiff = { workspace = true }
-rand = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tempfile = { workspace = true }

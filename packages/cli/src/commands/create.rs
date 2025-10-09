@@ -2,7 +2,7 @@ use crate::{cwl::highlight_cwl, print_diff, print_list};
 use anyhow::anyhow;
 use clap::Args;
 use colored::Colorize;
-use git2::Repository;
+use repository::Repository;
 use log::{info, warn};
 use s4n_core::io::{get_qualified_filename, get_workflows_folder};
 use std::{env, path::PathBuf};

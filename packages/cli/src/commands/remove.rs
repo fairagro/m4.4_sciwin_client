@@ -2,7 +2,7 @@ use crate::cwl::resolve_filename;
 use clap::Args;
 use commonwl::{Workflow, load_workflow};
 use dialoguer::Confirm;
-use git2::Repository;
+use repository::Repository;
 use ignore::WalkBuilder;
 use log::{info, warn};
 use repository::commit;

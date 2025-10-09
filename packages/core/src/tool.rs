@@ -1,5 +1,4 @@
 use crate::{io::resolve_path, parser};
-use repository::{self, Repository};
 use anyhow::Result;
 use commonwl::{
     Entry, PathItem,
@@ -8,6 +7,7 @@ use commonwl::{
     prelude::*,
     requirements::WorkDirItem,
 };
+use repository::{self, Repository};
 use std::{
     env,
     fs::remove_file,
@@ -198,10 +198,9 @@ fn prepare_save(tool: &mut CommandLineTool, path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use serde_yaml::Value;
     use test_utils::os_path;
-
-    use super::*;
 
     #[test]
     pub fn test_cwl_save() {

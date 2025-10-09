@@ -1,35 +1,10 @@
 use commonwl::Command;
+use std::path::Path;
 use util::is_cwl_file;
-use std::path::{Path, PathBuf};
-use anyhow::Result;
-
-pub fn get_filename_without_extension(relative_path: impl AsRef<Path>) -> String {
-    let filename = relative_path
-        .as_ref()
-        .file_name()
-        .map(|f| f.to_string_lossy())
-        .unwrap_or(relative_path.as_ref().to_string_lossy());
-    filename.split('.').next().unwrap_or(&filename).to_string()
-}
 
 pub fn get_workflows_folder() -> String {
     "workflows/".to_string()
 }
-
-pub fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
-    let path = filename.as_ref();
-    let relative_path = Path::new(relative_to.as_ref());
-    let base_dir = match relative_path.extension() {
-        Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
-        None => relative_path,
-    };
-
-    pathdiff::diff_paths(path, base_dir)
-        .expect("path diffs not valid")
-        .to_string_lossy()
-        .into_owned()
-}
-
 pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> String {
     //decide over filename
     let mut filename = match &command {
@@ -52,14 +27,27 @@ pub fn get_qualified_filename(command: &Command, the_name: Option<String>) -> St
     format!("{}{foldername}/{filename}", get_workflows_folder())
 }
 
-pub fn verify_base_dir(folder: &Path) -> Result<PathBuf> {
-    if let Some(parent) = folder.parent() {
-        let parent = parent.canonicalize()?;
-        let foldername = folder.file_name().unwrap_or_default();
-        Ok(parent.join(foldername))
-    } else {
-        Err(anyhow::anyhow!("Folder has no parent"))
-    }
+pub(crate) fn get_filename_without_extension(relative_path: impl AsRef<Path>) -> String {
+    let filename = relative_path
+        .as_ref()
+        .file_name()
+        .map(|f| f.to_string_lossy())
+        .unwrap_or(relative_path.as_ref().to_string_lossy());
+    filename.split('.').next().unwrap_or(&filename).to_string()
+}
+
+pub(crate) fn resolve_path<P: AsRef<Path>, Q: AsRef<Path>>(filename: P, relative_to: Q) -> String {
+    let path = filename.as_ref();
+    let relative_path = Path::new(relative_to.as_ref());
+    let base_dir = match relative_path.extension() {
+        Some(_) => relative_path.parent().unwrap_or_else(|| Path::new(".")),
+        None => relative_path,
+    };
+
+    pathdiff::diff_paths(path, base_dir)
+        .expect("path diffs not valid")
+        .to_string_lossy()
+        .into_owned()
 }
 
 #[cfg(test)]

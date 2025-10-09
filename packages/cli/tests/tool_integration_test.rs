@@ -5,9 +5,9 @@ use commonwl::{
     requirements::{InitialWorkDirRequirement, NetworkAccess, Requirement, WorkDirItem},
 };
 use fstest::fstest;
-use git2::Repository;
-use s4n::{cli::Commands, commands::*};
+use repository::Repository;
 use repository::{commit, get_modified_files, stage_all};
+use s4n::{cli::Commands, commands::*};
 use std::{
     env,
     fs::{self, read_to_string},

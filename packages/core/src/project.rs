@@ -1,4 +1,5 @@
-use crate::{config::Config, io::verify_base_dir};
+use crate::config::Config;
+use anyhow::Result;
 use repository::Repository;
 use repository::{commit, get_modified_files, initial_commit, stage_all};
 use std::{
@@ -81,6 +82,16 @@ pub fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn st
     File::create(workflows_dir.join(".gitkeep"))?;
 
     Ok(())
+}
+
+fn verify_base_dir(folder: &Path) -> Result<PathBuf> {
+    if let Some(parent) = folder.parent() {
+        let parent = parent.canonicalize()?;
+        let foldername = folder.file_name().unwrap_or_default();
+        Ok(parent.join(foldername))
+    } else {
+        Err(anyhow::anyhow!("Folder has no parent"))
+    }
 }
 
 #[cfg(test)]
