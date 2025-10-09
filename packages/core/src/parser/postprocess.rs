@@ -2,7 +2,7 @@ use commonwl::prelude::*;
 use std::collections::HashSet;
 
 /// Applies some postprocessing to the cwl `CommandLineTool`
-pub fn post_process_cwl(tool: &mut CommandLineTool) {
+pub(crate) fn post_process_cwl(tool: &mut CommandLineTool) {
     detect_array_inputs(tool);
     post_process_variables(tool);
     post_process_ids(tool);

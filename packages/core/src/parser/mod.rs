@@ -5,9 +5,9 @@ use std::fs;
 mod inputs;
 mod outputs;
 mod postprocess;
-pub use inputs::*;
-pub use outputs::*;
-pub use postprocess::post_process_cwl;
+pub(crate) use inputs::*;
+pub(crate) use outputs::*;
+pub(crate) use postprocess::post_process_cwl;
 
 //TODO complete list
 pub static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
