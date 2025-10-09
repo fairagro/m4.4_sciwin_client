@@ -153,14 +153,14 @@ mod tests {
     use s4n_core::project::init_git_repo;
     use serial_test::serial;
     use std::path::Path;
-    use tempfile::{Builder, NamedTempFile, tempdir};
+    use tempfile::{NamedTempFile, tempdir};
     use test_utils::check_git_user;
 
     #[test]
     #[serial]
     fn test_create_investigation_excel_file() {
         //create directory
-        let temp_dir = Builder::new().prefix("investigation_excel_test_").tempdir().unwrap();
+        let temp_dir = tempdir().unwrap();
         let directory = temp_dir.path().to_str().unwrap();
 
         //call the function
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_create_arc_folder_structure() {
-        let temp_dir = Builder::new().prefix("arc_folder_test").tempdir().unwrap();
+        let temp_dir = tempdir().unwrap();
 
         let base_folder = Some(temp_dir.path().to_str().unwrap());
 
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_cleanup_failed_init() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir = tempdir().unwrap();
         let test_folder = temp_dir.path().join("my_repo");
         let result = init_git_repo(&test_folder);
         if let Err(e) = &result {
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_init_s4n_with_arc() {
-        let temp_dir = Builder::new().prefix("init_with_arc_test").tempdir().unwrap();
+        let temp_dir = tempdir().unwrap();
         check_git_user().unwrap();
         let arc = true;
 
