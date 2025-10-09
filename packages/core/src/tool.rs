@@ -1,4 +1,7 @@
-use crate::{io::resolve_path, parser};
+use crate::{
+    io::{self, resolve_path},
+    parser,
+};
 use anyhow::Result;
 use commonwl::{
     Entry, PathItem,
@@ -19,7 +22,52 @@ pub struct ContainerInfo {
     pub tag: Option<String>,
 }
 
-pub fn create_tool(
+pub struct ToolCreationOptions {
+    pub command: Vec<String>,
+    pub outputs: Vec<String>,
+    pub inputs: Vec<String>,
+    pub no_run: bool,
+    pub cleanup: bool,
+    pub commit: bool,
+    pub clear_defaults: bool,
+    pub container: Option<ContainerInfo>,
+    pub enable_network: bool,
+    pub mounts: Vec<PathBuf>,
+}
+
+pub fn create_tool(options: &ToolCreationOptions, name: Option<String>) -> Result<(CommandLineTool, String)> {
+    let cwl = create_tool_base(
+        &options.command,
+        &options.outputs,
+        &options.inputs,
+        options.no_run,
+        options.cleanup,
+        options.commit,
+        options.clear_defaults,
+    )?;
+
+    // Handle container requirements
+    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, &options.mounts);
+    let path = io::get_qualified_filename(&cwl.base_command, name);
+    let yaml = finalize_tool(&mut cwl, &path)?;
+
+    Ok((cwl, yaml))
+}
+
+pub fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: bool) -> Result<()> {
+    match create_and_write_file(path, yaml) {
+        Ok(()) => {
+            if commit {
+                repository::stage_file(repo, path)?;
+                repository::commit(repo, &format!("🪄 Creation of `{path}`"))?;
+            }
+        }
+        Err(e) => anyhow::bail!("Creation of File {path} failed: {e}"),
+    }
+    Ok(())
+}
+
+fn create_tool_base(
     command: &[String],
     outputs: &[String],
     inputs: &[String],
@@ -103,12 +151,7 @@ pub fn create_tool(
     Ok(cwl)
 }
 
-pub fn add_tool_requirements(
-    mut cwl: CommandLineTool,
-    container: Option<&ContainerInfo>,
-    enable_network: bool,
-    mounts: &[PathBuf],
-) -> CommandLineTool {
+fn add_tool_requirements(mut cwl: CommandLineTool, container: Option<&ContainerInfo>, enable_network: bool, mounts: &[PathBuf]) -> CommandLineTool {
     // Handle container requirements
     if let Some(container) = &container {
         let requirement = if container.image.contains("Dockerfile") {
@@ -147,24 +190,11 @@ pub fn add_tool_requirements(
     cwl
 }
 
-pub fn finalize_tool(mut cwl: CommandLineTool, path: &str) -> Result<String> {
-    parser::post_process_cwl(&mut cwl);
-    let mut yaml = prepare_save(&mut cwl, path);
+fn finalize_tool(cwl: &mut CommandLineTool, path: &str) -> Result<String> {
+    parser::post_process_cwl(cwl);
+    let mut yaml = prepare_save(cwl, path);
     yaml = format_cwl(&yaml).map_err(|e| anyhow::anyhow!("Failed to format CWL: {e}"))?;
     Ok(yaml)
-}
-
-pub fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: bool) -> Result<()> {
-    match create_and_write_file(path, yaml) {
-        Ok(()) => {
-            if commit {
-                repository::stage_file(repo, path)?;
-                repository::commit(repo, &format!("🪄 Creation of `{path}`"))?;
-            }
-        }
-        Err(e) => anyhow::bail!("Creation of File {path} failed: {e}"),
-    }
-    Ok(())
 }
 
 fn prepare_save(tool: &mut CommandLineTool, path: &str) -> String {

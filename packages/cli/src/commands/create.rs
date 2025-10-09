@@ -2,9 +2,12 @@ use crate::{cwl::highlight_cwl, print_diff, print_list};
 use anyhow::anyhow;
 use clap::Args;
 use colored::Colorize;
-use repository::Repository;
 use log::{info, warn};
-use s4n_core::io::{get_qualified_filename, get_workflows_folder};
+use repository::Repository;
+use s4n_core::{
+    io::{get_qualified_filename, get_workflows_folder},
+    tool::ToolCreationOptions,
+};
 use std::{env, path::PathBuf};
 
 pub fn handle_create_command(args: &CreateArgs) -> anyhow::Result<()> {
@@ -63,6 +66,26 @@ pub struct CreateArgs {
     pub command: Vec<String>,
 }
 
+impl From<&CreateArgs> for ToolCreationOptions {
+    fn from(val: &CreateArgs) -> Self {
+        ToolCreationOptions {
+            command: val.command.clone(),
+            outputs: val.outputs.clone().unwrap_or_default(),
+            inputs: val.inputs.clone().unwrap_or_default(),
+            no_run: val.no_run,
+            cleanup: val.is_clean,
+            commit: !val.no_commit,
+            clear_defaults: val.no_defaults,
+            container: val.container_image.clone().map(|image| s4n_core::tool::ContainerInfo {
+                image,
+                tag: val.container_tag.clone(),
+            }),
+            enable_network: val.enable_network,
+            mounts: val.mount.clone().unwrap_or_default(),
+        }
+    }
+}
+
 pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
     let Some(name) = &args.name else {
         return Err(anyhow!("❌ Workflow name is required"));
@@ -77,18 +100,14 @@ pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
 }
 
 pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
-    let cwl = s4n_core::tool::create_tool(
-        &args.command,
-        &args.outputs.clone().unwrap_or_default(),
-        &args.inputs.clone().unwrap_or_default(),
-        args.no_run,
-        args.is_clean,
-        !args.no_commit,
-        args.no_defaults,
-    )?;
+    if args.command.is_empty() {
+        return Err(anyhow!("❌ Command is required to create a tool"));
+    }
     if args.no_run {
         warn!("User requested no execution, could not determine outputs!");
     }
+
+    let (cwl, yaml) = s4n_core::tool::create_tool(&args.into(), args.name.clone())?;
 
     info!("Found outputs:");
     let string_outputs = cwl
@@ -98,26 +117,13 @@ pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
         .collect::<Vec<_>>();
     print_list(&string_outputs);
 
-    // Handle container requirements
-    let container = if let Some(container_image) = &args.container_image {
-        let container = s4n_core::tool::ContainerInfo {
-            image: container_image.clone(),
-            tag: args.container_tag.clone(),
-        };
-        Some(container)
-    } else {
-        None
-    };
-    let cwl = s4n_core::tool::add_tool_requirements(cwl, container.as_ref(), args.enable_network, &args.mount.clone().unwrap_or_default());
-
     //save tool
-    let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-    let yaml = s4n_core::tool::finalize_tool(cwl, &path)?;
     if args.is_raw {
         highlight_cwl(&yaml);
     } else {
         let cwd = env::current_dir()?;
         let repo = Repository::open(&cwd).map_err(|e| anyhow!("Could not find git repository at {cwd:?}: {e}"))?;
+        let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         s4n_core::tool::save_tool_to_disk(&yaml, &path, &repo, !args.no_commit)?;
         info!("\n📄 Created CWL file {}", path.green().bold());
     }
