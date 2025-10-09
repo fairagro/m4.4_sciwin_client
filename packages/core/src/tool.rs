@@ -17,29 +17,29 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub struct ContainerInfo {
-    pub image: String,
-    pub tag: Option<String>,
+pub struct ContainerInfo<'a> {
+    pub image: &'a str,
+    pub tag: Option<&'a str>,
 }
 
-pub struct ToolCreationOptions {
-    pub command: Vec<String>,
-    pub outputs: Vec<String>,
-    pub inputs: Vec<String>,
+pub struct ToolCreationOptions<'a> {
+    pub command: &'a [String],
+    pub outputs: &'a [String],
+    pub inputs: &'a [String],
     pub no_run: bool,
     pub cleanup: bool,
     pub commit: bool,
     pub clear_defaults: bool,
-    pub container: Option<ContainerInfo>,
+    pub container: Option<ContainerInfo<'a>>,
     pub enable_network: bool,
-    pub mounts: Vec<PathBuf>,
+    pub mounts: &'a [PathBuf],
 }
 
 pub fn create_tool(options: &ToolCreationOptions, name: Option<String>) -> Result<(CommandLineTool, String)> {
     let cwl = create_tool_base(
-        &options.command,
-        &options.outputs,
-        &options.inputs,
+        options.command,
+        options.outputs,
+        options.inputs,
         options.no_run,
         options.cleanup,
         options.commit,
@@ -47,7 +47,7 @@ pub fn create_tool(options: &ToolCreationOptions, name: Option<String>) -> Resul
     )?;
 
     // Handle container requirements
-    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, &options.mounts);
+    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts);
     let path = io::get_qualified_filename(&cwl.base_command, name);
     let yaml = finalize_tool(&mut cwl, &path)?;
 
@@ -155,10 +155,10 @@ fn add_tool_requirements(mut cwl: CommandLineTool, container: Option<&ContainerI
     // Handle container requirements
     if let Some(container) = &container {
         let requirement = if container.image.contains("Dockerfile") {
-            let image_id = container.tag.as_deref().unwrap_or("sciwin-container");
-            Requirement::DockerRequirement(DockerRequirement::from_file(&container.image, image_id))
+            let image_id = container.tag.unwrap_or("sciwin-container");
+            Requirement::DockerRequirement(DockerRequirement::from_file(container.image, image_id))
         } else {
-            Requirement::DockerRequirement(DockerRequirement::from_pull(&container.image))
+            Requirement::DockerRequirement(DockerRequirement::from_pull(container.image))
         };
 
         cwl = cwl.append_requirement(requirement);

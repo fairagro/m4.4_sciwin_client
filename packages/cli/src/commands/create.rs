@@ -66,22 +66,22 @@ pub struct CreateArgs {
     pub command: Vec<String>,
 }
 
-impl From<&CreateArgs> for ToolCreationOptions {
-    fn from(val: &CreateArgs) -> Self {
-        ToolCreationOptions {
-            command: val.command.clone(),
-            outputs: val.outputs.clone().unwrap_or_default(),
-            inputs: val.inputs.clone().unwrap_or_default(),
-            no_run: val.no_run,
-            cleanup: val.is_clean,
-            commit: !val.no_commit,
-            clear_defaults: val.no_defaults,
-            container: val.container_image.clone().map(|image| s4n_core::tool::ContainerInfo {
-                image,
-                tag: val.container_tag.clone(),
+impl<'a> From<&'a CreateArgs> for ToolCreationOptions<'a> {
+    fn from(args: &'a CreateArgs) -> Self {
+        Self {
+            command: &args.command,
+            outputs: args.outputs.as_deref().unwrap_or(&[]),
+            inputs: args.inputs.as_deref().unwrap_or(&[]),
+            no_run: args.no_run,
+            cleanup: args.is_clean,
+            commit: !args.no_commit,
+            clear_defaults: args.no_defaults,
+            container: args.container_image.as_ref().map(|image| s4n_core::tool::ContainerInfo {
+                image: image.as_str(),
+                tag: args.container_tag.as_deref(),
             }),
-            enable_network: val.enable_network,
-            mounts: val.mount.clone().unwrap_or_default(),
+            enable_network: args.enable_network,
+            mounts: args.mount.as_deref().unwrap_or(&[]),
         }
     }
 }
