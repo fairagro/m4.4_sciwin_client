@@ -1,5 +1,7 @@
 [package]
 name = "repository"
+description = "A proxy crate for git repository related operations"
+
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

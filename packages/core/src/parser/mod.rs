@@ -1,4 +1,3 @@
-use crate::split_vec_at;
 use commonwl::prelude::*;
 use std::fs;
 
@@ -109,6 +108,17 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
     args.extend(piped_args);
 
     Some(args)
+}
+
+fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
+    let slice = vec.as_ref();
+    if let Some(index) = slice.iter().position(|x| x == split_at) {
+        let lhs = slice[..index].to_vec();
+        let rhs = slice[index + 1..].to_vec();
+        (lhs, rhs)
+    } else {
+        (slice.to_vec(), vec![])
+    }
 }
 
 #[cfg(test)]
