@@ -1,11 +1,12 @@
 [workspace]
 members = [
     "packages/cli",
+    "packages/core",
     "packages/cwl",
     "packages/cwl_annotation",
     "packages/cwl_core",
     "packages/cwl_execution",
-    "packages/remote_execution", "packages/s4n_core",
+    "packages/remote_execution",
     "packages/util",
     "packages/test_utils",
 ]
