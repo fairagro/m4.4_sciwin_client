@@ -1,5 +1,5 @@
 use crate::{cwl::highlight_cwl, print_diff, print_list};
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use clap::Args;
 use colored::Colorize;
 use commonwl::CommandLineTool;
@@ -90,9 +90,11 @@ pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
     let Some(name) = &args.name else {
         return Err(anyhow!("❌ Workflow name is required"));
     };
+
     //check if workflow already exists
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), name, name);
     let yaml = s4n_core::workflow::create_workflow(&filename, args.force)?;
+    
     info!("📄 Created new Workflow file: {filename}");
     print_diff("", &yaml);
 
@@ -101,23 +103,23 @@ pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
 
 pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
     if args.command.is_empty() {
-        return Err(anyhow!("❌ Command is required to create a tool"));
+        bail!("❌ Command is required to create a tool");
     }
     if args.no_run {
         warn!("User requested no execution, could not determine outputs!");
     }
 
     let yaml = s4n_core::tool::create_tool(&args.into(), args.name.clone(), !args.is_raw)?;
-
     let cwl: CommandLineTool = serde_yaml::from_str(&yaml)?;
+
     info!("Found outputs:");
-    let string_outputs = cwl
-        .outputs
+    let string_outputs: Vec<_> = cwl.outputs
         .iter()
-        .map(|o| o.output_binding.clone().unwrap_or_default().glob.unwrap_or_default())
-        .collect::<Vec<_>>();
+        .filter_map(|o| o.output_binding.as_ref()?.glob.clone())
+        .collect();
+
     print_list(&string_outputs);
-    
+
     //save tool
     if args.is_raw {
         highlight_cwl(&yaml);
@@ -125,5 +127,6 @@ pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
         info!("\n📄 Created CWL file {}", path.green().bold());
     }
+
     Ok(())
 }

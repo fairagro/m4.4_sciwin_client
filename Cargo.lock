@@ -590,9 +590,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "calamine"
-version = "0.30.0"
+version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9aeb09f84576a634da713630e11e431a744b91f1f8114c2ff0760189783a8a1"
+checksum = "b1a9acfeb1555aa8def91fe8ff208aadaea850c109968ec35ac965edbe7d210b"
 dependencies = [
  "atoi_simd",
  "byteorder",
@@ -3380,15 +3380,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust_xlsxwriter"
-version = "0.89.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a34eb37ee39e82b74f8a56cf0fe425586cee6e721839f14469d2648352651db"
-dependencies = [
- "zip",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3518,7 +3509,6 @@ name = "s4n"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "calamine",
  "clap",
  "clap_complete",
  "colored",
@@ -3534,7 +3524,6 @@ dependencies = [
  "repository",
  "reqwest",
  "rstest",
- "rust_xlsxwriter",
  "s4n_core",
  "serde_json",
  "serde_yaml",
@@ -3555,6 +3544,7 @@ name = "s4n_core"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "calamine",
  "commonwl",
  "fstest",
  "pathdiff",

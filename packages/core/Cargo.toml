@@ -26,6 +26,8 @@ slugify = "0.1.0"
 smart-default = "0.7.1"
 
 [dev-dependencies]
+calamine = "0.30.0"
+
 test_utils = { workspace = true }
 rstest = { workspace = true }
 serial_test = { workspace = true }
