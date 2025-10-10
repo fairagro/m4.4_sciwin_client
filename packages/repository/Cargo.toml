@@ -14,7 +14,6 @@ configparser = "3.1.0"
 
 [dev-dependencies]
 fstest = { workspace = true }
-serial_test = { workspace = true }
 
 [lints]
 workspace = true

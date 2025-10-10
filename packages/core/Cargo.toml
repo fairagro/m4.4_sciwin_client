@@ -31,7 +31,6 @@ calamine = "0.30.0"
 test_utils = { workspace = true }
 rstest = { workspace = true }
 serial_test = { workspace = true }
-fstest = { workspace = true }
 
 [lints]
 workspace = true

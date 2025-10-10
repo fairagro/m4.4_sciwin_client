@@ -63,9 +63,9 @@ pub fn remove_submodule(name: &str) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use fstest::fstest;
+    use fstest::serial_test;
 
     #[fstest(repo = true)]
     fn test_add_remove_submodule() {
