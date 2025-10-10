@@ -1,29 +1,29 @@
 use dialoguer::{Input, theme::ColorfulTheme};
-use git2::Config;
 use log::warn;
+use repository::Config;
 use std::error::Error;
 
 mod annotate;
+mod connect;
+mod create;
 mod execute;
 mod init;
 mod list;
 mod packages;
 mod remove;
-mod create;
-mod connect;
-mod visualize;
 mod save;
+mod visualize;
 
 pub use annotate::*;
+pub use connect::*;
+pub use create::*;
 pub use execute::*;
 pub use init::*;
 pub use list::*;
 pub use packages::*;
 pub use remove::*;
-pub use create::*;
-pub use connect::*;
-pub use visualize::*;
 pub use save::*;
+pub use visualize::*;
 
 pub fn check_git_config() -> Result<(), Box<dyn Error>> {
     let mut config = Config::open_default()?;

@@ -427,12 +427,7 @@ impl File {
         let absolute_path = if path.is_absolute() { path } else { &current.join(path) };
         let absolute_str = absolute_path.display().to_string();
         let metadata = fs::metadata(path).unwrap_or_else(|_| panic!("Could not get metadata for {absolute_str}"));
-        let mut hasher = Sha1::new();
-        let hash = fs::read(path).ok().map(|f| {
-            hasher.update(&f);
-            let hash = hasher.finalize();
-            format!("sha1${hash:x}")
-        });
+        let hash = compute_hash(path);
 
         Self {
             location: Some(format!("file://{absolute_str}")),
@@ -472,6 +467,16 @@ impl File {
 
         item
     }
+}
+
+pub fn compute_hash(path: &Path) -> Option<String> {
+    let mut hasher = Sha1::new();
+    
+    fs::read(path).ok().map(|f| {
+        hasher.update(&f);
+        let hash = hasher.finalize();
+        format!("sha1${hash:x}")
+    })
 }
 
 fn resolve_format(format: Option<String>) -> Option<String> {

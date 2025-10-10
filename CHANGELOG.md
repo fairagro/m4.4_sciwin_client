@@ -2,6 +2,9 @@
 ## 🐛 Bugfixes
 - default values are used on input connections
 
+## 🚜 Refactor
+- Major restructuring for better maintainability
+
 # v1.0.0
 ## 🚀 Features
 - Restructured CLI Commands #158 #151

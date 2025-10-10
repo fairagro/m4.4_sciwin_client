@@ -1,7 +1,8 @@
 #![allow(clippy::disallowed_macros)]
-use git2::Repository;
+use repository::Repository;
+use repository::get_modified_files;
+use s4n::cli::Commands;
 use s4n::commands::*;
-use s4n::{util::repo::get_modified_files, cli::Commands};
 use serial_test::serial;
 use std::path::Path;
 use test_utils::with_temp_repository;

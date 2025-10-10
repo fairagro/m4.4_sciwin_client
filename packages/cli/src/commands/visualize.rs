@@ -1,12 +1,7 @@
-
-use crate::{
-    util::{
-        DotRenderer, MermaidRenderer, render,
-    },
-};
 use anyhow::anyhow;
 use clap::{Args, ValueEnum};
 use commonwl::load_workflow;
+use s4n_core::visualize::{DotRenderer, MermaidRenderer, render};
 use std::path::PathBuf;
 
 #[derive(Args, Debug)]

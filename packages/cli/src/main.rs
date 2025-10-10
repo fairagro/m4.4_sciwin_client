@@ -8,7 +8,7 @@ use s4n::{
         handle_execute_commands, handle_init_command, handle_list_command, handle_remove_command, install_package, remove_package, save_workflow,
         visualize,
     },
-    util::LOGGER,
+    logger::LOGGER,
 };
 use std::{error::Error, process::exit};
 

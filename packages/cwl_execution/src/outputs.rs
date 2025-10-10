@@ -269,7 +269,10 @@ mod tests {
 
     use super::*;
     use crate::io::copy_dir;
-    use cwl_core::outputs::{CommandOutputBinding, CommandOutputParameter};
+    use cwl_core::{
+        compute_hash,
+        outputs::{CommandOutputBinding, CommandOutputParameter},
+    };
     use serial_test::serial;
     use tempfile::tempdir;
     use test_utils::repository;
@@ -304,22 +307,26 @@ mod tests {
     #[serial]
     pub fn test_get_file_metadata() {
         let dir = tempdir().unwrap();
-        let current = repository(dir.path())
-            .copy_file("testdata/file.txt", "file.txt")
-            .finalize()
-            .enter();
-        let path = Path::new("file.txt");
+        let current = repository(dir.path()).copy_file("testdata/meta.json", "meta.json").finalize().enter();
+        let path = Path::new("meta.json");
         assert!(path.exists());
 
         let result = get_file_metadata(path, None);
+        let hash = compute_hash(path).unwrap();
+        let metadata = fs::metadata(path).expect("Could not get metadata");
+        let size = Some(metadata.len());
+
         let expected = File {
-            location: Some(format!("file://{}", env::current_dir().unwrap().join(path).to_string_lossy().into_owned())),
-            basename: Some("file.txt".to_string()),
+            location: Some(format!(
+                "file://{}",
+                env::current_dir().unwrap().join(path).to_string_lossy().into_owned()
+            )),
+            basename: Some("meta.json".to_string()),
             class: "File".to_string(),
-            nameext: Some(".txt".into()),
-            nameroot: Some("file".into()),
-            checksum: Some("sha1$2c3cafa4db3f3e1e51b3dff4303502dbe42b7a89".to_string()),
-            size: Some(4),
+            nameext: Some(".json".into()),
+            nameroot: Some("meta".into()),
+            checksum: Some(hash),
+            size,
             path: Some(path.to_string_lossy().into_owned()),
             ..Default::default()
         };

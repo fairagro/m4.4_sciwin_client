@@ -1,11 +1,11 @@
-use crate::util::get_filename_without_extension;
+use crate::io::get_filename_without_extension;
 use commonwl::{
     outputs::{CommandOutputBinding, CommandOutputParameter},
     CWLType,
 };
 use std::path::Path;
 
-pub fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
+pub(crate) fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
     files
         .iter()
         .map(|f| {

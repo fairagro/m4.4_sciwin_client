@@ -1,13 +1,15 @@
 [workspace]
 members = [
     "packages/cli",
+    "packages/core",
     "packages/cwl",
     "packages/cwl_annotation",
     "packages/cwl_core",
     "packages/cwl_execution",
-    "packages/remote_execution",
+    "packages/reana",
+    "packages/repository",
     "packages/util",
-    "packages/test_utils",
+    "packages/test_utils", "packages/remote_execution",
 ]
 resolver = "3"
 
@@ -26,6 +28,7 @@ authors = [
 
 [workspace.dependencies]
 anyhow = "1.0.99"
+colored = "3.0.0"
 dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
 fancy-regex = "0.15.0"
 git2 = { version = "0.20.2", features = ["vendored-openssl"] }
@@ -57,6 +60,7 @@ uuid = { version = "1.18.0", features = ["v4"] }
 # dev dependencies
 test_utils = { path = "packages/test_utils" }
 rstest = "0.26.1"
+fstest = "0.3.0"
 serial_test = "3.1.1"
 
 [workspace.lints.clippy]

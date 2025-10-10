@@ -1,11 +1,12 @@
-use crate::{cwl::resolve_filename, util::repo::commit};
+use crate::cwl::resolve_filename;
 use clap::Args;
-use git2::Repository;
-use log::{info, warn};
-use std::{env, fs, path::Path};
-use ignore::WalkBuilder;
 use commonwl::{Workflow, load_workflow};
 use dialoguer::Confirm;
+use repository::Repository;
+use ignore::WalkBuilder;
+use log::{info, warn};
+use repository::commit;
+use std::{env, fs, path::Path};
 
 #[derive(Args, Debug, Default)]
 pub struct RemoveCWLArgs {
@@ -26,7 +27,7 @@ fn remove_cwl_file(filename: impl AsRef<Path>) -> anyhow::Result<()> {
     let cwd = env::current_dir()?;
     let repo = Repository::open(&cwd)?;
 
-    if filename.exists() && filename.is_file() && filename.extension().is_some_and(|e| e == "cwl") { 
+    if filename.exists() && filename.is_file() && filename.extension().is_some_and(|e| e == "cwl") {
         let folder = filename.parent().expect("Can not get parent dir");
         let tool_name = filename.file_name().and_then(|n| n.to_str()).unwrap_or_default();
         let workflows = check_tool_usage_in_workflows(&cwd, tool_name)?;
@@ -78,12 +79,8 @@ pub fn check_tool_usage_in_workflows(cwd: impl AsRef<Path>, tool: &str) -> anyho
                 Ok(wf) => wf,
                 Err(_) => continue,
             };
-             if workflow.steps.iter().any(|step| step.id == tool_name) {
-                workflows.push(format!(
-                    "{} ({})",
-                    entry.file_name().to_string_lossy(),
-                    path.display(),
-                ));
+            if workflow.steps.iter().any(|step| step.id == tool_name) {
+                workflows.push(format!("{} ({})", entry.file_name().to_string_lossy(), path.display(),));
             }
         }
     }

@@ -1,11 +1,12 @@
 #![allow(clippy::disallowed_macros)]
+use commonwl::execution::io::copy_dir;
 ///This file contains all examples described here: <https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation>/
 use commonwl::{
     Command, Entry, load_tool, load_workflow,
     requirements::{Requirement, WorkDirItem},
 };
-use commonwl::execution::io::copy_dir;
 use s4n::commands::*;
+use s4n_core::project::initialize_project;
 use serial_test::serial;
 use std::{env, fs, path::PathBuf, vec};
 use tempfile::{TempDir, tempdir};
@@ -23,7 +24,7 @@ fn setup() -> (PathBuf, TempDir) {
 
     //init
     check_git_user().unwrap();
-    initialize_project(&None, false).expect("Could not init s4n");
+    initialize_project(dir.path(), false).expect("Could not init s4n");
 
     (current, dir)
 }
@@ -444,7 +445,7 @@ pub fn test_example_project() {
     check_git_user().unwrap();
 
     //init project
-    initialize_project(&None, false).expect("Could not init s4n");
+    initialize_project(dir.path(), false).expect("Could not init s4n");
 
     //create calculation tool
     create_tool(&CreateArgs {

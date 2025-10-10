@@ -9,7 +9,7 @@ use rand::{distr::Alphanumeric, Rng};
 use serde_yaml::Value;
 use slugify::slugify;
 
-pub fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
+pub(crate) fn get_inputs(args: &[&str]) -> Vec<CommandInputParameter> {
     let mut inputs = vec![];
     let mut i = 0;
     while i < args.len() {
@@ -103,7 +103,7 @@ fn parse_input(input: &str) -> (&str, CWLType) {
     }
 }
 
-pub fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn add_fixed_inputs(tool: &mut CommandLineTool, inputs: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     for input in inputs {
         let (input, type_) = parse_input(input);
 

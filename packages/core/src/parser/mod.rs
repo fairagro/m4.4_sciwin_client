@@ -1,20 +1,19 @@
-use crate::split_vec_at;
 use commonwl::prelude::*;
 use std::fs;
 
 mod inputs;
 mod outputs;
 mod postprocess;
-pub use inputs::*;
-pub use outputs::*;
-pub use postprocess::post_process_cwl;
+pub(crate) use inputs::*;
+pub(crate) use outputs::*;
+pub(crate) use postprocess::post_process_cwl;
 
 //TODO complete list
-pub(crate) static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
+pub static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
-pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
+pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     let base_command = get_base_command(commands);
 
     let remainder = match &base_command {
@@ -60,7 +59,7 @@ pub fn parse_command_line(commands: &[&str]) -> CommandLineTool {
     tool
 }
 
-pub fn get_base_command(command: &[&str]) -> Command {
+pub(crate) fn get_base_command(command: &[&str]) -> Command {
     if command.is_empty() {
         return Command::Single(String::new());
     }
@@ -109,6 +108,17 @@ fn collect_arguments(piped: &[&str], inputs: &[CommandInputParameter]) -> Option
     args.extend(piped_args);
 
     Some(args)
+}
+
+fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (Vec<T>, Vec<T>) {
+    let slice = vec.as_ref();
+    if let Some(index) = slice.iter().position(|x| x == split_at) {
+        let lhs = slice[..index].to_vec();
+        let rhs = slice[index + 1..].to_vec();
+        (lhs, rhs)
+    } else {
+        (slice.to_vec(), vec![])
+    }
 }
 
 #[cfg(test)]
@@ -191,13 +201,13 @@ mod tests {
 
     #[test]
     pub fn test_parse_redirect() {
-        let tool = parse_command("cat testdata/input.txt \\> output.txt");
+        let tool = parse_command("cat tests/test_data/input.txt \\> output.txt");
         assert!(tool.stdout == Some("output.txt".to_string()));
     }
 
     #[test]
     pub fn test_parse_redirect_stderr() {
-        let tool = parse_command("cat testdata/inputtxt 2\\> err.txt");
+        let tool = parse_command("cat tests/test_data/inputtxt 2\\> err.txt");
         assert!(tool.stderr == Some("err.txt".to_string()));
     }
 
