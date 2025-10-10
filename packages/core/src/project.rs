@@ -2,29 +2,28 @@ use crate::config::Config;
 use anyhow::Result;
 use repository::Repository;
 use repository::{commit, get_modified_files, initial_commit, stage_all};
-use std::env;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 use std::{fs::File, io::Write};
 
-pub fn initialize_project(folder: &PathBuf, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn initialize_project(folder: &Path, arc: bool) -> Result<(), Box<dyn std::error::Error>> {
     let folder = verify_base_dir(folder)?;
 
-    let repo = if is_git_repo(folder) {
-        Repository::open(folder)?
+    let repo = if is_git_repo(&folder) {
+        Repository::open(&folder)?
     } else {
-        init_git_repo(folder)?
+        init_git_repo(&folder)?
     };
 
     if arc {
-        create_arc_folder_structure(folder.to_str())?;
+        create_arc_folder_structure(&folder)?;
     }
 
-    create_minimal_folder_structure(folder)?;
+    create_minimal_folder_structure(&folder)?;
 
-    write_config(folder)?;
+    write_config(&folder)?;
 
     let files = get_modified_files(&repo);
     if !files.is_empty() {
@@ -57,9 +56,9 @@ const GITIGNORE_CONTENT: &str = include_str!("../resources/default.gitignore");
 
 fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Error>> {
     if !base_dir.exists() {
-        fs::create_dir_all(&base_dir)?;
+        fs::create_dir_all(base_dir)?;
     }
-    let repo = Repository::init(&base_dir)?;
+    let repo = Repository::init(base_dir)?;
 
     let gitignore_path = base_dir.join(PathBuf::from(".gitignore"));
     if !gitignore_path.exists() {
@@ -76,7 +75,7 @@ fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Erro
 fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Create the base directory
     if !base_dir.exists() {
-        fs::create_dir_all(&base_dir)?;
+        fs::create_dir_all(base_dir)?;
     }
 
     // Check and create subdirectories
@@ -102,7 +101,7 @@ fn verify_base_dir(folder: &Path) -> Result<PathBuf> {
 fn create_arc_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Create the base directory
     if !base_dir.exists() {
-        fs::create_dir_all(&base_dir)?;
+        fs::create_dir_all(base_dir)?;
     }
 
     create_investigation_excel_file(base_dir.to_str().unwrap_or(""))?;
@@ -153,7 +152,7 @@ mod tests {
     use super::*;
     use calamine::{Reader, Xlsx, open_workbook};
     use serial_test::serial;
-    use std::path::Path;
+    use std::{env, path::Path};
     use tempfile::{Builder, NamedTempFile, tempdir};
     use test_utils::check_git_user;
 
@@ -239,7 +238,7 @@ mod tests {
         let base_folder = temp_dir.path();
 
         //call method with temp dir
-        let result = initialize_project(&base_folder.to_path_buf(), false);
+        let result = initialize_project(base_folder, false);
         eprintln!("{result:#?}");
         assert!(result.is_ok(), "Expected successful initialization");
 
@@ -290,7 +289,7 @@ mod tests {
     fn test_create_arc_folder_structure() {
         let temp_dir = tempdir().unwrap();
 
-        let base_folder = Some(temp_dir.path().to_str().unwrap());
+        let base_folder = temp_dir.path();
 
         let result = create_arc_folder_structure(base_folder);
 
@@ -309,7 +308,7 @@ mod tests {
     fn test_create_arc_folder_structure_invalid() {
         //this test only gives create_arc_folder_structure a file instead of a directory
         let temp_file = NamedTempFile::new().unwrap();
-        let base_path = Some(temp_file.path().to_str().unwrap());
+        let base_path = temp_file.path();
 
         let result = create_arc_folder_structure(base_path);
         //result should not be okay because of invalid input
@@ -342,7 +341,7 @@ mod tests {
     fn test_cleanup_failed_init() {
         let temp_dir = tempdir().unwrap();
         let test_folder = temp_dir.path().join("my_repo");
-        let result = initialize_project(&test_folder, false);
+        let result = initialize_project(test_folder.as_path(), false);
         if let Err(e) = &result {
             eprintln!("Error initializing git repo: {}", e);
         }
