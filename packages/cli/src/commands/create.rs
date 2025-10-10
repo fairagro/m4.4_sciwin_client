@@ -2,13 +2,13 @@ use crate::{cwl::highlight_cwl, print_diff, print_list};
 use anyhow::anyhow;
 use clap::Args;
 use colored::Colorize;
+use commonwl::CommandLineTool;
 use log::{info, warn};
-use repository::Repository;
 use s4n_core::{
     io::{get_qualified_filename, get_workflows_folder},
     tool::ToolCreationOptions,
 };
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 
 pub fn handle_create_command(args: &CreateArgs) -> anyhow::Result<()> {
     if args.command.is_empty() && args.name.is_some() {
@@ -107,8 +107,9 @@ pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
         warn!("User requested no execution, could not determine outputs!");
     }
 
-    let (cwl, yaml) = s4n_core::tool::create_tool(&args.into(), args.name.clone())?;
+    let yaml = s4n_core::tool::create_tool(&args.into(), args.name.clone(), !args.is_raw)?;
 
+    let cwl: CommandLineTool = serde_yaml::from_str(&yaml)?;
     info!("Found outputs:");
     let string_outputs = cwl
         .outputs
@@ -116,15 +117,12 @@ pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
         .map(|o| o.output_binding.clone().unwrap_or_default().glob.unwrap_or_default())
         .collect::<Vec<_>>();
     print_list(&string_outputs);
-
+    
     //save tool
     if args.is_raw {
         highlight_cwl(&yaml);
     } else {
-        let cwd = env::current_dir()?;
-        let repo = Repository::open(&cwd).map_err(|e| anyhow!("Could not find git repository at {cwd:?}: {e}"))?;
         let path = get_qualified_filename(&cwl.base_command, args.name.clone());
-        s4n_core::tool::save_tool_to_disk(&yaml, &path, &repo, !args.no_commit)?;
         info!("\n📄 Created CWL file {}", path.green().bold());
     }
     Ok(())

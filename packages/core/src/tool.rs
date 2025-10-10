@@ -35,7 +35,7 @@ pub struct ToolCreationOptions<'a> {
     pub mounts: &'a [PathBuf],
 }
 
-pub fn create_tool(options: &ToolCreationOptions, name: Option<String>) -> Result<(CommandLineTool, String)> {
+pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bool) -> Result<String> {
     let cwl = create_tool_base(
         options.command,
         options.outputs,
@@ -51,10 +51,15 @@ pub fn create_tool(options: &ToolCreationOptions, name: Option<String>) -> Resul
     let path = io::get_qualified_filename(&cwl.base_command, name);
     let yaml = finalize_tool(&mut cwl, &path)?;
 
-    Ok((cwl, yaml))
+    if save {
+        let cwd = env::current_dir()?;
+        let repo = Repository::open(&cwd).map_err(|e| anyhow::anyhow!("Could not find git repository at {cwd:?}: {e}"))?;
+        save_tool_to_disk(&yaml, &path, &repo, options.commit)?;
+    }
+    Ok(yaml)
 }
 
-pub fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: bool) -> Result<()> {
+fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: bool) -> Result<()> {
     match create_and_write_file(path, yaml) {
         Ok(()) => {
             if commit {
