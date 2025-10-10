@@ -3165,6 +3165,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "reana"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "commonwl",
+ "fancy-regex 0.15.0",
+ "httpmock",
+ "keyring",
+ "mockito",
+ "pathdiff",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "toml_edit 0.23.3",
+ "util",
+ "uuid",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3224,19 +3246,16 @@ name = "remote_execution"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "chrono",
+ "colored",
  "commonwl",
- "fancy-regex 0.15.0",
- "httpmock",
+ "dialoguer",
  "keyring",
- "mockito",
- "pathdiff",
- "reqwest",
- "serde",
+ "log",
+ "reana",
+ "s4n_core",
  "serde_json",
  "serde_yaml",
- "tempfile",
- "toml_edit 0.23.3",
+ "toml",
  "util",
  "uuid",
 ]

@@ -6,10 +6,10 @@ members = [
     "packages/cwl_annotation",
     "packages/cwl_core",
     "packages/cwl_execution",
-    "packages/remote_execution",
+    "packages/reana",
     "packages/repository",
     "packages/util",
-    "packages/test_utils",
+    "packages/test_utils", "packages/remote_execution",
 ]
 resolver = "3"
 
@@ -28,6 +28,7 @@ authors = [
 
 [workspace.dependencies]
 anyhow = "1.0.99"
+colored = "3.0.0"
 dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
 fancy-regex = "0.15.0"
 git2 = { version = "0.20.2", features = ["vendored-openssl"] }

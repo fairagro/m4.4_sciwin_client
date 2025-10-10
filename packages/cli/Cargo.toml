@@ -20,6 +20,7 @@ remote_execution = { path = "../remote_execution" }
 util = { path = "../util" }
 
 anyhow = { workspace = true }
+colored = { workspace = true }
 dialoguer = { workspace = true }
 keyring = { workspace = true }
 log = { workspace = true }
@@ -33,7 +34,6 @@ uuid = { workspace = true }
 
 clap = { version = "4.5.44", features = ["derive", "wrap_help"] }
 clap_complete = "4.5.57"
-colored = "3.0.0"
 ignore = "0.4.23"
 prettytable-rs = "0.10.0"
 

@@ -2,12 +2,11 @@ pub mod cli;
 pub mod commands;
 pub mod cwl;
 pub mod logger;
-mod reana;
 
 use colored::Colorize;
 use log::info;
 use similar::{ChangeTag, TextDiff};
-use std::{fmt};
+use std::fmt;
 
 pub fn print_list(list: &Vec<String>) {
     for item in list {
