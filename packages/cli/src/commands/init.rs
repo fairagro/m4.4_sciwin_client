@@ -150,7 +150,7 @@ fn create_investigation_excel_file(directory: &str) -> Result<(), Box<dyn std::e
 mod tests {
     use super::*;
     use calamine::{Reader, Xlsx, open_workbook};
-    use s4n_core::project::init_git_repo;
+    use s4n_core::project::initialize_project;
     use serial_test::serial;
     use std::path::Path;
     use tempfile::{NamedTempFile, tempdir};
@@ -266,7 +266,7 @@ mod tests {
     fn test_cleanup_failed_init() {
         let temp_dir = tempdir().unwrap();
         let test_folder = temp_dir.path().join("my_repo");
-        let result = init_git_repo(&test_folder);
+        let result = initialize_project(&test_folder);
         if let Err(e) = &result {
             eprintln!("Error initializing git repo: {}", e);
         }

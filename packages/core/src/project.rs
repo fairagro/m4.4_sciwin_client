@@ -48,7 +48,7 @@ fn is_git_repo(path: &Path) -> bool {
 
 const GITIGNORE_CONTENT: &str = include_str!("../resources/default.gitignore");
 
-pub fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Error>> {
+fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::Error>> {
     let base_dir = verify_base_dir(base_dir)?;
     if !base_dir.exists() {
         fs::create_dir_all(&base_dir)?;
@@ -67,7 +67,7 @@ pub fn init_git_repo(base_dir: &Path) -> Result<Repository, Box<dyn std::error::
     Ok(repo)
 }
 
-pub fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn create_minimal_folder_structure(base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = verify_base_dir(base_dir)?;
     // Create the base directory
     if !base_dir.exists() {
