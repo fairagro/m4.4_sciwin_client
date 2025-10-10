@@ -1,17 +1,13 @@
-use crate::reana::{
-    auth::get_or_prompt_credential, compatibility::compatibility_adjustments, export_rocrate, logout_reana, status::status_file_path,
-};
+use crate::reana::{auth::login_reana, compatibility::compatibility_adjustments, status::status_file_path};
 use reana::{
     api::{create_workflow, ping_reana},
     parser::generate_workflow_json_from_cwl,
     reana::Reana,
 };
 use s4n_core::config;
-use std::{collections::HashMap, error::Error, fs, path::PathBuf, thread, time::Duration};
+use std::{collections::HashMap, error::Error, fs, path::PathBuf};
 
-pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
-    const POLL_INTERVAL_SECS: u64 = 5;
-    const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
+pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>) -> Result<String, Box<dyn Error>> {
     let config_path = PathBuf::from("workflow.toml");
     let config: Option<config::Config> = if config_path.exists() {
         Some(toml::from_str(&fs::read_to_string(&config_path)?)?)
@@ -19,15 +15,15 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
         None
     };
     let workflow_name = derive_workflow_name(file, config.as_ref());
+
     // Get credentials
-    let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
-    let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let (reana_instance, reana_token) = login_reana()?;
     let reana = Reana::new(&reana_instance, &reana_token);
+
     // Ping
     let ping_status = ping_reana(&reana)?;
     if ping_status.get("status").and_then(|s| s.as_str()) != Some("200") {
-        eprintln!("⚠️ Unexpected response from Reana server: {ping_status:?}");
-        return Ok(());
+        return Err(format!("⚠️ Unexpected response from Reana server: {ping_status:?}").into());
     }
     // Generate worfklow.json
     let mut workflow_json = generate_workflow_json_from_cwl(file, input_file)?;
@@ -43,45 +39,9 @@ pub fn execute_remote_start(file: &PathBuf, input_file: &Option<PathBuf>, rocrat
     reana::api::upload_files(&reana, input_file, file, workflow_name, &workflow_json)?;
     reana::api::start_workflow(&reana, workflow_name, None, None, false, &converted_yaml)?;
     eprintln!("✅ Started workflow execution");
-    if watch {
-        loop {
-            let status_response =
-                reana::api::get_workflow_status(&reana, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
-            let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
-            if TERMINAL_STATUSES.contains(&workflow_status) {
-                match workflow_status {
-                    "finished" => {
-                        eprintln!("✅ Workflow finished successfully.");
-                        if let Err(e) = crate::reana::download_remote_results(workflow_name, None) {
-                            eprintln!("Error downloading remote results: {e}");
-                        }
-                        if rocrate && let Err(e) = export_rocrate(workflow_name, Some(&"rocrate".to_string())) {
-                            eprintln!("Error trying to create a Provenance RO-Crate: {e}");
-                        }
-                    }
-                    "failed" => {
-                        if let Some(logs_str) = status_response["logs"].as_str() {
-                            analyze_workflow_logs(logs_str);
-                        }
-                    }
-                    "deleted" => {
-                        eprintln!("⚠️ Workflow was deleted before completion.");
-                    }
-                    _ => {}
-                }
-                break;
-            }
-            thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
-        }
-    } else {
-        //save_workflow_name(workflow_name)?;
-        save_workflow_name(&reana_instance, workflow_name)?;
-    }
-    if logout && let Err(e) = logout_reana() {
-        eprintln!("Error logging out of reana instance: {e}");
-    }
 
-    Ok(())
+    save_workflow_name(&reana_instance, workflow_name)?;
+    Ok(workflow_name.to_owned())
 }
 
 pub fn analyze_workflow_logs(logs_str: &str) {

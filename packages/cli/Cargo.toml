@@ -22,15 +22,11 @@ util = { path = "../util" }
 anyhow = { workspace = true }
 colored = { workspace = true }
 dialoguer = { workspace = true }
-keyring = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true }
-serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
-toml.workspace = true
-uuid = { workspace = true }
 
 clap = { version = "4.5.44", features = ["derive", "wrap_help"] }
 clap_complete = "4.5.57"

@@ -3492,14 +3492,12 @@ dependencies = [
  "dialoguer",
  "fstest",
  "ignore",
- "keyring",
  "log",
  "prettytable-rs",
  "remote_execution",
  "repository",
  "reqwest",
  "s4n_core",
- "serde_json",
  "serde_yaml",
  "serial_test",
  "shlex",
@@ -3508,9 +3506,7 @@ dependencies = [
  "tempfile",
  "test_utils",
  "tokio",
- "toml",
  "util",
- "uuid",
 ]
 
 [[package]]

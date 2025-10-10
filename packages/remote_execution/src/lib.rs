@@ -1,9 +1,8 @@
 use std::path::PathBuf;
-
 mod reana;
 
-pub fn schedule_run(file: &PathBuf, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn std::error::Error>> {
-    reana::execute_remote_start(file, input_file, rocrate, watch, logout)
+pub fn schedule_run(file: &PathBuf, input_file: &Option<PathBuf>) -> Result<String, Box<dyn std::error::Error>> {
+    reana::execute_remote_start(file, input_file)
 }
 
 pub fn check_status(workflow_name: &Option<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -18,6 +17,10 @@ pub fn export_rocrate(workflow_name: &str, output_dir: Option<&String>) -> Resul
     reana::export_rocrate(workflow_name, output_dir)
 }
 
-pub fn logout()-> Result<(), Box<dyn std::error::Error>> {
+pub fn logout() -> Result<(), Box<dyn std::error::Error>> {
     reana::logout_reana()
+}
+
+pub fn watch(workflow_name: &str, rocrate: bool) -> Result<(), Box<dyn std::error::Error>> {
+    reana::watch(workflow_name, rocrate)
 }

@@ -1,16 +1,16 @@
 use crate::reana::{
-    auth::get_or_prompt_credential,
+    auth::login_reana,
+    export_rocrate,
     workflow::{analyze_workflow_logs, get_saved_workflows},
 };
 use reana::{api::get_workflow_status, reana::Reana};
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, path::PathBuf, thread, time::Duration};
 pub(super) fn status_file_path() -> PathBuf {
     std::env::temp_dir().join("workflow_status_list.json")
 }
 
 pub fn check_remote_status(workflow_name: &Option<String>) -> Result<(), Box<dyn Error>> {
-    let reana_instance = get_or_prompt_credential("reana", "instance", "Enter REANA instance URL: ")?;
-    let reana_token = get_or_prompt_credential("reana", "token", "Enter REANA access token: ")?;
+    let (reana_instance, reana_token) = login_reana()?;
     let reana = Reana::new(&reana_instance, &reana_token);
 
     if let Some(name) = workflow_name {
@@ -45,6 +45,44 @@ fn evaluate_workflow_status(reana: &Reana, name: &str, analyze_logs: bool) -> Re
         && let Some(logs_str) = status_response["logs"].as_str()
     {
         analyze_workflow_logs(logs_str);
+    }
+    Ok(())
+}
+
+pub fn watch(workflow_name: &str, rocrate: bool) -> Result<(), Box<dyn Error>> {
+    let (reana_instance, reana_token) = login_reana()?;
+    let reana = Reana::new(&reana_instance, &reana_token);
+
+    const POLL_INTERVAL_SECS: u64 = 5;
+    const TERMINAL_STATUSES: [&str; 3] = ["finished", "failed", "deleted"];
+
+    loop {
+        let status_response = reana::api::get_workflow_status(&reana, workflow_name).map_err(|e| format!("Failed to fetch workflow status: {e}"))?;
+        let workflow_status = status_response["status"].as_str().unwrap_or("unknown");
+        if TERMINAL_STATUSES.contains(&workflow_status) {
+            match workflow_status {
+                "finished" => {
+                    eprintln!("✅ Workflow finished successfully.");
+                    if let Err(e) = crate::reana::download_remote_results(workflow_name, None) {
+                        eprintln!("Error downloading remote results: {e}");
+                    }
+                    if rocrate && let Err(e) = export_rocrate(workflow_name, Some(&"rocrate".to_string())) {
+                        eprintln!("Error trying to create a Provenance RO-Crate: {e}");
+                    }
+                }
+                "failed" => {
+                    if let Some(logs_str) = status_response["logs"].as_str() {
+                        analyze_workflow_logs(logs_str);
+                    }
+                }
+                "deleted" => {
+                    eprintln!("⚠️ Workflow was deleted before completion.");
+                }
+                _ => {}
+            }
+            break;
+        }
+        thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
     }
     Ok(())
 }

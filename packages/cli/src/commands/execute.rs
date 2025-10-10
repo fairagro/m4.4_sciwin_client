@@ -1,7 +1,7 @@
 use clap::{Args, Subcommand};
 use commonwl::execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use commonwl::prelude::*;
-use remote_execution::{check_status, download_results, export_rocrate, logout, schedule_run};
+use remote_execution::{check_status, download_results, export_rocrate, logout};
 use serde_yaml::{Number, Value};
 use std::{collections::HashMap, error::Error, fs, path::PathBuf};
 
@@ -115,6 +115,20 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
     }
 
     execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
+}
+
+pub fn schedule_run(file: &PathBuf, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
+    let workflow_name = remote_execution::schedule_run(file, input_file)?;
+
+    if watch {
+        remote_execution::watch(&workflow_name, rocrate)?;
+    }
+
+    if logout && let Err(e) = remote_execution::logout() {
+        eprintln!("Error logging out of reana instance: {e}");
+    }
+
+    Ok(())
 }
 
 #[allow(clippy::disallowed_macros)]
