@@ -102,8 +102,8 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
             environment = environment.with_environment(read_env(env)?);
         }
 
+        // run command and get modified files
         command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
-
         let mut files = repository::get_modified_files(&repo);
         files.retain(|f| !modified.contains(f)); //remove files that were changed before run
 
@@ -113,11 +113,11 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
             }
         }
 
+        // stage changed files
         if commit {
             for file in &files {
                 let path = Path::new(file);
                 if path.exists() {
-                    //in case new dir was created
                     if path.is_dir() {
                         repository::stage_dir(&repo, path)?;
                     } else {
