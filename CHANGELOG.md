@@ -1,4 +1,6 @@
 # Unreleased
+## 🚀 Features
+- `create` now has `--env` option to load in an .env file
 ## 🐛 Bugfixes
 - default values are used on input connections
 
