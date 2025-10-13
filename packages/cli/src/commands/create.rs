@@ -60,6 +60,8 @@ pub struct CreateArgs {
         value_delimiter = ' '
     )]
     pub mount: Option<Vec<PathBuf>>,
+    #[arg(long = "env", help = "Loads an .env File")]
+    pub env: Option<PathBuf>,
     #[arg(short = 'f', long = "force", help = "Overwrites existing workflow")]
     pub force: bool,
     #[arg(trailing_var_arg = true, help = "Command line call e.g. python script.py [ARGUMENTS]")]
@@ -82,6 +84,7 @@ impl<'a> From<&'a CreateArgs> for ToolCreationOptions<'a> {
             }),
             enable_network: args.enable_network,
             mounts: args.mount.as_deref().unwrap_or(&[]),
+            env: args.env.as_deref()
         }
     }
 }

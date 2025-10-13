@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use commonwl::{
-    Entry, PathItem,
+    Entry, EnviromentDefs, PathItem,
     execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command},
     format::format_cwl,
     prelude::*,
@@ -12,8 +12,10 @@ use commonwl::{
 };
 use repository::{self, Repository};
 use std::{
+    collections::HashMap,
     env,
-    fs::remove_file,
+    fs::{self, remove_file},
+    io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
@@ -33,21 +35,14 @@ pub struct ToolCreationOptions<'a> {
     pub container: Option<ContainerInfo<'a>>,
     pub enable_network: bool,
     pub mounts: &'a [PathBuf],
+    pub env: Option<&'a Path>,
 }
 
 pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bool) -> Result<String> {
-    let cwl = create_tool_base(
-        options.command,
-        options.outputs,
-        options.inputs,
-        options.no_run,
-        options.cleanup,
-        options.commit,
-        options.clear_defaults,
-    )?;
+    let cwl = create_tool_base(options)?;
 
     // Handle container requirements
-    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts);
+    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
     let path = io::get_qualified_filename(&cwl.base_command, name);
     let yaml = finalize_tool(&mut cwl, &path)?;
 
@@ -72,15 +67,16 @@ fn save_tool_to_disk(yaml: &str, path: &String, repo: &Repository, commit: bool)
     Ok(())
 }
 
-fn create_tool_base(
-    command: &[String],
-    outputs: &[String],
-    inputs: &[String],
-    no_run: bool,
-    cleanup: bool,
-    commit: bool,
-    clear_defaults: bool,
-) -> Result<CommandLineTool> {
+fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
+    let command: &[String] = options.command;
+    let outputs: &[String] = options.outputs;
+    let inputs: &[String] = options.inputs;
+    let no_run: bool = options.no_run;
+    let cleanup: bool = options.cleanup;
+    let commit: bool = options.commit;
+    let clear_defaults: bool = options.clear_defaults;
+    let env: Option<&Path> = options.env;
+
     let command = command.iter().map(String::as_str).collect::<Vec<_>>();
     let current_working_dir = env::current_dir()?;
 
@@ -101,8 +97,12 @@ fn create_tool_base(
     }
 
     if !no_run {
-        command::run_command(&cwl, &mut RuntimeEnvironment::default())
-            .map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+        let mut environment = RuntimeEnvironment::default();
+        if let Some(env) = env {
+            environment = environment.with_environment(read_env(env)?);
+        }
+
+        command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
 
         let mut files = repository::get_modified_files(&repo);
         files.retain(|f| !modified.contains(f)); //remove files that were changed before run
@@ -156,7 +156,13 @@ fn create_tool_base(
     Ok(cwl)
 }
 
-fn add_tool_requirements(mut cwl: CommandLineTool, container: Option<&ContainerInfo>, enable_network: bool, mounts: &[PathBuf]) -> CommandLineTool {
+fn add_tool_requirements(
+    mut cwl: CommandLineTool,
+    container: Option<&ContainerInfo>,
+    enable_network: bool,
+    mounts: &[PathBuf],
+    env: Option<&Path>,
+) -> Result<CommandLineTool> {
     // Handle container requirements
     if let Some(container) = &container {
         let requirement = if container.image.contains("Dockerfile") {
@@ -171,6 +177,13 @@ fn add_tool_requirements(mut cwl: CommandLineTool, container: Option<&ContainerI
 
     if enable_network {
         cwl = cwl.append_requirement(Requirement::NetworkAccess(NetworkAccess { network_access: true }));
+    }
+
+    if let Some(env) = env {
+        let data = read_env(env)?;
+        cwl = cwl.append_requirement(Requirement::EnvVarRequirement(EnvVarRequirement {
+            env_def: EnviromentDefs::Map(data),
+        }));
     }
 
     if !mounts.is_empty() {
@@ -192,7 +205,7 @@ fn add_tool_requirements(mut cwl: CommandLineTool, container: Option<&ContainerI
             }
         }
     }
-    cwl
+    Ok(cwl)
 }
 
 fn finalize_tool(cwl: &mut CommandLineTool, path: &str) -> Result<String> {
@@ -229,6 +242,19 @@ fn prepare_save(tool: &mut CommandLineTool, path: &str) -> String {
         }
     }
     tool.to_string()
+}
+
+fn read_env(path: &Path) -> Result<HashMap<String, String>> {
+    let f = fs::File::open(path)?;
+    let reader = BufReader::new(f);
+
+    let mut map = HashMap::new();
+    for line in reader.lines() {
+        if let Some((key, value)) = line?.split_once('=') {
+            map.insert(key.to_string(), value.to_string());
+        }
+    }
+    Ok(map)
 }
 
 #[cfg(test)]

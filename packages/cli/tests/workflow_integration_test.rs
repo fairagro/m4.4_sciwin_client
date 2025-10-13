@@ -18,19 +18,7 @@ pub fn test_create_workflow() {
     env::set_current_dir(dir.path()).unwrap();
     let args = CreateArgs {
         name: Some("test".to_string()),
-        force: false,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        no_defaults: false,
-        enable_network: false,
-        inputs: None,
-        outputs: None,
-        mount: None,
-        command: vec![],
+        ..Default::default()
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());
@@ -53,19 +41,7 @@ pub fn test_remove_workflow() {
     initialize_project(dir.path(), false).unwrap();
     create_workflow(&CreateArgs {
         name: Some("test".to_string()),
-        force: false,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        no_defaults: false,
-        enable_network: false,
-        inputs: None,
-        outputs: None,
-        mount: None,
-        command: vec![],
+        ..Default::default()
     })
     .unwrap();
 
@@ -93,19 +69,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = CreateArgs {
         name: Some("test".to_string()),
-        force: false,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        no_defaults: false,
-        enable_network: false,
-        inputs: None,
-        outputs: None,
-        mount: None,
-        command: vec![],
+        ..Default::default()
     };
     let result = create_workflow(&args);
     assert!(result.is_ok());
@@ -141,19 +105,7 @@ pub fn test_workflow() -> Result<(), Box<dyn std::error::Error>> {
     //connect to another dummy workflow to check subworkflows work
     create_workflow(&CreateArgs {
         name: Some("dummy".to_string()),
-        force: false,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        no_defaults: false,
-        enable_network: false,
-        inputs: None,
-        outputs: None,
-        mount: None,
-        command: vec![],
+        ..Default::default()
     })?;
 
     let dummy_connect_args = ConnectWorkflowArgs {

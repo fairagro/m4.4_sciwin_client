@@ -487,19 +487,7 @@ pub fn test_example_project() {
     let name = "test_workflow".to_string();
     let create_args = CreateArgs {
         name: Some(name.clone()),
-        force: false,
-        container_image: None,
-        container_tag: None,
-        is_raw: false,
-        no_commit: false,
-        no_run: false,
-        is_clean: false,
-        no_defaults: false,
-        enable_network: false,
-        inputs: None,
-        outputs: None,
-        mount: None,
-        command: vec![],
+        ..Default::default()
     };
     create_workflow(&create_args).expect("Could not create workflow");
 
