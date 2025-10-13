@@ -24,10 +24,22 @@ pub fn get_modified_files(repo: &Repository) -> Vec<String> {
     files
 }
 
-pub fn stage_file(repo: &Repository, path: &str) -> Result<(), Error> {
+pub fn stage_file(repo: &Repository, path: impl AsRef<Path>) -> Result<(), Error> {
     let mut index = repo.index()?;
-    index.add_path(Path::new(path))?;
+    index.add_path(path.as_ref())?;
     index.write()
+}
+
+pub fn stage_dir(repo: &Repository, path: impl AsRef<Path>) -> anyhow::Result<()> {
+    let paths = std::fs::read_dir(path)?;
+    for entry in paths {
+        let entry = entry?;
+        let file_path = entry.path();
+        if file_path.is_file() {
+            stage_file(repo, file_path)?;
+        }
+    }
+    Ok(())
 }
 
 pub fn stage_all(repo: &Repository) -> Result<(), Error> {

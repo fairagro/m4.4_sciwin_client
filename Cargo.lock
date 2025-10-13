@@ -3264,6 +3264,7 @@ dependencies = [
 name = "repository"
 version = "1.0.0"
 dependencies = [
+ "anyhow",
  "configparser",
  "fstest",
  "git2",

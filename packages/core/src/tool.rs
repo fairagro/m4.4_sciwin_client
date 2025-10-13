@@ -119,16 +119,9 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
                 if path.exists() {
                     //in case new dir was created
                     if path.is_dir() {
-                        let paths = std::fs::read_dir(path)?;
-                        for entry in paths {
-                            let entry = entry?;
-                            let file_path = entry.path();
-                            if file_path.is_file() {
-                                repository::stage_file(&repo, file_path.to_str().unwrap())?;
-                            }
-                        }
+                        repository::stage_dir(&repo, path)?;
                     } else {
-                        repository::stage_file(&repo, file.as_str())?;
+                        repository::stage_file(&repo, file)?;
                     }
                 }
             }
