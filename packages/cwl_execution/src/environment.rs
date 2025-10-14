@@ -1,3 +1,5 @@
+use crate::Result;
+use crate::error::ExecutionError;
 use crate::{
     InputObject, get_available_disk_space, get_available_ram, get_processor_count, inputs::evaluate_input, validate::set_placeholder_values_in_string,
 };
@@ -9,7 +11,6 @@ use cwl_core::{
 use serde::Serialize;
 use std::{
     collections::HashMap,
-    error::Error,
     fs::{self},
     path::Path,
 };
@@ -47,7 +48,7 @@ impl RuntimeEnvironment {
         outdir: impl AsRef<Path>,
         tooldir: impl AsRef<Path>,
         tmpdir: impl AsRef<Path>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self> {
         let mut runtime = HashMap::from([
             (
                 "tooldir".to_string(),
@@ -116,14 +117,11 @@ impl RuntimeEnvironment {
     }
 }
 
-fn evaluate(
-    val: &StringOrNumber,
-    runtime: &RuntimeEnvironment,
-    inputs: &[CommandInputParameter],
-    cwl_version: &Option<String>,
-) -> Result<u64, Box<dyn Error>> {
+fn evaluate(val: &StringOrNumber, runtime: &RuntimeEnvironment, inputs: &[CommandInputParameter], cwl_version: &Option<String>) -> Result<u64> {
     if *cwl_version == Some("v1.0".into()) || *cwl_version == Some("v1.1".into()) && matches!(val, StringOrNumber::Decimal(_)) {
-        return Err("CWL v1.0 and v1.1 do not support decimal values in runtime".into());
+        return Err(ExecutionError::CWLVersionMismatch(
+            "CWL v1.0 and v1.1 do not support decimal values in runtime".into(),
+        ));
     }
     match val {
         StringOrNumber::String(str) => Ok(set_placeholder_values_in_string(str, runtime, inputs).parse()?),
@@ -147,16 +145,17 @@ pub(crate) fn collect_inputs(
     tool: &CWLDocument,
     input_values: &HashMap<String, DefaultValue>,
     tool_dir: impl AsRef<Path>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>> {
     let mut inputs = HashMap::new();
     for input in &tool.inputs {
         let mut result_input = evaluate_input(input, input_values)?;
         if let DefaultValue::File(f) = &mut result_input {
             if input.load_contents {
                 if fs::metadata(f.location.as_ref().expect("Could not read file"))?.len() > 64 * 1024 {
-                    return Err(
-                        "File is too large to load contents (see: https://www.commonwl.org/v1.2/CommandLineTool.html#CommandInputParameter)".into(),
-                    );
+                    return Err(anyhow::anyhow!(
+                        "File is too large to load contents (see: https://www.commonwl.org/v1.2/CommandLineTool.html#CommandInputParameter)"
+                    )
+                    .into());
                 }
                 f.contents = Some(fs::read_to_string(f.location.as_ref().expect("Could not read file"))?);
             }

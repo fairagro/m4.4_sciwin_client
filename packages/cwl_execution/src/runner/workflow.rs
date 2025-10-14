@@ -1,5 +1,7 @@
 use crate::{
-    InputObject, execute,
+    InputObject,
+    error::ExecutionError,
+    execute,
     expression::evaluate_condition,
     inputs::evaluate_input,
     io::{copy_dir, copy_file},
@@ -23,7 +25,7 @@ pub fn run_workflow(
     input_values: &InputObject,
     cwl_path: &PathBuf,
     out_dir: Option<String>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, ExecutionError> {
     let clock = Instant::now();
 
     let sorted_step_ids = workflow.sort_steps()?;
@@ -96,12 +98,12 @@ pub fn run_workflow(
                                         if let DefaultValue::Array(vec) = value {
                                             data.extend(vec);
                                         } else {
-                                            return Err("Expected array for MergeFlattened".into());
+                                            return Err(anyhow::anyhow!("Expected array for MergeFlattened").into());
                                         }
                                     }
                                 }
                             } else {
-                                return Err(format!("Could not find input: {item}").into());
+                                return Err(anyhow::anyhow!("Could not find input: {item}").into());
                             }
                         }
                         step_inputs.insert(parameter.id.to_string(), DefaultValue::Array(data));
@@ -123,7 +125,7 @@ pub fn run_workflow(
             //check conditional execution
             if let Some(condition) = &step.when {
                 if workflow.cwl_version == Some("v1.0".to_string()) || workflow.cwl_version == Some("v1.1".to_string()) {
-                    return Err(format!("Conditional execution is not supported in CWL {:?}", workflow.cwl_version).into());
+                    return Err(anyhow::anyhow!("Conditional execution is not supported in CWL {:?}", workflow.cwl_version).into());
                 }
                 if !evaluate_condition(condition, &input_values.inputs)? {
                     continue;
@@ -180,7 +182,7 @@ pub fn run_workflow(
                 outputs.insert(format!("{}/{}", step.id, key), value);
             }
         } else {
-            return Err(format!("Could not find step {step_id}").into());
+            return Err(anyhow::anyhow!("Could not find step {step_id}").into());
         }
     }
 
@@ -232,16 +234,13 @@ pub fn run_workflow(
             let value = match &result {
                 DefaultValue::File(file) => {
                     let dest = format!("{}/{}", output_directory, file.get_location());
-                    fs::copy(workflow_folder.join(file.get_location()), &dest).map_err(|e| format!("Could not copy file to {dest}: {e}"))?;
+                    fs::copy(workflow_folder.join(file.get_location()), &dest)?;
                     DefaultValue::File(get_file_metadata(Path::new(&dest).to_path_buf(), file.format.clone()))
                 }
-                DefaultValue::Directory(directory) => DefaultValue::Directory(
-                    copy_output_dir(
-                        workflow_folder.join(directory.get_location()),
-                        format!("{}/{}", &output_directory, &directory.get_location()),
-                    )
-                    .map_err(|e| format!("Could not provide output directory: {e}"))?,
-                ),
+                DefaultValue::Directory(directory) => DefaultValue::Directory(copy_output_dir(
+                    workflow_folder.join(directory.get_location()),
+                    format!("{}/{}", &output_directory, &directory.get_location()),
+                )?),
                 DefaultValue::Any(inner) => DefaultValue::Any(inner.clone()),
                 DefaultValue::Array(inner) => DefaultValue::Array(inner.clone()),
             };

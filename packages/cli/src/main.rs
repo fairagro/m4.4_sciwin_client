@@ -1,5 +1,5 @@
 use clap::{CommandFactory, Parser};
-use commonwl::execution::{CommandError, ExitCode};
+use commonwl::execution::error::{CommandError, ExitCode};
 use log::{LevelFilter, error};
 use s4n::{
     cli::{Cli, Commands, generate_completions},

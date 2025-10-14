@@ -1,3 +1,5 @@
+use crate::Result;
+use crate::error::CopyDataError;
 use crate::{
     expression::{output_eval, replace_expressions, set_self, unset_self},
     io::{copy_dir, copy_file, get_first_file_with_prefix},
@@ -9,13 +11,12 @@ use serde_yaml::Value;
 use std::{
     collections::HashMap,
     env,
-    error::Error,
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
 };
 
-pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: &Value) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: &Value) -> Result<HashMap<String, DefaultValue>> {
     let mut outputs = HashMap::new();
     for output in &tool.outputs {
         if let Some(result) = value.get(&output.id) {
@@ -34,7 +35,7 @@ pub(crate) fn evaluate_expression_outputs(tool: &ExpressionTool, value: &Value) 
 }
 
 ///Copies back requested outputs and writes to commandline
-pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+pub(crate) fn evaluate_command_outputs(tool: &CommandLineTool, initial_dir: &Path) -> Result<HashMap<String, DefaultValue>> {
     //check for cwl.output.json
     // If the output directory contains a file named "cwl.output.json", that file must be loaded and used as the output object.
     let check = Path::new("cwl.output.json");
@@ -92,7 +93,7 @@ fn evaluate_output_impl(
     tool_stdout: &Option<String>,
     tool_stderr: &Option<String>,
     outputs: &mut HashMap<String, DefaultValue>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     match type_ {
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
@@ -102,7 +103,7 @@ fn evaluate_output_impl(
                         let entry = &entry?;
                         outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
                     } else {
-                        Err(format!("Could not evaluate glob: {glob_}"))?;
+                        Err(anyhow::anyhow!("Could not evaluate glob: {glob_}"))?;
                     }
                 }
             } else {
@@ -120,7 +121,7 @@ fn evaluate_output_impl(
                     }
                 };
                 let path = &initial_dir.join(filename);
-                fs::copy(filename, path).map_err(|e| format!("Failed to copy file from {:?} to {:?}: {}", &filename, path, e))?;
+                fs::copy(filename, path).map_err(|e| CopyDataError::new(Path::new(filename), path, e))?;
                 eprintln!("📜 Wrote output file: {path:?}");
                 outputs.insert(output.id.clone(), DefaultValue::File(get_file_metadata(path, output.format.clone())));
             }
@@ -130,7 +131,7 @@ fn evaluate_output_impl(
                 && let Some(glob_) = &binding.glob
             {
                 let result = glob(glob_)?;
-                let values: Result<Vec<_>, Box<dyn Error>> = result
+                let values: Result<Vec<_>> = result
                     .map(|entry| {
                         let entry = entry?;
                         match **inner {
@@ -152,7 +153,7 @@ fn evaluate_output_impl(
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
                 } else {
-                    Err(format!("Could not evaluate glob: {glob_}"))?;
+                    Err(anyhow::anyhow!("Could not evaluate glob: {glob_}"))?;
                 }
             }
         }
@@ -187,10 +188,10 @@ fn evaluate_output_impl(
     Ok(())
 }
 
-fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue, Box<dyn Error>> {
+fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutputParameter) -> Result<DefaultValue> {
     let current_dir = env::current_dir()?.to_string_lossy().into_owned();
     let path = &initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(entry));
-    fs::copy(entry, path).map_err(|e| format!("Failed to copy file from {entry:?} to {path:?}: {e}"))?;
+    fs::copy(entry, path).map_err(|e| CopyDataError::new(entry, path, e))?;
     info!("📜 Wrote output file: {path:?}");
 
     let mut file = get_file_metadata(path, output.format.clone());
@@ -204,7 +205,7 @@ fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutpu
             for entry in glob(&pattern)? {
                 let entry = entry?;
                 let sec_path = initial_dir.join(entry.strip_prefix(&current_dir).unwrap_or(&entry));
-                fs::copy(&entry, &sec_path).map_err(|e| format!("Failed to copy file from {entry:?} to {sec_path:?}: {e}"))?;
+                fs::copy(&entry, &sec_path).map_err(|e| CopyDataError::new(&entry, &sec_path, e))?;
                 info!("📜 Wrote secondary file: {sec_path:?}");
                 secondary_files.push(DefaultValue::File(get_file_metadata(&sec_path, None)));
             }
@@ -216,11 +217,11 @@ fn handle_file_output(entry: &PathBuf, initial_dir: &Path, output: &CommandOutpu
     Ok(DefaultValue::File(file))
 }
 
-fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue, Box<dyn Error>> {
+fn handle_dir_output(entry: &PathBuf, initial_dir: &Path) -> Result<DefaultValue> {
     let current_dir = env::temp_dir().to_string_lossy().into_owned();
     let path = &initial_dir.join(entry.strip_prefix(current_dir).unwrap_or(entry));
     fs::create_dir_all(path)?;
-    let out_dir = copy_output_dir(entry, path).map_err(|e| format!("Failed to copy: {e}"))?;
+    let out_dir = copy_output_dir(entry, path).map_err(|e| CopyDataError::new(entry, path, e))?;
     Ok(DefaultValue::Directory(out_dir))
 }
 
@@ -239,7 +240,7 @@ pub(crate) fn get_diretory_metadata<P: AsRef<Path>>(path: P) -> Directory {
     }
 }
 
-pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Directory, std::io::Error> {
+pub(crate) fn copy_output_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> std::io::Result<Directory> {
     fs::create_dir_all(&dest)?;
     let mut dir = get_diretory_metadata(&dest);
     dir.listing = Some(vec![]);

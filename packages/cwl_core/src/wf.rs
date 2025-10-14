@@ -107,7 +107,7 @@ impl Workflow {
     }
 
     /// Sorts `WorkflowStep`s to get the sequence of execution
-    pub fn sort_steps(&self) -> Result<Vec<String>, String> {
+    pub fn sort_steps(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut graph: HashMap<String, Vec<String>> = HashMap::new();
         let mut in_degree: HashMap<String, usize> = HashMap::new();
 

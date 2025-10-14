@@ -1,17 +1,15 @@
+use crate::{Result, error::ExecutionError};
 use cwl_core::{CWLType, DefaultValue, inputs::CommandInputParameter};
 use serde_yaml::Value;
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
 ///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input_as_string(
-    input: &CommandInputParameter,
-    input_values: &HashMap<String, DefaultValue>,
-) -> Result<String, Box<dyn Error>> {
+pub(crate) fn evaluate_input_as_string(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<String> {
     Ok(evaluate_input(input, input_values)?.as_value_string())
 }
 
 ///Either gets the default value for input or the provided one (preferred)
-pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue, Box<dyn Error>> {
+pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashMap<String, DefaultValue>) -> Result<DefaultValue> {
     if let Some(value) = input_values.get(&input.id) {
         if (matches!(input.type_, CWLType::Any) || input.type_.is_optional())
             && matches!(value, DefaultValue::Any(Value::Null))
@@ -23,10 +21,7 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
         if value.has_matching_type(&input.type_) {
             return Ok(value.clone());
         } else {
-            Err(format!(
-                "CWLType '{:?}' is not matching input type. Input was: \n{:#?}",
-                &input.type_, value
-            ))?;
+            Err(ExecutionError::CWLTypeValueMismatch(input.type_.clone(), Box::new(value.clone())))?;
         }
     } else if let Some(default_) = &input.default {
         return Ok(default_.clone());
@@ -35,10 +30,14 @@ pub(crate) fn evaluate_input(input: &CommandInputParameter, input_values: &HashM
     if let CWLType::Optional(_) = input.type_ {
         return Ok(DefaultValue::Any(Value::Null));
     } else {
-        Err(format!("You did not include a value for {}", input.id).as_str())?;
+        Err(ExecutionError::CWLMissingInput(input.id.clone()))?;
     }
 
-    Err(format!("Could not evaluate input: {}. Expected type: {:?}", input.id, input.type_))?
+    Err(anyhow::anyhow!(
+        "Could not evaluate input: {}. Expected type: {:?}",
+        input.id,
+        input.type_
+    ))?
 }
 
 #[cfg(test)]

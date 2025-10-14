@@ -1,4 +1,5 @@
 pub mod environment;
+pub mod error;
 pub mod io;
 pub mod runner;
 
@@ -13,6 +14,7 @@ mod validate;
 
 pub use docker::{ContainerEngine, container_engine, set_container_engine};
 
+use crate::error::{ExecutionError, FileSystemError, YAMLDeserializationError};
 use cwl_core::{
     CWLDocument, CWLType, DefaultValue, Directory, File, PathItem, guess_type,
     packed::{PackedCWL, unpack_workflow},
@@ -23,15 +25,17 @@ use preprocess::preprocess_cwl;
 use runner::{tool::run_tool, workflow::run_workflow};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, error::Error, fmt::Display, fs, path::Path, process::Command, sync::LazyLock};
+use std::{collections::HashMap, error::Error, fs, path::Path, process::Command, sync::LazyLock};
 use sysinfo::{CpuRefreshKind, Disks, MemoryRefreshKind, System};
 
+pub type Result<T> = std::result::Result<T, ExecutionError>;
+
 #[allow(clippy::disallowed_macros)]
-pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<(), Box<dyn Error>> {
+pub fn execute_cwlfile(cwlfile: impl AsRef<Path>, raw_inputs: &[String], outdir: Option<impl AsRef<Path>>) -> Result<()> {
     //gather inputs
     let mut input_values = if raw_inputs.len() == 1 && !raw_inputs[0].starts_with('-') {
         let yaml = fs::read_to_string(&raw_inputs[0])?;
-        serde_yaml::from_str(&yaml).map_err(|e| format!("Could not read job file: {e}"))?
+        serde_yaml::from_str(&yaml).map_err(|e| YAMLDeserializationError::new(Path::new(&raw_inputs[0]), e))?
     } else {
         InputObject {
             inputs: raw_inputs
@@ -104,7 +108,7 @@ pub fn execute(
     input_values: &InputObject,
     outdir: Option<impl AsRef<Path>>,
     cwl_doc: Option<&CWLDocument>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>> {
     //load cwl
     let mut doc: CWLDocument = if let Some(doc) = cwl_doc {
         doc.clone()
@@ -112,12 +116,12 @@ pub fn execute(
         //if file_name does not exist we have more serious problems than this unwrap call :D
         let path = cwlfile.as_ref().to_string_lossy();
         let Some((real_path, id)) = path.split_once('#') else {
-            return Err("Could not determine how to load packed cwl file".into());
+            return Err(anyhow::anyhow!("Could not determine how to load packed cwl file").into());
         };
 
-        let contents = fs::read_to_string(real_path).map_err(|e| format!("Could not read CWL File {real_path:?}: {e}"))?;
+        let contents = fs::read_to_string(real_path)?;
         //we need to do preprocess here but we can not,yet
-        let packed: PackedCWL = serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse packed CWL File {real_path:?}: {e}"))?;
+        let packed: PackedCWL = serde_yaml::from_str(&contents).map_err(|e| YAMLDeserializationError::new(Path::new(real_path), e))?;
         if id != "main" {
             packed
                 .graph
@@ -128,9 +132,9 @@ pub fn execute(
             CWLDocument::Workflow(unpack_workflow(&packed)?)
         }
     } else {
-        let contents = fs::read_to_string(&cwlfile).map_err(|e| format!("Could not read CWL File {:?}: {e}", cwlfile.as_ref()))?;
+        let contents = fs::read_to_string(&cwlfile).map_err(|e| FileSystemError::new(cwlfile.as_ref(), e))?;
         let contents = preprocess_cwl(&contents, &cwlfile)?;
-        serde_yaml::from_str(&contents).map_err(|e| format!("Could not parse CWL File {:?}: {e}", cwlfile.as_ref()))?
+        serde_yaml::from_str(&contents).map_err(|e| YAMLDeserializationError::new(cwlfile.as_ref(), e))?
     };
 
     match doc {
@@ -232,30 +236,6 @@ impl From<HashMap<String, DefaultValue>> for InputObject {
             inputs,
             ..Default::default()
         }
-    }
-}
-
-pub trait ExitCode {
-    fn exit_code(&self) -> i32;
-}
-
-#[derive(Debug)]
-pub struct CommandError {
-    pub message: String,
-    pub exit_code: i32,
-}
-
-impl Error for CommandError {}
-
-impl Display for CommandError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, code: {}", self.message, self.exit_code)
-    }
-}
-
-impl ExitCode for CommandError {
-    fn exit_code(&self) -> i32 {
-        self.exit_code
     }
 }
 

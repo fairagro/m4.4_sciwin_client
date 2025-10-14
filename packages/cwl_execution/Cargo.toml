@@ -12,6 +12,7 @@ workspace = true
 cwl_core = { path = "../cwl_core" }
 util = { path = "../util" }
 
+anyhow.workspace = true
 fancy-regex = { workspace = true }
 log = { workspace = true }
 pathdiff = { workspace = true }
@@ -32,6 +33,7 @@ rustyscript = { version = "0.12.2", features = [
     "url",
 ], default-features = false }
 sysinfo = "0.37.0"
+thiserror = "2.0.17"
 
 [dev-dependencies]
 serial_test = { workspace = true }

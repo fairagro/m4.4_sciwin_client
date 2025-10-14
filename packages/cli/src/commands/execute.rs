@@ -1,4 +1,5 @@
 use clap::{Args, Subcommand};
+use commonwl::execution::error::ExecutionError;
 use commonwl::execution::{ContainerEngine, execute_cwlfile, set_container_engine};
 use commonwl::prelude::*;
 use remote_execution::{check_status, download_results, export_rocrate, logout};
@@ -7,7 +8,7 @@ use std::{collections::HashMap, error::Error, fs, path::PathBuf};
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
-        ExecuteCommands::Local(args) => execute_local(args),
+        ExecuteCommands::Local(args) => execute_local(args).map_err(|e| Box::new(e).into()),
         ExecuteCommands::Remote(remote_args) => match &remote_args.command {
             RemoteSubcommands::Start {
                 file,
@@ -104,7 +105,7 @@ pub enum RemoteSubcommands {
     Logout,
 }
 
-pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), Box<dyn Error>> {
+pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), ExecutionError> {
     if args.is_quiet {
         log::set_max_level(log::LevelFilter::Error);
     }

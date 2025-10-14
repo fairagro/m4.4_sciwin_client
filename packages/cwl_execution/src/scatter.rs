@@ -1,18 +1,18 @@
-use cwl_core::{DefaultValue, ScatterMethod};
-use std::{collections::HashMap, error::Error};
-
 use crate::InputObject;
+use crate::Result;
+use cwl_core::{DefaultValue, ScatterMethod};
+use std::collections::HashMap;
 
 pub fn gather_jobs(
     scatter_inputs: &[Vec<DefaultValue>],
     scatter_keys: &[String],
     method: &ScatterMethod,
-) -> Result<Vec<HashMap<String, DefaultValue>>, Box<dyn Error>> {
+) -> Result<Vec<HashMap<String, DefaultValue>>> {
     match method {
         ScatterMethod::DotProduct => {
             let len = scatter_inputs[0].len();
             if scatter_inputs.iter().any(|arr| arr.len() != len) {
-                return Err("All scatter inputs must be the same length for dotproduct.".into());
+                return Err(anyhow::anyhow!("All scatter inputs must be the same length for dotproduct.").into());
             }
 
             let jobs = (0..len)
@@ -68,7 +68,7 @@ pub fn gather_jobs(
     }
 }
 
-pub fn gather_inputs(scatter_keys: &[String], input_values: &InputObject) -> Result<Vec<Vec<DefaultValue>>, Box<dyn Error>> {
+pub fn gather_inputs(scatter_keys: &[String], input_values: &InputObject) -> Result<Vec<Vec<DefaultValue>>> {
     scatter_keys
         .iter()
         .map(|k| {
@@ -79,7 +79,7 @@ pub fn gather_inputs(scatter_keys: &[String], input_values: &InputObject) -> Res
                     DefaultValue::Array(arr) => Some(arr.clone()),
                     _ => None,
                 })
-                .ok_or_else(|| Box::from(format!("Input {k} must be of type array to scatter!")))
+                .ok_or_else(|| anyhow::anyhow!("Input {k} must be of type array to scatter!").into())
         })
-        .collect::<Result<Vec<Vec<DefaultValue>>, _>>()
+        .collect::<Result<Vec<Vec<DefaultValue>>>>()
 }

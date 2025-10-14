@@ -1,6 +1,7 @@
 use crate::{
-    CommandError, InputObject,
+    InputObject,
     environment::{RuntimeEnvironment, collect_environment},
+    error::{CommandError, ExecutionError},
     expression::{eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, reset_expression_engine},
     outputs::{evaluate_command_outputs, evaluate_expression_outputs},
     runner::command::run_command,
@@ -12,7 +13,6 @@ use log::info;
 use std::{
     collections::HashMap,
     env,
-    error::Error,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -23,7 +23,7 @@ pub fn run_tool(
     input_values: &InputObject,
     cwl_path: &PathBuf,
     out_dir: Option<String>,
-) -> Result<HashMap<String, DefaultValue>, Box<dyn Error>> {
+) -> Result<HashMap<String, DefaultValue>, ExecutionError> {
     //measure performance
     let clock = Instant::now();
     //create staging directory

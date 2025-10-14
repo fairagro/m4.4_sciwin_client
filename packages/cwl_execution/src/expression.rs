@@ -1,13 +1,14 @@
+use crate::Result;
 use crate::{InputObject, environment::RuntimeEnvironment};
 use cwl_core::{Entry, prelude::*, requirements::WorkDirItem};
 use rustyscript::static_runtime;
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
-use std::{collections::HashMap, error::Error, fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 static_runtime!(RUNTIME);
 
-pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Result<()> {
     let inputs = serde_json::to_string(&environment.inputs)?;
     let runtime = serde_json::to_string(&environment.runtime)?;
 
@@ -16,7 +17,7 @@ pub(crate) fn prepare_expression_engine(environment: &RuntimeEnvironment) -> Res
     Ok(())
 }
 
-pub(crate) fn reset_expression_engine() -> Result<(), Box<dyn Error>> {
+pub(crate) fn reset_expression_engine() -> Result<()> {
     Ok(RUNTIME::with(|rt| {
         rt.eval::<()>(
             r#"
@@ -27,37 +28,37 @@ pub(crate) fn reset_expression_engine() -> Result<(), Box<dyn Error>> {
     })?)
 }
 
-pub(crate) fn eval(expression: &str) -> Result<Value, Box<dyn Error>> {
+pub(crate) fn eval(expression: &str) -> Result<Value> {
     eval_generic(expression)
 }
 
-pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T, Box<dyn Error>> {
+pub(crate) fn eval_generic<T: DeserializeOwned>(expression: &str) -> Result<T> {
     Ok(RUNTIME::with(|rt| rt.eval::<T>(expression))?)
 }
 
-pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T, Box<dyn Error>> {
+pub(crate) fn eval_tool<T: DeserializeOwned>(expression: &str) -> Result<T> {
     Ok(RUNTIME::with(|rt| rt.eval::<T>(format!("var outputs = {expression}; outputs")))?)
 }
 
-pub(crate) fn load_lib(lib: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
+pub(crate) fn load_lib(lib: impl AsRef<Path>) -> Result<()> {
     Ok(RUNTIME::with(|rt| {
         let contents = fs::read_to_string(lib.as_ref()).unwrap();
         rt.eval(contents)
     })?)
 }
 
-pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<(), Box<dyn Error>> {
+pub(crate) fn set_self<T: Serialize>(me: &T) -> Result<()> {
     let json = serde_json::to_string(me)?;
     RUNTIME::with(|rt| rt.eval::<()>(format!("var self = {json};")))?;
     Ok(())
 }
 
-pub(crate) fn unset_self() -> Result<(), Box<dyn Error>> {
+pub(crate) fn unset_self() -> Result<()> {
     RUNTIME::with(|rt| rt.eval::<()>("var self = undefined;".to_string()))?;
     Ok(())
 }
 
-pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn Error>> {
+pub(crate) fn evaluate_expression(input: &str) -> Result<Value> {
     let expressions = parse_expressions(input);
 
     if !expressions.is_empty() {
@@ -69,7 +70,7 @@ pub(crate) fn evaluate_expression(input: &str) -> Result<Value, Box<dyn Error>> 
     Ok(Value::String(input.to_string()))
 }
 
-pub(crate) fn evaluate_condition(input: &str, inputs: &HashMap<String, DefaultValue>) -> Result<bool, Box<dyn Error>> {
+pub(crate) fn evaluate_condition(input: &str, inputs: &HashMap<String, DefaultValue>) -> Result<bool> {
     prepare_expression_engine(&RuntimeEnvironment {
         inputs: inputs.clone(),
         ..Default::default()
@@ -79,7 +80,7 @@ pub(crate) fn evaluate_condition(input: &str, inputs: &HashMap<String, DefaultVa
     Ok(result)
 }
 
-pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn Error>> {
+pub(crate) fn output_eval(input: &str) -> Result<Value> {
     let expressions = parse_expressions(input);
 
     if expressions.is_empty() {
@@ -123,12 +124,12 @@ pub(crate) fn output_eval(input: &str) -> Result<Value, Box<dyn Error>> {
     }
 }
 
-pub(crate) fn replace_expressions(input: &str) -> Result<String, Box<dyn Error>> {
+pub(crate) fn replace_expressions(input: &str) -> Result<String> {
     let expressions = parse_expressions(input);
     let evaluations = expressions
         .iter()
         .map(|e| eval_generic::<DefaultValue>(&e.expression()).map(|v| v.as_value_string()))
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     let mut result = input.to_string();
 
@@ -186,7 +187,7 @@ pub(crate) fn parse_expressions(input: &str) -> Vec<Expression> {
     expressions
 }
 
-pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut InputObject) -> Result<(), Box<dyn Error>> {
+pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut InputObject) -> Result<()> {
     for requirement in &mut input_values.requirements {
         if let Requirement::InitialWorkDirRequirement(wd_req) = requirement {
             for listing in &mut wd_req.listing {

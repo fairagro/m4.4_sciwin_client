@@ -1,3 +1,4 @@
+use crate::Result;
 use crate::environment::RuntimeEnvironment;
 use cwl_core::{Entry, StringOrNumber, requirements::DockerRequirement};
 use rand::Rng;
@@ -41,7 +42,7 @@ pub fn container_engine() -> ContainerEngine {
     CONTAINER_ENGINE.with(|engine| *engine.borrow())
 }
 
-pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement, runtime: &RuntimeEnvironment) -> SystemCommand {
+pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement, runtime: &RuntimeEnvironment) -> Result<SystemCommand> {
     let container_engine = container_engine().to_string();
 
     let docker_image = if let Some(pull) = &docker.docker_pull {
@@ -51,7 +52,7 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
             Entry::Include(include) => include.include.clone(),
             Entry::Source(src) => {
                 let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
-                fs::write(&path, src).unwrap();
+                fs::write(&path, src)?;
                 path
             }
         };
@@ -62,9 +63,8 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
             .args(["build", "-f", &path, "-t", docker_image_id, "."])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .expect("Could not build container!");
-        handle_process(&mut process, 0).expect("Could not build container");
+            .spawn()?;
+        handle_process(&mut process, 0)?;
         docker_image_id
     } else {
         unreachable!()
@@ -121,7 +121,7 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
     docker_command.stderr(Stdio::piped());
     docker_command.stdout(Stdio::piped());
 
-    docker_command
+    Ok(docker_command)
 }
 
 #[cfg(unix)]

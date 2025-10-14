@@ -1,20 +1,21 @@
 use rand::{Rng, distr::Alphanumeric};
+use std::io::Result;
 use std::{
     ffi::OsStr,
     fs::{self},
-    io::{self, Error, Write},
+    io::{self, Write},
     path::{MAIN_SEPARATOR_STR, Path},
     process::Command,
 };
 
-pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+pub fn create_and_write_file<P: AsRef<Path>>(filename: P, contents: &str) -> Result<()> {
     create_and_write_file_internal(filename, contents, false)
 }
-pub fn create_and_write_file_forced<P: AsRef<Path>>(filename: P, contents: &str) -> Result<(), Error> {
+pub fn create_and_write_file_forced<P: AsRef<Path>>(filename: P, contents: &str) -> Result<()> {
     create_and_write_file_internal(filename, contents, true)
 }
 
-fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, overwrite: bool) -> Result<(), Error> {
+fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, overwrite: bool) -> Result<()> {
     let path = filename.as_ref();
 
     if let Some(parent) = path.parent() {
@@ -29,7 +30,7 @@ fn create_and_write_file_internal<P: AsRef<Path>>(filename: P, contents: &str, o
     Ok(())
 }
 
-pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), Error> {
+pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<()> {
     let path = to.as_ref();
 
     if let Some(parent) = path.parent() {
@@ -40,7 +41,7 @@ pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<(), E
     Ok(())
 }
 
-pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<String>, Error> {
+pub fn copy_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> Result<Vec<String>> {
     let mut files = vec![];
     fs::create_dir_all(&dest)?;
 

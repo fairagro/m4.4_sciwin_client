@@ -1,7 +1,8 @@
+use crate::Result;
 use serde_yaml::{Mapping, Value};
-use std::{error::Error, fs, path::Path};
+use std::{fs, path::Path};
 
-pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String, Box<dyn Error>> {
+pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String> {
     let mut yaml: Value = serde_yaml::from_str(contents)?;
     let path = path.as_ref().parent().unwrap_or_else(|| Path::new("."));
     resolve_imports(&mut yaml, path)?;
@@ -9,7 +10,7 @@ pub fn preprocess_cwl<P: AsRef<Path>>(contents: &str, path: P) -> Result<String,
     Ok(serde_yaml::to_string(&yaml)?)
 }
 
-fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<(), Box<dyn Error>> {
+fn resolve_imports(value: &mut Value, base_path: &Path) -> Result<()> {
     match value {
         Value::Mapping(map) => {
             if map.len() == 1

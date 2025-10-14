@@ -1,3 +1,5 @@
+use crate::Result;
+use crate::error::CommandError;
 use crate::{
     container_engine,
     docker::{build_docker_command, is_docker_installed},
@@ -11,15 +13,15 @@ use cwl_core::{StringOrNumber, prelude::*};
 use log::{info, warn};
 use serde_yaml::Value;
 use std::process::Command as SystemCommand;
-use std::{env, error::Error, process::Stdio};
+use std::{env, process::Stdio};
 use util::handle_process;
 
-pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> Result<(), Box<dyn Error>> {
+pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> Result<()> {
     let mut command = build_command(tool, runtime)?;
 
     if let Some(docker) = tool.get_docker_requirement() {
         if is_docker_installed() {
-            command = build_docker_command(&mut command, docker, runtime);
+            command = build_docker_command(&mut command, docker, runtime)?;
         } else {
             eprintln!(
                 "{} is not installed, can not use {} on this system!",
@@ -75,7 +77,7 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
     if tool.get_sucess_code() == status_code {
         Ok(()) //fails expectedly
     } else {
-        Err(format!("command returned with code {status_code:?}").into())
+        Err(CommandError::new("Command Execution failed".to_owned(), status_code).into())
     }
 }
 
@@ -91,7 +93,7 @@ enum SortKey {
     Str(String),
 }
 
-fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<SystemCommand, Box<dyn Error>> {
+fn build_command(tool: &CommandLineTool, runtime: &RuntimeEnvironment) -> Result<SystemCommand> {
     let mut args: Vec<String> = vec![];
 
     //get executable
@@ -381,7 +383,7 @@ stdout: output.txt"#;
         };
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
-        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime).unwrap();
         eprint!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("docker"));
     }
@@ -401,7 +403,7 @@ stdout: output.txt"#;
         };
 
         let mut cmd = build_command(&tool, &runtime).unwrap();
-        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime);
+        let cmd = build_docker_command(&mut cmd, tool.get_docker_requirement().unwrap(), &runtime).unwrap();
         eprint!("{}", format_command(&cmd));
         assert!(cmd.get_program().to_string_lossy().contains("podman"));
     }
