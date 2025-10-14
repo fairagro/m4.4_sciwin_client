@@ -1,7 +1,7 @@
 use crate::{
     InputObject,
     environment::{RuntimeEnvironment, collect_environment},
-    error::{CommandError, ExecutionError},
+    error::ExecutionError,
     expression::{eval, eval_tool, load_lib, parse_expressions, prepare_expression_engine, process_expressions, reset_expression_engine},
     outputs::{evaluate_command_outputs, evaluate_expression_outputs},
     runner::command::run_command,
@@ -74,10 +74,7 @@ pub fn run_tool(
     //run the tool
     let mut result_value: Option<serde_yaml::Value> = None;
     if let CWLDocument::CommandLineTool(clt) = tool {
-        run_command(clt, &mut runtime).map_err(|e| CommandError {
-            message: format!("Error in Tool execution: {e}"),
-            exit_code: clt.get_error_code(),
-        })?;
+        run_command(clt, &mut runtime)?;
     } else if let CWLDocument::ExpressionTool(et) = tool {
         prepare_expression_engine(&runtime)?;
         let expressions = parse_expressions(&et.expression);
