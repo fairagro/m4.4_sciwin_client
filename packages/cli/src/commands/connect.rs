@@ -34,14 +34,26 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> 
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
-    if from_parts[0] == "@inputs" {
+    if from_parts[0] == "@inputs" || from_parts.len() == 1 {
+        let input = match from_parts.as_slice() {
+            ["@inputs", input] => input,
+            [input] => input,
+            _ => anyhow::bail!("Invalid input path"),
+        };
+
         workflow
-            .add_input_connection(from_parts[1], &args.to)
-            .map_err(|e| anyhow!("Could not add input connection from {} to {}: {e}", from_parts[1], args.to))?;
-    } else if to_parts[0] == "@outputs" {
+            .add_input_connection(input, &args.to)
+            .map_err(|e| anyhow!("Could not add input connection from {} to {}: {e}", input, args.to))?;
+    } else if to_parts[0] == "@outputs" || to_parts.len() == 1 {
+        let output = match to_parts.as_slice() {
+            ["@outputs", output] => output,
+            [output] => output,
+            _ => anyhow::bail!("Invalid output path"),
+        };
+
         workflow
-            .add_output_connection(&args.from, to_parts[1])
-            .map_err(|e| anyhow!("Could not add output connection from {} to {}: {e}", args.from, to_parts[1]))?;
+            .add_output_connection(&args.from, output)
+            .map_err(|e| anyhow!("Could not add output connection from {} to {}: {e}", args.from, output))?;
     } else {
         workflow
             .add_step_connection(&args.from, &args.to)
@@ -68,14 +80,26 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<(
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
 
-    if from_parts[0] == "@inputs" {
+    if from_parts[0] == "@inputs" || from_parts.len() == 1 {
+        let input = match from_parts.as_slice() {
+            ["@inputs", input] => input,
+            [input] => input,
+            _ => anyhow::bail!("Invalid input path"),
+        };
+
         workflow
-            .remove_input_connection(from_parts[1], &args.to)
-            .map_err(|e| anyhow!("Could not remove input connection from {} to {}: {e}", from_parts[1], args.to))?;
-    } else if to_parts[0] == "@outputs" {
+            .remove_input_connection(input, &args.to)
+            .map_err(|e| anyhow!("Could not remove input connection from {} to {}: {e}", input, args.to))?;
+    } else if to_parts[0] == "@outputs" || to_parts.len() == 1 {
+        let output = match to_parts.as_slice() {
+            ["@outputs", output] => output,
+            [output] => output,
+            _ => anyhow::bail!("Invalid output path"),
+        };
+
         workflow
-            .remove_output_connection(&args.from, to_parts[1])
-            .map_err(|e| anyhow!("Could not remove output connection from {} to {}: {e}", args.from, to_parts[1]))?;
+            .remove_output_connection(&args.from, output)
+            .map_err(|e| anyhow!("Could not remove output connection from {} to {}: {e}", args.from, output))?;
     } else {
         workflow
             .remove_step_connection(&args.from, &args.to)
