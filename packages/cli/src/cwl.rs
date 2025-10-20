@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(
             path,
             format!(
-                "{}{MAIN_SEPARATOR}{}{name}/{name}.cwl",
+                "{}{MAIN_SEPARATOR}{}{name}{MAIN_SEPARATOR}{name}.cwl",
                 module.path().to_string_lossy(),
                 get_workflows_folder()
             )
