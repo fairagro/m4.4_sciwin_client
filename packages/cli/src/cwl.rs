@@ -4,10 +4,7 @@ use log::info;
 use repository::Repository;
 use repository::submodule::get_submodule_paths;
 use s4n_core::io::get_workflows_folder;
-use std::{
-    error::Error,
-    path::{Path, PathBuf},
-};
+use std::{error::Error, path::PathBuf};
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -114,11 +111,8 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     let mut candidates: Vec<PathBuf> = vec![];
 
     //check if exists in workflows folder
-    let cwl_filename = cwl_filename.strip_suffix(".cwl").unwrap_or(cwl_filename);
-    let path = format!("{}{}/{}.cwl", get_workflows_folder(), cwl_filename, cwl_filename);
-    let path = Path::new(&path);
-    if path.exists() {
-        candidates.push(path.to_path_buf());
+    if let Some(path) = build_path(None, cwl_filename) {
+        candidates.push(path);
     }
 
     //let else = hell yeah!
@@ -130,9 +124,8 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
     };
 
     for module_path in get_submodule_paths(&repo)? {
-        let sub_path = module_path.join(path);
-        if sub_path.exists() {
-            candidates.push(sub_path);
+        if let Some(path) = build_path(Some(module_path), cwl_filename) {
+            candidates.push(path);
         }
     }
 
@@ -150,6 +143,21 @@ pub fn resolve_filename(cwl_filename: &str) -> Result<String, Box<dyn Error>> {
             Ok(items[selection].clone())
         }
     }
+}
+
+fn build_path(base: Option<PathBuf>, cwl_filename: &str) -> Option<PathBuf> {
+    let path = base.unwrap_or_default();
+    let wf_folder = get_workflows_folder();
+
+    let cwl_filename = cwl_filename.strip_suffix(".cwl").unwrap_or(cwl_filename);
+
+    let candidate_1 = path.join(&wf_folder).join(cwl_filename).join(format!("{cwl_filename}.cwl"));
+    let candidate_2 = path.join(&wf_folder).join(cwl_filename).join("workflow.cwl");
+
+    candidate_1
+        .exists()
+        .then_some(candidate_1)
+        .or_else(|| candidate_2.exists().then_some(candidate_2))
 }
 
 #[allow(clippy::disallowed_macros)]
