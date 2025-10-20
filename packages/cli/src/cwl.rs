@@ -196,7 +196,7 @@ mod tests {
 
         let name = "echo";
         let path = resolve_filename(name).unwrap();
-        assert_eq!(path, format!("{}{name}/{name}.cwl", get_workflows_folder()));
+        assert_eq!(path, format!("{}{name}{MAIN_SEPARATOR}{name}.cwl", get_workflows_folder()));
     }
 
     #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
