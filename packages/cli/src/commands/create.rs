@@ -84,7 +84,7 @@ impl<'a> From<&'a CreateArgs> for ToolCreationOptions<'a> {
             }),
             enable_network: args.enable_network,
             mounts: args.mount.as_deref().unwrap_or(&[]),
-            env: args.env.as_deref()
+            env: args.env.as_deref(),
         }
     }
 }
@@ -97,7 +97,7 @@ pub fn create_workflow(args: &CreateArgs) -> anyhow::Result<()> {
     //check if workflow already exists
     let filename = format!("{}{}/{}.cwl", get_workflows_folder(), name, name);
     let yaml = s4n_core::workflow::create_workflow(&filename, args.force)?;
-    
+
     info!("📄 Created new Workflow file: {filename}");
     print_diff("", &yaml);
 
@@ -116,9 +116,11 @@ pub fn create_tool(args: &CreateArgs) -> anyhow::Result<()> {
     let cwl: CommandLineTool = serde_yaml::from_str(&yaml)?;
 
     info!("Found outputs:");
-    let string_outputs: Vec<_> = cwl.outputs
+    let string_outputs: Vec<String> = cwl
+        .outputs
         .iter()
-        .filter_map(|o| o.output_binding.as_ref()?.glob.clone())
+        .filter_map(|o| o.output_binding.as_ref()?.glob.clone().map(|g| g.into_vec()))
+        .flatten()
         .collect();
 
     print_list(&string_outputs);

@@ -9,7 +9,7 @@ use crate::{
     inputs::{evaluate_input, evaluate_input_as_string},
     io::{create_and_write_file_forced, get_random_filename, get_shell_command},
 };
-use cwl_core::{StringOrNumber, prelude::*};
+use cwl_core::{SingularPlural, StringOrNumber, prelude::*};
 use log::{info, warn};
 use serde_yaml::Value;
 use std::process::Command as SystemCommand;
@@ -49,7 +49,8 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .output_binding
                 .as_ref()
                 .and_then(|binding| binding.glob.clone())
-                .unwrap_or_else(|| get_random_filename(&format!("{}_stdout", output.id), "out"));
+                .unwrap_or_else(|| SingularPlural::Singular(get_random_filename(&format!("{}_stdout", output.id), "out")))
+                .into_singular();
             create_and_write_file_forced(filename, out)?;
         }
     }
@@ -64,7 +65,8 @@ pub fn run_command(tool: &CommandLineTool, runtime: &mut RuntimeEnvironment) -> 
                 .output_binding
                 .as_ref()
                 .and_then(|binding| binding.glob.clone())
-                .unwrap_or_else(|| get_random_filename(&format!("{}_stderr", output.id), "out"));
+                .unwrap_or_else(|| SingularPlural::Singular(get_random_filename(&format!("{}_stderr", output.id), "out")))
+                .into_singular();
             create_and_write_file_forced(filename, out)?;
         }
     }

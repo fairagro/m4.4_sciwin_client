@@ -1,4 +1,4 @@
-use commonwl::prelude::*;
+use commonwl::{SingularPlural, prelude::*};
 use std::collections::HashSet;
 
 /// Applies some postprocessing to the cwl `CommandLineTool`
@@ -54,9 +54,9 @@ fn post_process_variables(tool: &mut CommandLineTool) {
         if let Some(default) = &input.default {
             for output in &mut tool.outputs {
                 if let Some(binding) = &mut output.output_binding
-                    && binding.glob == Some(default.as_value_string())
+                    && binding.glob == Some(SingularPlural::Singular(default.as_value_string()))
                 {
-                    binding.glob = Some(process_input(input));
+                    binding.glob = Some(SingularPlural::Singular(process_input(input)));
                     processed_once = true;
                 }
             }
@@ -84,10 +84,11 @@ fn post_process_variables(tool: &mut CommandLineTool) {
                         }
                         Argument::Binding(binding) => {
                             if let Some(from) = &mut binding.value_from
-                                && *from == default.as_value_string() {
-                                    *from = process_input(input);
-                                    processed_once = true;
-                                }
+                                && *from == default.as_value_string()
+                            {
+                                *from = process_input(input);
+                                processed_once = true;
+                            }
                         }
                     }
                 }
@@ -97,10 +98,10 @@ fn post_process_variables(tool: &mut CommandLineTool) {
 
     for output in &mut tool.outputs {
         if let Some(binding) = &mut output.output_binding
-            && matches!(binding.glob.as_deref(), Some("."))
+            && matches!(binding.glob, Some(SingularPlural::Singular(ref s)) if s == ".")
         {
             output.id = "output_directory".to_string();
-            binding.glob = Some("$(runtime.outdir)".to_string());
+            binding.glob = Some(SingularPlural::Singular("$(runtime.outdir)".to_string()));
         }
     }
 

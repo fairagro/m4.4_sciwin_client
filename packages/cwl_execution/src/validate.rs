@@ -1,6 +1,6 @@
 use crate::{InputObject, environment::RuntimeEnvironment, io::get_file_property};
 use cwl_core::{
-    Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem,
+    Argument, CWLDocument, Command, CommandLineTool, DefaultValue, Entry, EnviromentDefs, PathItem, SingularPlural,
     inputs::CommandInputParameter,
     requirements::{Requirement, WorkDirItem},
 };
@@ -57,7 +57,14 @@ fn set_placeholder_values_tool(clt: &mut CommandLineTool, runtime: &RuntimeEnvir
         if let Some(binding) = &mut output.output_binding
             && let Some(glob) = binding.glob.as_mut()
         {
-            *glob = set_placeholder_values_in_string(glob, runtime, &clt.base.inputs);
+            match glob {
+                SingularPlural::Singular(s) => *s = set_placeholder_values_in_string(s, runtime, &clt.base.inputs),
+                SingularPlural::Plural(items) => {
+                    for i in items.iter_mut() {
+                        *i = set_placeholder_values_in_string(i, runtime, &clt.base.inputs);
+                    }
+                }
+            }
         }
 
         //set values in output format
@@ -234,10 +241,7 @@ outputs:
         runtime.insert("true".to_string(), StringOrNumber::String("true".to_string()));
         let mut input_values = HashMap::new();
         input_values.insert("newname".to_string(), DefaultValue::Any(Value::String("neuer_name.txt".to_string())));
-        input_values.insert(
-            "srcfile".to_string(),
-            DefaultValue::File(File::from_location("testdata/input.txt")),
-        );
+        input_values.insert("srcfile".to_string(), DefaultValue::File(File::from_location("testdata/input.txt")));
 
         let runtime = RuntimeEnvironment {
             runtime,

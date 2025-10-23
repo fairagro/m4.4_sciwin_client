@@ -2,7 +2,7 @@ use inputs::{CommandInputParameter, deserialize_inputs};
 use requirements::{FromRequirement, Requirement, deserialize_hints, deserialize_requirements};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::{
     error::Error,
     fmt::Debug,
@@ -323,6 +323,31 @@ pub fn load_workflow<P: AsRef<Path> + Debug>(filename: P) -> Result<Workflow, Bo
 pub enum SingularPlural<T> {
     Singular(T),
     Plural(Vec<T>),
+}
+
+impl<T: Clone> SingularPlural<T> {
+    pub fn into_vec(&self) -> Vec<T> {
+        match self {
+            SingularPlural::Singular(item) => vec![item.clone()],
+            SingularPlural::Plural(items) => items.to_vec(),
+        }
+    }
+
+    pub fn into_singular(&self) -> T {
+        match self {
+            SingularPlural::Singular(item) => item.clone(),
+            SingularPlural::Plural(vec) => vec[0].clone(),
+        }
+    }
+}
+
+impl Display for SingularPlural<String> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SingularPlural::Singular(s) => write!(f, "{s}"),
+            SingularPlural::Plural(v) => write!(f, "{:?}", v),
+        }
+    }
 }
 
 #[cfg(test)]

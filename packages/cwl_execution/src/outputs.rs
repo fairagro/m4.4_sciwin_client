@@ -98,12 +98,13 @@ fn evaluate_output_impl(
         CWLType::File | CWLType::Stdout | CWLType::Stderr => {
             if let Some(binding) = &output.output_binding {
                 if let Some(glob_) = &binding.glob {
-                    let mut result = glob(glob_)?;
+                    let glob_ = glob_.into_singular();
+                    let mut result = glob(&glob_)?;
                     if let Some(entry) = result.next() {
                         let entry = &entry?;
                         outputs.insert(output.id.clone(), handle_file_output(entry, initial_dir, output)?);
                     } else {
-                        Err(anyhow::anyhow!("Could not evaluate glob: {glob_}"))?;
+                        Err(anyhow::anyhow!("Could not evaluate glob: {}", glob_))?;
                     }
                 }
             } else {
@@ -130,30 +131,37 @@ fn evaluate_output_impl(
             if let Some(binding) = &output.output_binding
                 && let Some(glob_) = &binding.glob
             {
-                let result = glob(glob_)?;
-                let values: Result<Vec<_>> = result
-                    .map(|entry| {
-                        let entry = entry?;
-                        match **inner {
-                            CWLType::File => handle_file_output(&entry, initial_dir, output),
-                            CWLType::Directory => handle_dir_output(&entry, initial_dir),
-                            _ => unreachable!(),
-                        }
-                    })
-                    .collect();
-                outputs.insert(output.id.clone(), DefaultValue::Array(values?));
+                let mut values = vec![];
+                for glob_ in &glob_.into_vec() {
+                    let result = glob(glob_)?;
+                    values.push(
+                        result
+                            .map(|entry| {
+                                let entry = entry?;
+                                match **inner {
+                                    CWLType::File => handle_file_output(&entry, initial_dir, output),
+                                    CWLType::Directory => handle_dir_output(&entry, initial_dir),
+                                    _ => unreachable!(),
+                                }
+                            })
+                            .collect::<Result<Vec<_>>>()?,
+                    );
+                }
+                let values = values.into_iter().flatten().collect();
+                outputs.insert(output.id.clone(), DefaultValue::Array(values));
             }
         }
         CWLType::Directory => {
             if let Some(binding) = &output.output_binding
                 && let Some(glob_) = &binding.glob
             {
-                let mut result = glob(glob_)?;
+                let glob_ = glob_.into_singular();
+                let mut result = glob(&glob_)?;
                 if let Some(entry) = result.next() {
                     let entry = &entry?;
                     outputs.insert(output.id.clone(), handle_dir_output(entry, initial_dir)?);
                 } else {
-                    Err(anyhow::anyhow!("Could not evaluate glob: {glob_}"))?;
+                    Err(anyhow::anyhow!("Could not evaluate glob: {}", glob_))?;
                 }
             }
         }
@@ -161,10 +169,11 @@ fn evaluate_output_impl(
             //string and has binding -> read file
             if let Some(binding) = &output.output_binding {
                 if let Some(glob_) = &binding.glob {
-                    let contents = fs::read_to_string(glob_)?;
+                    let glob_ = glob_.into_singular();
+                    let contents = fs::read_to_string(&glob_)?;
 
                     let value = if let Some(expression) = &binding.output_eval {
-                        let mut ctx = File::from_location(glob_);
+                        let mut ctx = File::from_location(&glob_);
                         ctx.format.clone_from(&output.format);
                         let mut ctx = ctx.snapshot();
                         ctx.contents = Some(contents);
@@ -271,7 +280,7 @@ mod tests {
     use super::*;
     use crate::io::copy_dir;
     use cwl_core::{
-        compute_hash,
+        SingularPlural, compute_hash,
         outputs::{CommandOutputBinding, CommandOutputParameter},
     };
     use serial_test::serial;
@@ -288,7 +297,7 @@ mod tests {
             .with_id("out")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: Some("testdata/file.txt".to_string()),
+                glob: Some(SingularPlural::Singular("testdata/file.txt".to_string())),
                 ..Default::default()
             });
 

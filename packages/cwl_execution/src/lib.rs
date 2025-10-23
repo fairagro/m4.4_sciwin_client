@@ -112,13 +112,11 @@ pub fn execute(
     //load cwl
     let mut doc: CWLDocument = if let Some(doc) = cwl_doc {
         doc.clone()
-    } else if cwlfile.as_ref().file_name().unwrap().to_string_lossy().contains("#") {
+    } else if is_packed(&cwlfile)? {
         //if file_name does not exist we have more serious problems than this unwrap call :D
         let path = cwlfile.as_ref().to_string_lossy();
-        let Some((real_path, id)) = path.split_once('#') else {
-            return Err(anyhow::anyhow!("Could not determine how to load packed cwl file").into());
-        };
-
+        let (real_path, id) = path.split_once('#').unwrap_or((path.as_ref(), "main"));
+        
         let contents = fs::read_to_string(real_path)?;
         //we need to do preprocess here but we can not,yet
         let packed: PackedCWL = serde_yaml::from_str(&contents).map_err(|e| YAMLDeserializationError::new(Path::new(real_path), e))?;
@@ -151,6 +149,14 @@ pub fn execute(
             outdir.map(|d| d.as_ref().to_string_lossy().into_owned()),
         ),
     }
+}
+
+fn is_packed(cwlfile: impl AsRef<Path>) -> Result<bool> {
+    if cwlfile.as_ref().file_name().unwrap().to_string_lossy().contains("#") {
+        return Ok(true);
+    }
+    let contents = fs::read_to_string(&cwlfile)?;
+    Ok(contents.contains("$graph"))
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]

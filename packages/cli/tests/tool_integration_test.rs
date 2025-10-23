@@ -300,8 +300,8 @@ pub fn test_tool_magic_outputs() {
     let tool = load_tool("workflows/touch/touch.cwl").unwrap();
 
     assert_eq!(
-        tool.outputs[0].output_binding.as_ref().unwrap().glob.as_deref(),
-        Some("$(inputs.output_txt)")
+        tool.outputs[0].output_binding.as_ref().unwrap().glob.clone().unwrap().into_singular(),
+        "$(inputs.output_txt)"
     );
 }
 
@@ -375,7 +375,7 @@ pub fn test_tool_output_complete_dir() {
     assert_eq!(tool.inputs.len(), 0);
     assert_eq!(tool.outputs.len(), 1); //only root folder
     if let Some(binding) = &tool.outputs[0].output_binding {
-        assert_eq!(binding.glob, Some("$(runtime.outdir)".to_string()));
+        assert_eq!(binding.glob, Some(commonwl::SingularPlural::Singular("$(runtime.outdir)".to_string())));
     } else {
         panic!("No Binding")
     }

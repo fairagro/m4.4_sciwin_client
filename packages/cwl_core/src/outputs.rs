@@ -1,5 +1,5 @@
 use super::{deserialize::Identifiable, types::CWLType};
-use crate::types::SecondaryFileSchema;
+use crate::{SingularPlural, types::SecondaryFileSchema};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_yaml::Value;
 
@@ -82,7 +82,7 @@ where
 #[serde(rename_all = "camelCase")]
 pub struct CommandOutputBinding {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub glob: Option<String>,
+    pub glob: Option<SingularPlural<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_eval: Option<String>,
 }

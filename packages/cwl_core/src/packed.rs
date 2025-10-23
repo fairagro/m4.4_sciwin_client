@@ -350,7 +350,7 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
 mod tests {
     use super::*;
     use crate::{
-        CWLType, Command, CommandLineTool, Dirent, File, Include,
+        CWLType, Command, CommandLineTool, Dirent, File, Include, SingularPlural,
         inputs::CommandLineBinding,
         load_workflow,
         outputs::CommandOutputBinding,
@@ -419,7 +419,7 @@ mod tests {
             .with_id("results")
             .with_type(CWLType::File)
             .with_binding(CommandOutputBinding {
-                glob: Some("results.csv".to_string()),
+                glob: Some(SingularPlural::Singular("results.csv".to_string())),
                 ..Default::default()
             });
 
@@ -462,7 +462,7 @@ mod tests {
                     .with_id("results")
                     .with_type(CWLType::File)
                     .with_binding(CommandOutputBinding {
-                        glob: Some("results.csv".to_string()),
+                        glob: Some(SingularPlural::Singular("results.csv".to_string())),
                         ..Default::default()
                     }),
             ])

@@ -1,5 +1,6 @@
 use crate::Result;
 use crate::{InputObject, environment::RuntimeEnvironment};
+use cwl_core::SingularPlural;
 use cwl_core::{Entry, prelude::*, requirements::WorkDirItem};
 use rustyscript::static_runtime;
 use serde::{Serialize, de::DeserializeOwned};
@@ -253,7 +254,14 @@ pub(crate) fn process_expressions(tool: &mut CWLDocument, input_values: &mut Inp
             if let Some(binding) = &mut output.output_binding
                 && let Some(glob) = binding.glob.as_mut()
             {
-                *glob = replace_expressions(glob)?;
+                match glob {
+                    SingularPlural::Singular(s) => *s = replace_expressions(s)?,
+                    SingularPlural::Plural(items) => {
+                        for i in items.iter_mut() {
+                            *i = replace_expressions(i)?;
+                        }
+                    }
+                }
             }
             if let Some(format) = &mut output.format {
                 let format = replace_expressions(format)?;

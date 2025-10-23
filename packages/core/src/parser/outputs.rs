@@ -1,7 +1,7 @@
 use crate::io::get_filename_without_extension;
 use commonwl::{
+    CWLType, SingularPlural,
     outputs::{CommandOutputBinding, CommandOutputParameter},
-    CWLType,
 };
 use std::path::Path;
 
@@ -19,7 +19,7 @@ pub(crate) fn get_outputs(files: &[String]) -> Vec<CommandOutputParameter> {
                 .with_type(output_type)
                 .with_id(&filename)
                 .with_binding(CommandOutputBinding {
-                    glob: Some(f.to_string()),
+                    glob: Some(SingularPlural::Singular(f.to_string())),
                     ..Default::default()
                 })
         })
@@ -38,14 +38,14 @@ mod tests {
                 .with_type(CWLType::File)
                 .with_id("my-file")
                 .with_binding(CommandOutputBinding {
-                    glob: Some("my-file.txt".to_string()),
+                    glob: Some(commonwl::SingularPlural::Singular("my-file.txt".to_string())),
                     ..Default::default()
                 }),
             CommandOutputParameter::default()
                 .with_type(CWLType::File)
                 .with_id("archive")
                 .with_binding(CommandOutputBinding {
-                    glob: Some("archive.tar.gz".to_string()),
+                    glob: Some(commonwl::SingularPlural::Singular("archive.tar.gz".to_string())),
                     ..Default::default()
                 }),
         ];
