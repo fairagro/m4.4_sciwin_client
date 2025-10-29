@@ -26,7 +26,7 @@ authors:
     orcid: 0000-0002-6068-1659
     affiliation: 5
 
-  affiliations:
+affiliations:
   - name: Johann Heinrich von Thünen-Institute, Braunschweig, Germany
     index: 1
   - name:  Leibniz Institute of Plant Genetics and Crop Plant Research, Gatersleben, Germany
