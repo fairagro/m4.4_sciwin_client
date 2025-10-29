@@ -70,6 +70,9 @@ When performing high demanding calculations, workflows often need to be dispatch
 Structured execution results in form of RO-crates[@SoilandReyes2022ROCrate] more specifically Workflow Run RO-Crates[@Leo2024WRRC] using the Provenance Run Crate profile can be exported. ...
 ...
 
+## Other Features?
+Install, ...?
+
 ## Example Use case (?)
 
 ![Workflow representation of the example use case.\label{fig:example}](assets/demo_wf.png)
