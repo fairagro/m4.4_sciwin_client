@@ -28,12 +28,16 @@ authors:
 
 affiliations:
   - name: Johann Heinrich von Thünen-Institute, Braunschweig, Germany
+    ror: 00mr84n67 
     index: 1
   - name:  Leibniz Institute of Plant Genetics and Crop Plant Research, Gatersleben, Germany
+    ror: 02skbsp27
     index: 2
   - name: Helmholtz Centre for Infection Research, Braunschweig, Germany
+    ror: 03d0p2685 
     index: 3
-  - name: University Bielefeld, Bielefeld, Germany
+  - name: Bielefeld University, Bielefeld, Germany
+    ror: 02hpadn98 
     index: 4
   - name: PowerCo ??
     index: 5
