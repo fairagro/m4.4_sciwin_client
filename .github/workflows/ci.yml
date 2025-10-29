@@ -13,6 +13,14 @@ on:
 
   pull_request:
     branches: ["main"]
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!mkdocs.yml"
+      - "!**/*.md"
+      - "!LICENSE-*"
+      - "!paper/**"
+
 
 env:
   CARGO_TERM_COLOR: always
