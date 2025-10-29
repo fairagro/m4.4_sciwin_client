@@ -53,6 +53,6 @@ By integrating with Git it promotes transparent and collaborative workflow devel
 # ...?
 
 # Acknowledgements 
-DFG mention
+We gratefully acknowledge the financial support of the German Research Foundation (DFG) – project number 501899475.
 
 # References
