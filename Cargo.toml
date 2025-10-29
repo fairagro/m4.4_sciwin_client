@@ -9,7 +9,9 @@ members = [
     "packages/reana",
     "packages/repository",
     "packages/util",
-    "packages/test_utils", "packages/remote_execution", "packages/gui",
+    "packages/test_utils", 
+    "packages/remote_execution", 
+    "packages/gui",
 ]
 resolver = "3"
 
