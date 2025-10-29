@@ -49,6 +49,7 @@ By integrating with Git it promotes transparent and collaborative workflow devel
 ...
 
 # Statement of Need
+Computational workflows are used in many different disciplines to automate complex, multi-step data analysis procedures. To ensure reproducibility, scalability and efficiency in scientific research, lots of effort has been put into domain specific languages that formalize and standardize computational scientific work. The Common Workflow Language (CWL)[@Crusoe2022MethodsIncluded] is among the most powerful and established workflow languages. While CWL is an extremely flexible language, is also quite verbose.  [copied from CoRDI abstract, change!]
 
 # ...?
 
