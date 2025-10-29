@@ -56,7 +56,7 @@ SciWIn-Client is a command-line application based on Rust that makes it simple t
 
 # Features and Implementation
 ...
-![](../docs/src/assets/sciwin-overview2.svg) <!--may change path to paper folder-->
+![Overview of ...](assets/overview.png)
 
 ## Creation of CWL Files
 To create CWL CommandLineTools, users must prefix their tool or script invocations with the "s4n create" prefix. The SciWIn client automatically identifies the inputs of the CommandLineTool based on the program call. Outputs are the newly generated files produced after executing a command or script. When a new project is initialized, a Git repository is created in the background to provide a version-controlled environment for tracking changes and support this process. While the system can automatically infer inputs and outputs, users also have the option to define them explicitly. Users can specify a container image pulled from Docker Hub or provide paths to local Dockerfiles to ensure consistent, reproducible execution environments across different systems.
