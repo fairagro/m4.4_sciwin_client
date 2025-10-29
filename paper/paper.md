@@ -51,7 +51,21 @@ By integrating with Git it promotes transparent and collaborative workflow devel
 # Statement of Need
 Automated computational workflows have become essential accross various scientific disciplines to manage complex, multi-step data analysis procedures.[ref?] Significant resources have been invested into domain specific languages that formalize and standardize computational scientific processes, thereby enhancing reproducibility, scalability and efficiency. In order to harmonize and standardize the proliferation of workflow languages, the Common Workflow Language (CWL)[@Crusoe2022MethodsIncluded] was created as a higher-level standard. However, CWL's verbose syntax, while enabling great flexibility, creates a steep learning curve that may hinder the language from reaching its full potential in the broader scientific community. On the other hand, CWL's foundation in the the YAML file format ensures excellent machine readability and actionability, facilitating automated processing and integration. CWL is actually predestined to be written by machines rather than humans, which ultimately led to the conception of SciWIn-Client.
 
-# ...?
+SciWIn-Client is a command-line application based on Rust that makes it simple to transform scripts and command-line tools into complex CWL Workflows...
+... FAIRagro-Consortium[@Ewert2023Proposal]
+
+# Features and Implementation
+...
+![](../docs/src/assets/sciwin-overview2.svg) <!--may change path to paper folder-->
+
+## Creation of CWL Files
+...
+
+## Workflow Execution
+... For the execution on remote compute clusters SciWIn-Client is able to communicate with the REST-API of Reana[@Simko2019Reana]. Structured execution results in form of RO-crates[@SoilandReyes2022ROCrate] more specifically Workflow Run RO-Crates[@Leo2024WRRC] using the Provenance Run Crate profile can be exported. ...
+
+## ...
+...
 
 # Acknowledgements 
 We gratefully acknowledge the financial support of the German Research Foundation (DFG) – project number 501899475.
