@@ -65,10 +65,19 @@ SciWIn-Client is a command-line application based on Rust that makes it simple t
 To create CWL CommandLineTools, users must prefix their tool or script invocations with the "s4n create" prefix. The SciWIn client automatically identifies the inputs of the CommandLineTool based on the program call. Outputs are the newly generated files produced after executing a command or script. When a new project is initialized, a Git repository is created in the background to provide a version-controlled environment for tracking changes and support this process. While the system can automatically infer inputs and outputs, users also have the option to define them explicitly. Users can specify a container image pulled from Docker Hub or provide paths to local Dockerfiles to ensure consistent, reproducible execution environments across different systems.
 
 ## Workflow Execution
-For the execution on remote compute clusters SciWIn-Client is able to communicate with the REST-API of Reana[@Simko2019Reana]. Structured execution results in form of RO-crates[@SoilandReyes2022ROCrate] more specifically Workflow Run RO-Crates[@Leo2024WRRC] using the Provenance Run Crate profile can be exported. ...
+The simplest way to execute a workflow is to run it directly on the machine where the workflow is defined by using the `s4n execute local` command (or `cwltool` which however does not support Windows).
+When performing high demanding calculations, workflows often need to be dispatched to large compute clusters. For the execution on compute clusters SciWIn-Client is able to communicate with the REST-API of Reana[@Simko2019Reana]. Reana is a reproducible research data analysis platform provided by CERN. FAIRagro operates their own Reana Installation in de.NBI Cloud. 
+Structured execution results in form of RO-crates[@SoilandReyes2022ROCrate] more specifically Workflow Run RO-Crates[@Leo2024WRRC] using the Provenance Run Crate profile can be exported. ...
 ...
-## ...
-...
+
+## Example Use case (?)
+
+![Workflow representation of the example use case.\label{fig:example}](assets/demo_wf.png)
+
+A proof of concept use case is provided (?). An overview graph can be seen in \autoref{fig:example}. 
+
+## Future Plans
+... GUI and stuff ...
 
 # Acknowledgements 
 We gratefully acknowledge the financial support of the German Research Foundation (DFG) – project number 501899475.
