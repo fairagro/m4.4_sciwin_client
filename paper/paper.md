@@ -59,9 +59,14 @@ SciWIn-Client provides an intuitive command-line interface that automates CWL ge
 # Features and Implementation
 SciWIn-Client (short: `s4n`) is implemented in the Rust programming language, chosen for its high performance, strong type safety, and robust error handling — qualities essential in scientific software. Git integration provides built-in version control and interoperability with research data management frameworks such as  DataPLANTs ARC [@dataplant2025ARCSpec][@Weil2023PLANTdataHUB] format which can be viewed as a Git-based implementation of the RO-Crate standard [@SoilandReyes2022ROCrate].
 
-## Creation of CWL Files
+## Managing CWL Files
 A central concept of the tool is the automation of CWL generation. When users invoke a command or script using the `s4n create` prefix SciWIn-Client analyzes the command-line inputs and execution to identify `inputs`, `baseCommand` and `requirements` metadata and creates a CWL CommandLineTool. SciWIn-Client uses Git in background  a version-controlled environment for tracking changes and support this process. However most importantly Git serves information of changed files to create the  `outputs`-Section of the CWL CommandLineTool. While the system can automatically infer inputs and outputs, users also have the option to define them explicitly. Users can specify a container image pulled from Docker Hub or provide paths to local Dockerfiles to ensure consistent, reproducible execution environments across different systems.
+
 Once individual CWL CommandLineTools have been created, the next step is to combine them into a CWL Workflow. This is achieved using the `s4n connect` command, which allows the user to specify a source (starting tool or node) and a target (a subsequent tool or node). By linking the output of one tool to the input of another, the user defines the workflow's execution sequence. 
+
+In order to expand the possible sources for connecting complex workflows, there is the option to `install` exisiting workflows using SciWIn-Client which internally uses Git's submodule feature. ...
+
+Annotate...
 
 ## Workflow Execution
 The simplest way to execute a workflow is to run it directly on the machine where the workflow is defined by using the `s4n execute local` command (or `cwltool` which however does not support Windows).
