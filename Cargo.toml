@@ -9,7 +9,7 @@ members = [
     "packages/reana",
     "packages/repository",
     "packages/util",
-    "packages/test_utils", "packages/remote_execution",
+    "packages/test_utils", "packages/remote_execution", "packages/gui",
 ]
 resolver = "3"
 
@@ -88,3 +88,13 @@ unnecessary_semicolon = "warn"
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
