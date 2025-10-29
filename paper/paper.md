@@ -46,6 +46,7 @@ bibliography: paper.bib
 SciWIn-Client is a command-line tool developed as part of FAIRagro's Scientific Workflow Infrastructure (SciWIn). It is designed to streamline the creation, execution and management of reproducible computational Workflows using the Common Workflow Language (CWL).
 SciWIn-Client allows researchers to create and modify CWL CommandLineTools and workflows with minimal amount of work. It supports local and remote workflow execution within containerized environments enabling consitent results across different systems.
 By integrating with Git it promotes transparent and collaborative workflow development helping researchers to share their work in a reproducible and substainable way.
+...
 
 # Statement of Need
 
