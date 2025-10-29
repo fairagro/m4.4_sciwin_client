@@ -10,6 +10,7 @@ on:
       - "!**/*.md"
       - "!LICENSE-*"
       - "!paper/**"
+      - "!.github/workflows/draft-pdf.yml"
 
   pull_request:
     branches: ["main"]
@@ -20,6 +21,7 @@ on:
       - "!**/*.md"
       - "!LICENSE-*"
       - "!paper/**"
+      - "!.github/workflows/draft-pdf.yml"
 
 
 env:
