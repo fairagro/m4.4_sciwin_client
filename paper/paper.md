@@ -14,7 +14,7 @@ authors:
     orcid: 0009-0007-1765-0527
     affiliation: 2
   - name: Harald von Waldow
-    orcid: ...
+    orcid: 0000-0003-4800-2833
     affiliation: 1
   - name: Patrick König
     orcid: 0000-0002-8948-6793
