@@ -74,6 +74,9 @@ When performing high demanding calculations, workflows often need to be dispatch
 Structured execution results in form of RO-crates [@SoilandReyes2022ROCrate] more specifically Workflow Run RO-Crates [@Leo2024WRRC] using the Provenance Run Crate profile can be exported. 
 
 # Conclusion and Outlook
+
+![Integration of SciWin-Client into Research Data Management infrastructures](./assets/overview.png)
+
 SciWin-Client is a powerful tool for building, managing and executing complex computational pipelines locally and at scale on Reana instances. The code is hosted in a public GitHub repository (https://github.com/fairagro/m4.4_sciwin_client). 
 Future development will focus of extending SciWIn-Client with the possiblity to publish workflows to workflowhub.eu [@gustafsson_workflowhub_2025] and a graphical user interface to lower the barrier of entry for new users. 
 
