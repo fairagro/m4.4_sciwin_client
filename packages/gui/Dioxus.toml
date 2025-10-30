@@ -3,7 +3,7 @@
 [web.app]
 
 # HTML title tag content
-title = "gui"
+title = "SciWIn Studio"
 
 # include `assets` in web platform
 [web.resource]

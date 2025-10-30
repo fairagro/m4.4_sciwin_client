@@ -9,6 +9,8 @@ license.workspace = true
 [dependencies]
 dioxus = { version = "0.6.0", features = [] }
 
+commonwl = { path = "../cwl" }
+
 [features]
 default = ["desktop"]
 web = ["dioxus/web"]

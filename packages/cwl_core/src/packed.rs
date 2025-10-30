@@ -12,7 +12,6 @@ use std::{
     fs::{self},
     path::Path,
 };
-use url::Url;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -166,9 +165,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
         && !location.starts_with("file://")
     {
         if Path::new(location).is_absolute() {
-            *location = Url::from_file_path(&location)
-                .map_err(|_| "Could not get url from file_path")?
-                .to_string();
+            *location = url_from_path(&mut *location);
         } else {
             let path = doc_dir.as_ref().join(&location);
             let path = if path.exists() {
@@ -176,7 +173,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             } else {
                 normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
             };
-            *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
+            *location = url_from_path(&path);
         }
     }
 
@@ -185,9 +182,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
         && !location.starts_with("file://")
     {
         if Path::new(location).is_absolute() {
-            *location = Url::from_file_path(&location)
-                .map_err(|_| "Could not get url from file_path")?
-                .to_string();
+            *location = url_from_path(&mut *location);
         } else {
             let path = doc_dir.as_ref().join(&location);
             let path = if path.exists() {
@@ -195,7 +190,7 @@ fn pack_input(input: &mut CommandInputParameter, root_id: &str, doc_dir: impl As
             } else {
                 normalize_path(&path).unwrap_or(path).to_string_lossy().into_owned()
             };
-            *location = Url::from_file_path(path).map_err(|_| "Could not get url from file_path")?.to_string();
+            *location = url_from_path(&path);
         }
     }
 
@@ -344,6 +339,11 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
     step.id = step.id.strip_prefix(&format!("{root_id}/")).unwrap_or(&step.id).to_string();
 
     Ok(())
+}
+
+fn url_from_path(path: impl AsRef<Path>) -> String {
+    let str = path.as_ref().to_string_lossy().into_owned();
+    format!("file://{str}")
 }
 
 #[cfg(test)]

@@ -1379,7 +1379,6 @@ dependencies = [
  "serial_test",
  "sha1",
  "test_utils",
- "url",
 ]
 
 [[package]]
@@ -3153,6 +3152,7 @@ dependencies = [
 name = "gui"
 version = "0.1.0"
 dependencies = [
+ "commonwl",
  "dioxus",
 ]
 
