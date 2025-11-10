@@ -15,6 +15,10 @@ members = [
 ]
 resolver = "3"
 
+[patch.crates-io]
+# https://github.com/rscarson/rustyscript/pull/396
+rustyscript = {git = "https://github.com/Foorack/rustyscript", branch="upgrade-deno"}
+
 [workspace.package]
 version = "1.0.0"
 edition = "2024"
@@ -31,8 +35,8 @@ authors = [
 [workspace.dependencies]
 anyhow = "1.0.99"
 colored = "3.0.0"
-dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
-fancy-regex = "0.15.0"
+dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
+fancy-regex = "0.16.2"
 git2 = { version = "0.20.2", features = ["vendored-openssl"] }
 keyring = { version = "3.6.3", features = [
     "apple-native",

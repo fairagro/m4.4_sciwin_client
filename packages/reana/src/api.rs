@@ -565,7 +565,7 @@ mod tests {
         let result = upload_files(&reana, &None, &dummy_cwl.path().to_path_buf(), workflow_name, &workflow_json);
 
         assert!(result.is_ok(), "upload_files failed: {:?}", result.err());
-        _mock_upload.assert_hits(3);
+        _mock_upload.assert_calls(3);
     }
 
     #[test]
@@ -620,7 +620,7 @@ mod tests {
         let contents = fs::read_to_string(&downloaded_path).expect("Failed to read downloaded file");
 
         assert_eq!(contents, test_content);
-        _mock.assert_hits(1);
+        _mock.assert_calls(1);
     }
 
     #[test]
@@ -645,6 +645,6 @@ mod tests {
         let result = download_files(&reana, workflow_name, &files, None);
 
         assert!(result.is_ok(), "download_files failed: {:?}", result.err());
-        _mock.assert_hits(1);
+        _mock.assert_calls(1);
     }
 }
