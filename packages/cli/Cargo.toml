@@ -28,12 +28,12 @@ serde_yaml = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
 
-clap = { version = "4.5.44", features = ["derive", "wrap_help"] }
-clap_complete = "4.5.57"
-ignore = "0.4.23"
+clap = { version = "4.5.51", features = ["derive", "wrap_help"] }
+clap_complete = "4.5.60"
+ignore = "0.4.25"
 prettytable-rs = "0.10.0"
 
-syntect = { version = "5.2.0", default-features = false, features = [
+syntect = { version = "5.3.0", default-features = false, features = [
     "regex-fancy",
     "parsing",
     "default-themes",
