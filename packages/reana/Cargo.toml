@@ -28,4 +28,4 @@ chrono = { version = "0.4.41" }
 
 [dev-dependencies]
 mockito = "1.7.0"
-httpmock = "0.7.0"
+httpmock = "0.8.2"

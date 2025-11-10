@@ -33,8 +33,8 @@ authors = [
 [workspace.dependencies]
 anyhow = "1.0.99"
 colored = "3.0.0"
-dialoguer = { version = "0.11.0", features = ["fuzzy-select"] }
-fancy-regex = "0.15.0"
+dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
+fancy-regex = "0.16.2"
 git2 = { version = "0.20.2", features = ["vendored-openssl"] }
 keyring = { version = "3.6.3", features = [
     "apple-native",
