@@ -23,6 +23,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - run: sudo apt update && sudo apt install install libglib2.0-dev
       - name: Run Clippy
         run: |
           rustup component add clippy
