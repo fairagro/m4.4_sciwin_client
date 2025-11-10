@@ -13,6 +13,10 @@ members = [
 ]
 resolver = "3"
 
+[patch.crates-io]
+# https://github.com/rscarson/rustyscript/pull/396
+rustyscript = {git = "https://github.com/Foorack/rustyscript", branch="upgrade-deno"}
+
 [workspace.package]
 version = "1.0.0"
 edition = "2024"
