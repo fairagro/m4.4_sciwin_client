@@ -11,7 +11,6 @@ fn App() -> Element {
         document::Stylesheet {  href: asset!("/assets/main.css") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
         Logo {}
-
     }
 }
 
