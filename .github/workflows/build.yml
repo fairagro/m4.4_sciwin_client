@@ -41,7 +41,7 @@ jobs:
           podman machine start
       - name: Install Systen Packages
         if: ${{ runner.os == 'linux' }}
-        run: sudo apt update && sudo apt install libglib2.0-dev
+        run: sudo apt update && sudo apt install -y libglib2.0-dev
       - name: Install cargo-nextest
         uses: baptiste0928/cargo-install@v3
         with:

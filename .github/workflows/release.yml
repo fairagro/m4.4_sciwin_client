@@ -127,6 +127,9 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
+      - name: "Install Systen Packages"
+        if: "${{ matrix.runner == 'ubuntu-22.04' }}"
+        run: "sudo apt update && sudo apt install libglib2.0-dev"
       - name: Install dist
         run: ${{ matrix.install_dist.run }}
       # Get the dist-manifest

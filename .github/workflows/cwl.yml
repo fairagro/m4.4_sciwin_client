@@ -23,7 +23,8 @@ jobs:
             ${{ runner.os }}-cargo-
       - run: |
           git config --global user.name "Derp Derpson"
-          git config --global user.email "derp.derpson@derpipedia.org"
+          git config --global user.email "derp.derpson@derpipedia.org"          
+      - run: sudo apt update && sudo apt install -y libglib2.0-dev
       - name: build
         run: cargo build --release
       - name: Clone CWL
