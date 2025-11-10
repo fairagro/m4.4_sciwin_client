@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fs::{self},
-    path::Path,
+    path::{MAIN_SEPARATOR_STR, Path},
 };
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -343,6 +343,15 @@ fn unpack_step(step: &mut WorkflowStep, root_id: &str, graph: &[CWLDocument]) ->
 
 fn url_from_path(path: impl AsRef<Path>) -> String {
     let str = path.as_ref().to_string_lossy().into_owned();
+    // windows fixes
+    let str = str.replace(MAIN_SEPARATOR_STR, "/");
+    //remove windows /? thingy
+    let str = str.split_once("/?").unwrap_or(("", &str)).1;
+
+    if !str.starts_with("/") {
+        return format!("file:///{str}");
+    }
+
     format!("file://{str}")
 }
 
@@ -504,7 +513,7 @@ mod tests {
         let packed = pack_workflow(&wf, file, None).unwrap();
         let mut json = serde_json::json!(&packed);
 
-        let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+        let base_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../").canonicalize().unwrap();
         let reference_json = include_str!("../../../testdata/packed/main_packed.cwl")
             .replace("/mnt/m4.4_sciwin_client", &base_dir.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/"))
             .replace("//?", "");
