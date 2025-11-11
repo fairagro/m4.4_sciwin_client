@@ -1,7 +1,6 @@
 use commonwl::CWLType;
 use dioxus::html::geometry::ClientPoint;
 use dioxus::html::geometry::euclid::Point2D;
-use dioxus::logger::tracing;
 use dioxus::{CapturedError, prelude::*};
 use gui::graph::{NodeInstance, WorkflowGraph, load_workflow_graph};
 use petgraph::graph::{EdgeIndex, NodeIndex};
