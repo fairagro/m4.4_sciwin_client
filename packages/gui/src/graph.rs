@@ -91,7 +91,7 @@ impl WorkflowGraphBuilder {
             });
             self.node_map.insert(output.id.clone(), node_id);
         }
-                
+
         // add steps sorted by execution order
         let step_ids = workflow.sort_steps().map_err(|e| anyhow::anyhow!("{e}"))?;
         for step_id in step_ids {
@@ -108,16 +108,16 @@ impl WorkflowGraphBuilder {
 
             let node_id = self.graph.add_node(VisualNode {
                 instance: NodeInstance::Step(doc.clone()),
-                inputs: step
-                    .in_
+                inputs: doc
+                    .inputs
                     .iter()
                     .map(|i| Slot {
                         id: i.id.clone(),
-                        type_: doc.inputs.iter().find(|o| o.id == i.id).unwrap().type_.clone(),
+                        type_: i.type_.clone(),
                     })
                     .collect(),
-                outputs: step
-                    .out
+                outputs: doc
+                    .get_output_ids()
                     .iter()
                     .map(|i| Slot {
                         id: i.to_string(),

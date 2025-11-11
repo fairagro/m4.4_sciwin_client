@@ -220,7 +220,7 @@ pub fn Edge(props: EdgeProps) -> Element {
     let tix = to_node.inputs.iter().position(|i| i.id == edge.target_port).unwrap();
 
     const HEADER_OFFSET: f32 = 24.0 + 4.0 + 4.0; //padding + height
-    const ITEM_HEIGHT: f32 = 24.0;
+    const ITEM_HEIGHT: f32 = 28.0;
     const NODE_WIDTH: f32 = 190.0;
 
     let y_source = HEADER_OFFSET + (fix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + from_node.position.y;
