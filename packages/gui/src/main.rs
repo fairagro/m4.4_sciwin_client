@@ -10,6 +10,7 @@ use petgraph::visit::IntoNodeIdentifiers;
 pub struct ApplicationState {
     graph: WorkflowGraph,
     dragging: Option<NodeIndex>,
+    drag_offset: Signal<ClientPoint>,
 }
 
 pub fn use_app_state() -> Signal<ApplicationState> {
@@ -59,7 +60,24 @@ pub fn Graph() -> Element {
     rsx! {
         div {
             div {
-                class: "relative h-full w-full select-none",
+                class: "relative w-100 inset-0 select-none",
+                onmousemove: move |e| {
+                    if let Some(current) = use_app_state()().dragging{
+                        //we are dragging
+                        let current_pos = e.data.client_coordinates();
+                        let last_pos = (use_app_state()().drag_offset)();
+
+                        let deltaX = current_pos.x - last_pos.x;
+                        let deltaY = current_pos.y - last_pos.y;
+                        let pos = use_app_state()().graph[current].position;
+                        use_app_state().write().graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+
+                        use_app_state().write().drag_offset.set(current_pos);
+                    }
+                },
+                onmouseup: move |_| {
+                    use_app_state().write().dragging = None;
+                },
                 for id in graph.node_identifiers() {
                     Node {id}
                 },
@@ -139,7 +157,7 @@ pub fn Node(props: NodeProps) -> Element {
         NodeInstance::Output(_) => "bg-red-900",
     };
 
-    let mut drag_offset = use_signal(ClientPoint::zero);
+    let mut drag_offset = use_app_state().write().drag_offset;
 
     rsx! {
         div {
@@ -153,23 +171,7 @@ pub fn Node(props: NodeProps) -> Element {
 
                     use_app_state().write().dragging = Some(props.id);
                 },
-                onmousemove: move |e| {
-                    if let Some(current) = use_app_state()().dragging{
-                        //we are dragging
-                        let last_pos = drag_offset();
-                        let deltaX = e.data.client_coordinates().x - last_pos.x;
-                        let deltaY = e.data.client_coordinates().y - last_pos.y;
 
-                        let pos = use_app_state()().graph[current].position;
-                        use_app_state().write().graph[current].position = Point2D::new(pos.x+deltaX as f32, pos.y+deltaY as f32);
-                    }
-                },
-                onmouseup: move |_| {
-                    use_app_state().write().dragging = None;
-                },
-                onmouseleave: move  |_| {
-                    use_app_state().write().dragging = None;
-                },
                 class: "{top_color} rounded-t-lg p-1 overflow-hidden",
                 "{node.instance.id()}",
 
@@ -226,7 +228,8 @@ pub fn Edge(props: EdgeProps) -> Element {
     let y_source = HEADER_OFFSET + (fix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + from_node.position.y;
     let x_source = NODE_WIDTH + from_node.position.x;
 
-    let y_target = HEADER_OFFSET + (tix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + to_node.position.y + (to_node.outputs.len() as f32 * ITEM_HEIGHT);
+    let y_target =
+        HEADER_OFFSET + (tix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + to_node.position.y + (to_node.outputs.len() as f32 * ITEM_HEIGHT);
     let x_target = to_node.position.x;
 
     // Control points for a simple horizontal curve
