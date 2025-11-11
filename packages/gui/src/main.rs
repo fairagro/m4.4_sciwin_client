@@ -121,7 +121,7 @@ pub fn SlotElement(props: SlotProps) -> Element {
 
     rsx! {
         div {
-            class: "{bg} w-2 h-2 m-2 {geometry} {margin} {border}"
+            class: "{bg} w-3 h-3 m-2 {geometry} {margin} {border}"
         }
     }
 }
@@ -223,10 +223,10 @@ pub fn Edge(props: EdgeProps) -> Element {
     const ITEM_HEIGHT: f32 = 24.0;
     const NODE_WIDTH: f32 = 190.0;
 
-    let y_source = HEADER_OFFSET + (fix as f32 * ITEM_HEIGHT) + 12.0 + from_node.position.y;
+    let y_source = HEADER_OFFSET + (fix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + from_node.position.y;
     let x_source = NODE_WIDTH + from_node.position.x;
 
-    let y_target = HEADER_OFFSET + (tix as f32 * ITEM_HEIGHT) + 12.0 + to_node.position.y + (to_node.outputs.len() as f32 * ITEM_HEIGHT);
+    let y_target = HEADER_OFFSET + (tix as f32 * ITEM_HEIGHT) + (ITEM_HEIGHT / 2.0 + 5.0) + to_node.position.y + (to_node.outputs.len() as f32 * ITEM_HEIGHT);
     let x_target = to_node.position.x;
 
     // Control points for a simple horizontal curve

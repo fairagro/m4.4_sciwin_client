@@ -91,8 +91,9 @@ impl WorkflowGraphBuilder {
             });
             self.node_map.insert(output.id.clone(), node_id);
         }
+                
+        // add steps sorted by execution order
         let step_ids = workflow.sort_steps().map_err(|e| anyhow::anyhow!("{e}"))?;
-
         for step_id in step_ids {
             let step = workflow.get_step(&step_id).unwrap();
             let StringOrDocument::String(str) = &step.run else {
@@ -136,6 +137,14 @@ impl WorkflowGraphBuilder {
             }
         }
 
+        //add output connections
+        for output in &workflow.outputs {
+            let (source, source_port) = output.output_source.split_once("/").unwrap(); //EVIL!
+            let type_ = output.type_.clone();
+            self.connect_edge(source, &output.id, source_port, &output.id, type_)?
+        }
+
+        //calculate some positions (ugly)
         let node_indices: Vec<_> = self.graph.node_indices().collect();
 
         let mut node_neighbors: Vec<Vec<usize>> = node_indices.iter().map(|_| Vec::new()).collect();
