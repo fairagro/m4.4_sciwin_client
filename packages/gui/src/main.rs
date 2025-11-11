@@ -1,5 +1,7 @@
 use commonwl::CWLType;
 use dioxus::html::geometry::ClientPoint;
+use dioxus::html::geometry::euclid::Point2D;
+use dioxus::logger::tracing;
 use dioxus::{CapturedError, prelude::*};
 use gui::graph::{NodeInstance, WorkflowGraph, load_workflow_graph};
 use petgraph::graph::{EdgeIndex, NodeIndex};
@@ -145,12 +147,29 @@ pub fn Node(props: NodeProps) -> Element {
             class: "absolute border bg-gray-800 rounded-lg cursor-pointer w-48",
             left: "{pos_x}px",
             top: "{pos_y}px",
-            div { 
-                onmousedown: move |e: Event<MouseData>| {
+            div {
+                onmousedown: move |e| {
                     drag_offset.write().x = e.data.client_coordinates().x;
                     drag_offset.write().y = e.data.client_coordinates().y;
 
                     use_app_state().write().dragging = Some(props.id);
+                },
+                onmousemove: move |e| {
+                    if let Some(current) = use_app_state()().dragging{
+                        //we are dragging
+                        let last_pos = drag_offset();
+                        let deltaX = e.data.client_coordinates().x - last_pos.x;
+                        let deltaY = e.data.client_coordinates().y - last_pos.y;
+
+                        let pos = use_app_state()().graph[current].position;
+                        use_app_state().write().graph[current].position = Point2D::new(pos.x+deltaX as f32, pos.y+deltaY as f32);
+                    }
+                },
+                onmouseup: move |_| {
+                    use_app_state().write().dragging = None;
+                },
+                onmouseleave: move  |_| {
+                    use_app_state().write().dragging = None;
                 },
                 class: "{top_color} rounded-t-lg p-1 overflow-hidden",
                 "{node.instance.id()}",
@@ -225,7 +244,7 @@ pub fn Edge(props: EdgeProps) -> Element {
 
     rsx! {
         div {
-            class: "absolute w-0 h-0 z-index-1",
+            class: "absolute w-0 h-0 z-[-1]",
             left: 0,
             top: 0,
             svg {
