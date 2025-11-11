@@ -1,15 +1,31 @@
 use commonwl::{StringOrDocument, load_doc, load_workflow, prelude::*};
-use petgraph::{graph::NodeIndex, prelude::StableDiGraph};
+use dioxus::html::geometry::euclid::Point2D;
+use petgraph::{graph::NodeIndex, prelude::*};
+use rand::Rng;
 use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Clone)]
-pub enum Node {
+pub struct VisualNode {
+    pub instance: NodeInstance,
+    pub position: Point2D<f32, f32>,
+    pub inputs: Vec<Slot>,
+    pub outputs: Vec<Slot>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Slot {
+    pub id: String,
+    pub type_: CWLType,
+}
+
+#[derive(Debug, Clone)]
+pub enum NodeInstance {
     Step(CWLDocument),
     Input(CommandInputParameter), //WorkflowInputParameter
     Output(WorkflowOutputParameter),
 }
 
-impl Node {
+impl NodeInstance {
     pub fn id(&self) -> String {
         match &self {
             Self::Step(doc) => doc.id.clone().unwrap().clone(),
@@ -26,7 +42,7 @@ pub struct Edge {
     pub data_type: CWLType,
 }
 
-pub type WorkflowGraph = StableDiGraph<Node, Edge>;
+pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
 pub fn load_workflow_graph(path: impl AsRef<Path>) -> anyhow::Result<WorkflowGraph> {
     let workflow = load_workflow(path.as_ref()).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -48,13 +64,31 @@ impl WorkflowGraphBuilder {
     }
 
     fn load_workflow(&mut self, workflow: &Workflow, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        let mut rng = rand::rng();
+
         for input in &workflow.inputs {
-            let node_id = self.graph.add_node(Node::Input(input.clone()));
+            let node_id = self.graph.add_node(VisualNode {
+                instance: NodeInstance::Input(input.clone()),
+                outputs: vec![Slot {
+                    id: input.id.clone(),
+                    type_: input.type_.clone(),
+                }],
+                inputs: vec![],
+                position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+            });
             self.node_map.insert(input.id.clone(), node_id);
         }
 
         for output in &workflow.outputs {
-            let node_id = self.graph.add_node(Node::Output(output.clone()));
+            let node_id = self.graph.add_node(VisualNode {
+                instance: NodeInstance::Output(output.clone()),
+                inputs: vec![Slot {
+                    id: output.id.clone(),
+                    type_: output.type_.clone(),
+                }],
+                outputs: vec![],
+                position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+            });
             self.node_map.insert(output.id.clone(), node_id);
         }
         let step_ids = workflow.sort_steps().map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -71,16 +105,58 @@ impl WorkflowGraphBuilder {
                 doc.id = Some(step_file.file_name().unwrap().to_string_lossy().to_string());
             }
 
-            let node_id = self.graph.add_node(Node::Step(doc.clone()));
+            let node_id = self.graph.add_node(VisualNode {
+                instance: NodeInstance::Step(doc.clone()),
+                inputs: step
+                    .in_
+                    .iter()
+                    .map(|i| Slot {
+                        id: i.id.clone(),
+                        type_: doc.inputs.iter().find(|o| o.id == i.id).unwrap().type_.clone(),
+                    })
+                    .collect(),
+                outputs: step
+                    .out
+                    .iter()
+                    .map(|i| Slot {
+                        id: i.to_string(),
+                        type_: doc.get_output_type(i).unwrap(),
+                    })
+                    .collect(),
+                position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+            });
             self.node_map.insert(step.id.clone(), node_id);
 
             for wsip in &step.in_ {
                 let source = wsip.source.as_ref().unwrap(); //TODO!
-                let (source, source_port) = source.split_once('/').unwrap_or((source.as_str(), ""));
+                let (source, source_port) = source.split_once('/').unwrap_or((source.as_str(), source.as_str()));
                 let type_ = doc.inputs.iter().find(|i| i.id == wsip.id).unwrap().type_.clone(); //TODO!
 
                 self.connect_edge(source, &step.id, source_port, &wsip.id, type_)?;
             }
+        }
+
+        let node_indices: Vec<_> = self.graph.node_indices().collect();
+
+        let mut node_neighbors: Vec<Vec<usize>> = node_indices.iter().map(|_| Vec::new()).collect();
+        for item in &node_indices {
+            for neighbor in self.graph.neighbors(*item) {
+                node_neighbors[item.index()].push(neighbor.index())
+            }
+        }
+
+        let mut node_positions: Vec<graph_layout::P2d> = node_indices
+            .iter()
+            .map(|i| {
+                let position = self.graph[*i].position;
+                graph_layout::P2d(position.x, position.y)
+            })
+            .collect();
+
+        graph_layout::typical_fruchterman_reingold_2d(1.0, &mut node_positions, &node_neighbors);
+        for ix in node_indices {
+            let pos = node_positions[ix.index()];
+            self.graph[ix].position = Point2D::new(pos.0 * 500.0, pos.1 * 500.0);
         }
 
         Ok(())
