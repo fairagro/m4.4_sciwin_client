@@ -51,8 +51,17 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
         x_source, y_source, cx1, cy1, cx2, cy2, x_target, y_target
     );
     let is_selected = app_state().selected_edge == Some(props.id);
-    let stroke_color = if is_selected { "red" } else { "green" };
-    let stroke_width = if is_selected { "3" } else { "2" };
+    let stroke_width = if is_selected { "4" } else { "3" };
+
+    let slot_type = to_node.inputs.iter().find(|i| i.id == edge.target_port).unwrap().type_.clone();
+    let stroke = match slot_type {
+        CWLType::String => "stroke-red-400",
+        CWLType::File => "stroke-green-400",
+        CWLType::Directory => "stroke-blue-400",
+        CWLType::Optional(_) => "stroke-red-700",
+        CWLType::Array(_) => "stroke-green-700",
+        _ => todo!(),
+    };
 
     // compute midpoint for delete label
     let mid_x = (x_source + x_target) / 2.0;
@@ -70,8 +79,8 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
                     app_state.write().selected_edge = Some(props.id);
                 },
                 path {
+                    class: "{stroke}",
                     d: "{path_data}",
-                    stroke: "{stroke_color}",
                     stroke_width: "{stroke_width}",
                     fill: "transparent",
                     style: "cursor: pointer;",

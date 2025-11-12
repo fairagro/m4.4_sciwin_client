@@ -1,33 +1,29 @@
-use dioxus::prelude::*;
 use crate::use_app_state;
+use dioxus::prelude::*;
+use syntect::{highlighting::ThemeSet, html::highlighted_html_for_string, parsing::SyntaxSet};
 
 #[component]
 pub fn CodeViewer() -> Element {
-    let mut app_state = use_app_state();
+    let app_state = use_app_state();
 
+    let ps = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+
+    let syntax = ps.find_syntax_by_extension("yaml").unwrap();
+    let theme = &ts.themes["InspiredGitHub"];
     // Get the CWL code from state
     let code = match &app_state().cwl_code {
         Some(c) => c.clone(),
         None => "No CWL code loaded.".to_string(),
     };
 
+    let html_code = highlighted_html_for_string(&code, &ps, syntax, theme)?;
+
     rsx! {
         div {
-            class: "flex flex-col h-full p-4 bg-gray-900 text-white overflow-auto",
-            div {
-                class: "flex justify-between mb-2",
-                h2 { class: "text-lg font-bold", "CWL Code Viewer" },
-                button {
-                    class: "rounded bg-gray-700 px-2 py-1 hover:bg-gray-600 transition",
-                    onclick: move |_| {
-                        app_state.write().show_code = false;
-                    },
-                    "Back"
-                }
-            }
             pre {
                 class: "whitespace-pre-wrap overflow-x-auto bg-gray-800 p-4 rounded-lg",
-                "{code}"
+                dangerous_inner_html: "{html_code}"
             }
         }
     }

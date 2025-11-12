@@ -49,7 +49,7 @@ pub fn SlotElement(props: SlotProps) -> Element {
 
     rsx! {
         div {
-            class: "{bg} w-3 h-3 m-2 {geometry} {margin} {border}"
+            class: "{bg} w-3 h-3 m-2 {geometry} {margin} {border} z-2"
         }
     }
 }

@@ -1,7 +1,8 @@
 use dioxus::{CapturedError, prelude::*};
+use gui::code::CodeViewer;
+use gui::components::tabs::*;
 use gui::graph::{GraphEditor, load_workflow_graph};
 use gui::{ApplicationState, use_app_state};
-use gui::code::CodeViewer;
 
 fn main() {
     dioxus::launch(App);
@@ -10,15 +11,9 @@ fn main() {
 #[component]
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
-    let app_state = use_app_state();
-
-    // when show_code is true, render code viewer
-    if app_state().show_code {
-        return rsx! { CodeViewer {} };
-    }
-
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
+        document::Stylesheet { href: asset!("/assets/dx-components-theme.css") }
         document::Stylesheet { href: asset!("/assets/main.css") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
@@ -52,22 +47,10 @@ fn App() -> Element {
                     class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
                 }
             }
-
             div {
-                class: "flex justify-between items-center px-4 mb-2",
-                button {
-                    class: "rounded bg-gray-700 text-white px-3 py-1 hover:bg-gray-600 transition",
-                    onclick: move |_| {
-                        let mut binding = use_app_state();
-                        if binding().cwl_code.is_some() {
-                            binding.write().show_code = true;
-                        }
-                    },
-                    "View CWL Code"
-                }
+                class: "flex-1 min-h-0",
+                Content_Area {  }
             }
-
-            GraphEditor {}
         }
     }
 }
@@ -79,4 +62,26 @@ pub fn Logo() -> Element {
             img { src: asset!("/assets/logo.svg"), width: 150 }
         }
     }
+}
+
+#[component]
+pub fn Content_Area() -> Element {
+    rsx!(
+        Tabs{
+            default_value: "editor".to_string(),
+            TabList {
+                TabTrigger { index: 0usize, value: "editor".to_string(), "Nodes"}
+                TabTrigger { index: 1usize, value: "code".to_string(), "Code"}
+            }
+            TabContent{
+                class: "h-dvh",
+                index: 0usize,
+                value: "editor".to_string(),
+                GraphEditor {}
+            }
+            TabContent{ index: 1usize, value: "code".to_string(),
+                CodeViewer {}
+            }
+        }
+    )
 }

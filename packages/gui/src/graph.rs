@@ -10,7 +10,7 @@ use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
-use std::{collections::HashMap, path::Path, fs};
+use std::{collections::HashMap, fs, path::Path};
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
@@ -173,7 +173,7 @@ pub fn GraphEditor() -> Element {
 
     rsx! {
         div {
-            class: "relative flex-1 overflow-auto min-h-0 select-none",
+            class:"relative select-none overflow-scroll h-full",
             onclick: move |_| {
                 if let Some(edge_id) = app_state().selected_edge {
                     app_state.write().graph.remove_edge(edge_id);

@@ -13,6 +13,14 @@ commonwl = { path = "../cwl" }
 dioxus = { version = "0.7.1", features = [] }
 petgraph = "0.8.3"
 rust-sugiyama = "0.4.0"
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
+syntect = { version = "5.2.0", default-features = false, features = [
+    "regex-fancy",
+    "parsing",
+    "default-themes",
+    "default-syntaxes",
+    "html"
+] }
 
 [features]
 default = ["desktop"]
