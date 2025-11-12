@@ -114,16 +114,32 @@ impl WorkflowGraphBuilder {
             self.connect_edge(source, &output.id, source_port, &output.id, type_)?
         }
 
-        //calculate some positions (ugly)
+        //layout        
+        self.auto_layout();
+
+        Ok(())
+    }
+
+    fn connect_edge(&mut self, source: &str, target: &str, source_port: &str, target_port: &str, type_: CWLType) -> anyhow::Result<()> {
+        let source_idx = self.node_map.get(source).unwrap(); //TODO!
+        let target_idx = self.node_map.get(target).unwrap(); //TODO!
+
+        self.graph.add_edge(
+            *source_idx,
+            *target_idx,
+            Edge {
+                source_port: source_port.to_string(),
+                target_port: target_port.to_string(),
+                data_type: type_,
+            },
+        );
+
+        Ok(())
+    }
+
+    pub fn auto_layout(&mut self) {
         let node_indices: Vec<_> = self.graph.node_indices().collect();
-
-        let mut node_neighbors: Vec<Vec<usize>> = node_indices.iter().map(|_| Vec::new()).collect();
-        for item in &node_indices {
-            for neighbor in self.graph.neighbors(*item) {
-                node_neighbors[item.index()].push(neighbor.index())
-            }
-        }
-
+        info!("{node_indices:?}");
         let positions = rust_sugiyama::from_graph(
             &self.graph,
             &(|_, _| (120.0, 190.0)),
@@ -146,25 +162,6 @@ impl WorkflowGraphBuilder {
             let pos = first[&ix];
             self.graph[ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
         }
-
-        Ok(())
-    }
-
-    fn connect_edge(&mut self, source: &str, target: &str, source_port: &str, target_port: &str, type_: CWLType) -> anyhow::Result<()> {
-        let source_idx = self.node_map.get(source).unwrap(); //TODO!
-        let target_idx = self.node_map.get(target).unwrap(); //TODO!
-
-        self.graph.add_edge(
-            *source_idx,
-            *target_idx,
-            Edge {
-                source_port: source_port.to_string(),
-                target_port: target_port.to_string(),
-                data_type: type_,
-            },
-        );
-
-        Ok(())
     }
 }
 
