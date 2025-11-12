@@ -16,7 +16,8 @@ pub struct EdgeProps {
 
 #[component]
 pub fn EdgeElement(props: EdgeProps) -> Element {
-    let graph = use_app_state()().graph;
+    let mut app_state = use_app_state();
+    let graph = app_state().graph;
     let (from_node_id, to_node_id) = graph.edge_endpoints(props.id).unwrap(); //TODO!
     let from_node = &graph[from_node_id];
     let to_node = &graph[to_node_id];
@@ -49,29 +50,40 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
         "M {} {} C {} {}, {} {}, {} {}",
         x_source, y_source, cx1, cy1, cx2, cy2, x_target, y_target
     );
+    let is_selected = app_state().selected_edge == Some(props.id);
+    let stroke_color = if is_selected { "red" } else { "green" };
+    let stroke_width = if is_selected { "3" } else { "2" };
 
-    let slot_type = to_node.inputs.iter().find(|i| i.id == edge.target_port).unwrap().type_.clone();
-    let stroke = match slot_type {
-        CWLType::String => "stroke-red-400",
-        CWLType::File => "stroke-green-400",
-        CWLType::Directory => "stroke-blue-400",
-        CWLType::Optional(_) => "stroke-red-700",
-        CWLType::Array(_) => "stroke-green-700",
-        _ => todo!(),
-    };
+    // compute midpoint for delete label
+    let mid_x = (x_source + x_target) / 2.0;
+    let mid_y = (y_source + y_target) / 2.0;
 
     rsx! {
         div {
-            class: "absolute w-0 h-0 z-[-1]",
+            class: "absolute w-0 h-0 z-[1]",
             left: 0,
             top: 0,
             svg {
                 class: "overflow-visible w-0 h-0",
+                onclick: move |e| {
+                    e.stop_propagation();
+                    app_state.write().selected_edge = Some(props.id);
+                },
                 path {
                     d: "{path_data}",
-                    class: "{stroke}",
+                    stroke: "{stroke_color}",
+                    stroke_width: "{stroke_width}",
                     fill: "transparent",
-                    stroke_width: "3",
+                    style: "cursor: pointer;",
+                }
+            }
+
+            // Show label only when selected
+            if is_selected {
+                div {
+                    class: "absolute bg-gray-800 text-white rounded px-2 py-1 text-xs select-none",
+                    style: "left: {mid_x + 20.0}px; top: {mid_y}px;",
+                    "Click to delete edge"
                 }
             }
         }

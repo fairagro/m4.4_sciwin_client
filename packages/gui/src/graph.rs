@@ -168,10 +168,17 @@ impl WorkflowGraphBuilder {
 #[component]
 pub fn GraphEditor() -> Element {
     let graph = use_app_state()().graph;
+    let mut app_state = use_app_state();
 
     rsx! {
         div {
             class: "relative flex-1 overflow-auto min-h-0 select-none",
+            onclick: move |_| {
+                if let Some(edge_id) = app_state().selected_edge {
+                    app_state.write().graph.remove_edge(edge_id);
+                    app_state.write().selected_edge = None;
+                }
+            },
             onmousemove: move |e| {
                 if let Some(current) = use_app_state()().dragging{
                     //we are dragging
