@@ -3012,12 +3012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "graph-layout"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84f73535e4550cf4833fc252be56e9148d4d191e8bf4b61fb30423439bde6372"
-
-[[package]]
 name = "gtk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3076,9 +3070,9 @@ dependencies = [
  "anyhow",
  "commonwl",
  "dioxus",
- "graph-layout",
  "petgraph",
  "rand 0.9.2",
+ "rust-sugiyama",
 ]
 
 [[package]]
@@ -5467,6 +5461,16 @@ dependencies = [
  "rustc_version",
  "syn 2.0.110",
  "unicode-ident",
+]
+
+[[package]]
+name = "rust-sugiyama"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a81a3e22e7b3e9218ae4d1a3640a7e7ad142e120acd03e5e66d231d5861598b1"
+dependencies = [
+ "log",
+ "petgraph",
 ]
 
 [[package]]

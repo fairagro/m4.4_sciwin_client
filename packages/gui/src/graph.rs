@@ -74,7 +74,7 @@ impl WorkflowGraphBuilder {
                     type_: input.type_.clone(),
                 }],
                 inputs: vec![],
-                position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+                position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
             });
             self.node_map.insert(input.id.clone(), node_id);
         }
@@ -87,7 +87,7 @@ impl WorkflowGraphBuilder {
                     type_: output.type_.clone(),
                 }],
                 outputs: vec![],
-                position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+                position: Point2D::new(rng.random_range(0.0..=1.0), 1.0),
             });
             self.node_map.insert(output.id.clone(), node_id);
         }
@@ -154,18 +154,27 @@ impl WorkflowGraphBuilder {
             }
         }
 
-        let mut node_positions: Vec<graph_layout::P2d> = node_indices
-            .iter()
-            .map(|i| {
-                let position = self.graph[*i].position;
-                graph_layout::P2d(position.x, position.y)
-            })
-            .collect();
-
-        graph_layout::typical_fruchterman_reingold_2d(1.0, &mut node_positions, &node_neighbors);
+        let positions = rust_sugiyama::from_graph(
+            &self.graph,
+            &(|_, _| (120.0, 190.0)),
+            &rust_sugiyama::configure::Config {
+                vertex_spacing: 50.0,
+                ..Default::default()
+            },
+        )
+        .into_iter()
+        .map(|(layout, _, _)| {
+            let mut new_layout = HashMap::new();
+            for (id, coords) in layout {
+                new_layout.insert(id, coords);
+            }
+            new_layout
+        })
+        .collect::<Vec<_>>();
+        let first = &positions[0];
         for ix in node_indices {
-            let pos = node_positions[ix.index()];
-            self.graph[ix].position = Point2D::new(pos.0 * 500.0, pos.1 * 500.0);
+            let pos = first[&ix];
+            self.graph[ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
         }
 
         Ok(())
