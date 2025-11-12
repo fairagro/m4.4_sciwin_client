@@ -73,10 +73,11 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> 
 }
 
 pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
-    use std::fs;
-    use std::io::Write;
-    use std::path::Path;
-    let filename = if Path::new(&args.name).is_absolute() && args.name.ends_with(".cwl") {
+    let filename = if Path::new(&args.name).is_absolute()
+        && Path::new(&args.name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("cwl"))
+    {
         // Absolute path
         args.name.clone()
     } else {
