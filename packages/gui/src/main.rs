@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use commonwl::CWLType;
 use dioxus::html::geometry::ClientPoint;
 use dioxus::html::geometry::euclid::Point2D;
