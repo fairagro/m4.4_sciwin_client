@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use commonwl::CWLType;
 use dioxus::html::geometry::ClientPoint;
 use dioxus::html::geometry::euclid::Point2D;
@@ -244,6 +246,16 @@ pub fn Edge(props: EdgeProps) -> Element {
         x_source, y_source, cx1, cy1, cx2, cy2, x_target, y_target
     );
 
+    let slot_type = to_node.inputs.iter().find(|i| i.id == edge.target_port).unwrap().type_.clone();
+    let stroke = match slot_type {
+        CWLType::String => "stroke-red-400",
+        CWLType::File => "stroke-green-400",
+        CWLType::Directory => "stroke-blue-400",
+        CWLType::Optional(_) => "stroke-red-700",
+        CWLType::Array(_) => "stroke-green-700",
+        _ => todo!()
+    };
+
     rsx! {
         div {
             class: "absolute w-0 h-0 z-[-1]",
@@ -253,9 +265,9 @@ pub fn Edge(props: EdgeProps) -> Element {
                 class: "overflow-visible w-0 h-0",
                 path {
                     d: "{path_data}",
-                    stroke: "green",
+                    class: "{stroke}",
                     fill: "transparent",
-                    stroke_width: "2",
+                    stroke_width: "3",
                 }
             }
         }

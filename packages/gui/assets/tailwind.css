@@ -12,6 +12,7 @@
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-red-700: oklch(50.5% 0.213 27.518);
     --color-red-900: oklch(39.6% 0.141 25.723);
+    --color-green-50: oklch(98.2% 0.018 155.826);
     --color-green-200: oklch(92.5% 0.084 155.995);
     --color-green-300: oklch(87.1% 0.15 154.449);
     --color-green-400: oklch(79.2% 0.209 151.711);
@@ -339,6 +340,12 @@
   .border-black {
     border-color: var(--color-black);
   }
+  .border-green-50 {
+    border-color: var(--color-green-50);
+  }
+  .border-green-500 {
+    border-color: var(--color-green-500);
+  }
   .border-green-700 {
     border-color: var(--color-green-700);
   }
@@ -389,6 +396,24 @@
   }
   .bg-red-900 {
     background-color: var(--color-red-900);
+  }
+  .stroke-blue-400 {
+    stroke: var(--color-blue-400);
+  }
+  .stroke-green-400 {
+    stroke: var(--color-green-400);
+  }
+  .stroke-green-500 {
+    stroke: var(--color-green-500);
+  }
+  .stroke-green-700 {
+    stroke: var(--color-green-700);
+  }
+  .stroke-red-400 {
+    stroke: var(--color-red-400);
+  }
+  .stroke-red-700 {
+    stroke: var(--color-red-700);
   }
   .p-1 {
     padding: calc(var(--spacing) * 1);
