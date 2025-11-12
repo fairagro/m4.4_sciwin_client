@@ -114,7 +114,7 @@ impl WorkflowGraphBuilder {
             self.connect_edge(source, &output.id, source_port, &output.id, type_)?
         }
 
-        //layout        
+        //layout
         self.auto_layout();
 
         Ok(())
@@ -171,34 +171,29 @@ pub fn GraphEditor() -> Element {
 
     rsx! {
         div {
-            div {
-                class: "relative w-100 inset-0 select-none",
-                onmousemove: move |e| {
-                    if let Some(current) = use_app_state()().dragging{
-                        //we are dragging
-                        let current_pos = e.data.client_coordinates();
-                        let last_pos = (use_app_state()().drag_offset)();
+            class: "relative flex-1 overflow-auto min-h-0 select-none",
+            onmousemove: move |e| {
+                if let Some(current) = use_app_state()().dragging{
+                    //we are dragging
+                    let current_pos = e.data.client_coordinates();
+                    let last_pos = (use_app_state()().drag_offset)();
 
-                        let deltaX = current_pos.x - last_pos.x;
-                        let deltaY = current_pos.y - last_pos.y;
-                        let pos = use_app_state()().graph[current].position;
-                        use_app_state().write().graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                    let deltaX = current_pos.x - last_pos.x;
+                    let deltaY = current_pos.y - last_pos.y;
 
-                        use_app_state().write().drag_offset.set(current_pos);
-                    }
-                },
-                onmouseup: move |_| {
-                    use_app_state().write().dragging = None;
-                },
-                for id in graph.node_identifiers() {
-                    NodeElement {id}
-                },
-                for id in graph.edge_indices() {
-                    EdgeElement {id}
+                    let pos = use_app_state()().graph[current].position;
+                    use_app_state().write().graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                    use_app_state().write().drag_offset.set(current_pos);
                 }
             },
-            div {
-                //"Debug: {graph:?}"
+            onmouseup: move |_| {
+                use_app_state().write().dragging = None;
+            },
+            for id in graph.node_identifiers() {
+                NodeElement {id}
+            },
+            for id in graph.edge_indices() {
+                EdgeElement {id}
             }
         }
     }
