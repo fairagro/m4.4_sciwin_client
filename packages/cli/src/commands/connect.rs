@@ -73,9 +73,18 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> 
 }
 
 pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
-    // Get the workflow
-    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
-    let mut workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
+    use std::fs;
+    use std::io::Write;
+    use std::path::Path;
+    let filename = if Path::new(&args.name).is_absolute() && args.name.ends_with(".cwl") {
+        // Absolute path
+        args.name.clone()
+    } else {
+        // Relative workflow name
+        format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name)
+    };
+    let mut workflow = load_workflow(&filename)
+        .map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();
@@ -106,7 +115,6 @@ pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<(
             .map_err(|e| anyhow!("Could not remove connection from {} to {}:: {e}", args.from, args.to))?;
     }
 
-    // save workflow
     let mut yaml = serde_yaml::to_string(&workflow)?;
     yaml = format_cwl(&yaml).map_err(|e| anyhow!("Could not format yaml: {e}"))?;
     let old = fs::read_to_string(&filename)?;

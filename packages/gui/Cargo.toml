@@ -10,6 +10,7 @@ license.workspace = true
 anyhow.workspace = true
 rand.workspace = true
 commonwl = { path = "../cwl" }
+s4n = { path = "../cli" }
 dioxus = { version = "0.7.1", features = [] }
 petgraph = "0.8.3"
 rust-sugiyama = "0.4.0"

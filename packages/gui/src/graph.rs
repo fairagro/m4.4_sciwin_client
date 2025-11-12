@@ -11,6 +11,8 @@ use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
 use std::{collections::HashMap, fs, path::Path};
+use s4n::commands::ConnectWorkflowArgs;
+use s4n::commands::disconnect_workflow_nodes;
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
@@ -174,10 +176,33 @@ pub fn GraphEditor() -> Element {
     rsx! {
         div {
             class:"relative select-none overflow-scroll h-full",
-            onclick: move |_| {
-                if let Some(edge_id) = app_state().selected_edge {
-                    app_state.write().graph.remove_edge(edge_id);
-                    app_state.write().selected_edge = None;
+             onclick: move |_| {
+                let maybe_edge_id = app_state.read().selected_edge;
+                let workflow_path = app_state.read().workflow_path.clone();
+
+                if let (Some(edge_id), Some(workflow_path)) = (maybe_edge_id, workflow_path) {
+                    let read_state = app_state.read();
+                    let edge = read_state.graph[edge_id].clone();
+                    let (from_node_id, to_node_id) = read_state.graph.edge_endpoints(edge_id).unwrap();
+                    let from_node_instance = read_state.graph[from_node_id].instance.clone();
+                    let to_node_instance = read_state.graph[to_node_id].instance.clone();
+                    drop(read_state);
+                    let mut state = app_state.write();
+                    state.graph.remove_edge(edge_id);
+                    state.selected_edge = None;
+                    // Construct connection arguments
+                    let args = ConnectWorkflowArgs {
+                        name: workflow_path.clone(),
+                        from: format!("{}/{}", from_node_instance.id().trim_end_matches(".cwl"), edge.source_port),
+                        to: format!("{}/{}", to_node_instance.id().trim_end_matches(".cwl"), edge.target_port),
+                    };
+
+                    if let Err(err) = disconnect_workflow_nodes(&args) {
+                        error!("Failed to disconnect workflow nodes: {err}");
+                    }
+                     if let Ok(new_code) = fs::read_to_string(&workflow_path) {
+                        state.cwl_code = Some(new_code);
+                    }
                 }
             },
             onmousemove: move |e| {

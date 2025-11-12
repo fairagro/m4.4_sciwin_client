@@ -16,6 +16,7 @@ pub struct ApplicationState {
     pub drag_offset: Signal<ClientPoint>,
     pub selected_edge: Option<EdgeIndex>, 
     pub cwl_code: Option<String>,
+    pub workflow_path: Option<String>,
 }
 
 pub fn use_app_state() -> Signal<ApplicationState> {
