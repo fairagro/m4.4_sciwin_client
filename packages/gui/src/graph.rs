@@ -10,14 +10,15 @@ use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, fs};
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
-pub fn load_workflow_graph(path: impl AsRef<Path>) -> anyhow::Result<WorkflowGraph> {
+pub fn load_workflow_graph(path: impl AsRef<Path>) -> anyhow::Result<(WorkflowGraph, String)> {
+    let workflow_text = fs::read_to_string(path.as_ref())?;
     let workflow = load_workflow(path.as_ref()).map_err(|e| anyhow::anyhow!("{e}"))?;
     let wgb = WorkflowGraphBuilder::from_workflow(&workflow, path)?;
-    Ok(wgb.graph)
+    Ok((wgb.graph, workflow_text))
 }
 
 #[derive(Default)]

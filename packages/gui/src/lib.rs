@@ -6,6 +6,7 @@ pub mod edge;
 pub mod graph;
 pub mod node;
 pub mod slot;
+pub mod code;
 
 #[derive(Default, Clone)]
 pub struct ApplicationState {
@@ -13,6 +14,8 @@ pub struct ApplicationState {
     pub dragging: Option<NodeIndex>,
     pub drag_offset: Signal<ClientPoint>,
     pub selected_edge: Option<EdgeIndex>, 
+    pub show_code: bool,
+    pub cwl_code: Option<String>,
 }
 
 pub fn use_app_state() -> Signal<ApplicationState> {
