@@ -15,7 +15,7 @@ pub struct EdgeProps {
 }
 
 #[component]
-pub fn Edge(props: EdgeProps) -> Element {
+pub fn EdgeElement(props: EdgeProps) -> Element {
     let graph = use_app_state()().graph;
     let (from_node_id, to_node_id) = graph.edge_endpoints(props.id).unwrap(); //TODO!
     let from_node = &graph[from_node_id];

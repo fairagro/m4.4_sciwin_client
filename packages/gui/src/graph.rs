@@ -1,10 +1,13 @@
 use crate::{
-    edge::Edge,
-    node::{NodeInstance, VisualNode},
+    edge::{Edge, EdgeElement},
+    node::{NodeElement, NodeInstance, VisualNode},
     slot::Slot,
+    use_app_state,
 };
 use commonwl::{StringOrDocument, load_doc, load_workflow, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
+use dioxus::prelude::*;
+use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
 use std::{collections::HashMap, path::Path};
@@ -162,5 +165,44 @@ impl WorkflowGraphBuilder {
         );
 
         Ok(())
+    }
+}
+
+#[component]
+pub fn GraphEditor() -> Element {
+    let graph = use_app_state()().graph;
+
+    rsx! {
+        div {
+            div {
+                class: "relative w-100 inset-0 select-none",
+                onmousemove: move |e| {
+                    if let Some(current) = use_app_state()().dragging{
+                        //we are dragging
+                        let current_pos = e.data.client_coordinates();
+                        let last_pos = (use_app_state()().drag_offset)();
+
+                        let deltaX = current_pos.x - last_pos.x;
+                        let deltaY = current_pos.y - last_pos.y;
+                        let pos = use_app_state()().graph[current].position;
+                        use_app_state().write().graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+
+                        use_app_state().write().drag_offset.set(current_pos);
+                    }
+                },
+                onmouseup: move |_| {
+                    use_app_state().write().dragging = None;
+                },
+                for id in graph.node_identifiers() {
+                    NodeElement {id}
+                },
+                for id in graph.edge_indices() {
+                    EdgeElement {id}
+                }
+            },
+            div {
+                //"Debug: {graph:?}"
+            }
+        }
     }
 }

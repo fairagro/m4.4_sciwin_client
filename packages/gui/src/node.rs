@@ -36,7 +36,7 @@ pub struct NodeProps {
 }
 
 #[component]
-pub fn Node(props: NodeProps) -> Element {
+pub fn NodeElement(props: NodeProps) -> Element {
     let graph = use_app_state()().graph;
     let node = &graph[props.id];
     let pos_x = node.position.x;
