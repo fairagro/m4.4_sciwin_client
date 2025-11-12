@@ -176,7 +176,7 @@ pub fn GraphEditor() -> Element {
     rsx! {
         div {
             class:"relative select-none overflow-scroll h-full",
-             onclick: move |_| {
+            onclick: move |_| {
                 let maybe_edge_id = app_state.read().selected_edge;
                 let workflow_path = app_state.read().workflow_path.clone();
 
@@ -190,17 +190,29 @@ pub fn GraphEditor() -> Element {
                     let mut state = app_state.write();
                     state.graph.remove_edge(edge_id);
                     state.selected_edge = None;
+                    let to_id = to_node_instance.id().trim_end_matches(".cwl").to_string();
+                    let to_port = edge.target_port.clone();
+                    let workflow = load_workflow(&workflow_path).ok();
+                    let to_string = if let Some(workflow) = workflow {
+                        if !workflow.steps.iter().any(|step| step.id == to_id) {
+                            format!("@outputs/{}", to_port)
+                        } else {
+                            format!("{}/{}", to_id, to_port)
+                        }
+                    } else {
+                        format!("{}/{}", to_id, to_port)
+                    };
                     // Construct connection arguments
                     let args = ConnectWorkflowArgs {
                         name: workflow_path.clone(),
                         from: format!("{}/{}", from_node_instance.id().trim_end_matches(".cwl"), edge.source_port),
-                        to: format!("{}/{}", to_node_instance.id().trim_end_matches(".cwl"), edge.target_port),
+                        to: to_string,
                     };
 
                     if let Err(err) = disconnect_workflow_nodes(&args) {
                         error!("Failed to disconnect workflow nodes: {err}");
                     }
-                     if let Ok(new_code) = fs::read_to_string(&workflow_path) {
+                    if let Ok(new_code) = fs::read_to_string(&workflow_path) {
                         state.cwl_code = Some(new_code);
                     }
                 }
