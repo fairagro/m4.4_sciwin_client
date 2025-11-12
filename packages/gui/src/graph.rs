@@ -1,46 +1,13 @@
+use crate::{
+    edge::Edge,
+    node::{NodeInstance, VisualNode},
+    slot::Slot,
+};
 use commonwl::{StringOrDocument, load_doc, load_workflow, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
 use std::{collections::HashMap, path::Path};
-
-#[derive(Debug, Clone)]
-pub struct VisualNode {
-    pub instance: NodeInstance,
-    pub position: Point2D<f32, f32>,
-    pub inputs: Vec<Slot>,
-    pub outputs: Vec<Slot>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Slot {
-    pub id: String,
-    pub type_: CWLType,
-}
-
-#[derive(Debug, Clone)]
-pub enum NodeInstance {
-    Step(CWLDocument),
-    Input(CommandInputParameter), //WorkflowInputParameter
-    Output(WorkflowOutputParameter),
-}
-
-impl NodeInstance {
-    pub fn id(&self) -> String {
-        match &self {
-            Self::Step(doc) => doc.id.clone().unwrap().clone(),
-            Self::Input(input) => input.id.clone(),
-            Self::Output(output) => output.id.clone(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Edge {
-    pub source_port: String,
-    pub target_port: String,
-    pub data_type: CWLType,
-}
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
