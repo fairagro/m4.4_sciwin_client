@@ -1,18 +1,19 @@
 use crate::{
-    edge::{Edge, EdgeElement},
+    DragState,
+    edge::{self, EdgeElement, Line, LineProps, VisualEdge},
     node::{NodeElement, NodeInstance, VisualNode},
     slot::Slot,
     use_app_state,
 };
-use rand::Rng;
 use commonwl::{StringOrDocument, load_doc, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
-use std::{collections::HashMap, path::Path};
+use rand::Rng;
+use std::{collections::HashMap, path::Path, rc::Rc};
 
-pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
+pub type WorkflowGraph = StableDiGraph<VisualNode, VisualEdge>;
 
 pub fn load_workflow_graph(workflow: &Workflow, path: impl AsRef<Path>) -> anyhow::Result<WorkflowGraph> {
     let wgb = WorkflowGraphBuilder::from_workflow(workflow, path)?;
@@ -126,7 +127,7 @@ impl WorkflowGraphBuilder {
         self.graph.add_edge(
             *source_idx,
             *target_idx,
-            Edge {
+            VisualEdge {
                 source_port: source_port.to_string(),
                 target_port: target_port.to_string(),
                 data_type: type_,
@@ -170,19 +171,33 @@ impl WorkflowGraphBuilder {
 #[component]
 pub fn GraphEditor() -> Element {
     let graph = use_app_state()().workflow.graph;
+    let mut new_line = use_signal(|| None::<LineProps>);
+
+    let mut div_ref: Signal<Option<Rc<MountedData>>> = use_signal(|| None);
+    let mut client_rect = use_signal(|| None);
+
+    let read_rect = move || async move {
+        if let Some(div) = div_ref()
+            && let Ok(rect) = div.get_client_rect().await
+        {
+            client_rect.set(Some(rect));
+        }
+    };
 
     rsx! {
         div {
             class:"relative select-none overflow-scroll h-full",
-            onmousemove: move |e| {
+            onmounted: move |e| div_ref.set(Some(e.data())),
+            onmousemove: move |e| async move{
+                e.stop_propagation();
                 if let Some(drag_state) = use_app_state()().dragging{
                     //we are dragging
+                    let current_pos = e.client_coordinates();
 
                     match drag_state {
-                        crate::DragState::None => todo!(),
-                        crate::DragState::Node(node_index) => {
+                        DragState::None => todo!(),
+                        DragState::Node(node_index) => {
                             //we are dragging a node
-                            let current_pos = e.data.client_coordinates();
                             let last_pos = (use_app_state()().drag_offset)();
 
                             let deltaX = current_pos.x - last_pos.x;
@@ -192,19 +207,50 @@ pub fn GraphEditor() -> Element {
                             use_app_state().write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
                             use_app_state().write().drag_offset.set(current_pos);
                         },
-                        crate::DragState::Connection { .. } => todo!(),
+                        DragState::Connection { source_node, source_port } => {
+                            //we are dragging from a connection
+                            let rect = if let Some(rect) = *client_rect.read() {
+                                rect
+                            } else {
+                                read_rect().await;
+                                client_rect.read().unwrap()
+                            };
+
+                            let base_pos = (current_pos.x - rect.origin.x,  current_pos.y - rect.origin.y);
+                            let source_node = &use_app_state()().workflow.graph[source_node];
+
+                            let (x_source, y_source) = edge::calculate_source_position(source_node, &source_port);
+                            let x_target = base_pos.0 as f32;
+                            let y_target = base_pos.1 as f32;
+
+                            let cwl_type = source_node.outputs.iter().find(|i| i.id == source_port).unwrap().type_.clone(); //danger!
+                            let stroke = edge::get_stroke_from_cwl_type(cwl_type);
+
+                            new_line.set(Some(LineProps{x_source, y_source, x_target, y_target, stroke: stroke.to_string(), onclick: None}));
+                        },
                     }
 
                 }
             },
             onmouseup: move |_| {
                 use_app_state().write().dragging = None;
+                new_line.set(None);
             },
             for id in graph.node_identifiers() {
                 NodeElement {id}
             },
             for id in graph.edge_indices() {
                 EdgeElement {id}
+            },
+            if let Some(line) = &*new_line.read() {
+                Line {
+                    x_source: line.x_source,
+                    y_source: line.y_source,
+                    x_target: line.x_target,
+                    y_target: line.y_target,
+                    stroke: line.stroke.clone(),
+                    onclick: line.onclick
+                }
             }
         }
     }

@@ -75,7 +75,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
                         div {
                             class: "flex justify-end items-center",
                             "{slot.id}",
-                            SlotElement {type_: slot.type_.clone(), slot_type: SlotType::Output}
+                            SlotElement {slot: slot.clone(), node_id: props.id, slot_type: SlotType::Output}
                         }
                     }
                 }
@@ -84,7 +84,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
                     for slot in node.inputs.iter() {
                         div {
                             class: "flex justify-start items-center",
-                            SlotElement {type_: slot.type_.clone(), slot_type: SlotType::Input},
+                            SlotElement {slot: slot.clone(), node_id: props.id, slot_type: SlotType::Input},
                             "{slot.id}"
                         }
                     }
