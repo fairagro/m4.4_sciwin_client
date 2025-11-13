@@ -3098,8 +3098,8 @@ dependencies = [
  "petgraph",
  "rand 0.9.2",
  "rust-sugiyama",
- "s4n",
  "s4n_core",
+ "serde_yaml",
  "syntect",
 ]
 

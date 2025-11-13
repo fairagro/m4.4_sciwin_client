@@ -1,6 +1,6 @@
 use crate::workflow::VisualWorkflow;
 use dioxus::{html::geometry::ClientPoint, prelude::*};
-use petgraph::graph::{EdgeIndex, NodeIndex};
+use petgraph::graph::NodeIndex;
 
 pub mod code;
 pub mod components;
@@ -15,7 +15,6 @@ pub struct ApplicationState {
     pub workflow: VisualWorkflow,
     pub dragging: Option<DragState>,
     pub drag_offset: Signal<ClientPoint>,
-    pub selected_edge: Option<EdgeIndex>,
 }
 
 #[derive(Default, Debug, Clone)]

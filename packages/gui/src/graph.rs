@@ -4,14 +4,12 @@ use crate::{
     slot::Slot,
     use_app_state,
 };
-use commonwl::{StringOrDocument, load_doc, load_workflow, prelude::*};
+use rand::Rng;
+use commonwl::{StringOrDocument, load_doc, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
-use rand::Rng;
-use s4n::commands::ConnectWorkflowArgs;
-use s4n::commands::disconnect_workflow_nodes;
 use std::{collections::HashMap, path::Path};
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
@@ -172,57 +170,18 @@ impl WorkflowGraphBuilder {
 #[component]
 pub fn GraphEditor() -> Element {
     let graph = use_app_state()().workflow.graph;
-    let mut app_state = use_app_state();
 
     rsx! {
         div {
             class:"relative select-none overflow-scroll h-full",
-            onclick: move |_| {
-                let maybe_edge_id = app_state.read().selected_edge;
-                let workflow_path = app_state.read().workflow.path.clone();
-
-                if let Some(edge_id) = maybe_edge_id {
-                    let read_state = app_state.read();
-                    let edge = read_state.workflow.graph[edge_id].clone();
-                    let (from_node_id, to_node_id) = read_state.workflow.graph.edge_endpoints(edge_id).unwrap();
-                    let from_node_instance = read_state.workflow.graph[from_node_id].instance.clone();
-                    let to_node_instance = read_state.workflow.graph[to_node_id].instance.clone();
-                    drop(read_state);
-                    let mut state = app_state.write();
-                    state.workflow.graph.remove_edge(edge_id);
-                    state.selected_edge = None;
-                    let to_id = to_node_instance.id().trim_end_matches(".cwl").to_string();
-                    let to_port = edge.target_port.clone();
-                    let workflow = load_workflow(&workflow_path).ok();
-                    let to_string = if let Some(workflow) = workflow {
-                        if !workflow.steps.iter().any(|step| step.id == to_id) {
-                            format!("@outputs/{}", to_port)
-                        } else {
-                            format!("{}/{}", to_id, to_port)
-                        }
-                    } else {
-                        format!("{}/{}", to_id, to_port)
-                    };
-                    // Construct connection arguments
-                    let args = ConnectWorkflowArgs {
-                        name: workflow_path.to_string_lossy().to_string(),
-                        from: format!("{}/{}", from_node_instance.id().trim_end_matches(".cwl"), edge.source_port),
-                        to: to_string,
-                    };
-
-                    if let Err(err) = disconnect_workflow_nodes(&args) {
-                        error!("Failed to disconnect workflow nodes: {err}");
-                    }
-                }
-            },
             onmousemove: move |e| {
                 if let Some(drag_state) = use_app_state()().dragging{
                     //we are dragging
 
-                    //we are dragging a node
                     match drag_state {
                         crate::DragState::None => todo!(),
                         crate::DragState::Node(node_index) => {
+                            //we are dragging a node
                             let current_pos = e.data.client_coordinates();
                             let last_pos = (use_app_state()().drag_offset)();
 

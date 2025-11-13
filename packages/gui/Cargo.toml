@@ -9,8 +9,8 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 rand.workspace = true
+serde_yaml.workspace = true
 commonwl = { path = "../cwl" }
-s4n = { path = "../cli" }
 s4n_core = { path = "../core" }
 dioxus = { version = "0.7.1", features = [] }
 petgraph = "0.8.3"
@@ -21,7 +21,7 @@ syntect = { version = "5.2.0", default-features = false, features = [
     "parsing",
     "default-themes",
     "default-syntaxes",
-    "html"
+    "html",
 ] }
 
 [features]

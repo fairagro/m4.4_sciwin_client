@@ -50,8 +50,8 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
         "M {} {} C {} {}, {} {}, {} {}",
         x_source, y_source, cx1, cy1, cx2, cy2, x_target, y_target
     );
-    let is_selected = app_state().selected_edge == Some(props.id);
-    let stroke_width = if is_selected { "4" } else { "3" };
+
+    let stroke_width = 3;
 
     let slot_type = to_node.inputs.iter().find(|i| i.id == edge.target_port).unwrap().type_.clone();
     let stroke = match slot_type {
@@ -63,10 +63,6 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
         _ => todo!(),
     };
 
-    // compute midpoint for delete label
-    let mid_x = (x_source + x_target) / 2.0;
-    let mid_y = (y_source + y_target) / 2.0;
-
     rsx! {
         div {
             class: "absolute w-0 h-0 z-[1]",
@@ -76,7 +72,25 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
                 class: "overflow-visible w-0 h-0",
                 onclick: move |e| {
                     e.stop_propagation();
-                    app_state.write().selected_edge = Some(props.id);
+                    if e.modifiers().shift() {
+                        //disconnect on shift click
+                        let mut state = app_state.write();
+                        let edge = &state.workflow.graph[props.id];
+
+                        let (from_node_id, to_node_id) = state.workflow.graph.edge_endpoints(props.id).unwrap();
+                        let from_node_instance = &state.workflow.graph[from_node_id].instance;
+                        let to_node_instance = &state.workflow.graph[to_node_id].instance;
+
+                        let from_node = from_node_instance.id().trim_end_matches(".cwl").to_string();
+                        let to_node = to_node_instance.id().trim_end_matches(".cwl").to_string();
+
+                        let from_slot = edge.source_port.clone();
+                        let to_slot = edge.target_port.clone();
+
+                        state.workflow.remove_connection(&from_node, &from_slot, &to_node, &to_slot)?;
+                        state.workflow.graph.remove_edge(props.id);
+                    }
+                    Ok(())
                 },
                 path {
                     class: "{stroke}",
@@ -84,15 +98,6 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
                     stroke_width: "{stroke_width}",
                     fill: "transparent",
                     style: "cursor: pointer;",
-                }
-            }
-
-            // Show label only when selected
-            if is_selected {
-                div {
-                    class: "absolute bg-gray-800 text-white rounded px-2 py-1 text-xs select-none",
-                    style: "left: {mid_x + 20.0}px; top: {mid_y}px;",
-                    "Click to delete edge"
                 }
             }
         }
