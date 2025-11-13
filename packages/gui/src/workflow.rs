@@ -1,5 +1,5 @@
 use crate::graph::{WorkflowGraph, load_workflow_graph};
-use commonwl::{Workflow, load_workflow};
+use commonwl::{CWLDocument, Workflow, load_workflow};
 use std::path::{Path, PathBuf};
 
 /// Viewmodel implementation for Workflow
@@ -21,4 +21,11 @@ impl VisualWorkflow {
             graph,
         })
     }
+}
+
+impl VisualWorkflow {
+    pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument) {
+        s4n_core::workflow::add_workflow_step(&mut self.workflow, name, path, doc);
+    }
+    //...
 }

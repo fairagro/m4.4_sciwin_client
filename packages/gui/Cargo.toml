@@ -11,6 +11,7 @@ anyhow.workspace = true
 rand.workspace = true
 commonwl = { path = "../cwl" }
 s4n = { path = "../cli" }
+s4n_core = { path = "../core" }
 dioxus = { version = "0.7.1", features = [] }
 petgraph = "0.8.3"
 rust-sugiyama = "0.4.0"
