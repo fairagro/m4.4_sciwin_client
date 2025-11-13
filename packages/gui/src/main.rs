@@ -1,7 +1,8 @@
 use dioxus::{CapturedError, prelude::*};
 use gui::code::CodeViewer;
 use gui::components::tabs::*;
-use gui::graph::{GraphEditor, load_workflow_graph};
+use gui::graph::GraphEditor;
+use gui::workflow::VisualWorkflow;
 use gui::{ApplicationState, use_app_state};
 
 fn main() {
@@ -26,14 +27,8 @@ fn App() -> Element {
                     e.prevent_default();
                     let FormValue::Text(path) = e.get_first("path").unwrap()
                         else { return Err(CapturedError::msg("Missing path")) };
-                    let (graph, cwl_code) = load_workflow_graph(&path)?;
-
-                    let mut binding = use_app_state();
-                    let mut state = binding.write();
-
-                    state.graph = graph;
-                    state.cwl_code = Some(cwl_code);
-                    state.workflow_path = Some(path.clone());
+                    let workflow = VisualWorkflow::from_file(path)?;
+                    use_app_state().write().workflow = workflow;
                     Ok(())
                 },
                 input {

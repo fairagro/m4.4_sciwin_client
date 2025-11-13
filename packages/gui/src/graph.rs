@@ -10,17 +10,15 @@ use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
-use std::{collections::HashMap, fs, path::Path};
 use s4n::commands::ConnectWorkflowArgs;
 use s4n::commands::disconnect_workflow_nodes;
+use std::{collections::HashMap, path::Path};
 
 pub type WorkflowGraph = StableDiGraph<VisualNode, Edge>;
 
-pub fn load_workflow_graph(path: impl AsRef<Path>) -> anyhow::Result<(WorkflowGraph, String)> {
-    let workflow_text = fs::read_to_string(path.as_ref())?;
-    let workflow = load_workflow(path.as_ref()).map_err(|e| anyhow::anyhow!("{e}"))?;
-    let wgb = WorkflowGraphBuilder::from_workflow(&workflow, path)?;
-    Ok((wgb.graph, workflow_text))
+pub fn load_workflow_graph(workflow: &Workflow, path: impl AsRef<Path>) -> anyhow::Result<WorkflowGraph> {
+    let wgb = WorkflowGraphBuilder::from_workflow(workflow, path)?;
+    Ok(wgb.graph)
 }
 
 #[derive(Default)]
@@ -170,7 +168,7 @@ impl WorkflowGraphBuilder {
 
 #[component]
 pub fn GraphEditor() -> Element {
-    let graph = use_app_state()().graph;
+    let graph = use_app_state()().workflow.graph;
     let mut app_state = use_app_state();
 
     rsx! {
@@ -178,17 +176,17 @@ pub fn GraphEditor() -> Element {
             class:"relative select-none overflow-scroll h-full",
             onclick: move |_| {
                 let maybe_edge_id = app_state.read().selected_edge;
-                let workflow_path = app_state.read().workflow_path.clone();
+                let workflow_path = app_state.read().workflow.path.clone();
 
-                if let (Some(edge_id), Some(workflow_path)) = (maybe_edge_id, workflow_path) {
+                if let Some(edge_id) = maybe_edge_id {
                     let read_state = app_state.read();
-                    let edge = read_state.graph[edge_id].clone();
-                    let (from_node_id, to_node_id) = read_state.graph.edge_endpoints(edge_id).unwrap();
-                    let from_node_instance = read_state.graph[from_node_id].instance.clone();
-                    let to_node_instance = read_state.graph[to_node_id].instance.clone();
+                    let edge = read_state.workflow.graph[edge_id].clone();
+                    let (from_node_id, to_node_id) = read_state.workflow.graph.edge_endpoints(edge_id).unwrap();
+                    let from_node_instance = read_state.workflow.graph[from_node_id].instance.clone();
+                    let to_node_instance = read_state.workflow.graph[to_node_id].instance.clone();
                     drop(read_state);
                     let mut state = app_state.write();
-                    state.graph.remove_edge(edge_id);
+                    state.workflow.graph.remove_edge(edge_id);
                     state.selected_edge = None;
                     let to_id = to_node_instance.id().trim_end_matches(".cwl").to_string();
                     let to_port = edge.target_port.clone();
@@ -204,16 +202,13 @@ pub fn GraphEditor() -> Element {
                     };
                     // Construct connection arguments
                     let args = ConnectWorkflowArgs {
-                        name: workflow_path.clone(),
+                        name: workflow_path.to_string_lossy().to_string(),
                         from: format!("{}/{}", from_node_instance.id().trim_end_matches(".cwl"), edge.source_port),
                         to: to_string,
                     };
 
                     if let Err(err) = disconnect_workflow_nodes(&args) {
                         error!("Failed to disconnect workflow nodes: {err}");
-                    }
-                    if let Ok(new_code) = fs::read_to_string(&workflow_path) {
-                        state.cwl_code = Some(new_code);
                     }
                 }
             },
@@ -226,8 +221,8 @@ pub fn GraphEditor() -> Element {
                     let deltaX = current_pos.x - last_pos.x;
                     let deltaY = current_pos.y - last_pos.y;
 
-                    let pos = use_app_state()().graph[current].position;
-                    use_app_state().write().graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                    let pos = use_app_state()().workflow.graph[current].position;
+                    use_app_state().write().workflow.graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
                     use_app_state().write().drag_offset.set(current_pos);
                 }
             },

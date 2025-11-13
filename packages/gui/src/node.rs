@@ -37,7 +37,7 @@ pub struct NodeProps {
 
 #[component]
 pub fn NodeElement(props: NodeProps) -> Element {
-    let graph = use_app_state()().graph;
+    let graph = use_app_state()().workflow.graph;
     let node = &graph[props.id];
     let pos_x = node.position.x;
     let pos_y = node.position.y;
