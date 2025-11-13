@@ -52,7 +52,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
 
     rsx! {
         div {
-            class: "absolute border bg-gray-800 rounded-md cursor-pointer w-48",
+            class: "absolute border bg-gray-800 rounded-md cursor-pointer w-48 z-2",
             left: "{pos_x}px",
             top: "{pos_y}px",
             div {

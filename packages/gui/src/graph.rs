@@ -143,7 +143,7 @@ impl WorkflowGraphBuilder {
             &self.graph,
             &(|_, _| (120.0, 190.0)),
             &rust_sugiyama::configure::Config {
-                vertex_spacing: 50.0,
+                vertex_spacing: 30.0,
                 ..Default::default()
             },
         )
