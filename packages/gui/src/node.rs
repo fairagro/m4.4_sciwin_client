@@ -52,7 +52,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
 
     rsx! {
         div {
-            class: "absolute border bg-gray-800 rounded-lg cursor-pointer w-48",
+            class: "absolute border bg-gray-800 rounded-md cursor-pointer w-48",
             left: "{pos_x}px",
             top: "{pos_y}px",
             div {
@@ -63,7 +63,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
                     use_app_state().write().dragging = Some(props.id);
                 },
 
-                class: "{top_color} rounded-t-lg p-1 overflow-hidden",
+                class: "{top_color} rounded-t-md p-1 overflow-hidden",
                 "{node.instance.id()}",
 
             },

@@ -28,7 +28,7 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
     let fix = from_node.outputs.iter().position(|o| o.id == edge.source_port).unwrap();
     let tix = to_node.inputs.iter().position(|i| i.id == edge.target_port).unwrap();
 
-    const HEADER_OFFSET: f32 = 24.0 + 4.0 + 4.0; //padding + height
+    const HEADER_OFFSET: f32 = 18.0 + 4.0 + 6.0; //padding + height
     const ITEM_HEIGHT: f32 = 28.0;
     const NODE_WIDTH: f32 = 190.0;
 
@@ -40,10 +40,10 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
     let x_target = to_node.position.x;
 
     // Control points for a simple horizontal curve
-    let cx1 = x_source + 50.0; // move 50px to the right from source
+    let cx1 = x_source + 25.0; // move 50px to the right from source
     let cy1 = y_source;
 
-    let cx2 = x_target - 50.0; // move 50px to the left from target
+    let cx2 = x_target - 25.0; // move 50px to the left from target
     let cy2 = y_target;
 
     let path_data = format!(
