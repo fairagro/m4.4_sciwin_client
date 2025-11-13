@@ -140,7 +140,7 @@ impl WorkflowGraphBuilder {
 
     pub fn auto_layout(&mut self) {
         let node_indices: Vec<_> = self.graph.node_indices().collect();
-        info!("{node_indices:?}");
+        
         let positions = rust_sugiyama::from_graph(
             &self.graph,
             &(|_, _| (120.0, 190.0)),
@@ -158,10 +158,13 @@ impl WorkflowGraphBuilder {
             new_layout
         })
         .collect::<Vec<_>>();
-        let first = &positions[0];
-        for ix in node_indices {
-            let pos = first[&ix];
-            self.graph[ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
+
+        for island in &positions {
+            for ix in &node_indices {
+                if let Some(pos) = island.get(ix) {
+                    self.graph[*ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
+                }
+            }
         }
     }
 }
