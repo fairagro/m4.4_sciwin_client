@@ -1,5 +1,5 @@
 use crate::slot::{Slot, SlotElement, SlotType};
-use crate::use_app_state;
+use crate::{DragState, use_app_state};
 use commonwl::prelude::*;
 use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
@@ -60,7 +60,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
                     drag_offset.write().x = e.data.client_coordinates().x;
                     drag_offset.write().y = e.data.client_coordinates().y;
 
-                    use_app_state().write().dragging = Some(props.id);
+                    use_app_state().write().dragging = Some(DragState::Node(props.id));
                 },
 
                 class: "{top_color} rounded-t-md p-1 overflow-hidden",

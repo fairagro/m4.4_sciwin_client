@@ -140,7 +140,7 @@ impl WorkflowGraphBuilder {
 
     pub fn auto_layout(&mut self) {
         let node_indices: Vec<_> = self.graph.node_indices().collect();
-        
+
         let positions = rust_sugiyama::from_graph(
             &self.graph,
             &(|_, _| (120.0, 190.0)),
@@ -216,17 +216,26 @@ pub fn GraphEditor() -> Element {
                 }
             },
             onmousemove: move |e| {
-                if let Some(current) = use_app_state()().dragging{
+                if let Some(drag_state) = use_app_state()().dragging{
                     //we are dragging
-                    let current_pos = e.data.client_coordinates();
-                    let last_pos = (use_app_state()().drag_offset)();
 
-                    let deltaX = current_pos.x - last_pos.x;
-                    let deltaY = current_pos.y - last_pos.y;
+                    //we are dragging a node
+                    match drag_state {
+                        crate::DragState::None => todo!(),
+                        crate::DragState::Node(node_index) => {
+                            let current_pos = e.data.client_coordinates();
+                            let last_pos = (use_app_state()().drag_offset)();
 
-                    let pos = use_app_state()().workflow.graph[current].position;
-                    use_app_state().write().workflow.graph[current].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
-                    use_app_state().write().drag_offset.set(current_pos);
+                            let deltaX = current_pos.x - last_pos.x;
+                            let deltaY = current_pos.y - last_pos.y;
+
+                            let pos = use_app_state()().workflow.graph[node_index].position;
+                            use_app_state().write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                            use_app_state().write().drag_offset.set(current_pos);
+                        },
+                        crate::DragState::Connection { .. } => todo!(),
+                    }
+
                 }
             },
             onmouseup: move |_| {
