@@ -25,7 +25,8 @@ pub fn create_workflow(filename: &str, force: bool) -> Result<String> {
     Ok(yaml)
 }
 
-pub fn add_workflow_step(workflow: &mut Workflow, name: &str, path: &str, doc: &CWLDocument) {
+pub fn add_workflow_step(workflow: &mut Workflow, name: &str, path: impl AsRef<Path>, doc: &CWLDocument) {
+    let path = path.as_ref().to_string_lossy().into_owned();
     if !workflow.has_step(name) {
         let path = if path.starts_with("workflows") {
             path.replace("workflows", "..")
@@ -52,7 +53,9 @@ pub fn add_workflow_step(workflow: &mut Workflow, name: &str, path: &str, doc: &
 }
 
 /// Adds a connection between an input and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow input will be added.
-pub fn add_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_filename: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
+pub fn add_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_filename: impl AsRef<Path>, to_name: &str, to_slot_id: &str) -> Result<()> {
+    let to_filename = to_filename.as_ref();
+
     let to_cwl = load_doc(to_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
     let to_slot = to_cwl.inputs.iter().find(|i| i.id == to_slot_id).expect("No slot");
 
@@ -84,9 +87,11 @@ pub fn add_workflow_output_connection(
     workflow: &mut Workflow,
     from_name: &str,
     from_slot_id: &str,
-    from_filename: &str,
+    from_filename: impl AsRef<Path>,
     to_output: &str,
 ) -> Result<()> {
+    let from_filename = from_filename.as_ref();
+
     let from_cwl = load_doc(from_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
     let from_type = from_cwl.get_output_type(from_slot_id).context("No slot")?;
     add_workflow_step(workflow, from_name, from_filename, &from_cwl);
@@ -105,20 +110,23 @@ pub fn add_workflow_output_connection(
 /// Adds a connection between two `CommandLineTools`. The tools will be registered as step if registered not already.
 pub fn add_workflow_step_connection(
     workflow: &mut Workflow,
-    from_filename: &str,
+    from_filename: impl AsRef<Path>,
     from_name: &str,
     from_slot_id: &str,
-    to_filename: &str,
+    to_filename: impl AsRef<Path>,
     to_name: &str,
     to_slot_id: &str,
 ) -> Result<()> {
     //check if step already exists and create if not
+    let from_filename = from_filename.as_ref();
+    let to_filename = to_filename.as_ref();
+
     if !workflow.has_step(from_name) {
         let from_cwl = load_doc(from_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
         let from_outputs = from_cwl.get_output_ids();
         if !from_outputs.contains(&from_slot_id.to_string()) {
             anyhow::bail!(
-                "Tool {} does not have output `{}`. Cannot not create node from {} in Workflow!",
+                "Tool {} does not have output `{}`. Cannot not create node from {:?} in Workflow!",
                 from_name,
                 from_slot_id,
                 from_filename

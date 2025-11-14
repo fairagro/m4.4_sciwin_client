@@ -73,19 +73,8 @@ pub fn connect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> 
 }
 
 pub fn disconnect_workflow_nodes(args: &ConnectWorkflowArgs) -> anyhow::Result<()> {
-    let filename = if Path::new(&args.name).is_absolute()
-        && Path::new(&args.name)
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("cwl"))
-    {
-        // Absolute path
-        args.name.clone()
-    } else {
-        // Relative workflow name
-        format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name)
-    };
-    let mut workflow = load_workflow(&filename)
-        .map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
+    let filename = format!("{}{}/{}.cwl", get_workflows_folder(), args.name, args.name);
+    let mut workflow = load_workflow(&filename).map_err(|e| anyhow!("Could not load workflow {filename}: {e}"))?;
 
     let from_parts = args.from.split('/').collect::<Vec<_>>();
     let to_parts = args.to.split('/').collect::<Vec<_>>();

@@ -44,6 +44,7 @@ impl WorkflowGraphBuilder {
                     type_: input.type_.clone(),
                 }],
                 inputs: vec![],
+                path: None,
                 position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
             });
             self.node_map.insert(input.id.clone(), node_id);
@@ -57,6 +58,7 @@ impl WorkflowGraphBuilder {
                     type_: output.type_.clone(),
                 }],
                 outputs: vec![],
+                path: None,
                 position: Point2D::new(rng.random_range(0.0..=1.0), 1.0),
             });
             self.node_map.insert(output.id.clone(), node_id);
@@ -94,6 +96,7 @@ impl WorkflowGraphBuilder {
                         type_: doc.get_output_type(i).unwrap(),
                     })
                     .collect(),
+                path: Some(step_file),
                 position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
             });
             self.node_map.insert(step.id.clone(), node_id);
@@ -233,6 +236,7 @@ pub fn GraphEditor() -> Element {
                 }
             },
             onmouseup: move |_| {
+                //reset state
                 use_app_state().write().dragging = None;
                 new_line.set(None);
             },

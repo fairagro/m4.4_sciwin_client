@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::slot::{Slot, SlotElement, SlotType};
 use crate::{DragState, use_app_state};
 use commonwl::prelude::*;
@@ -8,6 +10,7 @@ use petgraph::graph::NodeIndex;
 #[derive(Debug, Clone)]
 pub struct VisualNode {
     pub instance: NodeInstance,
+    pub path: Option<PathBuf>,
     pub position: Point2D<f32, f32>,
     pub inputs: Vec<Slot>,
     pub outputs: Vec<Slot>,

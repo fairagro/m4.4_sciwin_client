@@ -77,20 +77,7 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
                     if e.modifiers().shift() {
                         //disconnect on shift click
                         let mut state = app_state.write();
-                        let edge = &state.workflow.graph[props.id];
-
-                        let (from_node_id, to_node_id) = state.workflow.graph.edge_endpoints(props.id).unwrap();
-                        let from_node_instance = &state.workflow.graph[from_node_id].instance;
-                        let to_node_instance = &state.workflow.graph[to_node_id].instance;
-
-                        let from_node = from_node_instance.id().trim_end_matches(".cwl").to_string();
-                        let to_node = to_node_instance.id().trim_end_matches(".cwl").to_string();
-
-                        let from_slot = edge.source_port.clone();
-                        let to_slot = edge.target_port.clone();
-
-                        state.workflow.remove_connection(&from_node, &from_slot, &to_node, &to_slot)?;
-                        state.workflow.graph.remove_edge(props.id);
+                        state.workflow.remove_connection(props.id)?;
                     }
                     Ok(())
                 },
