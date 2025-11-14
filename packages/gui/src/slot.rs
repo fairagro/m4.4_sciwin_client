@@ -62,7 +62,7 @@ pub fn SlotElement(props: SlotProps) -> Element {
                 //check whether we are in connection mode and node/port has changed
                 let graph = &use_app_state()().workflow.graph;
                 if let Some(DragState::Connection { source_node, source_port }) = use_app_state()().dragging
-                    && source_node != node_id && source_port != props.slot.id {
+                    && (source_node, &source_port) != (node_id, &props.slot.id) {
                         //get source and target nodes
                         let source = &graph[source_node];
                         let target = &graph[node_id];

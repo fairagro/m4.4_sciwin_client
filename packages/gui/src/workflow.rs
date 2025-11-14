@@ -106,9 +106,9 @@ impl VisualWorkflow {
         if self.workflow.has_step(&from_node) && self.workflow.has_step(&to_node) {
             s4n_core::workflow::remove_workflow_step_connection(&mut self.workflow, &to_node, &to_slot)?
         } else if !self.workflow.has_step(&from_node) {
-            s4n_core::workflow::remove_workflow_input_connection(&mut self.workflow, &from_node, &to_node, &to_slot)?
+            s4n_core::workflow::remove_workflow_input_connection(&mut self.workflow, &from_node, &to_node, &to_slot, false)?
         } else if !self.workflow.has_step(&to_node) {
-            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, &from_node, &from_slot, &to_node)?
+            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, &from_node, &from_slot, &to_node, false)?
         } else {
             anyhow::bail!("undefined disconnection command")
         }

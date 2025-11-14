@@ -53,7 +53,13 @@ pub fn add_workflow_step(workflow: &mut Workflow, name: &str, path: impl AsRef<P
 }
 
 /// Adds a connection between an input and a `CommandLineTool`. The tool will be registered as step if it is not already and an Workflow input will be added.
-pub fn add_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_filename: impl AsRef<Path>, to_name: &str, to_slot_id: &str) -> Result<()> {
+pub fn add_workflow_input_connection(
+    workflow: &mut Workflow,
+    from_input: &str,
+    to_filename: impl AsRef<Path>,
+    to_name: &str,
+    to_slot_id: &str,
+) -> Result<()> {
     let to_filename = to_filename.as_ref();
 
     let to_cwl = load_doc(to_filename).map_err(|e| anyhow::anyhow!("Failed to load CWL document: {e}"))?;
@@ -169,8 +175,14 @@ pub fn remove_workflow_step_connection(workflow: &mut Workflow, to_name: &str, t
 }
 
 /// Removes an input from inputs and removes it from `CommandLineTool` input.
-pub fn remove_workflow_input_connection(workflow: &mut Workflow, from_input: &str, to_name: &str, to_slot_id: &str) -> Result<()> {
-    if let Some(index) = workflow.inputs.iter().position(|s| s.id == *from_input.to_string()) {
+pub fn remove_workflow_input_connection(
+    workflow: &mut Workflow,
+    from_input: &str,
+    to_name: &str,
+    to_slot_id: &str,
+    remove_input: bool,
+) -> Result<()> {
+    if remove_input && let Some(index) = workflow.inputs.iter().position(|s| s.id == *from_input.to_string()) {
         workflow.inputs.remove(index);
     }
     if let Some(step) = workflow.steps.iter_mut().find(|s| s.id == to_name) {
@@ -186,8 +198,14 @@ pub fn remove_workflow_input_connection(workflow: &mut Workflow, from_input: &st
 }
 
 /// Removes a connection between an output and a `CommandLineTool`.
-pub fn remove_workflow_output_connection(workflow: &mut Workflow, from_name: &str, from_slot_id: &str, to_output: &str) -> Result<()> {
-    if let Some(index) = workflow.outputs.iter().position(|o| o.id == to_output) {
+pub fn remove_workflow_output_connection(
+    workflow: &mut Workflow,
+    from_name: &str,
+    from_slot_id: &str,
+    to_output: &str,
+    remove_output: bool,
+) -> Result<()> {
+    if remove_output && let Some(index) = workflow.outputs.iter().position(|o| o.id == to_output) {
         // Remove the output connection
         workflow.outputs.remove(index);
     }
