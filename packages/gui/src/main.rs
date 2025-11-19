@@ -14,12 +14,12 @@ fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
-        document::Stylesheet { href: asset!("/assets/dx-components-theme.css") }
         document::Stylesheet { href: asset!("/assets/main.css") }
+        document::Stylesheet { href: asset!("/assets/dx-components-theme.css") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
         div {
-            class: "flex flex-col h-dvh overflow-hidden select-none",
+            class: "flex flex-col h-dvh overflow-hidden select-none p-1",
             Logo {}
 
             form {
@@ -43,10 +43,7 @@ fn App() -> Element {
                     class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
                 }
             }
-            div {
-                class: "flex-1 min-h-0",
-                Content_Area {  }
-            }
+            Content_Area {  }
         }
     }
 }
@@ -64,18 +61,22 @@ pub fn Logo() -> Element {
 pub fn Content_Area() -> Element {
     rsx!(
         Tabs{
+            class: "h-full",
             default_value: "editor".to_string(),
             TabList {
                 TabTrigger { index: 0usize, value: "editor".to_string(), "Nodes"}
                 TabTrigger { index: 1usize, value: "code".to_string(), "Code"}
             }
             TabContent{
-                class: "h-dvh",
+                class: "h-full",
                 index: 0usize,
                 value: "editor".to_string(),
                 GraphEditor {}
             }
-            TabContent{ index: 1usize, value: "code".to_string(),
+            TabContent{
+                class: "h-full",
+                index: 1usize,
+                value: "code".to_string(),
                 CodeViewer {}
             }
         }

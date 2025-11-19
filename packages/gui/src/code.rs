@@ -23,10 +23,8 @@ pub fn CodeViewer() -> Element {
 
     rsx! {
         div {
-            pre {
-                class: "whitespace-pre-wrap overflow-x-auto bg-gray-800 p-4 rounded-lg",
-                dangerous_inner_html: "{html_code}"
-            }
+            class: "codebox h-full",
+            dangerous_inner_html: "{html_code}"
         }
     }
 }
