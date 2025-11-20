@@ -10,11 +10,23 @@ pub fn Sidebar(props: SidebarProps) -> Element {
     rsx! {
         aside {
             class: "w-64 bg-zinc-200 border-r border-zinc-400 p-2 overflow-y-auto",
+            Logo { }
             h2 {
                 class:"text-sm text-zinc-800 mb-2 text-center",
                 "Project"
             }
             {props.children}
+        }
+    }
+}
+
+
+
+#[component]
+pub fn Logo() -> Element {
+    rsx! {
+        div {
+            img { src: asset!("/assets/logo.png"), width: 150 }
         }
     }
 }

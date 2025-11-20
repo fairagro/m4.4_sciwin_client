@@ -1,3 +1,5 @@
+use dioxus::desktop::tao::window::Icon;
+use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::{CapturedError, prelude::*};
 use gui::code::CodeViewer;
 use gui::components::footer::Footer;
@@ -9,7 +11,18 @@ use gui::workflow::VisualWorkflow;
 use gui::{ApplicationState, use_app_state};
 
 fn main() {
-    dioxus::launch(App);
+    dioxus::LaunchBuilder::new()
+        .with_cfg(
+            Config::default()
+                .with_menu(None)
+                .with_window(
+                    WindowBuilder::new()
+                        .with_inner_size(LogicalSize::new(1270, 720))
+                        .with_title("SciWIn Studio"),
+                )
+                .with_icon(Icon::from_rgba(include_bytes!("../assets/icon.rgba").to_vec(), 192, 192).unwrap()),
+        )
+        .launch(App);
 }
 
 #[component]
@@ -17,7 +30,7 @@ fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
 
     rsx! {
-        document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
+        document::Link { rel: "icon", href: asset!("/assets/icon.png") }
         document::Stylesheet { href: asset!("/assets/main.css") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
@@ -87,13 +100,4 @@ pub fn Content_Area() -> Element {
             }
         }
     )
-}
-
-#[component]
-pub fn Logo() -> Element {
-    rsx! {
-        div {
-            img { src: asset!("/assets/logo.svg"), width: 150 }
-        }
-    }
 }
