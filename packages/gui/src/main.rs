@@ -1,5 +1,6 @@
 use dioxus::{CapturedError, prelude::*};
 use gui::code::CodeViewer;
+use gui::components::footer::Footer;
 use gui::components::main::Main;
 use gui::components::sidebar::Sidebar;
 use gui::components::tabs::{TabContent, TabList, TabTrigger, Tabs};
@@ -21,37 +22,43 @@ fn App() -> Element {
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
         div {
-            class: "h-screen w-full flex",
-            Sidebar {
-                h2 {
-                    {use_app_state().read().working_directory.as_ref().map_or("No Project Loaded".to_string(), |p| format!("Project: {}", p.display()))}
+            class: "h-screen w-full flex flex-col",
+            div {
+                class: "h-full w-full flex flex-row flex-1",
+                Sidebar {
+                    h2 {
+                        {use_app_state().read().working_directory.as_ref().map_or("No Project Loaded".to_string(), |p| format!("Project: {}", p.display()))}
 
-                    //will be removed with proper project loading
-                    form {
-                        onsubmit: move |e| {
-                            e.prevent_default();
-                            let FormValue::Text(path) = e.get_first("path").unwrap()
-                                else { return Err(CapturedError::msg("Missing path")) };
-                            let workflow = VisualWorkflow::from_file(path)?;
-                            use_app_state().write().workflow = workflow;
-                            Ok(())
-                        },
-                        input {
-                            r#type: "text",
-                            name: "path",
-                            placeholder: "Path to CWL",
-                            value: "/mnt/m4.4_sciwin_client_demo/workflows/demo/demo.cwl"
-                        },
-                        input {
-                            r#type: "submit",
-                            value: "Load CWL",
-                            class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
+                        //will be removed with proper project loading
+                        form {
+                            onsubmit: move |e| {
+                                e.prevent_default();
+                                let FormValue::Text(path) = e.get_first("path").unwrap()
+                                    else { return Err(CapturedError::msg("Missing path")) };
+                                let workflow = VisualWorkflow::from_file(path)?;
+                                use_app_state().write().workflow = workflow;
+                                Ok(())
+                            },
+                            input {
+                                r#type: "text",
+                                name: "path",
+                                placeholder: "Path to CWL",
+                                value: "/mnt/m4.4_sciwin_client_demo/workflows/demo/demo.cwl"
+                            },
+                            input {
+                                r#type: "submit",
+                                value: "Load CWL",
+                                class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
+                            }
                         }
                     }
                 }
+                Main {
+                    Content_Area {  }
+                }
             }
-            Main {
-                Content_Area {  }
+            Footer {
+                {use_app_state().read().workflow.path.to_string_lossy().to_string()}
             }
         }
 
@@ -82,37 +89,6 @@ pub fn Content_Area() -> Element {
     )
 }
 
-/*
-        div {
-            class: "flex flex-col h-dvh overflow-hidden select-none p-1",
-            Logo {}
-
-            form {
-                onsubmit: move |e| {
-                    e.prevent_default();
-                    let FormValue::Text(path) = e.get_first("path").unwrap()
-                        else { return Err(CapturedError::msg("Missing path")) };
-                    let workflow = VisualWorkflow::from_file(path)?;
-                    use_app_state().write().workflow = workflow;
-                    Ok(())
-                },
-                input {
-                    r#type: "text",
-                    name: "path",
-                    placeholder: "Path to CWL",
-                    value: "/mnt/m4.4_sciwin_client_demo/workflows/demo/demo.cwl"
-                },
-                input {
-                    r#type: "submit",
-                    value: "Load CWL",
-                    class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
-                }
-            }
-            Content_Area {  }
-        }
-    }
-}
-
 #[component]
 pub fn Logo() -> Element {
     rsx! {
@@ -121,6 +97,3 @@ pub fn Logo() -> Element {
         }
     }
 }
-
-
- */
