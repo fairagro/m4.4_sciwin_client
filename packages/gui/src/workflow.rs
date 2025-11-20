@@ -13,7 +13,7 @@ use std::{
 /// Viewmodel implementation for Workflow
 #[derive(Default, Debug, Clone)]
 pub struct VisualWorkflow {
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
     pub workflow: Workflow,
     pub graph: WorkflowGraph,
 }
@@ -24,7 +24,7 @@ impl VisualWorkflow {
         let workflow = load_workflow(path).map_err(|e| anyhow::anyhow!("{e}"))?;
         let graph = load_workflow_graph(&workflow, path)?;
         Ok(Self {
-            path: path.to_path_buf(),
+            path: Some(path.to_path_buf()),
             workflow,
             graph,
         })
@@ -121,7 +121,7 @@ impl VisualWorkflow {
         let mut yaml = serde_yaml::to_string(&self.workflow)?;
 
         yaml = format_cwl(&yaml).map_err(|e| anyhow::anyhow!("Could not format yaml: {e}"))?;
-        let mut file = fs::File::create(&self.path)?;
+        let mut file = fs::File::create(self.path.clone().unwrap())?;
         file.write_all(yaml.as_bytes())?;
 
         Ok(())

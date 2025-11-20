@@ -1,14 +1,24 @@
 use dioxus::desktop::tao::window::Icon;
 use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
-use dioxus::{CapturedError, prelude::*};
-use gui::code::CodeViewer;
-use gui::components::footer::Footer;
-use gui::components::main::Main;
-use gui::components::sidebar::Sidebar;
-use gui::components::tabs::{TabContent, TabList, TabTrigger, Tabs};
-use gui::graph::GraphEditor;
-use gui::workflow::VisualWorkflow;
-use gui::{ApplicationState, use_app_state};
+use dioxus::prelude::*;
+use dioxus_free_icons::Icon as DioxusIcon;
+use dioxus_free_icons::icons::go_icons::GoRocket;
+use gui::{
+    ApplicationState,
+    code::CodeViewer,
+    components::{
+        footer::Footer,
+        fs_view::FileSystemView,
+        main::Main,
+        sidebar::Sidebar,
+        tabs::{TabContent, TabList, TabTrigger, Tabs},
+    },
+    graph::GraphEditor,
+    use_app_state,
+};
+use rfd::FileDialog;
+use s4n_core::config::Config as ProjectConfig;
+use std::path::PathBuf;
 
 fn main() {
     dioxus::LaunchBuilder::new()
@@ -39,39 +49,58 @@ fn App() -> Element {
             div {
                 class: "h-full w-full flex flex-row flex-1",
                 Sidebar {
-                    h2 {
-                        {use_app_state().read().working_directory.as_ref().map_or("No Project Loaded".to_string(), |p| format!("Project: {}", p.display()))}
+                    form {
+                        onsubmit: move |e| {
+                            e.prevent_default();
+                            let path =  FileDialog::new().pick_folder().unwrap();
 
-                        //will be removed with proper project loading
-                        form {
-                            onsubmit: move |e| {
-                                e.prevent_default();
-                                let FormValue::Text(path) = e.get_first("path").unwrap()
-                                    else { return Err(CapturedError::msg("Missing path")) };
-                                let workflow = VisualWorkflow::from_file(path)?;
-                                use_app_state().write().workflow = workflow;
-                                Ok(())
-                            },
-                            input {
-                                r#type: "text",
-                                name: "path",
-                                placeholder: "Path to CWL",
-                                value: "/mnt/m4.4_sciwin_client_demo/workflows/demo/demo.cwl"
-                            },
-                            input {
-                                r#type: "submit",
-                                value: "Load CWL",
-                                class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
+                            //get workflow.toml
+                            let config_path = path.join("workflow.toml");
+                            if !config_path.exists() {
+                                //ask user to init a new project
+                                return Ok(());
+                            } else {
+                                let toml = std::fs::read_to_string(config_path).unwrap();
+                                let config: ProjectConfig = toml::from_str(&toml).unwrap();
+                                use_app_state().write().project_name = Some(config.workflow.name);
                             }
+
+                            use_app_state().write().working_directory = Some(path.clone());
+                            Ok(())
+                        },
+                        input {
+                            r#type: "submit",
+                            value: "Load Project",
+                            class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer"
+                        },
+                    }
+                    h2 {
+                        {use_app_state().read().project_name.as_ref().map_or("".to_string(), |p| format!("Project: {p}" ))}
+                    }
+                    if use_app_state().read().working_directory.is_some() {
+                        FileSystemView{
+                            project_path: use_app_state().read().working_directory.clone().unwrap_or(PathBuf::from("."))
                         }
                     }
+                    else {
+                        div {
+                            class: "flex flex-col items-center mt-10 gap-4 text-lg text-center text-zinc-400",
+                            DioxusIcon { width: Some(64), height: Some(64), icon: GoRocket }
+                            div { "Start by loading up a project" }
+                        }
+                    }
+
                 }
                 Main {
-                    Content_Area {  }
+                    if use_app_state().read().workflow.path.is_some() {
+                        Content_Area {  }
+                    }
                 }
             }
             Footer {
-                {use_app_state().read().workflow.path.to_string_lossy().to_string()}
+                if let Some(path) = &use_app_state().read().workflow.path {
+                    {path.to_string_lossy().to_string()}
+                }
             }
         }
 

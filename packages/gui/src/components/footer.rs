@@ -9,7 +9,7 @@ pub struct FooterProps {
 pub fn Footer(props: FooterProps) -> Element {
     rsx! {
         footer {
-            class: "bg-zinc-200 h-6 flex items-center border-t border-zinc-400 text-xs p-2",
+            class: "select-none bg-zinc-200 h-6 flex items-center border-t border-zinc-400 text-xs p-2",
             {props.children}
         }
     }

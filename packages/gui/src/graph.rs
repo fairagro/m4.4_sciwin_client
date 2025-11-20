@@ -6,8 +6,8 @@ use crate::{
     use_app_state,
 };
 use commonwl::{StringOrDocument, load_doc, prelude::*};
-use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
+use dioxus::html::geometry::euclid::Point2D;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
@@ -198,7 +198,7 @@ pub fn GraphEditor() -> Element {
 
     rsx! {
         div {
-            class:"relative select-none overflow-scroll w-full h-full bg-white",
+            class:"relative select-none overflow-scroll w-full h-full",
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move{
                 e.stop_propagation();

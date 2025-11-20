@@ -14,7 +14,7 @@ pub fn CodeViewer() -> Element {
     let syntax = ps.find_syntax_by_extension("yaml").unwrap();
     let theme = &ts.themes["InspiredGitHub"];
     // Get the CWL code from state
-    let code = match fs::read_to_string(app_state().workflow.path) {
+    let code = match fs::read_to_string(app_state().workflow.path.unwrap()) {
         Ok(c) => c.clone(),
         Err(_) => "No CWL code loaded.".to_string(),
     };

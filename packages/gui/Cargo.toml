@@ -7,21 +7,27 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-rand.workspace = true
-serde_yaml.workspace = true
-commonwl = { path = "../cwl" }
-s4n_core = { path = "../core" }
-dioxus = { version = "0.7.1", features = [] }
-dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
-petgraph = "0.8.3"
-rust-sugiyama = "0.4.0"
 syntect = { version = "5.2.0", default-features = false, features = [
     "regex-fancy",
     "parsing",
     "default-themes",
     "default-syntaxes",
     "html",
+] }
+toml.workspace = true
+anyhow.workspace = true
+rand.workspace = true
+serde_yaml.workspace = true
+commonwl = { path = "../cwl" }
+s4n_core = { path = "../core" }
+dioxus = { version = "0.7.1", features = [] }
+dioxus-free-icons = { version = "0.10.0", features = ["octicons"] }
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
+petgraph = "0.8.3"
+rust-sugiyama = "0.4.0"
+rfd = { version = "0.15.4", default-features = false, features = [
+    "tokio",
+    "xdg-portal",
 ] }
 
 [features]

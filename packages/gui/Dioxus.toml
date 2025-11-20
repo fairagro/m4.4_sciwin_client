@@ -1,23 +1,18 @@
 [application]
+name = "SciWIn Studio"
+default_platform = "desktop"
 
+[bundle]
+identifier = "net.fairagro.sciwin.studio"
+publisher = "FAIRagro"
 icon = ["assets/icon.png"]
 
 [web.app]
-
-# HTML title tag content
 title = "SciWIn Studio"
 
-# include `assets` in web platform
 [web.resource]
-
-# Additional CSS style files
-style = []
-
-# Additional JavaScript files
+style = ["assets/main.css", "assets/tailwind.css"]
 script = []
 
 [web.resource.dev]
-
-# Javascript code file
-# serve: [dev-server] only
 script = []

@@ -14,6 +14,7 @@ pub mod workflow;
 #[derive(Default, Clone, Debug)]
 pub struct ApplicationState {
     pub working_directory: Option<PathBuf>,
+    pub project_name: Option<String>,
     pub workflow: VisualWorkflow,
     pub dragging: Option<DragState>,
     pub drag_offset: Signal<ClientPoint>,
