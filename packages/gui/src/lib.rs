@@ -1,6 +1,7 @@
 use crate::workflow::VisualWorkflow;
 use dioxus::{html::geometry::ClientPoint, prelude::*};
 use petgraph::graph::NodeIndex;
+use std::path::PathBuf;
 
 pub mod code;
 pub mod components;
@@ -12,6 +13,7 @@ pub mod workflow;
 
 #[derive(Default, Clone, Debug)]
 pub struct ApplicationState {
+    pub working_directory: Option<PathBuf>,
     pub workflow: VisualWorkflow,
     pub dragging: Option<DragState>,
     pub drag_offset: Signal<ClientPoint>,

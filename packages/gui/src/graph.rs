@@ -189,7 +189,7 @@ pub fn GraphEditor() -> Element {
 
     rsx! {
         div {
-            class:"relative select-none overflow-scroll h-full",
+            class:"relative select-none overflow-scroll w-full h-full bg-white",
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move{
                 e.stop_propagation();

@@ -9,11 +9,3 @@ body {
   overflow: hidden;
   /* prevent root scrollbars */
 }
-
-.codebox pre {
-  max-height: 100%;
-  overflow: scroll;
-  word-break: normal !important;
-  word-wrap: normal !important;
-  white-space: pre !important;
-}

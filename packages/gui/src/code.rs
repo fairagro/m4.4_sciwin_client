@@ -23,8 +23,8 @@ pub fn CodeViewer() -> Element {
 
     rsx! {
         div {
-            class: "codebox h-full",
-            dangerous_inner_html: "{html_code}"
+            class: "codebox",
+                dangerous_inner_html: "{html_code}"
         }
     }
 }
