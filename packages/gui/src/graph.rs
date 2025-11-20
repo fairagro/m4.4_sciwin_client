@@ -177,14 +177,23 @@ pub fn GraphEditor() -> Element {
     let mut new_line = use_signal(|| None::<LineProps>);
 
     let mut div_ref: Signal<Option<Rc<MountedData>>> = use_signal(|| None);
-    let mut client_rect = use_signal(|| None);
 
     let read_rect = move || async move {
         if let Some(div) = div_ref()
             && let Ok(rect) = div.get_client_rect().await
         {
-            client_rect.set(Some(rect));
+            return rect;
         }
+        Default::default()
+    };
+
+    let read_scroll = move || async move {
+        if let Some(div) = div_ref()
+            && let Ok(scroll) = div.get_scroll_offset().await
+        {
+            return (scroll.x, scroll.y);
+        }
+        Default::default()
     };
 
     rsx! {
@@ -212,19 +221,15 @@ pub fn GraphEditor() -> Element {
                         },
                         DragState::Connection { source_node, source_port } => {
                             //we are dragging from a connection
-                            let rect = if let Some(rect) = *client_rect.read() {
-                                rect
-                            } else {
-                                read_rect().await;
-                                client_rect.read().unwrap()
-                            };
+                            let rect = read_rect().await;
+                            let scroll = read_scroll().await;
 
                             let base_pos = (current_pos.x - rect.origin.x,  current_pos.y - rect.origin.y);
                             let source_node = &use_app_state()().workflow.graph[source_node];
 
                             let (x_source, y_source) = edge::calculate_source_position(source_node, &source_port);
-                            let x_target = base_pos.0 as f32;
-                            let y_target = base_pos.1 as f32;
+                            let x_target = (base_pos.0 + scroll.0) as f32;
+                            let y_target = (base_pos.1 + scroll.1) as f32;
 
                             let cwl_type = source_node.outputs.iter().find(|i| i.id == source_port).unwrap().type_.clone(); //danger!
                             let stroke = edge::get_stroke_from_cwl_type(cwl_type);
