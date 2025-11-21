@@ -10,7 +10,6 @@ license.workspace = true
 toml.workspace = true
 anyhow.workspace = true
 rand.workspace = true
-serde_json.workspace = true
 serde_yaml.workspace = true
 commonwl = { path = "../cwl" }
 s4n_core = { path = "../core" }

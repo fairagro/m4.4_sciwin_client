@@ -3110,7 +3110,6 @@ dependencies = [
  "rfd",
  "rust-sugiyama",
  "s4n_core",
- "serde_json",
  "serde_yaml",
  "toml 0.9.8",
 ]

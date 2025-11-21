@@ -20,7 +20,11 @@ pub fn CodeViewer() -> Element {
             let value = value.clone();
             async move{
                 document::eval(include_str!("../assets/bundle.min.js")).await.unwrap();
-                let escaped_value = serde_json::to_string(&value).unwrap();
+                let escaped_value = value
+                    .replace('\\', "\\\\")
+                    .replace('`', "\\`")
+                    .replace("${", "\\${");
+
                 document::eval(&format!("initMonaco(`{}`);", escaped_value)).await.unwrap();
             }
             },
