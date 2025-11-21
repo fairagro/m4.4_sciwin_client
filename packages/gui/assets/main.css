@@ -1,0 +1,11 @@
+/* App-wide styling */
+body {
+  font-size: 12px;
+}
+
+html,
+body {
+  height: 100dvh;
+  overflow: hidden;
+  /* prevent root scrollbars */
+}
