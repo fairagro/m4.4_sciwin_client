@@ -1,13 +1,11 @@
 [application]
 name = "SciWIn Studio"
 default_platform = "desktop"
-asset_dir = "assets"
 
 [bundle]
 identifier = "net.fairagro.sciwin.studio"
 publisher = "FAIRagro"
 icon = ["assets/icon.ico", "assets/icon.png"]
-resources = ["/assets/**/*"]
 category = "Productivity"
 
 [bundle.windows]
