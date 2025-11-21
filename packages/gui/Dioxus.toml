@@ -7,7 +7,8 @@ asset_dir = "assets"
 identifier = "net.fairagro.sciwin.studio"
 publisher = "FAIRagro"
 icon = ["assets/icon.ico", "assets/icon.png"]
-resources = ["assets/**/*"]
+resources = ["/assets/**/*"]
+category = "Productivity"
 
 [bundle.windows]
 icon_path = "packages/gui/assets/icon.ico"
