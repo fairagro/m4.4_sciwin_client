@@ -116,7 +116,7 @@ pub fn Line(props: LineProps) -> Element {
             top: 0,
             svg {
                 view_box: "0 0 1920 1080",
-                class: "overflow-visible w-1 h-1",
+                class: "overflow-visible block",
                 onclick: move |e| {
                     if let Some(handler) = props.onclick {
                         handler.call(e);
