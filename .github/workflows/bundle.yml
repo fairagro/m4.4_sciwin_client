@@ -19,4 +19,4 @@ jobs:
       - name: Install Dioxus 📈
         run: curl -sSL http://dioxus.dev/install.sh | sh
       - name: Create bundle
-        run: dx bundle --desktop 
+        run: dx bundle -p gui --desktop 
