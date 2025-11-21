@@ -23,5 +23,10 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: Bundle
-          path: target/dx/gui/release/bundle/windows/
+          path: target/dx/gui/bundle/windows/bundle
+          retention-days: 1
+      - uses: actions/upload-artifact@v5
+        with:
+          name: Exe
+          path: target/dx/gui/release/windows
           retention-days: 1
