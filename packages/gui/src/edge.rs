@@ -111,10 +111,11 @@ pub fn Line(props: LineProps) -> Element {
 
     rsx! {
         div {
-            class: "absolute w-0 h-0 z-[1]",
+            class: "absolute z-[1]",
             left: 0,
             top: 0,
             svg {
+                view_box: "0 0 1920 1080",
                 class: "overflow-visible w-0 h-0",
                 onclick: move |e| {
                     if let Some(handler) = props.onclick {
