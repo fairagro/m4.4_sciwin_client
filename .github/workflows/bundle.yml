@@ -1,0 +1,22 @@
+name: 🧰 Bundle SciWIn Studio (Windows)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  bundle:
+    name: 🎁 Bundle
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Dioxus 📈
+        run: cargo install dioxus-cli --force
+      - name: Create bundle
+        run: dx bundle --desktop 
