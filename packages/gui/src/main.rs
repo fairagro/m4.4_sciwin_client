@@ -43,6 +43,7 @@ fn App() -> Element {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
         document::Stylesheet { href: asset!("/assets/main.css") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
+        document::Stylesheet { href: asset!("/assets/bundle.min.css") }
 
         div {
             class: "h-screen w-full flex flex-col",

@@ -7,16 +7,10 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-syntect = { version = "5.2.0", default-features = false, features = [
-    "regex-fancy",
-    "parsing",
-    "default-themes",
-    "default-syntaxes",
-    "html",
-] }
 toml.workspace = true
 anyhow.workspace = true
 rand.workspace = true
+serde_json.workspace = true
 serde_yaml.workspace = true
 commonwl = { path = "../cwl" }
 s4n_core = { path = "../core" }
