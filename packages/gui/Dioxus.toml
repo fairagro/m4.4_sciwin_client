@@ -5,7 +5,10 @@ default_platform = "desktop"
 [bundle]
 identifier = "net.fairagro.sciwin.studio"
 publisher = "FAIRagro"
-icon = ["assets/icon.ico"]
+icon = ["assets/icon.ico", "assets/icon.png"]
+
+[bundle.windows]
+icon_path = "assets/icon.ico"
 
 [web.app]
 title = "SciWIn Studio"
