@@ -8,7 +8,7 @@ publisher = "FAIRagro"
 icon = ["assets/icon.ico", "assets/icon.png"]
 
 [bundle.windows]
-icon_path = "assets/icon.ico"
+icon_path = "packages/gui/assets/icon.ico"
 
 [web.app]
 title = "SciWIn Studio"
