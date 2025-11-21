@@ -24,6 +24,11 @@ pub fn FileTree(node: Node, is_root: bool) -> Element {
     let node = use_signal(|| node);
 
     let mut expanded = use_signal(|| false);
+
+    if is_root {
+        expanded.set(true);
+    }
+
     const ICON_SIZE: Option<u32> = Some(14);
 
     let cursor_class = if node().is_dir | node().name.ends_with(".cwl") {
