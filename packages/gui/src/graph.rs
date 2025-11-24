@@ -6,7 +6,10 @@ use crate::{
     use_app_state,
 };
 use commonwl::{StringOrDocument, load_doc, prelude::*};
-use dioxus::html::{canvas::width, geometry::euclid::Point2D};
+use dioxus::html::geometry::{
+    Pixels, PixelsSize, PixelsVector2D,
+    euclid::{Point2D, Rect},
+};
 use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
@@ -175,34 +178,20 @@ impl WorkflowGraphBuilder {
 pub fn GraphEditor() -> Element {
     let graph = use_app_state()().workflow.graph;
     let mut new_line = use_signal(|| None::<LineProps>);
-
     let mut div_ref: Signal<Option<Rc<MountedData>>> = use_signal(|| None);
 
-    let read_rect = move || async move {
-        if let Some(div) = div_ref()
-            && let Ok(rect) = div.get_client_rect().await
-        {
-            return rect;
-        }
-        Default::default()
-    };
-
-    let read_scroll = move || async move {
-        if let Some(div) = div_ref()
-            && let Ok(scroll) = div.get_scroll_offset().await
-        {
-            return (scroll.x, scroll.y);
-        }
-        Default::default()
-    };
-
-    let read_scroll_size = move || async move {
-        if let Some(div) = div_ref()
-            && let Ok(scroll) = div.get_scroll_size().await
-        {
-            return (scroll.width, scroll.height);
-        }
-        Default::default()
+    struct DivDims {
+        rect: Rect<f64, Pixels>,
+        scroll_offset: PixelsVector2D,
+        scroll_size: PixelsSize,
+    }
+    let read_dims = move || async move {
+        let div = div_ref()?;
+        Some(DivDims {
+            rect: div.get_client_rect().await.ok()?,
+            scroll_offset: div.get_scroll_offset().await.ok()?,
+            scroll_size: div.get_scroll_size().await.ok()?,
+        })
     };
 
     let mut dim_w = use_signal(|| 0.0);
@@ -210,9 +199,10 @@ pub fn GraphEditor() -> Element {
 
     let update_dims = move || {
         spawn(async move {
-            let rect = read_scroll_size().await;
-            dim_w.set(rect.0);
-            dim_h.set(rect.1);
+            if let Some(dims) = read_dims().await {
+                dim_w.set(dims.scroll_size.width);
+                dim_h.set(dims.scroll_size.height);
+            }
         });
     };
 
@@ -243,15 +233,16 @@ pub fn GraphEditor() -> Element {
                         },
                         DragState::Connection { source_node, source_port } => {
                             //we are dragging from a connection
-                            let rect = read_rect().await;
-                            let scroll = read_scroll().await;
+                            let dims = read_dims().await.unwrap();
+                            let rect = dims.rect;
+                            let scroll = dims.scroll_offset;
 
                             let base_pos = (current_pos.x - rect.origin.x,  current_pos.y - rect.origin.y);
                             let source_node = &use_app_state()().workflow.graph[source_node];
 
                             let (x_source, y_source) = edge::calculate_source_position(source_node, &source_port);
-                            let x_target = (base_pos.0 + scroll.0) as f32;
-                            let y_target = (base_pos.1 + scroll.1) as f32;
+                            let x_target = (base_pos.0 + scroll.x) as f32;
+                            let y_target = (base_pos.1 + scroll.y) as f32;
 
                             let cwl_type = source_node.outputs.iter().find(|i| i.id == source_port).unwrap().type_.clone(); //danger!
                             let stroke = edge::get_stroke_from_cwl_type(cwl_type);
