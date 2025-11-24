@@ -26,6 +26,7 @@ pub fn calculate_source_position(source_node: &VisualNode, slot_id: &str) -> (f3
     let x_source = NODE_WIDTH + source_node.position.x;
     (x_source, y_source)
 }
+
 pub fn calculate_target_position(target_node: &VisualNode, slot_id: &str) -> (f32, f32) {
     //get positions in array
     let tix = target_node.inputs.iter().position(|o| o.id == slot_id).unwrap_or_default();

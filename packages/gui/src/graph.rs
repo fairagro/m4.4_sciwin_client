@@ -288,3 +288,29 @@ pub fn GraphEditor() -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use commonwl::load_workflow;
+
+    #[test]
+    fn test_load_workflow_graph() {
+        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let workflow = load_workflow(path).unwrap();
+        let graph = load_workflow_graph(&workflow, path).unwrap();
+
+        assert_eq!(graph.node_count(), 5); //2 inputs, 2 steps, 1 output
+        assert_eq!(graph.edge_count(), 4);
+    }
+
+    #[test]
+    fn test_load_workflow_graph_02() {
+        let path = "../../testdata/mkdir_wf.cwl";
+        let workflow = load_workflow(path).unwrap();
+        let graph = load_workflow_graph(&workflow, path).unwrap();
+
+        assert_eq!(graph.node_count(), 3);
+        assert_eq!(graph.edge_count(), 2);
+    }
+}
