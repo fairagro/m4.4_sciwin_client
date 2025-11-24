@@ -6,7 +6,7 @@ use crate::{
     use_app_state,
 };
 use commonwl::{StringOrDocument, load_doc, prelude::*};
-use dioxus::html::geometry::euclid::Point2D;
+use dioxus::html::{canvas::width, geometry::euclid::Point2D};
 use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
@@ -196,12 +196,31 @@ pub fn GraphEditor() -> Element {
         Default::default()
     };
 
-    let width = move || async move {read_rect().await.size.width};
-    let height = move || async move {read_rect().await.size.width;};
+    let read_scroll_size = move || async move {
+        if let Some(div) = div_ref()
+            && let Ok(scroll) = div.get_scroll_size().await
+        {
+            return (scroll.width, scroll.height);
+        }
+        Default::default()
+    };
+
+    let mut dim_w = use_signal(|| 0.0);
+    let mut dim_h = use_signal(|| 0.0);
+
+    let update_dims = move || {
+        spawn(async move {
+            let rect = read_scroll_size().await;
+            dim_w.set(rect.0);
+            dim_h.set(rect.1);
+        });
+    };
 
     rsx! {
         div {
             class:"relative select-none overflow-scroll w-full h-full",
+            onresize: move |_| update_dims(),
+            onscroll: move |_| update_dims(),
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move{
                 e.stop_propagation();
@@ -252,11 +271,11 @@ pub fn GraphEditor() -> Element {
                 NodeElement {id}
             },
 
-            svg {
-                width: "100%",
-                height: "100%",
-                view_box: "0 0 100% 100%",
-                class: "absolute inset-0 w-full h-full pointer-events-auto",
+            svg{
+                width: "{dim_w}",
+                height: "{dim_h}",
+                view_box: "0 0 {dim_w} {dim_h}",
+                class: "absolute inset-0  pointer-events-auto",
                 for id in graph.edge_indices() {
                     g {
                         EdgeElement {id}
