@@ -110,26 +110,17 @@ pub fn Line(props: LineProps) -> Element {
     let stroke_width = 3;
 
     rsx! {
-        div {
-            class: "absolute z-[1]",
-            left: 0,
-            top: 0,
-            svg {
-                view_box: "0 0 1920 1080",
-                class: "overflow-visible block",
-                onclick: move |e| {
-                    if let Some(handler) = props.onclick {
-                        handler.call(e);
-                    }
-                },
-                path {
-                    class: "{props.stroke}",
-                    d: "{path_data}",
-                    stroke_width: "{stroke_width}",
-                    fill: "transparent",
-                    style: "cursor: pointer;",
+     path {
+            onclick: move |e| {
+                if let Some(handler) = props.onclick {
+                    handler.call(e);
                 }
-            }
+            },
+            class: "{props.stroke}",
+            d: "{path_data}",
+            stroke_width: "{stroke_width}",
+            fill: "transparent",
+            style: "cursor: pointer;",
         }
     }
 }

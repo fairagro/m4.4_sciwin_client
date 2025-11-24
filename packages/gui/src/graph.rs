@@ -6,8 +6,8 @@ use crate::{
     use_app_state,
 };
 use commonwl::{StringOrDocument, load_doc, prelude::*};
-use dioxus::prelude::*;
 use dioxus::html::geometry::euclid::Point2D;
+use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::{graph::NodeIndex, prelude::*};
 use rand::Rng;
@@ -196,6 +196,9 @@ pub fn GraphEditor() -> Element {
         Default::default()
     };
 
+    let width = move || async move {read_rect().await.size.width};
+    let height = move || async move {read_rect().await.size.width;};
+
     rsx! {
         div {
             class:"relative select-none overflow-scroll w-full h-full",
@@ -248,17 +251,28 @@ pub fn GraphEditor() -> Element {
             for id in graph.node_identifiers() {
                 NodeElement {id}
             },
-            for id in graph.edge_indices() {
-                EdgeElement {id}
-            },
-            if let Some(line) = &*new_line.read() {
-                Line {
-                    x_source: line.x_source,
-                    y_source: line.y_source,
-                    x_target: line.x_target,
-                    y_target: line.y_target,
-                    stroke: line.stroke.clone(),
-                    onclick: line.onclick
+
+            svg {
+                width: "100%",
+                height: "100%",
+                view_box: "0 0 100% 100%",
+                class: "absolute inset-0 w-full h-full pointer-events-auto",
+                for id in graph.edge_indices() {
+                    g {
+                        EdgeElement {id}
+                    }
+                },
+                if let Some(line) = &*new_line.read() {
+                    g {
+                        Line {
+                            x_source: line.x_source,
+                            y_source: line.y_source,
+                            x_target: line.x_target,
+                            y_target: line.y_target,
+                            stroke: line.stroke.clone(),
+                            onclick: line.onclick
+                        }
+                    }
                 }
             }
         }
