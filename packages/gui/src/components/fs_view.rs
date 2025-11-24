@@ -6,11 +6,6 @@ use dioxus_free_icons::Icon;
 use dioxus_free_icons::icons::go_icons::{GoChevronDown, GoChevronRight, GoFile, GoFileDirectory};
 use std::path::{Path, PathBuf};
 
-#[derive(Props, Clone, PartialEq)]
-pub struct FileSystemProps {
-    project_path: PathBuf,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node {
     pub name: String,
@@ -20,10 +15,9 @@ pub struct Node {
 }
 
 #[component]
-pub fn FileTree(node: Node, is_root: bool) -> Element {
-    let node = use_signal(|| node);
-
+pub fn FileTree(node: ReadSignal<Node>, is_root: bool) -> Element {
     let mut expanded = use_signal(|| false);
+    let mut app_state = use_app_state();
 
     if is_root {
         expanded.set(true);
@@ -31,7 +25,7 @@ pub fn FileTree(node: Node, is_root: bool) -> Element {
 
     const ICON_SIZE: Option<u32> = Some(14);
 
-    let cursor_class = if node().is_dir | node().name.ends_with(".cwl") {
+    let cursor_class = if node.read().is_dir | node.read().name.ends_with(".cwl") {
         "cursor-pointer"
     } else {
         "cursor-not-allowed"
@@ -46,14 +40,14 @@ pub fn FileTree(node: Node, is_root: bool) -> Element {
                 class: "{cursor_class} select-none",
                 onclick: move |_| {
                     //simply expand folder if directory
-                    if node().is_dir {
+                    if node.read().is_dir {
                         expanded.set(!expanded())
                     }
-                    else if node().name.ends_with(".cwl") {
+                    else if node.read().name.ends_with(".cwl") {
                         let data = load_doc(&node().path).unwrap();
                         if let commonwl::CWLDocument::Workflow(_) = data {
-                            let workflow = VisualWorkflow::from_file(&node().path).unwrap();
-                            use_app_state().write().workflow = workflow;
+                            let workflow = VisualWorkflow::from_file(&node.read().path).unwrap();
+                            app_state.write().workflow = workflow;
                         }
                     }
                 },
@@ -76,7 +70,7 @@ pub fn FileTree(node: Node, is_root: bool) -> Element {
                 }
             },
             if expanded() {
-                for child in node().children.clone() {
+                for child in node.read().children.clone() {
                     FileTree { node: child , is_root: false}
                 }
             }
@@ -85,10 +79,15 @@ pub fn FileTree(node: Node, is_root: bool) -> Element {
 }
 
 #[component]
-pub fn FileSystemView(props: FileSystemProps) -> Element {
-    let root = load_project_tree(&props.project_path);
+pub fn FileSystemView(project_path: ReadSignal<PathBuf>) -> Element {
+    let app_state = use_app_state();
+
+    let root = use_memo(move || app_state.read().working_directory.as_ref().map(|path| load_project_tree(path)));
+
     rsx! {
-        FileTree { node: root , is_root: true}
+        if let Some(root) = root(){
+            FileTree { node: root , is_root: true }
+        }
     }
 }
 

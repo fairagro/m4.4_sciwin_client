@@ -176,7 +176,9 @@ impl WorkflowGraphBuilder {
 
 #[component]
 pub fn GraphEditor() -> Element {
-    let graph = use_app_state()().workflow.graph;
+    let mut app_state = use_app_state();
+    let graph = app_state().workflow.graph;
+
     let mut new_line = use_signal(|| None::<LineProps>);
     let mut div_ref: Signal<Option<Rc<MountedData>>> = use_signal(|| None);
 
@@ -214,7 +216,7 @@ pub fn GraphEditor() -> Element {
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move{
                 e.stop_propagation();
-                if let Some(drag_state) = use_app_state()().dragging{
+                if let Some(drag_state) = app_state().dragging{
                     //we are dragging
                     let current_pos = e.client_coordinates();
 
@@ -222,14 +224,14 @@ pub fn GraphEditor() -> Element {
                         DragState::None => todo!(),
                         DragState::Node(node_index) => {
                             //we are dragging a node
-                            let last_pos = (use_app_state()().drag_offset)();
+                            let last_pos = (app_state().drag_offset)();
 
                             let deltaX = current_pos.x - last_pos.x;
                             let deltaY = current_pos.y - last_pos.y;
 
-                            let pos = use_app_state()().workflow.graph[node_index].position;
-                            use_app_state().write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
-                            use_app_state().write().drag_offset.set(current_pos);
+                            let pos = app_state.read().workflow.graph[node_index].position;
+                            app_state.write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                            app_state.write().drag_offset.set(current_pos);
                         },
                         DragState::Connection { source_node, source_port } => {
                             //we are dragging from a connection
@@ -238,7 +240,7 @@ pub fn GraphEditor() -> Element {
                             let scroll = dims.scroll_offset;
 
                             let base_pos = (current_pos.x - rect.origin.x,  current_pos.y - rect.origin.y);
-                            let source_node = &use_app_state()().workflow.graph[source_node];
+                            let source_node = &app_state.read().workflow.graph[source_node];
 
                             let (x_source, y_source) = edge::calculate_source_position(source_node, &source_port);
                             let x_target = (base_pos.0 + scroll.x) as f32;
@@ -255,7 +257,7 @@ pub fn GraphEditor() -> Element {
             },
             onmouseup: move |_| {
                 //reset state
-                use_app_state().write().dragging = None;
+                app_state.write().dragging = None;
                 new_line.set(None);
             },
             for id in graph.node_identifiers() {

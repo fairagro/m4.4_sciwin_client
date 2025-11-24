@@ -7,7 +7,7 @@ pub fn CodeViewer() -> Element {
     let app_state = use_app_state();
 
     // Get the CWL code from state
-    let code = match fs::read_to_string(app_state().workflow.path.unwrap()) {
+    let code = match fs::read_to_string(app_state.read().workflow.path.clone().unwrap()) {
         Ok(c) => c.clone(),
         Err(_) => "No CWL code loaded.".to_string(),
     };

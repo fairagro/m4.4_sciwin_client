@@ -18,7 +18,6 @@ use gui::{
 };
 use rfd::FileDialog;
 use s4n_core::config::Config as ProjectConfig;
-use std::path::PathBuf;
 
 fn main() {
     dioxus::LaunchBuilder::new()
@@ -38,6 +37,9 @@ fn main() {
 #[component]
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
+
+    let mut app_state = use_app_state();
+    let working_dir = use_memo(move || app_state.read().working_directory.clone());
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
@@ -63,10 +65,10 @@ fn App() -> Element {
                             } else {
                                 let toml = std::fs::read_to_string(config_path).unwrap();
                                 let config: ProjectConfig = toml::from_str(&toml).unwrap();
-                                use_app_state().write().project_name = Some(config.workflow.name);
+                                app_state.write().project_name = Some(config.workflow.name);
                             }
 
-                            use_app_state().write().working_directory = Some(path.clone());
+                            app_state.write().working_directory = Some(path.clone());
                             Ok(())
                         },
                         input {
@@ -76,11 +78,11 @@ fn App() -> Element {
                         },
                     }
                     h2 {
-                        {use_app_state().read().project_name.as_ref().map_or("".to_string(), |p| format!("Project: {p}" ))}
+                        {app_state.read().project_name.as_ref().map_or("".to_string(), |p| format!("Project: {p}" ))}
                     }
-                    if use_app_state().read().working_directory.is_some() {
-                        FileSystemView{
-                            project_path: use_app_state().read().working_directory.clone().unwrap_or(PathBuf::from("."))
+                    if let Some(working_dir) = working_dir(){
+                        FileSystemView {
+                            project_path: working_dir
                         }
                     }
                     else {
@@ -93,13 +95,13 @@ fn App() -> Element {
 
                 }
                 Main {
-                    if use_app_state().read().workflow.path.is_some() {
+                    if app_state.read().workflow.path.is_some() {
                         Content_Area {  }
                     }
                 }
             }
             Footer {
-                if let Some(path) = &use_app_state().read().workflow.path {
+                if let Some(path) = &app_state.read().workflow.path {
                     {path.to_string_lossy().to_string()}
                 }
             }
