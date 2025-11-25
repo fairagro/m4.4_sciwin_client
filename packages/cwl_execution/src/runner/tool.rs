@@ -18,6 +18,7 @@ use std::{
 };
 use tempfile::tempdir;
 
+
 pub fn run_tool(
     tool: &mut CWLDocument,
     input_values: &InputObject,
@@ -29,6 +30,46 @@ pub fn run_tool(
     //create staging directory
     let dir = tempdir()?;
     info!("📁 Created staging directory: {:?}", dir.path());
+    fn resolve_image_path(image: &str, _cwl_path: &Path) -> String {
+    let current_dir = env::current_dir().unwrap();
+
+    if Path::new(image).is_absolute() {
+        return image.to_string();
+    }
+
+    let joined = current_dir.join(image);
+
+    match std::fs::canonicalize(&joined) {
+        Ok(p) => p.to_string_lossy().into_owned(),
+        Err(e) => {
+            log::warn!("⚠️ Could not canonicalize {} ({})", joined.display(), e);
+            image.to_string()
+        }
+    }
+}
+    // If tool has a DockerRequirement, fix its path immediately
+    if let CWLDocument::CommandLineTool(clt) = tool {
+    for req in &mut clt.requirements {
+        if let Requirement::DockerRequirement(docker_req) = req {
+            if let Some(pull_val) = docker_req.docker_pull.clone() {
+                let is_dockerfile = pull_val.contains("Dockerfile");
+                if Path::new(&pull_val).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif")) {
+                    let abs = resolve_image_path(&pull_val, cwl_path);
+                    docker_req.docker_pull = Some(abs);
+                }
+                else if !is_dockerfile {
+                    let maybe_sif = format!("{pull_val}.sif");
+                    if Path::new(&maybe_sif).exists() {
+                        let abs = resolve_image_path(&maybe_sif, cwl_path);
+                        docker_req.docker_pull = Some(abs);
+                    } else {
+                        docker_req.docker_pull = Some(pull_val);
+                    }
+                }
+            }
+        }
+    }
+}
 
     //save reference to current working directory
     let current = env::current_dir()?;
@@ -64,7 +105,6 @@ pub fn run_tool(
         }
         process_expressions(tool, &mut input_values)?;
     }
-
     //stage files listed in input default values, input values or initial work dir requirements
     stage_required_files(tool, &input_values, &mut runtime, tool_path, dir.path(), output_directory)?;
 

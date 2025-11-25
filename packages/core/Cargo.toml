@@ -8,6 +8,7 @@ authors.workspace = true
 
 [dependencies]
 commonwl = { path = "../cwl", features = ["execution", "annotation"] }
+cwl_execution = { path = "../cwl_execution" }
 repository = { path = "../repository" }
 util = { path = "../util" }
 
