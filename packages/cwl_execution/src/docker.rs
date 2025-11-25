@@ -49,23 +49,18 @@ pub fn configure_container_engine(engine: &Option<ContainerEngineType>) {
     match engine {
         Some(ContainerEngineType::Docker) => {
             set_container_engine(ContainerEngine::Docker);
-            log::info!("✅ Using Docker as container engine");
         }
         Some(ContainerEngineType::Podman) => {
             set_container_engine(ContainerEngine::Podman);
-            log::info!("✅ Using Podman as container engine");
         }
         Some(ContainerEngineType::Singularity) => {
             set_container_engine(ContainerEngine::Singularity);
-            log::info!("✅ Using Singularity as container engine");
         }
         Some(ContainerEngineType::Apptainer) => {
             set_container_engine(ContainerEngine::Apptainer);
-            log::info!("✅ Using Apptainer as container engine");
         }
         None => {
-            // No container mode selected
-            log::info!("ℹ️ Running without container engine (native execution)");
+            log::info!("Running without container engine (native execution)");
         }
     }
 }
