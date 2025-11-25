@@ -6,7 +6,7 @@ use rand::Rng;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::process::{Command as SystemCommand, Stdio};
-use std::{fs, path::MAIN_SEPARATOR_STR, process::Command};
+use std::{fs, process::Command};
 use util::handle_process;
 use clap::ValueEnum;
 
@@ -75,59 +75,103 @@ pub fn container_engine() -> ContainerEngine {
     CONTAINER_ENGINE.with(|engine| *engine.borrow())
 }
 
-pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerRequirement, runtime: &RuntimeEnvironment) -> Result<SystemCommand> {
+pub(crate) fn build_docker_command(
+    command: &mut SystemCommand,
+    docker: &DockerRequirement,
+    runtime: &RuntimeEnvironment,
+) -> Result<SystemCommand> {
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
     let container_engine = container_engine().to_string();
     let is_singularity = container_engine.contains("singularity") || container_engine.contains("apptainer");
 
     let docker_image = if let Some(pull) = &docker.docker_pull {
+        let inspect_status = SystemCommand::new(&container_engine)
+            .args(["image", "inspect", pull])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+
+        if !matches!(inspect_status, Ok(s) if s.success()) && !is_singularity {
+            log::info!("Pulling image {pull}...");
+            let _ = SystemCommand::new(&container_engine)
+                .args(["pull", pull])
+                .status();
+        }
+
         pull
-    } else if let (Some(docker_file), Some(docker_image_id)) = (&docker.docker_file, &docker.docker_image_id) {
-        let path = match docker_file {
+    } else if let (Some(docker_file), Some(docker_image_id)) =
+        (&docker.docker_file, &docker.docker_image_id)
+    {
+        let dockerfile_path = match docker_file {
             Entry::Include(include) => include.include.clone(),
             Entry::Source(src) => {
-                let path = format!("{}/Dockerfile", runtime.runtime["tmpdir"]);
-                fs::write(&path, src)?;
-                path
+                let mut tmpfile = NamedTempFile::new()?;
+                tmpfile.write_all(src.as_bytes())?;
+                tmpfile.path().display().to_string()
             }
         };
-        let path = path.trim_start_matches(&("..".to_owned() + MAIN_SEPARATOR_STR)).to_string();
 
-        let mut build = SystemCommand::new(&container_engine);
-        let mut process = build
-            .args(["build", "-f", &path, "-t", docker_image_id, "."])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        handle_process(&mut process, 0)?;
+        let inspect_status = SystemCommand::new(&container_engine)
+            .args(["image", "inspect", docker_image_id])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+
+        if !matches!(inspect_status, Ok(s) if s.success()) && !is_singularity {
+            log::info!("Building Docker image {docker_image_id}...");
+            let mut build = SystemCommand::new(&container_engine);
+            let mut process = build
+                .args(["build", "-f", &dockerfile_path, "-t", docker_image_id, "."])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
+            handle_process(&mut process, 0)?;
+        }
+
         docker_image_id
     } else {
-        unreachable!()
+        unreachable!("DockerRequirement missing both docker_pull and docker_file")
     };
-
     let outdir = runtime
         .runtime
         .get("outdir")
         .map(|s| s.to_string())
         .unwrap_or_else(|| std::env::current_dir().unwrap().to_string_lossy().into_owned());
 
-    let tmpdir = runtime.runtime.get("tmpdir").map(|s| s.to_string()).unwrap_or_else(|| "/tmp".to_string());
+    let tmpdir = runtime
+        .runtime
+        .get("tmpdir")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "/tmp".to_string());
 
     let workdir = if let Some(docker_output_directory) = &docker.docker_output_directory {
         docker_output_directory
     } else {
-        &format!("/{}", rand::rng().sample_iter(&Alphanumeric).take(5).map(char::from).collect::<String>())
+        &format!(
+            "/{}",
+            rand::rng()
+                .sample_iter(&Alphanumeric)
+                .take(5)
+                .map(char::from)
+                .collect::<String>()
+        )
     };
     let mut container_command = SystemCommand::new(&container_engine);
 
     if is_singularity {
-        fs::create_dir_all("/tmp/apptainer_tmp")?;
+        let apptainer_tmp = "/tmp/apptainer_tmp";
+        if !std::path::Path::new(apptainer_tmp).exists() {
+            fs::create_dir_all(apptainer_tmp)?;
+        }
 
         container_command.arg("exec");
         container_command.args([
             "-H",
             &format!("{outdir}:{workdir}"),
             "-B",
-            "/tmp/apptainer_tmp:/tmp",
+            &format!("{apptainer_tmp}:/tmp"),
             "--pwd",
             workdir,
             "--env",
@@ -138,28 +182,36 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
     } else {
         let workdir_mount = format!("--mount=type=bind,source={outdir},target={workdir}");
         let tmpdir_mount = format!("--mount=type=bind,source={tmpdir},target=/tmp");
-        let workdir_arg = format!("--workdir={}", &workdir);
+        let workdir_arg = format!("--workdir={workdir}");
 
-        container_command.args(["run", "-i", &workdir_mount, &tmpdir_mount, &workdir_arg, "--rm"]);
+        container_command.args(["run", "-i", "--rm"]);
+        container_command.args([&workdir_mount, &tmpdir_mount, &workdir_arg]);
 
         #[cfg(unix)]
         {
             container_command.arg(get_user_flag());
         }
 
-        container_command.arg(format!("--env=HOME={}", &workdir));
+        container_command.arg(format!("--env=HOME={workdir}"));
         container_command.arg("--env=TMPDIR=/tmp");
 
-        for (key, val) in command.get_envs().skip_while(|(key, _)| *key == "HOME" || *key == "TMPDIR") {
-            container_command.arg(format!("--env={}={}", key.to_string_lossy(), val.unwrap().to_string_lossy()));
+        for (key, val) in command
+            .get_envs()
+            .skip_while(|(key, _)| *key == "HOME" || *key == "TMPDIR")
+        {
+            container_command.arg(format!(
+                "--env={}={}",
+                key.to_string_lossy(),
+                val.unwrap().to_string_lossy()
+            ));
         }
 
-        if let Some(StringOrNumber::Integer(i)) = runtime.runtime.get("network") {
-            if *i != 1 {
+        match runtime.runtime.get("network") {
+            Some(StringOrNumber::Integer(i)) if *i == 1 => {
+            }
+            _ => {
                 container_command.arg("--net=none");
             }
-        } else {
-            container_command.arg("--net=none");
         }
 
         container_command.arg(docker_image);
@@ -168,7 +220,12 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
 
     let args = command
         .get_args()
-        .map(|arg| arg.to_string_lossy().into_owned().replace(&outdir, workdir).replace("\\", "/"))
+        .map(|arg| {
+            arg.to_string_lossy()
+                .into_owned()
+                .replace(&outdir, workdir)
+                .replace("\\", "/")
+        })
         .collect::<Vec<_>>();
     container_command.args(args);
 
