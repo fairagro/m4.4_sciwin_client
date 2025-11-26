@@ -101,8 +101,9 @@ pub fn Empty() -> Element {
 pub fn WorkflowView(path: String) -> Element {
     let mut app_state = use_app_state();
 
+    let tmp = path.clone();
     use_effect(move || {
-        let path = Path::new(&path);
+        let path = Path::new(&tmp);
         let data = load_doc(path).unwrap();
         if let commonwl::CWLDocument::Workflow(_) = data {
             let workflow = VisualWorkflow::from_file(path).unwrap();
@@ -126,7 +127,7 @@ pub fn WorkflowView(path: String) -> Element {
             TabContent{
                 index: 1usize,
                 value: "code".to_string(),
-                CodeViewer {}
+                CodeViewer {path: path}
             }
         }
     )
@@ -134,5 +135,7 @@ pub fn WorkflowView(path: String) -> Element {
 
 #[component]
 pub fn ToolView(path: String) -> Element {
-    rsx!("CommandLineTool")
+    rsx! {
+        CodeViewer {path: path}
+    }
 }

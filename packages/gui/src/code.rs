@@ -1,18 +1,14 @@
-use crate::use_app_state;
 use dioxus::prelude::*;
 use std::fs;
 
 #[component]
-pub fn CodeViewer() -> Element {
-    let app_state = use_app_state();
+pub fn CodeViewer(path: String) -> Element {
     let mut code = use_signal(|| "No CWL code loaded.".to_string());
 
     // Get the CWL code from state
-    if let Some(path) = &app_state.read().workflow.path {
-        let contents = fs::read_to_string(path);
-        if let Ok(contents) = contents {
-            code.set(contents);
-        }
+    let contents = fs::read_to_string(path);
+    if let Ok(contents) = contents {
+        code.set(contents);
     }
 
     let value = code();
