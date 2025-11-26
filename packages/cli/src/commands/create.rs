@@ -9,6 +9,7 @@ use s4n_core::{
     tool::ToolCreationOptions,
 };
 use std::path::PathBuf;
+use commonwl::execution::docker::ContainerEngineType;
 
 pub fn handle_create_command(args: &CreateArgs) -> anyhow::Result<()> {
     if args.command.is_empty() && args.name.is_some() {
@@ -46,6 +47,8 @@ pub struct CreateArgs {
     pub enable_network: bool,
     #[arg(short = 'i', long = "inputs", help = "Force values to be considered as an input.", value_delimiter = ' ')]
     pub inputs: Option<Vec<String>>,
+    #[arg(long = "run-container", value_enum)]
+    pub run_container: Option<ContainerEngineType>,
     #[arg(
         short = 'o',
         long = "outputs",
@@ -83,6 +86,7 @@ impl<'a> From<&'a CreateArgs> for ToolCreationOptions<'a> {
                 tag: args.container_tag.as_deref(),
             }),
             enable_network: args.enable_network,
+            run_container: args.run_container,
             mounts: args.mount.as_deref().unwrap_or(&[]),
             env: args.env.as_deref(),
         }

@@ -50,6 +50,10 @@ pub struct LocalExecuteArgs {
     pub is_quiet: bool,
     #[arg(long = "podman", help = "Use podman instead of docker")]
     pub podman: bool,
+    #[arg(long = "singularity", help = "Use singularity instead of docker")]
+    pub singularity: bool,
+    #[arg(long = "apptainer", help = "Use apptainer instead of docker")]
+    pub apptainer: bool,
     #[arg(help = "CWL File to execute")]
     pub file: PathBuf,
     #[arg(trailing_var_arg = true, help = "Other arguments provided to cwl file", allow_hyphen_values = true)]
@@ -111,10 +115,16 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), ExecutionError> {
     }
     if args.podman {
         set_container_engine(ContainerEngine::Podman);
-    } else {
+    }
+    else if args.singularity {
+        set_container_engine(ContainerEngine::Singularity);
+    } 
+    else if args.apptainer {
+        set_container_engine(ContainerEngine::Apptainer);
+    }
+    else {
         set_container_engine(ContainerEngine::Docker);
     }
-
     execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
 }
 

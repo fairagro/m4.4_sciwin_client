@@ -34,6 +34,7 @@ rustyscript = { version = "0.12.2", features = [
 ], default-features = false }
 sysinfo = "0.37.0"
 thiserror = "2.0.17"
+clap = { version = "4.5.44", features = ["derive"] }
 
 [dev-dependencies]
 serial_test = { workspace = true }
