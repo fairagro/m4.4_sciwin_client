@@ -8,6 +8,7 @@ pub mod components;
 pub mod edge;
 pub mod graph;
 pub mod node;
+pub mod layout;
 pub mod slot;
 pub mod workflow;
 

@@ -53,7 +53,7 @@ pub fn get_stroke_from_cwl_type(type_: CWLType) -> &'static str {
 #[component]
 pub fn EdgeElement(props: EdgeProps) -> Element {
     let mut app_state = use_app_state();
-    
+
     let graph = app_state().workflow.graph;
     let (from_node_id, to_node_id) = graph.edge_endpoints(props.id).unwrap(); //TODO!
     let from_node = &graph[from_node_id];

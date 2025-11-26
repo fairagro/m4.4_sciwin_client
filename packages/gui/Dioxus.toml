@@ -15,7 +15,7 @@ icon_path = "packages/gui/assets/icon.ico"
 title = "SciWIn Studio"
 
 [web.resource]
-style = ["assets/main.css", "assets/tailwind.css"]
+style = ["assets/main.css", "assets/tailwind.css", "assets/bundle.min.css"]
 script = []
 
 [web.resource.dev]

@@ -5,15 +5,17 @@ use std::fs;
 #[component]
 pub fn CodeViewer() -> Element {
     let app_state = use_app_state();
+    let mut code = use_signal(|| "No CWL code loaded.".to_string());
 
     // Get the CWL code from state
-    let code = match fs::read_to_string(app_state.read().workflow.path.clone().unwrap()) {
-        Ok(c) => c.clone(),
-        Err(_) => "No CWL code loaded.".to_string(),
-    };
+    if let Some(path) = &app_state.read().workflow.path {
+        let contents = fs::read_to_string(path);
+        if let Ok(contents) = contents {
+            code.set(contents);
+        }
+    }
 
-    //let html_code = highlighted_html_for_string(&code, &ps, syntax, theme)?;
-    let value = code.clone();
+    let value = code();
     rsx! {
         div {
             onmounted: move |_| {
