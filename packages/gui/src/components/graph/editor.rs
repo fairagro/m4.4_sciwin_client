@@ -69,6 +69,7 @@ pub fn GraphEditor(path: String) -> Element {
     rsx! {
         div {
             class: "relative select-none overflow-scroll w-full h-full",
+            style: "background: url({asset!(\"/assets/graph-paper.svg\")});",
             onresize: move |_| update_dims(),
             onscroll: move |_| update_dims(),
             onmounted: move |e| div_ref.set(Some(e.data())),
