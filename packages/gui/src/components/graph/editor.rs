@@ -11,10 +11,12 @@ use dioxus::html::geometry::{
 };
 use dioxus::prelude::*;
 use petgraph::visit::IntoNodeIdentifiers;
-use std::{path::Path, rc::Rc};
+use std::{path::PathBuf, rc::Rc};
 
 #[component]
 pub fn GraphEditor(path: String) -> Element {
+    let mut path = use_reactive(&path, PathBuf::from);
+
     let dragging = None::<DragState>;
     let drag_offset = use_signal(ClientPoint::zero);
     let mut drag_state = use_signal(|| DragContext { drag_offset, dragging });
@@ -23,10 +25,9 @@ pub fn GraphEditor(path: String) -> Element {
     let mut app_state = use_app_state();
 
     {
-        let tmp = path.clone();
         use_effect(move || {
-            let path = Path::new(&tmp);
-            let data = load_doc(path).unwrap();
+            let path = path();
+            let data = load_doc(&path).unwrap();
             if let commonwl::CWLDocument::Workflow(_) = data {
                 let workflow = VisualWorkflow::from_file(path).unwrap();
                 app_state.write().workflow = workflow;
