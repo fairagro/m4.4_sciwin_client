@@ -12,13 +12,11 @@ pub fn FileTree(node: ReadSignal<Node>, is_root: bool) -> Element {
     let padleft = if is_root { "" } else { "pl-2" };
 
     rsx! {
-        div {
-            class: "{padleft}",
+        div { class: "{padleft}",
             if node.read().is_dir {
-                DirItem {  node: node, is_root: is_root }
-            }
-            else {
-                FileItem {  node:node }
+                DirItem { node, is_root }
+            } else {
+                FileItem { node }
             }
         }
     }
@@ -30,16 +28,12 @@ pub fn FileItem(node: ReadSignal<Node>) -> Element {
 
     if let Route::Empty = route {
         return rsx! {
-            div {
-                class: "cursor-not-allowed select-none",
-                div {
-                    class: "flex gap-1 items-center",
-                    div {
-                        style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                    }
+            div { class: "cursor-not-allowed select-none",
+                div { class: "flex gap-1 items-center",
+                    div { style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;" }
                     Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFile }
 
-                    { node().name }
+                    {node().name}
                 }
             }
         };
@@ -50,18 +44,15 @@ pub fn FileItem(node: ReadSignal<Node>) -> Element {
             active_class: "font-bold",
             to: route,
             class: "cursor-pointer select-none",
-            div {
-                class: "flex gap-1 items-center",
-                div {
-                    style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                }
+            div { class: "flex gap-1 items-center",
+                div { style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;" }
                 div {
                     class: "flex",
                     style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                    img { src: asset!("/assets/CWL.svg")}
+                    img { src: asset!("/assets/CWL.svg") }
                 }
 
-                { node().name }
+                {node().name}
             }
         }
     }
@@ -75,29 +66,40 @@ pub fn DirItem(node: ReadSignal<Node>, is_root: bool) -> Element {
         expanded.set(true);
     }
     rsx! {
-    div {
-        class: "cursor-pointer select-none",
-        onclick: move |_| {
+        div {
+            class: "cursor-pointer select-none",
+            onclick: move |_| {
                 //simply expand folder if directory
                 if node.read().is_dir {
                     expanded.set(!expanded())
                 }
-        },
-        div {
-            class: "flex gap-1 items-center",
+            },
+            div { class: "flex gap-1 items-center",
                 if expanded() {
-                    Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoChevronDown }
+                    Icon {
+                        width: ICON_SIZE,
+                        height: ICON_SIZE,
+                        icon: GoChevronDown,
+                    }
                 } else {
-                    Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoChevronRight }
+                    Icon {
+                        width: ICON_SIZE,
+                        height: ICON_SIZE,
+                        icon: GoChevronRight,
+                    }
                 }
-                Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFileDirectory }
+                Icon {
+                    width: ICON_SIZE,
+                    height: ICON_SIZE,
+                    icon: GoFileDirectory,
+                }
 
-            { node().name }
+                {node().name}
             }
-        },
+        }
         if expanded() {
             for child in node.read().children.clone() {
-                FileTree { node: child , is_root: false}
+                FileTree { node: child, is_root: false }
             }
         }
     }
@@ -109,8 +111,8 @@ pub fn FileSystemView(project_path: ReadSignal<PathBuf>) -> Element {
     let root = use_memo(move || app_state.read().working_directory.as_ref().map(|path| load_project_tree(path)));
 
     rsx! {
-        if let Some(root) = root(){
-            FileTree { node: root , is_root: true }
+        if let Some(root) = root() {
+            FileTree { node: root, is_root: true }
         }
     }
 }

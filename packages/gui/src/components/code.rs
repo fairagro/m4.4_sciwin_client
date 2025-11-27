@@ -26,11 +26,6 @@ pub fn CodeViewer(path: String) -> Element {
     }
 
     rsx! {
-        div {
-            id: "editor",
-            width: "100%",
-            height: "100%",
-            class: "relative p-4",
-        }
+        div { id: "editor", class: "h-full p-4 w-full min-h-0" }
     }
 }

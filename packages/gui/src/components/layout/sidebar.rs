@@ -8,12 +8,9 @@ pub struct SidebarProps {
 #[component]
 pub fn Sidebar(props: SidebarProps) -> Element {
     rsx! {
-        aside {
-            class: "select-none w-64 bg-zinc-200 border-r border-zinc-400 p-2 overflow-y-auto",
-            Logo { }
-            div {
-                class: "mt-4",
-            }
+        aside { class: "select-none w-64 bg-zinc-200 border-r border-zinc-400 p-2 overflow-y-auto",
+            Logo {}
+            div { class: "mt-4" }
             {props.children}
         }
     }

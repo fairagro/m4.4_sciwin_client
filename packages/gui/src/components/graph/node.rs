@@ -41,27 +41,31 @@ pub fn NodeElement(props: NodeProps) -> Element {
                 },
 
                 class: "{top_color} rounded-t-md p-1 overflow-hidden",
-                "{node.instance.id()}",
+                "{node.instance.id()}"
+            }
+            div { class: "p-1",
 
-            },
-            div { // slot wrapper
-                class: "p-1",
-
-                div{
+                div {
                     for slot in node.outputs.iter() {
-                        div {
-                            class: "flex justify-end items-center",
-                            "{slot.id}",
-                            SlotElement {slot: slot.clone(), node_id: props.id, slot_type: SlotType::Output}
+                        div { class: "flex justify-end items-center",
+                            "{slot.id}"
+                            SlotElement {
+                                slot: slot.clone(),
+                                node_id: props.id,
+                                slot_type: SlotType::Output,
+                            }
                         }
                     }
                 }
 
                 div {
                     for slot in node.inputs.iter() {
-                        div {
-                            class: "flex justify-start items-center",
-                            SlotElement {slot: slot.clone(), node_id: props.id, slot_type: SlotType::Input},
+                        div { class: "flex justify-start items-center",
+                            SlotElement {
+                                slot: slot.clone(),
+                                node_id: props.id,
+                                slot_type: SlotType::Input,
+                            }
                             "{slot.id}"
                         }
                     }

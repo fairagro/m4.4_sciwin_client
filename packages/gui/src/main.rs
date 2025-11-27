@@ -23,15 +23,12 @@ fn main() {
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
 
-    rsx!(
+    rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
-        Stylesheet{ href: asset!("/assets/main.css") }
-        Stylesheet{ href: asset!("/assets/bundle.min.css") }
-        Stylesheet{ href: asset!("/assets/tailwind.css") }
+        Stylesheet { href: asset!("/assets/main.css") }
+        Stylesheet { href: asset!("/assets/bundle.min.css") }
+        Stylesheet { href: asset!("/assets/tailwind.css") }
 
-        div {
-            class: "h-screen w-full flex flex-col",
-            Router::<Route> {}
-        }
-    )
+        Router::<Route> {}
+    }
 }

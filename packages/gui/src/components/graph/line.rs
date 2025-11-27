@@ -26,7 +26,7 @@ pub fn Line(props: LineProps) -> Element {
     let stroke_width = 3;
 
     rsx! {
-     path {
+        path {
             onclick: move |e| {
                 if let Some(handler) = props.onclick {
                     handler.call(e);

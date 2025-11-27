@@ -67,11 +67,11 @@ pub fn GraphEditor(path: String) -> Element {
 
     rsx! {
         div {
-            class:"relative select-none overflow-scroll w-full h-full",
+            class: "relative select-none overflow-scroll w-full h-full",
             onresize: move |_| update_dims(),
             onscroll: move |_| update_dims(),
             onmounted: move |e| div_ref.set(Some(e.data())),
-            onmousemove: move |e| async move{
+            onmousemove: move |e| async move {
                 e.stop_propagation();
                 if let Some(dragstate) = drag_state().dragging {
                     //we are dragging
@@ -87,29 +87,50 @@ pub fn GraphEditor(path: String) -> Element {
                             let deltaY = current_pos.y - last_pos.y;
 
                             let pos = app_state.read().workflow.graph[node_index].position;
-                            app_state.write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
+                            app_state.write().workflow.graph[node_index].position = Point2D::new(
+                                //we are dragging from a connection
+
+                                pos.x + deltaX as f32,
+                                pos.y + deltaY as f32,
+                            );
                             drag_state.write().drag_offset.set(current_pos);
-                        },
+                        }
                         DragState::Connection { source_node, source_port } => {
-                            //we are dragging from a connection
                             let dims = read_dims().await.unwrap();
                             let rect = dims.rect;
                             let scroll = dims.scroll_offset;
-
-                            let base_pos = (current_pos.x - rect.origin.x,  current_pos.y - rect.origin.y);
+                            let base_pos = (
+                                current_pos.x - rect.origin.x,
+                                current_pos.y - rect.origin.y,
+                            );
                             let source_node = &app_state.read().workflow.graph[source_node];
-
-                            let (x_source, y_source) = calculate_source_position(source_node, &source_port);
+                            let (x_source, y_source) = calculate_source_position(
+                                source_node,
+                                &source_port,
+                            );
                             let x_target = (base_pos.0 + scroll.x) as f32;
                             let y_target = (base_pos.1 + scroll.y) as f32;
-
-                            let cwl_type = source_node.outputs.iter().find(|i| i.id == source_port).unwrap().type_.clone(); //danger!
+                            let cwl_type = source_node
+                                .outputs
+                                .iter()
+                                .find(|i| i.id == source_port)
+                                .unwrap()
+                                .type_
+                                .clone();
                             let stroke = get_stroke_from_cwl_type(cwl_type);
-
-                            new_line.set(Some(LineProps{x_source, y_source, x_target, y_target, stroke: stroke.to_string(), onclick: None}));
-                        },
+                            new_line
+                                .set(
+                                    Some(LineProps {
+                                        x_source,
+                                        y_source,
+                                        x_target,
+                                        y_target,
+                                        stroke: stroke.to_string(),
+                                        onclick: None,
+                                    }),
+                                );
+                        }
                     }
-
                 }
             },
             onmouseup: move |_| {
@@ -118,19 +139,19 @@ pub fn GraphEditor(path: String) -> Element {
                 new_line.set(None);
             },
             for id in graph.node_identifiers() {
-                NodeElement {id}
-            },
+                NodeElement { id }
+            }
 
-            svg{
+            svg {
                 width: "{dim_w}",
                 height: "{dim_h}",
                 view_box: "0 0 {dim_w} {dim_h}",
                 class: "absolute inset-0  pointer-events-auto",
                 for id in graph.edge_indices() {
                     g {
-                        EdgeElement {id}
+                        EdgeElement { id }
                     }
-                },
+                }
                 if let Some(line) = &*new_line.read() {
                     g {
                         Line {
@@ -139,7 +160,7 @@ pub fn GraphEditor(path: String) -> Element {
                             x_target: line.x_target,
                             y_target: line.y_target,
                             stroke: line.stroke.clone(),
-                            onclick: line.onclick
+                            onclick: line.onclick,
                         }
                     }
                 }

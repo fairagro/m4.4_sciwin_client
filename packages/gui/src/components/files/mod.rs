@@ -32,14 +32,11 @@ impl FromStr for View {
 pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>) -> Element {
     match *view.read() {
         View::Solution => rsx! {
-            SolutionView {
-            project_path: working_dir
-            }
+            SolutionView { project_path: working_dir }
         },
         View::FileSystem => rsx! {
-            FileSystemView {
-            project_path: working_dir
-        }},
+            FileSystemView { project_path: working_dir }
+        },
     }
 }
 

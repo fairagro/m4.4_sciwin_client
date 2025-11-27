@@ -68,14 +68,14 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
             y_target,
             stroke,
             onclick: move |e: Event<MouseData>| {
-                    e.stop_propagation();
-                    if e.modifiers().shift() {
-                        //disconnect on shift click
-                        let mut state = app_state.write();
-                        state.workflow.remove_connection(props.id)?;
-                    }
-                    Ok(())
-                },
+                e.stop_propagation();
+                if e.modifiers().shift() {
+                    //disconnect on shift click
+                    let mut state = app_state.write();
+                    state.workflow.remove_connection(props.id)?;
+                }
+                Ok(())
+            },
         }
     }
 }

@@ -8,9 +8,6 @@ pub struct MainProps {
 #[component]
 pub fn Main(props: MainProps) -> Element {
     rsx! {
-        main {
-            class: "flex-1 bg-zinc-300 h-full w-full p-2",
-            { props.children }
-        }
+        main { class: "flex-1 bg-zinc-300 h-full w-full p-2", {props.children} }
     }
 }

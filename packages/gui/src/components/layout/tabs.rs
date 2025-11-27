@@ -16,7 +16,7 @@ pub struct TabsProps {
 pub fn Tabs(props: TabsProps) -> Element {
     rsx! {
         tabs::Tabs {
-            class: props.class +  " select-none grid h-full w-full grid-rows-[auto_1fr]",
+            class: props.class + " select-none grid h-full w-full grid-rows-[auto_1fr]",
             default_value: props.default_value,
             {props.children}
         }
