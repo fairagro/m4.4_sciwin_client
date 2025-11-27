@@ -330,14 +330,14 @@
   .resize {
     resize: both;
   }
+  .grid-cols-\[auto_1fr\] {
+    grid-template-columns: auto 1fr;
+  }
   .grid-rows-\[auto_1fr\] {
     grid-template-rows: auto 1fr;
   }
   .flex-col {
     flex-direction: column;
-  }
-  .flex-row {
-    flex-direction: row;
   }
   .items-center {
     align-items: center;

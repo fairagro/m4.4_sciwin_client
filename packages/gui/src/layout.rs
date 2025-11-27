@@ -19,7 +19,7 @@ pub fn Layout() -> Element {
 
     rsx! {
         div {
-           class: "h-full w-full flex flex-row flex-1",
+           class: "h-full w-full grid grid-cols-[auto_1fr]",
            Sidebar {
                form {
                    onsubmit: move |e| {
