@@ -1,6 +1,7 @@
 use crate::{
     components::{
-        CodeViewer, FileSystemView, NoProject,
+        CodeViewer, NoProject,
+        files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
@@ -14,6 +15,7 @@ use s4n_core::config::Config as ProjectConfig;
 pub fn Layout() -> Element {
     let mut app_state = use_app_state();
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
+    let mut view = use_signal(|| View::Solution);
 
     rsx! {
         div {
@@ -46,9 +48,19 @@ pub fn Layout() -> Element {
                    {app_state.read().project_name.as_ref().map_or("".to_string(), |p| format!("Project: {p}" ))}
                }
                if let Some(working_dir) = working_dir(){
-                   FileSystemView {
-                       project_path: working_dir
-                   }
+                   select {
+                    onchange: move |e| view.set(e.value().parse().unwrap()),
+                    class: "form-select appearance-none rounded-base bg-zinc-300 w-full px-2 py-1.5 font-bold bg-no-repeat",
+                        option {
+                            value: "Solution",
+                            "Solution"
+                        },
+                        option {
+                            value: "FileSystem",
+                            "Filesystem"
+                        }
+                    }
+                    FilesView { working_dir, view }
                }
                else {
                    NoProject {  }
@@ -99,11 +111,7 @@ pub fn WorkflowView(path: String) -> Element {
                 value: "editor".to_string(),
                 GraphEditor { path: path.clone() }
             }
-            TabContent{
-                index: 1usize,
-                value: "code".to_string(),
-                CodeViewer { path: path }
-            }
+
         }
     )
 }
@@ -111,9 +119,17 @@ pub fn WorkflowView(path: String) -> Element {
 #[component]
 pub fn ToolView(path: String) -> Element {
     rsx! {
-        div {
+        Tabs{
             class: "h-full",
-            CodeViewer { path: path }
+            default_value: "code".to_string(),
+            TabList {
+                TabTrigger { index: 1usize, value: "code".to_string(), "Code"}
+            }
+            TabContent{
+                index: 1usize,
+                value: "code".to_string(),
+                CodeViewer { path: path }
+            }
         }
     }
 }

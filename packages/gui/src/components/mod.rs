@@ -1,13 +1,13 @@
 mod code;
-mod fs_view;
 pub mod graph;
 pub mod layout;
+pub mod files;
 
 pub use code::*;
-pub use fs_view::*;
-
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::go_icons::GoRocket};
+
+pub const ICON_SIZE: Option<u32> = Some(14);
 
 #[component]
 pub fn NoProject() -> Element {

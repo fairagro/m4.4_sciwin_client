@@ -1,28 +1,11 @@
+use crate::components::ICON_SIZE;
+use crate::components::files::{Node, get_route, read_node_type};
 use crate::layout::Route;
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
 use dioxus_free_icons::icons::go_icons::{GoChevronDown, GoChevronRight, GoFile, GoFileDirectory};
-use serde_yaml::Value;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum FileType {
-    Workflow,
-    CommandLineTool,
-    ExpressionTool,
-    Other,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Node {
-    pub name: String,
-    pub path: PathBuf,
-    pub children: Vec<Node>,
-    pub is_dir: bool,
-    pub type_: FileType,
-}
 
 #[component]
 pub fn FileTree(node: ReadSignal<Node>, is_root: bool) -> Element {
@@ -41,19 +24,9 @@ pub fn FileTree(node: ReadSignal<Node>, is_root: bool) -> Element {
     }
 }
 
-const ICON_SIZE: Option<u32> = Some(14);
-
 #[component]
 pub fn FileItem(node: ReadSignal<Node>) -> Element {
-    let route = match node.read().type_ {
-        FileType::Workflow => Route::WorkflowView {
-            path: format!("{}", node.read().path.to_string_lossy()),
-        },
-        FileType::CommandLineTool | FileType::ExpressionTool => Route::ToolView {
-            path: format!("{}", node.read().path.to_string_lossy()),
-        },
-        _ => Route::Empty,
-    };
+    let route = get_route(&node());
 
     if let Route::Empty = route {
         return rsx! {
@@ -173,34 +146,5 @@ fn load_project_tree(path: &Path) -> Node {
         is_dir: true,
         children,
         type_: read_node_type(path),
-    }
-}
-
-fn read_node_type(path: impl AsRef<Path>) -> FileType {
-    if path.as_ref().is_dir() || path.as_ref().extension() != Some(OsStr::new("cwl")) {
-        return FileType::Other;
-    }
-    let content = std::fs::read_to_string(path).expect("Can not read file!");
-    let yaml: Value = serde_yaml::from_str(&content).unwrap_or(Value::Null);
-
-    match yaml.get("class").and_then(|v| v.as_str()) {
-        Some("CommandLineTool") => FileType::CommandLineTool,
-        Some("Workflow") => FileType::Workflow,
-        Some("ExpressionTool") => FileType::ExpressionTool,
-        _ => FileType::Other,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_read_node_type() {
-        let path = "../../testdata/hello_world/workflows/main/main.cwl";
-        assert_eq!(read_node_type(path), FileType::Workflow);
-
-        let path = "../../testdata/hello_world/workflows/calculation/calculation.cwl";
-        assert_eq!(read_node_type(path), FileType::CommandLineTool);
     }
 }

@@ -22,6 +22,7 @@ rfd = { version = "0.15.4", default-features = false, features = [
     "tokio",
     "xdg-portal",
 ] }
+ignore = "0.4.23"
 
 [features]
 default = ["desktop"]
