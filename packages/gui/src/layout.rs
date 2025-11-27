@@ -111,6 +111,9 @@ pub fn WorkflowView(path: String) -> Element {
 #[component]
 pub fn ToolView(path: String) -> Element {
     rsx! {
-        CodeViewer { path: path }
+        div {
+            class: "h-full",
+            CodeViewer { path: path }
+        }
     }
 }

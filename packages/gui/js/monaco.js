@@ -15,3 +15,11 @@ window.initMonaco = function(code) {
 
     window.monacoEditor = myEditor;
 };
+
+window.updateMonaco = function(code) {
+    if (window.monacoEditor) {
+        window.monacoEditor.setValue(code);
+    } else {
+        console.error("Monaco editor not initialized");
+    }
+};

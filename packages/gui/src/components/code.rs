@@ -3,29 +3,30 @@ use std::fs;
 
 #[component]
 pub fn CodeViewer(path: String) -> Element {
-    let mut code = use_signal(|| "No CWL code loaded.".to_string());
+    let mut path = use_reactive(&path, |path| path);
+    let mut editor_initialized = use_signal(|| false);
 
-    // Get the CWL code from state
-    let contents = fs::read_to_string(path);
-    if let Ok(contents) = contents {
-        code.set(contents);
+    {
+        use_effect(move || {
+            let contents = fs::read_to_string(path());
+            let code = if let Ok(contents) = contents { contents } else { "".to_string() };
+
+            spawn(async move {
+                let escaped_value = code.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${");
+                if !editor_initialized() {
+                    document::eval(include_str!("../../assets/bundle.min.js")).await.unwrap();
+                    editor_initialized.set(true);
+
+                    document::eval(&format!("initMonaco(`{}`);", escaped_value)).await.unwrap();
+                } else {
+                    document::eval(&format!("updateMonaco(`{}`);", escaped_value)).await.unwrap();
+                }
+            });
+        });
     }
 
-    let value = code();
     rsx! {
         div {
-            onmounted: move |_| {
-            let value = value.clone();
-            async move{
-                document::eval(include_str!("../../assets/bundle.min.js")).await.unwrap();
-                let escaped_value = value
-                    .replace('\\', "\\\\")
-                    .replace('`', "\\`")
-                    .replace("${", "\\${");
-
-                document::eval(&format!("initMonaco(`{}`);", escaped_value)).await.unwrap();
-            }
-            },
             id: "editor",
             width: "100%",
             height: "100%",
