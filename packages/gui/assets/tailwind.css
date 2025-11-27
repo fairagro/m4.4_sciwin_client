@@ -24,8 +24,6 @@
     --spacing: 0.25rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
-    --text-sm: 0.875rem;
-    --text-sm--line-height: calc(1.25 / 0.875);
     --text-lg: 1.125rem;
     --text-lg--line-height: calc(1.75 / 1.125);
     --font-weight-bold: 700;
@@ -252,9 +250,6 @@
   .my-5 {
     margin-block: calc(var(--spacing) * 5);
   }
-  .mt-1 {
-    margin-top: calc(var(--spacing) * 1);
-  }
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
   }
@@ -309,9 +304,6 @@
   .h-screen {
     height: 100vh;
   }
-  .max-h-full {
-    max-height: 100%;
-  }
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
   }
@@ -333,14 +325,8 @@
   .w-screen {
     width: 100vw;
   }
-  .flex-0 {
-    flex: 0;
-  }
   .flex-1 {
     flex: 1;
-  }
-  .flex-shrink {
-    flex-shrink: 1;
   }
   .shrink {
     flex-shrink: 1;
@@ -353,9 +339,6 @@
   }
   .grow {
     flex-grow: 1;
-  }
-  .border-collapse {
-    border-collapse: collapse;
   }
   .rotate-45 {
     rotate: 45deg;
@@ -375,9 +358,6 @@
   .appearance-none {
     appearance: none;
   }
-  .grid-cols-\[auto_1fr\] {
-    grid-template-columns: auto 1fr;
-  }
   .grid-rows-\[1fr_1\.5rem\] {
     grid-template-rows: 1fr 1.5rem;
   }
@@ -387,14 +367,8 @@
   .flex-col {
     flex-direction: column;
   }
-  .flex-row {
-    flex-direction: row;
-  }
   .items-center {
     align-items: center;
-  }
-  .justify-center {
-    justify-content: center;
   }
   .justify-end {
     justify-content: flex-end;
@@ -422,14 +396,8 @@
   .overflow-x-clip {
     overflow-x: clip;
   }
-  .overflow-x-hidden {
-    overflow-x: hidden;
-  }
   .overflow-y-auto {
     overflow-y: auto;
-  }
-  .overflow-y-scroll {
-    overflow-y: scroll;
   }
   .rounded {
     border-radius: 0.25rem;
@@ -551,12 +519,6 @@
   .py-1\.5 {
     padding-block: calc(var(--spacing) * 1.5);
   }
-  .py-2 {
-    padding-block: calc(var(--spacing) * 2);
-  }
-  .py-4 {
-    padding-block: calc(var(--spacing) * 4);
-  }
   .pt-1 {
     padding-top: calc(var(--spacing) * 1);
   }
@@ -580,9 +542,6 @@
   .font-bold {
     --tw-font-weight: var(--font-weight-bold);
     font-weight: var(--font-weight-bold);
-  }
-  .text-fairagro-dark-500 {
-    color: var(--color-fairagro-dark-500);
   }
   .text-white {
     color: var(--color-white);
