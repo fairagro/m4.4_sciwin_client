@@ -48,7 +48,7 @@ pub fn Layout() -> Element {
                         input {
                             r#type: "submit",
                             value: "Load Project",
-                            class: "rounded-lg bg-green-500 px-3 py-1 my-5 cursor-pointer",
+                            class: "rounded-lg bg-fairagro-light-500 px-3 py-1 my-5 cursor-pointer",
                         }
                     }
                     h2 {
