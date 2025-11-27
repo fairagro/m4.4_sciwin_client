@@ -111,6 +111,11 @@ pub fn WorkflowView(path: String) -> Element {
                 value: "editor".to_string(),
                 GraphEditor { path: path.clone() }
             }
+            TabContent {
+                index: 1usize,
+                value: "code".to_string(),
+                CodeViewer{ path: path.clone() }
+            }
 
         }
     )
@@ -123,10 +128,10 @@ pub fn ToolView(path: String) -> Element {
             class: "h-full",
             default_value: "code".to_string(),
             TabList {
-                TabTrigger { index: 1usize, value: "code".to_string(), "Code"}
+                TabTrigger { index: 0usize, value: "code".to_string(), "Code"}
             }
             TabContent{
-                index: 1usize,
+                index: 0usize,
                 value: "code".to_string(),
                 CodeViewer { path: path }
             }
