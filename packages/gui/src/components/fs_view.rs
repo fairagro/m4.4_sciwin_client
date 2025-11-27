@@ -45,12 +45,6 @@ const ICON_SIZE: Option<u32> = Some(14);
 
 #[component]
 pub fn FileItem(node: ReadSignal<Node>) -> Element {
-    let cursor_class = if node.read().is_dir | node.read().name.ends_with(".cwl") {
-        "cursor-pointer"
-    } else {
-        "cursor-not-allowed"
-    };
-
     let route = match node.read().type_ {
         FileType::Workflow => Route::WorkflowView {
             path: format!("{}", node.read().path.to_string_lossy()),
@@ -61,17 +55,38 @@ pub fn FileItem(node: ReadSignal<Node>) -> Element {
         _ => Route::Empty,
     };
 
+    if let Route::Empty = route {
+        return rsx! {
+            div {
+                class: "cursor-not-allowed select-none",
+                div {
+                    class: "flex gap-1 items-center",
+                    div {
+                        style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
+                    }
+                    Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFile }
+
+                    { node().name }
+                }
+            }
+        };
+    }
+
     rsx! {
         Link {
             active_class: "font-bold",
             to: route,
-            class: "{cursor_class} select-none",
+            class: "cursor-pointer select-none",
             div {
                 class: "flex gap-1 items-center",
                 div {
                     style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
                 }
-                Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFile }
+                div {
+                    class: "flex",
+                    style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
+                    img { src: asset!("/assets/CWL.svg")}
+                }
 
                 { node().name }
             }
@@ -177,11 +192,11 @@ fn read_node_type(path: impl AsRef<Path>) -> FileType {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_read_node_type(){
+    fn test_read_node_type() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         assert_eq!(read_node_type(path), FileType::Workflow);
 
