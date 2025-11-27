@@ -95,7 +95,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]
@@ -118,7 +120,7 @@ pub fn WorkflowView(path: String) -> Element {
                 value: "code".to_string(),
                 CodeViewer { path: path.clone() }
             }
-
+        
         }
     )
 }

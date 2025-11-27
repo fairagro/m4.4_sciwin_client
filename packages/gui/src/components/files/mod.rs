@@ -30,16 +30,18 @@ impl FromStr for View {
 
 #[component]
 pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>) -> Element {
-    rsx! {div {
-        class: "flex flex-grow flex-col overflow-y-auto pt-1 pb-4",
-        match *view.read() {
-        View::Solution => rsx! {
-            SolutionView { project_path: working_dir }
-        },
-        View::FileSystem => rsx! {
-            FileSystemView { project_path: working_dir }
-        },
-    }}}
+    rsx! {
+        div { class: "flex flex-grow flex-col overflow-y-auto pt-1 pb-4",
+            match *view.read() {
+                View::Solution => rsx! {
+                    SolutionView { project_path: working_dir }
+                },
+                View::FileSystem => rsx! {
+                    FileSystemView { project_path: working_dir }
+                },
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
