@@ -1,14 +1,12 @@
 use crate::{
     components::{
-        CodeViewer, FileSystemView,
+        CodeViewer, FileSystemView, NoProject,
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
     use_app_state,
 };
 use dioxus::prelude::*;
-use dioxus_free_icons::Icon as DioxusIcon;
-use dioxus_free_icons::icons::go_icons::GoRocket;
 use rfd::FileDialog;
 use s4n_core::config::Config as ProjectConfig;
 
@@ -53,11 +51,7 @@ pub fn Layout() -> Element {
                    }
                }
                else {
-                   div {
-                       class: "flex flex-col items-center mt-10 gap-4 text-lg text-center text-zinc-400",
-                       DioxusIcon { width: Some(64), height: Some(64), icon: GoRocket }
-                       div { "Start by loading up a project" }
-                   }
+                   NoProject {  }
                }
            }
            Main {
