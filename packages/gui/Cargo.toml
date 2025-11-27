@@ -13,6 +13,7 @@ rand.workspace = true
 serde_yaml.workspace = true
 commonwl = { path = "../cwl" }
 s4n_core = { path = "../core" }
+repository = { path = "../repository" }
 dioxus = { version = "0.7.1", features = ["router"] }
 dioxus-free-icons = { version = "0.10.0", features = ["octicons"] }
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
