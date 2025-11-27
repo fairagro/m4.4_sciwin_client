@@ -10,16 +10,22 @@
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-700: oklch(50.5% 0.213 27.518);
     --color-red-900: oklch(39.6% 0.141 25.723);
+    --color-lime-800: oklch(45.3% 0.124 130.933);
     --color-green-400: oklch(79.2% 0.209 151.711);
     --color-green-500: oklch(72.3% 0.219 149.579);
     --color-green-700: oklch(52.7% 0.154 150.069);
     --color-green-900: oklch(39.3% 0.095 152.535);
+    --color-sky-500: oklch(68.5% 0.169 237.323);
+    --color-sky-700: oklch(50% 0.134 242.749);
+    --color-sky-800: oklch(44.3% 0.11 240.79);
     --color-blue-400: oklch(70.7% 0.165 254.624);
     --color-blue-900: oklch(37.9% 0.146 265.522);
     --color-zinc-200: oklch(92% 0.004 286.32);
     --color-zinc-300: oklch(87.1% 0.006 286.286);
     --color-zinc-400: oklch(70.5% 0.015 286.067);
+    --color-zinc-600: oklch(44.2% 0.017 285.786);
     --color-zinc-700: oklch(37% 0.013 285.805);
+    --color-zinc-800: oklch(27.4% 0.006 286.033);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -219,6 +225,12 @@
   .z-2 {
     z-index: 2;
   }
+  .z-4 {
+    z-index: 4;
+  }
+  .z-10 {
+    z-index: 10;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -318,11 +330,20 @@
   .flex-1 {
     flex: 1;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
   .shrink {
     flex-shrink: 1;
   }
+  .flex-grow {
+    flex-grow: 1;
+  }
   .grow {
     flex-grow: 1;
+  }
+  .border-collapse {
+    border-collapse: collapse;
   }
   .rotate-45 {
     rotate: 45deg;
@@ -443,11 +464,23 @@
   .bg-green-900 {
     background-color: var(--color-green-900);
   }
+  .bg-lime-800 {
+    background-color: var(--color-lime-800);
+  }
   .bg-red-400 {
     background-color: var(--color-red-400);
   }
   .bg-red-900 {
     background-color: var(--color-red-900);
+  }
+  .bg-sky-500 {
+    background-color: var(--color-sky-500);
+  }
+  .bg-sky-700 {
+    background-color: var(--color-sky-700);
+  }
+  .bg-sky-800 {
+    background-color: var(--color-sky-800);
   }
   .bg-white {
     background-color: var(--color-white);
@@ -458,8 +491,14 @@
   .bg-zinc-300 {
     background-color: var(--color-zinc-300);
   }
+  .bg-zinc-600 {
+    background-color: var(--color-zinc-600);
+  }
   .bg-zinc-700 {
     background-color: var(--color-zinc-700);
+  }
+  .bg-zinc-800 {
+    background-color: var(--color-zinc-800);
   }
   .bg-no-repeat {
     background-repeat: no-repeat;

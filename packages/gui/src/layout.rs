@@ -15,7 +15,14 @@ use s4n_core::config::Config as ProjectConfig;
 pub fn Layout() -> Element {
     let mut app_state = use_app_state();
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
+
     let mut view = use_signal(|| View::Solution);
+    let route: Route = use_route();
+    let current_path = use_memo(move || match &route {
+        Route::Empty => "".to_string(),
+        Route::WorkflowView { path } => path.to_string(),
+        Route::ToolView { path } => path.to_string(),
+    });
 
     rsx! {
         div { class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
@@ -67,12 +74,7 @@ pub fn Layout() -> Element {
                 }
                 Main { Outlet::<Route> {} }
             }
-            Footer {
-                "òla"
-                if let Some(path) = &app_state.read().workflow.path {
-                    {path.to_string_lossy().to_string()}
-                }
-            }
+            Footer {{current_path}}
         }
     }
 }
@@ -92,9 +94,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]
@@ -117,7 +117,7 @@ pub fn WorkflowView(path: String) -> Element {
                 value: "code".to_string(),
                 CodeViewer { path: path.clone() }
             }
-        
+
         }
     )
 }
