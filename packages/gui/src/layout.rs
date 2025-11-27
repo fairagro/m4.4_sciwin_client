@@ -120,7 +120,6 @@ pub fn WorkflowView(path: String) -> Element {
                 value: "code".to_string(),
                 CodeViewer { path: path.clone() }
             }
-        
         }
     )
 }

@@ -1,10 +1,11 @@
 use dioxus::prelude::*;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 #[component]
 pub fn CodeViewer(path: String) -> Element {
-    let mut path = use_reactive(&path, |path| path);
+    let mut path = use_reactive(&path, PathBuf::from);
     let mut editor_initialized = use_signal(|| false);
+    let path_signal = use_signal(&mut path);
 
     {
         use_effect(move || {
@@ -26,6 +27,16 @@ pub fn CodeViewer(path: String) -> Element {
     }
 
     rsx! {
+         button {
+            onclick: move |_| async move {
+                let value = document::eval("return getMonacoValue();");
+                let value = value.await?;
+                let code: String = serde_json::from_value(value)?;
+                fs::write(path_signal(), code)?;
+                Ok(())
+            },
+            "Save"
+        }
         div { id: "editor", class: "h-full p-4 w-full min-h-0" }
     }
 }

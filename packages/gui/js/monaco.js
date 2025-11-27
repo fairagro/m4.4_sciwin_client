@@ -6,7 +6,7 @@ window.initMonaco = function(code) {
         console.error("Editor element not found");
         return;
     }
-
+    
     const myEditor = monaco.editor.create(editorElement, {
         value: code,
         language: "yaml",
@@ -23,3 +23,12 @@ window.updateMonaco = function(code) {
         console.error("Monaco editor not initialized");
     }
 };
+
+window.getMonacoValue = function() {
+    if (window.monacoEditor) {
+        var code = window.monacoEditor.getValue()
+        return code
+    } else {
+        console.error("Monaco editor not initialized");
+    }
+}
