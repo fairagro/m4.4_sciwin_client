@@ -16,54 +16,57 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>) -> Element {
     let submodule_files = use_memo(move || get_submodules_cwl_files(project_path()));
 
     rsx! {
-        h2 { class: "mt-2 font-bold flex gap-1 items-center",
-            Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFileDirectory }
-            {app_state.read().project_name.as_ref().map_or("".to_string(), |p| p.to_string())}
-        }
-        ul {
-            for item in files() {
-                li {
-                    Link {
-                        to: get_route(&item),
-                        active_class: "font-bold",
-                        class: "cursor-pointer select-none",
-                        div { class: "flex gap-1 items-center",
-                            div {
-                                class: "flex",
-                                style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                                img { src: asset!("/assets/CWL.svg") }
-                            }
-
-                            {item.name}
-                        }
-                    }
-                }
-            }
-        }
-        for (module, files) in submodule_files() {
+        div{
+            class: "flex flex-grow flex-col overflow-y-auto",
             h2 { class: "mt-2 font-bold flex gap-1 items-center",
-                Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoCloud }
-                {module}
+                Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoFileDirectory }
+                {app_state.read().project_name.as_ref().map_or("".to_string(), |p| p.to_string())}
             }
             ul {
-               for item in files {
-                li {
-                    Link {
-                        to: get_route(&item),
-                        active_class: "font-bold",
-                        class: "cursor-pointer select-none",
-                        div { class: "flex gap-1 items-center",
-                            div {
-                                class: "flex",
-                                style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                                img { src: asset!("/assets/CWL.svg") }
-                            }
+                for item in files() {
+                    li {
+                        Link {
+                            to: get_route(&item),
+                            active_class: "font-bold",
+                            class: "cursor-pointer select-none",
+                            div { class: "flex gap-1 items-center",
+                                div {
+                                    class: "flex",
+                                    style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
+                                    img { src: asset!("/assets/CWL.svg") }
+                                }
 
-                            {item.name}
+                                {item.name}
+                            }
                         }
                     }
                 }
             }
+            for (module, files) in submodule_files() {
+                h2 { class: "mt-2 font-bold flex gap-1 items-center",
+                    Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoCloud }
+                    {module}
+                }
+                ul {
+                    for item in files {
+                        li {
+                            Link {
+                                to: get_route(&item),
+                                active_class: "font-bold",
+                                class: "cursor-pointer select-none",
+                                div { class: "flex gap-1 items-center",
+                                    div {
+                                        class: "flex",
+                                        style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
+                                        img { src: asset!("/assets/CWL.svg") }
+                                    }
+
+                                    {item.name}
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

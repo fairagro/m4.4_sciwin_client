@@ -26,7 +26,7 @@ pub fn Layout() -> Element {
 
     rsx! {
         div { class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
-            div { class: "h-full w-full grid grid-cols-[auto_1fr] min-h-0",
+            div { class: "flex min-h-full w-full overflow-x-clip relative",
                 Sidebar {
                     form {
                         onsubmit: move |e| {

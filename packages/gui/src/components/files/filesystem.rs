@@ -111,8 +111,11 @@ pub fn FileSystemView(project_path: ReadSignal<PathBuf>) -> Element {
     let root = use_memo(move || app_state.read().working_directory.as_ref().map(|path| load_project_tree(path)));
 
     rsx! {
-        if let Some(root) = root() {
-            FileTree { node: root, is_root: true }
+        div{
+            class: "flex flex-grow flex-col overflow-y-auto mt-2",
+            if let Some(root) = root() {
+                FileTree { node: root, is_root: true }
+            }
         }
     }
 }
