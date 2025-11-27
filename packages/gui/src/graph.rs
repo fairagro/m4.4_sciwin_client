@@ -1,13 +1,14 @@
 use crate::{
-    DragState,
+    DragContext, DragState,
     edge::{self, EdgeElement, Line, LineProps, VisualEdge},
     node::{NodeElement, NodeInstance, VisualNode},
     slot::Slot,
     use_app_state,
+    workflow::VisualWorkflow,
 };
 use commonwl::{StringOrDocument, load_doc, prelude::*};
 use dioxus::html::geometry::{
-    Pixels, PixelsSize, PixelsVector2D,
+    ClientPoint, Pixels, PixelsSize, PixelsVector2D,
     euclid::{Point2D, Rect},
 };
 use dioxus::prelude::*;
@@ -175,8 +176,26 @@ impl WorkflowGraphBuilder {
 }
 
 #[component]
-pub fn GraphEditor() -> Element {
+pub fn GraphEditor(path: String) -> Element {
+    let dragging = None::<DragState>;
+    let drag_offset = use_signal(ClientPoint::zero);
+    let mut drag_state = use_signal(|| DragContext { drag_offset, dragging });
+    use_context_provider(|| drag_state);
+
     let mut app_state = use_app_state();
+
+    {
+        let tmp = path.clone();
+        use_effect(move || {
+            let path = Path::new(&tmp);
+            let data = load_doc(path).unwrap();
+            if let commonwl::CWLDocument::Workflow(_) = data {
+                let workflow = VisualWorkflow::from_file(path).unwrap();
+                app_state.write().workflow = workflow;
+            }
+        });
+    }
+
     let graph = app_state().workflow.graph;
 
     let mut new_line = use_signal(|| None::<LineProps>);
@@ -216,22 +235,22 @@ pub fn GraphEditor() -> Element {
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move{
                 e.stop_propagation();
-                if let Some(drag_state) = app_state().dragging{
+                if let Some(dragstate) = drag_state().dragging {
                     //we are dragging
                     let current_pos = e.client_coordinates();
 
-                    match drag_state {
+                    match dragstate {
                         DragState::None => todo!(),
                         DragState::Node(node_index) => {
                             //we are dragging a node
-                            let last_pos = (app_state().drag_offset)();
+                            let last_pos = (drag_state().drag_offset)();
 
                             let deltaX = current_pos.x - last_pos.x;
                             let deltaY = current_pos.y - last_pos.y;
 
                             let pos = app_state.read().workflow.graph[node_index].position;
                             app_state.write().workflow.graph[node_index].position = Point2D::new(pos.x + deltaX as f32, pos.y + deltaY as f32);
-                            app_state.write().drag_offset.set(current_pos);
+                            drag_state.write().drag_offset.set(current_pos);
                         },
                         DragState::Connection { source_node, source_port } => {
                             //we are dragging from a connection
@@ -257,7 +276,7 @@ pub fn GraphEditor() -> Element {
             },
             onmouseup: move |_| {
                 //reset state
-                app_state.write().dragging = None;
+                drag_state.write().dragging = None;
                 new_line.set(None);
             },
             for id in graph.node_identifiers() {

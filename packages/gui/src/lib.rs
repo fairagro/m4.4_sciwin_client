@@ -3,12 +3,11 @@ use dioxus::{html::geometry::ClientPoint, prelude::*};
 use petgraph::graph::NodeIndex;
 use std::path::PathBuf;
 
-pub mod code;
 pub mod components;
 pub mod edge;
 pub mod graph;
-pub mod node;
 pub mod layout;
+pub mod node;
 pub mod slot;
 pub mod workflow;
 
@@ -17,8 +16,6 @@ pub struct ApplicationState {
     pub working_directory: Option<PathBuf>,
     pub project_name: Option<String>,
     pub workflow: VisualWorkflow,
-    pub dragging: Option<DragState>,
-    pub drag_offset: Signal<ClientPoint>,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -33,6 +30,16 @@ pub enum DragState {
     },
 }
 
+#[derive(Default, Clone, Debug)]
+pub struct DragContext {
+    pub dragging: Option<DragState>,
+    pub drag_offset: Signal<ClientPoint>,
+}
+
 pub fn use_app_state() -> Signal<ApplicationState> {
     use_context::<Signal<ApplicationState>>()
+}
+
+pub fn use_drag() -> Signal<DragContext> {
+    use_context::<Signal<DragContext>>()
 }

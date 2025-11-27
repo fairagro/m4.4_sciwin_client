@@ -1,6 +1,6 @@
 use crate::{
-    code::CodeViewer,
     components::{
+        code::CodeViewer,
         footer::Footer,
         fs_view::FileSystemView,
         main::Main,
@@ -9,15 +9,12 @@ use crate::{
     },
     graph::GraphEditor,
     use_app_state,
-    workflow::VisualWorkflow,
 };
-use commonwl::load_doc;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon as DioxusIcon;
 use dioxus_free_icons::icons::go_icons::GoRocket;
 use rfd::FileDialog;
 use s4n_core::config::Config as ProjectConfig;
-use std::path::Path;
 
 #[component]
 pub fn Layout() -> Element {
@@ -99,18 +96,6 @@ pub fn Empty() -> Element {
 
 #[component]
 pub fn WorkflowView(path: String) -> Element {
-    let mut app_state = use_app_state();
-
-    let tmp = path.clone();
-    use_effect(move || {
-        let path = Path::new(&tmp);
-        let data = load_doc(path).unwrap();
-        if let commonwl::CWLDocument::Workflow(_) = data {
-            let workflow = VisualWorkflow::from_file(path).unwrap();
-            app_state.write().workflow = workflow;
-        }
-    });
-
     rsx!(
         Tabs{
             class: "h-full",
@@ -122,12 +107,12 @@ pub fn WorkflowView(path: String) -> Element {
             TabContent{
                 index: 0usize,
                 value: "editor".to_string(),
-                GraphEditor {}
+                GraphEditor { path: path.clone() }
             }
             TabContent{
                 index: 1usize,
                 value: "code".to_string(),
-                CodeViewer {path: path}
+                CodeViewer { path: path }
             }
         }
     )
@@ -136,6 +121,6 @@ pub fn WorkflowView(path: String) -> Element {
 #[component]
 pub fn ToolView(path: String) -> Element {
     rsx! {
-        CodeViewer {path: path}
+        CodeViewer { path: path }
     }
 }

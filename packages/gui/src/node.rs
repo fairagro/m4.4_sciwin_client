@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::slot::{Slot, SlotElement, SlotType};
-use crate::{DragState, use_app_state};
+use crate::{DragState, use_app_state, use_drag};
 use commonwl::prelude::*;
 use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
@@ -40,7 +40,9 @@ pub struct NodeProps {
 
 #[component]
 pub fn NodeElement(props: NodeProps) -> Element {
-    let mut app_state = use_app_state();
+    let app_state = use_app_state();
+    let mut drag_state = use_drag();
+
     let graph = app_state().workflow.graph;
     let node = &graph[props.id];
     let pos_x = node.position.x;
@@ -52,7 +54,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
         NodeInstance::Output(_) => "bg-red-900",
     };
 
-    let mut drag_offset = app_state.write().drag_offset;
+    let mut drag_offset = drag_state.write().drag_offset;
 
     rsx! {
         div {
@@ -64,7 +66,7 @@ pub fn NodeElement(props: NodeProps) -> Element {
                     drag_offset.write().x = e.data.client_coordinates().x;
                     drag_offset.write().y = e.data.client_coordinates().y;
 
-                    app_state.write().dragging = Some(DragState::Node(props.id));
+                    drag_state.write().dragging = Some(DragState::Node(props.id));
                 },
 
                 class: "{top_color} rounded-t-md p-1 overflow-hidden",

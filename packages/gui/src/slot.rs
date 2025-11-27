@@ -1,4 +1,4 @@
-use crate::{DragState, use_app_state};
+use crate::{DragState, use_app_state, use_drag};
 use commonwl::prelude::*;
 use dioxus::prelude::*;
 use petgraph::graph::NodeIndex;
@@ -24,6 +24,8 @@ pub(crate) struct SlotProps {
 
 #[component]
 pub fn SlotElement(props: SlotProps) -> Element {
+    let mut drag_state = use_drag();
+
     let margin = match props.slot_type {
         SlotType::Input => "ml-[-9px]",
         SlotType::Output => "mr-[-9px]",
@@ -56,12 +58,12 @@ pub fn SlotElement(props: SlotProps) -> Element {
     rsx! {
         div {
             onmousedown: move |_| {
-                use_app_state().write().dragging = Some(DragState::Connection { source_node: node_id, source_port: slot_id.clone() });
+                drag_state.write().dragging = Some(DragState::Connection { source_node: node_id, source_port: slot_id.clone() });
             },
             onmouseup: move |_| {
                 //check whether we are in connection mode and node/port has changed
                 let graph = &use_app_state()().workflow.graph;
-                if let Some(DragState::Connection { source_node, source_port }) = use_app_state()().dragging
+                if let Some(DragState::Connection { source_node, source_port }) = drag_state().dragging
                     && (source_node, &source_port) != (node_id, &props.slot.id) {
                         //get source and target nodes
                         let source = &graph[source_node];

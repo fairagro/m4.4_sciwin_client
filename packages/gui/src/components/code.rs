@@ -17,7 +17,7 @@ pub fn CodeViewer(path: String) -> Element {
             onmounted: move |_| {
             let value = value.clone();
             async move{
-                document::eval(include_str!("../assets/bundle.min.js")).await.unwrap();
+                document::eval(include_str!("../../assets/bundle.min.js")).await.unwrap();
                 let escaped_value = value
                     .replace('\\', "\\\\")
                     .replace('`', "\\`")
