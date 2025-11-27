@@ -1,19 +1,11 @@
-use crate::{DragState, use_app_state, use_drag};
+use crate::{
+    DragState,
+    types::{Slot, SlotType},
+    use_app_state, use_drag,
+};
 use commonwl::prelude::*;
 use dioxus::prelude::*;
 use petgraph::graph::NodeIndex;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Slot {
-    pub id: String,
-    pub type_: CWLType,
-}
-
-#[derive(Clone, PartialEq)]
-pub enum SlotType {
-    Input,
-    Output,
-}
 
 #[derive(Props, Clone, PartialEq)]
 pub(crate) struct SlotProps {

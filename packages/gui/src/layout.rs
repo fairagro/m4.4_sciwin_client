@@ -1,13 +1,9 @@
 use crate::{
     components::{
-        code::CodeViewer,
-        footer::Footer,
-        fs_view::FileSystemView,
-        main::Main,
-        sidebar::Sidebar,
-        tabs::{TabContent, TabList, TabTrigger, Tabs},
+        CodeViewer, FileSystemView,
+        graph::GraphEditor,
+        layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
-    graph::GraphEditor,
     use_app_state,
 };
 use dioxus::prelude::*;

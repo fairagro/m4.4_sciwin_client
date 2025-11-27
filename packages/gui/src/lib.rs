@@ -4,11 +4,9 @@ use petgraph::graph::NodeIndex;
 use std::path::PathBuf;
 
 pub mod components;
-pub mod edge;
+pub mod types;
 pub mod graph;
 pub mod layout;
-pub mod node;
-pub mod slot;
 pub mod workflow;
 
 #[derive(Default, Clone, Debug)]

@@ -1,5 +1,5 @@
 use crate::{
-    edge::VisualEdge,
+    types::VisualEdge,
     graph::{WorkflowGraph, load_workflow_graph},
 };
 use commonwl::{CWLDocument, Workflow, format::format_cwl, load_workflow};

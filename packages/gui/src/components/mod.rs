@@ -1,6 +1,7 @@
-pub mod code;
-pub mod footer;
-pub mod fs_view;
-pub mod main;
-pub mod sidebar;
-pub mod tabs;
+mod code;
+mod fs_view;
+pub mod graph;
+pub mod layout;
+
+pub use code::*;
+pub use fs_view::*;

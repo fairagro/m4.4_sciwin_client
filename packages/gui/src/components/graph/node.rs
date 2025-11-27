@@ -1,37 +1,8 @@
-use std::path::PathBuf;
-
-use crate::slot::{Slot, SlotElement, SlotType};
+use crate::components::graph::SlotElement;
+use crate::types::{NodeInstance, SlotType};
 use crate::{DragState, use_app_state, use_drag};
-use commonwl::prelude::*;
-use dioxus::html::geometry::euclid::Point2D;
 use dioxus::prelude::*;
 use petgraph::graph::NodeIndex;
-
-#[derive(Debug, Clone)]
-pub struct VisualNode {
-    pub instance: NodeInstance,
-    pub path: Option<PathBuf>,
-    pub position: Point2D<f32, f32>,
-    pub inputs: Vec<Slot>,
-    pub outputs: Vec<Slot>,
-}
-
-#[derive(Debug, Clone)]
-pub enum NodeInstance {
-    Step(CWLDocument),
-    Input(CommandInputParameter), //WorkflowInputParameter
-    Output(WorkflowOutputParameter),
-}
-
-impl NodeInstance {
-    pub fn id(&self) -> String {
-        match &self {
-            Self::Step(doc) => doc.id.clone().unwrap().clone(),
-            Self::Input(input) => input.id.clone(),
-            Self::Output(output) => output.id.clone(),
-        }
-    }
-}
 
 #[derive(Props, Clone, Copy, PartialEq)]
 pub struct NodeProps {
