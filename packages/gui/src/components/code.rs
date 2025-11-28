@@ -1,4 +1,8 @@
-use crate::components::{ICON_SIZE, ToastItem};
+use crate::{
+    components::{ICON_SIZE, ToastItem},
+    use_app_state,
+    workflow::VisualWorkflow,
+};
 use dioxus::{
     desktop::{HotKeyState, use_global_shortcut},
     prelude::*,
@@ -13,6 +17,7 @@ pub fn CodeViewer(path: String) -> Element {
     let path_signal = use_signal(&mut path);
 
     let mut toast_items = use_context::<Signal<Vec<ToastItem>>>();
+    let mut app_state = use_app_state();
 
     {
         use_effect(move || {
@@ -44,6 +49,11 @@ pub fn CodeViewer(path: String) -> Element {
             format!("Saved changes for: {:?}", path_signal()),
             5,
         ));
+
+        //reload current workflow
+        if let Some(path) = &app_state().workflow.path {
+            app_state.write().workflow = VisualWorkflow::from_file(path)?;
+        }
 
         Ok(())
     };
