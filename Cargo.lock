@@ -3143,6 +3143,7 @@ name = "gui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "commonwl",
  "dioxus",
  "dioxus-free-icons",
@@ -3156,6 +3157,7 @@ dependencies = [
  "s4n_core",
  "serde_json",
  "serde_yaml",
+ "tokio",
  "toml 0.9.8",
 ]
 

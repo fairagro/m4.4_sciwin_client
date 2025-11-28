@@ -1,9 +1,12 @@
 mod code;
+pub mod files;
 pub mod graph;
 pub mod layout;
-pub mod files;
+mod toast;
 
 pub use code::*;
+pub use toast::*;
+
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::go_icons::GoRocket};
 

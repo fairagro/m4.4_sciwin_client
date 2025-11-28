@@ -1,4 +1,8 @@
-use dioxus::prelude::*;
+use crate::components::ToastItem;
+use dioxus::{
+    desktop::{HotKeyState, use_global_shortcut},
+    prelude::*,
+};
 use std::{fs, path::PathBuf};
 
 #[component]
@@ -6,6 +10,8 @@ pub fn CodeViewer(path: String) -> Element {
     let mut path = use_reactive(&path, PathBuf::from);
     let mut editor_initialized = use_signal(|| false);
     let path_signal = use_signal(&mut path);
+
+    let mut toast_items = use_context::<Signal<Vec<ToastItem>>>();
 
     {
         use_effect(move || {
@@ -26,17 +32,35 @@ pub fn CodeViewer(path: String) -> Element {
         });
     }
 
-    rsx! {
-         button {
-            onclick: move |_| async move {
-                let value = document::eval("return getMonacoValue();");
-                let value = value.await?;
-                let code: String = serde_json::from_value(value)?;
-                fs::write(path_signal(), code)?;
-                Ok(())
-            },
-            "Save"
+    let save_code_file = move || async move {
+        let value = document::eval("return getMonacoValue();");
+        let value = value.await?;
+        let code: String = serde_json::from_value(value)?;
+        fs::write(path_signal(), code)?;
+
+        toast_items.write().push(ToastItem::new(
+            "Changes saved!".to_string(),
+            format!("Saved changes for: {:?}", path_signal()),
+            5,
+        ));
+
+        Ok(())
+    };
+
+    use_global_shortcut("Ctrl+S", move |s| {
+        if s == HotKeyState::Pressed {
+            spawn(async move {
+                save_code_file().await.unwrap();
+            });
         }
-        div { id: "editor", class: "h-full p-4 w-full min-h-0" }
+    })
+    .unwrap();
+
+    rsx! {
+        button { onclick: move |_| save_code_file(), "Save" }
+        div {
+            id: "editor",
+            class: "relative overflow-scroll w-full h-full min-h-0",
+        }
     }
 }

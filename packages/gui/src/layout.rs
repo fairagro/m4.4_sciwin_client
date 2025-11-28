@@ -21,7 +21,7 @@ pub fn Layout() -> Element {
 
     rsx! {
         div { class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
-            div { class: "flex min-h-full w-full overflow-x-clip relative",
+            div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
                 Sidebar {
                     form {
                         onsubmit: move |e| {
@@ -115,8 +115,8 @@ pub fn WorkflowView(path: String) -> Element {
                 GraphEditor { path: path.clone() }
             }
             TabContent {
-                class: "h-full min-h-0",
                 index: 1usize,
+                class: "h-full min-h-0",
                 value: "code".to_string(),
                 CodeViewer { path: path.clone() }
             }
@@ -131,7 +131,10 @@ pub fn ToolView(path: String) -> Element {
             TabList {
                 TabTrigger { index: 0usize, value: "code".to_string(), "Code" }
             }
-            TabContent { index: 0usize, value: "code".to_string(),
+            TabContent {
+                index: 0usize,
+                class: "h-full min-h-0",
+                value: "code".to_string(),
                 CodeViewer { path }
             }
         }
