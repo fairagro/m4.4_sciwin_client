@@ -30,7 +30,7 @@ pub fn ToastProvider() -> Element {
     });
 
     rsx! {
-        div { class: "absolute right-5 bottom-5 z-10 select-none",
+        div { class: "absolute right-5 bottom-8 z-10 select-none",
             //message as children
             for item in items() {
                 div {

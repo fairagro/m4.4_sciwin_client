@@ -1,8 +1,9 @@
-use crate::components::ToastItem;
+use crate::components::{ICON_SIZE, ToastItem};
 use dioxus::{
     desktop::{HotKeyState, use_global_shortcut},
     prelude::*,
 };
+use dioxus_free_icons::{Icon, icons::go_icons::GoCheck};
 use std::{fs, path::PathBuf};
 
 #[component]
@@ -57,7 +58,11 @@ pub fn CodeViewer(path: String) -> Element {
     .unwrap();
 
     rsx! {
-        button { onclick: move |_| save_code_file(), "Save" }
+        div { class: "flex justify-end w-full py-1 px-3",
+            button { title: "Save", onclick: move |_| save_code_file(),
+                Icon { icon: GoCheck, width: ICON_SIZE, height: ICON_SIZE }
+            }
+        }
         div {
             id: "editor",
             class: "relative overflow-scroll w-full h-full min-h-0",
