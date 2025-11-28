@@ -1,16 +1,21 @@
+use std::{fs, path::PathBuf};
+
 use crate::{
+    close_project,
     components::{
-        CodeViewer, NoProject,
+        CodeViewer, ICON_SIZE, NoProject,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
-    use_app_state,
+    last_session_data, open_project, restore_last_session, use_app_state,
 };
 use dioxus::prelude::*;
-use dioxus_free_icons::{Icon, icons::go_icons::GoRepo};
+use dioxus_free_icons::{
+    Icon,
+    icons::go_icons::{GoRepo, GoX},
+};
 use rfd::FileDialog;
-use s4n_core::config::Config as ProjectConfig;
 
 #[component]
 pub fn Layout() -> Element {
@@ -18,27 +23,36 @@ pub fn Layout() -> Element {
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
 
     let mut view = use_signal(|| View::Solution);
-    let route = use_route();
+    let route: Route = use_route();
+    let mut route_rx = use_reactive(&route, |route| route);
+
+    {
+        use_effect(move || {
+            app_state.write().current_file = match route_rx() {
+                Route::Empty => None,
+                Route::WorkflowView { path } => Some(PathBuf::from(path)),
+                Route::ToolView { path } => Some(PathBuf::from(path)),
+            };
+
+            let serialized = serde_json::to_string(&app_state()).expect("Could not serialize app state");
+            fs::write(last_session_data(), serialized).expect("Could not save app state");
+        });
+    }
 
     rsx! {
-        div { class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
+        div {
+            class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
+            onmounted: move |_| {
+                restore_last_session()?;
+                Ok(())
+            },
             div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
                 Sidebar {
                     form {
                         onsubmit: move |e| {
                             e.prevent_default();
                             let path = FileDialog::new().pick_folder().unwrap();
-                            //get workflow.toml
-                            let config_path = path.join("workflow.toml");
-                            if !config_path.exists() {
-                                //ask user to init a new project
-                                return Ok(());
-                            } else {
-                                let toml = std::fs::read_to_string(config_path).unwrap();
-                                let config: ProjectConfig = toml::from_str(&toml).unwrap();
-                                app_state.write().project_name = Some(config.workflow.name);
-                            }
-                            app_state.write().working_directory = Some(path.clone());
+                            open_project(path)?;
                             Ok(())
                         },
                         input {
@@ -50,7 +64,21 @@ pub fn Layout() -> Element {
                     if let Some(project_name) = &app_state.read().project_name {
                         h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
                             Icon { icon: GoRepo, width: 16, height: 16 }
-                            div{"{project_name}"}
+                            div { "{project_name}" }
+                            button {
+                                class: "p-1 hover:bg-fairagro-red-light/20 rounded-xl text-fairagro-red",
+                                title: "Close Project",
+                                onclick: move |_| {
+                                    close_project()?;
+                                    router().push("/");
+                                    Ok(())
+                                },
+                                Icon {
+                                    icon: GoX,
+                                    width: ICON_SIZE,
+                                    height: ICON_SIZE,
+                                }
+                            }
                         }
                     }
                     if let Some(working_dir) = working_dir() {

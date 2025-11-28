@@ -69,7 +69,10 @@ pub fn CodeViewer(path: String) -> Element {
 
     rsx! {
         div { class: "flex justify-end w-full py-1 px-3",
-            button { title: "Save", onclick: move |_| save_code_file(),
+            button {
+                class: "p-1 hover:bg-fairagro-mid-200 rounded-xl",
+                title: "Save",
+                onclick: move |_| save_code_file(),
                 Icon { icon: GoCheck, width: ICON_SIZE, height: ICON_SIZE }
             }
         }
