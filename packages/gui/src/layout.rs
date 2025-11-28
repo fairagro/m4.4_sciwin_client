@@ -8,6 +8,7 @@ use crate::{
     use_app_state,
 };
 use dioxus::prelude::*;
+use dioxus_free_icons::{Icon, icons::go_icons::GoRepo};
 use rfd::FileDialog;
 use s4n_core::config::Config as ProjectConfig;
 
@@ -46,13 +47,10 @@ pub fn Layout() -> Element {
                             class: "rounded-lg bg-fairagro-light-500 px-3 py-1 my-5 cursor-pointer",
                         }
                     }
-                    h2 {
-                        {
-                            app_state
-                                .read()
-                                .project_name
-                                .as_ref()
-                                .map_or("".to_string(), |p| format!("Project: {p}"))
+                    if let Some(project_name) = &app_state.read().project_name {
+                        h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
+                            Icon { icon: GoRepo, width: 16, height: 16 }
+                            div{"{project_name}"}
                         }
                     }
                     if let Some(working_dir) = working_dir() {
