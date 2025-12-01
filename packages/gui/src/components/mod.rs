@@ -1,10 +1,12 @@
 mod code;
+mod dialog;
 pub mod files;
 pub mod graph;
 pub mod layout;
 mod toast;
 
 pub use code::*;
+pub use dialog::*;
 pub use toast::*;
 
 use dioxus::prelude::*;
@@ -20,4 +22,8 @@ pub fn NoProject() -> Element {
             div { "Start by loading up a project" }
         }
     }
+}
+
+pub(crate) async fn sleep(interval: usize) {
+    tokio::time::sleep(tokio::time::Duration::from_millis(interval as u64)).await;
 }

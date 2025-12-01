@@ -1,16 +1,21 @@
 use crate::{
-    components::files::{FileType, read_node_type},
+    components::{
+        Dialog, MessageResult, close_dialog,
+        files::{FileType, read_node_type},
+    },
     workflow::VisualWorkflow,
 };
 use dioxus::{html::geometry::ClientPoint, prelude::*, router::RouterContext};
 use petgraph::graph::NodeIndex;
-use s4n_core::config::Config;
+use s4n_core::{config::Config, project::initialize_project};
 use serde::{Deserialize, Serialize};
 use std::{
     env::temp_dir,
     fs,
     path::{Path, PathBuf},
+    time::Duration,
 };
+use tokio::time::sleep;
 
 pub mod components;
 pub mod graph;
@@ -46,6 +51,12 @@ pub struct DragContext {
     pub drag_offset: Signal<ClientPoint>,
 }
 
+#[derive(Default, Clone, Debug)]
+pub struct ProjectInfo {
+    pub working_directory: PathBuf,
+    pub project_name: String,
+}
+
 pub fn use_app_state() -> Signal<ApplicationState> {
     use_context::<Signal<ApplicationState>>()
 }
@@ -54,21 +65,47 @@ pub fn use_drag() -> Signal<DragContext> {
     use_context::<Signal<DragContext>>()
 }
 
-pub fn open_project(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    let mut app_state = use_app_state();
-
+pub fn open_project(path: impl AsRef<Path>) -> anyhow::Result<Option<ProjectInfo>> {
     let config_path = path.as_ref().join("workflow.toml");
     if !config_path.exists() {
-        //ask user to init a new project
-        return Ok(());
-    } else {
-        let toml = std::fs::read_to_string(config_path)?;
-        let config: Config = toml::from_str(&toml)?;
-        app_state.write().project_name = Some(config.workflow.name);
-    }
-    app_state.write().working_directory = Some(path.as_ref().to_path_buf());
+        let mut dialog = use_context::<Signal<Option<Dialog>>>();
+        dialog.set(Some(Dialog::new(
+            "No Project found!",
+            "There is no project that has been initialized in the folder you selected. Do you want to create a new project?",
+        )));
 
-    Ok(())
+        {
+            let path = path.as_ref().to_owned();
+            // Check dialog result
+            spawn(async move {
+                loop {
+                    let res = close_dialog(dialog);
+                    if let Some(res) = res {
+                        if res == MessageResult::Ok {
+                            initialize_project(&path, false).unwrap();
+                            open_project_inner(path.as_ref()).unwrap();
+                        }
+                        break;
+                    }
+                    sleep(Duration::from_millis(100)).await;
+                }
+            });
+        }
+
+        Ok(None)
+    } else {
+        Ok(Some(open_project_inner(path.as_ref())?))
+    }
+}
+
+fn open_project_inner(path: &Path) -> anyhow::Result<ProjectInfo> {
+    let config_path = path.join("workflow.toml");
+    let toml = std::fs::read_to_string(config_path)?;
+    let config: Config = toml::from_str(&toml)?;
+    Ok(ProjectInfo {
+        working_directory: path.to_path_buf(),
+        project_name: config.workflow.name,
+    })
 }
 
 pub fn close_project() -> anyhow::Result<()> {
@@ -107,7 +144,11 @@ pub fn restore_last_session() -> anyhow::Result<()> {
         let mut current_state = use_app_state();
 
         if let Some(working_dir) = &state.working_directory {
-            open_project(working_dir)?;
+            let info = open_project(working_dir)?;
+            if let Some(info) = info {
+                current_state.write().working_directory = Some(info.working_directory);
+                current_state.write().project_name = Some(info.project_name);
+            }
         } else {
             current_state.write().working_directory = state.working_directory
         }

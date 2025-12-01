@@ -1,3 +1,4 @@
+use crate::components::sleep;
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::go_icons::GoInfo};
 
@@ -50,8 +51,4 @@ pub fn ToastProvider() -> Element {
             }
         }
     }
-}
-
-async fn sleep(interval: usize) {
-    tokio::time::sleep(tokio::time::Duration::from_millis(interval as u64)).await;
 }

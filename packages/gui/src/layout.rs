@@ -1,5 +1,3 @@
-use std::{fs, path::PathBuf};
-
 use crate::{
     close_project,
     components::{
@@ -16,6 +14,7 @@ use dioxus_free_icons::{
     icons::go_icons::{GoRepo, GoX},
 };
 use rfd::FileDialog;
+use std::{fs, path::PathBuf};
 
 #[component]
 pub fn Layout() -> Element {
@@ -52,7 +51,10 @@ pub fn Layout() -> Element {
                         onsubmit: move |e| {
                             e.prevent_default();
                             let path = FileDialog::new().pick_folder().unwrap();
-                            open_project(path)?;
+                            if let Some(info) = open_project(path)? {
+                                app_state.write().working_directory = Some(info.working_directory);
+                                app_state.write().project_name = Some(info.project_name);
+                            }
                             Ok(())
                         },
                         input {
