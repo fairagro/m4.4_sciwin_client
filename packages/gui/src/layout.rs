@@ -1,5 +1,5 @@
 use crate::{
-    close_project,
+    ApplicationState,
     components::{
         CodeViewer, Dialog, ICON_SIZE, NoProject, close_dialog,
         files::{FilesView, View},
@@ -80,7 +80,8 @@ pub fn Layout() -> Element {
                                 class: "p-1 hover:bg-fairagro-red-light/20 rounded-xl text-fairagro-red",
                                 title: "Close Project",
                                 onclick: move |_| {
-                                    close_project()?;
+                                    fs::remove_file(last_session_data())?;
+                                    app_state.set(ApplicationState::default());
                                     router().push("/");
                                     Ok(())
                                 },

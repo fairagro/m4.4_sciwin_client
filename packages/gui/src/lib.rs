@@ -106,15 +106,6 @@ fn open_project_inner(path: &Path) -> anyhow::Result<ProjectInfo> {
     })
 }
 
-pub fn close_project() -> anyhow::Result<()> {
-    let mut app_state = use_app_state();
-
-    fs::remove_file(last_session_data())?;
-    app_state.set(ApplicationState::default());
-
-    Ok(())
-}
-
 fn open_file(path: impl AsRef<Path>, router: RouterContext) {
     if path.as_ref().exists() {
         match read_node_type(&path) {
