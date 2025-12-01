@@ -1,7 +1,7 @@
 use crate::{
     close_project,
     components::{
-        CodeViewer, ICON_SIZE, NoProject,
+        CodeViewer, Dialog, ICON_SIZE, NoProject, close_dialog,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
@@ -25,6 +25,12 @@ pub fn Layout() -> Element {
     let route: Route = use_route();
     let mut route_rx = use_reactive(&route, |route| route);
 
+    let mut dialog = use_context::<Signal<Option<Dialog>>>();
+    let open_dialog = move |title: String, message: String| {
+        dialog.set(Some(Dialog::new(&title, &message)));
+    };
+    let close_dialog = move || close_dialog(dialog);
+
     {
         use_effect(move || {
             app_state.write().current_file = match route_rx() {
@@ -41,8 +47,10 @@ pub fn Layout() -> Element {
     rsx! {
         div {
             class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
-            onmounted: move |_| {
-                restore_last_session()?;
+            onmounted: move |_| async move{
+                spawn(async move{if let Some(last_session) = restore_last_session(open_dialog, close_dialog).await.unwrap() {
+                    app_state.set(last_session)
+                }});
                 Ok(())
             },
             div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
@@ -51,10 +59,11 @@ pub fn Layout() -> Element {
                         onsubmit: move |e| {
                             e.prevent_default();
                             let path = FileDialog::new().pick_folder().unwrap();
-                            if let Some(info) = open_project(path)? {
+                            spawn(
+                                async move {if let Some(info) = open_project(path, open_dialog, close_dialog).await.unwrap() {
                                 app_state.write().working_directory = Some(info.working_directory);
                                 app_state.write().project_name = Some(info.project_name);
-                            }
+                            }});
                             Ok(())
                         },
                         input {
@@ -123,9 +132,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]

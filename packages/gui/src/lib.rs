@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        Dialog, MessageResult, close_dialog,
+        MessageResult,
         files::{FileType, read_node_type},
     },
     workflow::VisualWorkflow,
@@ -15,7 +15,6 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
-use tokio::time::sleep;
 
 pub mod components;
 pub mod graph;
@@ -65,34 +64,33 @@ pub fn use_drag() -> Signal<DragContext> {
     use_context::<Signal<DragContext>>()
 }
 
-pub fn open_project(path: impl AsRef<Path>) -> anyhow::Result<Option<ProjectInfo>> {
+pub async fn open_project<T: FnMut(String, String), X: Fn() -> Option<MessageResult>>(
+    path: impl AsRef<Path>,
+    mut open: T,
+    close: X,
+) -> anyhow::Result<Option<ProjectInfo>> {
     let config_path = path.as_ref().join("workflow.toml");
+
     if !config_path.exists() {
-        let mut dialog = use_context::<Signal<Option<Dialog>>>();
-        dialog.set(Some(Dialog::new(
-            "No Project found!",
-            "There is no project that has been initialized in the folder you selected. Do you want to create a new project?",
-        )));
+        open(
+            "No Project found!".to_string(),
+            "There is no project that has been initialized in the folder you selected. Do you want to create a new project?".to_string(),
+        );
 
         {
             let path = path.as_ref().to_owned();
             // Check dialog result
-            spawn(async move {
-                loop {
-                    let res = close_dialog(dialog);
-                    if let Some(res) = res {
-                        if res == MessageResult::Ok {
-                            initialize_project(&path, false).unwrap();
-                            open_project_inner(path.as_ref()).unwrap();
-                        }
-                        break;
+            loop {
+                if let Some(res) = close() {
+                    if res == MessageResult::Ok {
+                        initialize_project(&path, false).map_err(|e| anyhow::anyhow!("{e}"))?;
+                        return Ok::<_, anyhow::Error>(Some(open_project_inner(path.as_ref())?));
                     }
-                    sleep(Duration::from_millis(100)).await;
+                    return Ok(None);
                 }
-            });
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
         }
-
-        Ok(None)
     } else {
         Ok(Some(open_project_inner(path.as_ref())?))
     }
@@ -137,28 +135,27 @@ pub fn last_session_data() -> PathBuf {
     tmp.join("app_state.json")
 }
 
-pub fn restore_last_session() -> anyhow::Result<()> {
+pub async fn restore_last_session<T: FnMut(String, String), X: Fn() -> Option<MessageResult>>(
+    open: T,
+    close: X,
+) -> anyhow::Result<Option<ApplicationState>> {
     if last_session_data().exists() {
         let data = fs::read_to_string(last_session_data())?;
-        let state: ApplicationState = serde_json::from_str(&data)?;
-        let mut current_state = use_app_state();
+        let mut state: ApplicationState = serde_json::from_str(&data)?;
 
         if let Some(working_dir) = &state.working_directory {
-            let info = open_project(working_dir)?;
+            let info = open_project(working_dir, open, close).await?;
             if let Some(info) = info {
-                current_state.write().working_directory = Some(info.working_directory);
-                current_state.write().project_name = Some(info.project_name);
+                state.working_directory = Some(info.working_directory);
+                state.project_name = Some(info.project_name);
             }
-        } else {
-            current_state.write().working_directory = state.working_directory
         }
 
         if let Some(current_file) = &state.current_file {
             open_file(current_file, router());
         }
-
-        current_state.write().current_file = state.current_file;
+        Ok(Some(state))
+    } else {
+        Ok(None)
     }
-
-    Ok(())
 }
