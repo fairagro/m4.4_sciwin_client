@@ -10,10 +10,16 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 #[component]
-pub fn SolutionView(project_path: ReadSignal<PathBuf>) -> Element {
+pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: ReadSignal<i32>) -> Element {
     let app_state = use_app_state();
-    let files = use_memo(move || get_cwl_files(project_path().join("workflows")));
-    let submodule_files = use_memo(move || get_submodules_cwl_files(project_path()));
+    let files = use_memo(move || {
+        reload_trigger(); //subscribe to changes
+        get_cwl_files(project_path().join("workflows"))
+    });
+    let submodule_files = use_memo(move || {
+        reload_trigger(); //subscribe to changes
+        get_submodules_cwl_files(project_path())
+    });
 
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto",

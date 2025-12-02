@@ -142,7 +142,9 @@ pub async fn restore_last_session<T: FnMut(String, String), X: Fn() -> Option<Me
             }
         }
 
-        if let Some(current_file) = &state.current_file {
+        if let Some(current_file) = &state.current_file
+            && current_file.exists()
+        {
             open_file(current_file, router());
         }
         Ok(Some(state))

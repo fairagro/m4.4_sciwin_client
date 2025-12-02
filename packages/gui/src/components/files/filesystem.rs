@@ -106,9 +106,12 @@ pub fn DirItem(node: ReadSignal<Node>, is_root: bool) -> Element {
 }
 
 #[component]
-pub fn FileSystemView(project_path: ReadSignal<PathBuf>) -> Element {
+pub fn FileSystemView(project_path: ReadSignal<PathBuf>,  reload_trigger: ReadSignal<i32>) -> Element {
     let app_state = use_app_state();
-    let root = use_memo(move || app_state.read().working_directory.as_ref().map(|path| load_project_tree(path)));
+    let root = use_memo(move || {
+         reload_trigger();
+        app_state.read().working_directory.as_ref().map(|path| load_project_tree(path))
+    });
 
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto mt-2",

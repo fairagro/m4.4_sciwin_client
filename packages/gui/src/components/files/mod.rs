@@ -29,15 +29,15 @@ impl FromStr for View {
 }
 
 #[component]
-pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>) -> Element {
+pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>, reload_trigger: ReadSignal<i32>) -> Element {
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto pt-1 pb-4",
             match *view.read() {
                 View::Solution => rsx! {
-                    SolutionView { project_path: working_dir }
+                    SolutionView { project_path: working_dir, reload_trigger }
                 },
                 View::FileSystem => rsx! {
-                    FileSystemView { project_path: working_dir }
+                    FileSystemView { project_path: working_dir, reload_trigger }
                 },
             }
         }

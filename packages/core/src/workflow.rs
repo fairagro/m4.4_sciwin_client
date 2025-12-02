@@ -2,18 +2,16 @@ use anyhow::{Context, Result};
 use commonwl::{StringOrDocument, execution::io::create_and_write_file, format::format_cwl, load_doc, prelude::*};
 use std::{fs, path::Path};
 
-pub fn create_workflow(filename: &str, force: bool) -> Result<String> {
+pub fn create_workflow(filename: impl AsRef<Path>, force: bool) -> Result<String> {
     let wf = Workflow::default();
+    let filename = filename.as_ref();
 
     let mut yaml = serde_yaml::to_string(&wf)?;
     yaml = format_cwl(&yaml).map_err(|e| anyhow::anyhow!("Could not formal yaml: {e}"))?;
 
     //removes file first if exists and force is given
-    if force {
-        let path = Path::new(&filename);
-        if path.exists() {
-            fs::remove_file(path)?;
-        }
+    if force && filename.exists() {
+        fs::remove_file(filename)?;
     }
 
     let name = Path::new(&filename)
@@ -21,7 +19,8 @@ pub fn create_workflow(filename: &str, force: bool) -> Result<String> {
         .and_then(|s| s.to_str())
         .context("Could not determine workflow name from filename")?;
 
-    create_and_write_file(filename, &yaml).map_err(|e| anyhow::anyhow!("❌ Could not create workflow {} at {}: {}", name, filename, e))?;
+    create_and_write_file(filename, &yaml)
+        .map_err(|e| anyhow::anyhow!("❌ Could not create workflow {} at {}: {}", name, filename.to_string_lossy(), e))?;
     Ok(yaml)
 }
 

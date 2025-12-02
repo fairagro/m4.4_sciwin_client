@@ -1,7 +1,7 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, Dialog, ICON_SIZE, NoProject, close_dialog,
+        CodeViewer, Dialog, ICON_SIZE, NoProject, RoundActionButton, WorkflowAddDialog, close_dialog,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
@@ -11,7 +11,7 @@ use crate::{
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::go_icons::{GoRepo, GoX},
+    icons::go_icons::{GoPlus, GoRepo, GoWorkflow, GoX},
 };
 use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
@@ -21,7 +21,9 @@ pub fn Layout() -> Element {
     let mut app_state = use_app_state();
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
 
+    let reload_trigger = use_signal(|| 0);
     let mut view = use_signal(|| View::Solution);
+
     let route: Route = use_route();
     let mut route_rx = use_reactive(&route, |route| route);
 
@@ -30,6 +32,9 @@ pub fn Layout() -> Element {
         dialog.set(Some(Dialog::new(&title, &message)));
     };
     let close_dialog = move || close_dialog(dialog);
+
+    let mut show_add_actions = use_signal(|| false);
+    let mut show_create_dialog = use_signal(|| false);
 
     {
         use_effect(move || {
@@ -60,27 +65,6 @@ pub fn Layout() -> Element {
             },
             div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
                 Sidebar {
-                    form {
-                        onsubmit: move |e| {
-                            e.prevent_default();
-                            spawn(async move {
-                                let path = AsyncFileDialog::new().pick_folder().await.unwrap();
-                                if let Some(info) = open_project(path.path(), open_dialog, close_dialog)
-                                    .await
-                                    .unwrap()
-                                {
-                                    app_state.write().working_directory = Some(info.working_directory);
-                                    app_state.write().project_name = Some(info.project_name);
-                                }
-                            });
-                            Ok(())
-                        },
-                        input {
-                            r#type: "submit",
-                            value: "Load Project",
-                            class: "rounded-lg bg-fairagro-light-500 px-3 py-1 my-5 cursor-pointer",
-                        }
-                    }
                     if let Some(project_name) = &app_state.read().project_name {
                         h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
                             Icon { icon: GoRepo, width: 16, height: 16 }
@@ -101,6 +85,28 @@ pub fn Layout() -> Element {
                                 }
                             }
                         }
+                    } else {
+                        form {
+                            onsubmit: move |e| {
+                                e.prevent_default();
+                                spawn(async move {
+                                    let path = AsyncFileDialog::new().pick_folder().await.unwrap();
+                                    if let Some(info) = open_project(path.path(), open_dialog, close_dialog)
+                                        .await
+                                        .unwrap()
+                                    {
+                                        app_state.write().working_directory = Some(info.working_directory);
+                                        app_state.write().project_name = Some(info.project_name);
+                                    }
+                                });
+                                Ok(())
+                            },
+                            input {
+                                r#type: "submit",
+                                value: "Load Project",
+                                class: "rounded-lg bg-fairagro-light-500 px-3 py-1 cursor-pointer",
+                            }
+                        }
                     }
                     if let Some(working_dir) = working_dir() {
                         select {
@@ -109,12 +115,36 @@ pub fn Layout() -> Element {
                             option { value: "Solution", "Solution" }
                             option { value: "FileSystem", "Filesystem" }
                         }
-                        FilesView { working_dir, view }
+                        FilesView { working_dir, view, reload_trigger }
                     } else {
                         NoProject {}
                     }
                 }
                 Main { Outlet::<Route> {} }
+                //floating action button
+                if let Some(working_dir) = working_dir() {
+                    WorkflowAddDialog {
+                        open: show_create_dialog,
+                        working_dir,
+                        show_add_actions,
+                        reload_trigger
+                    }
+                }
+                div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
+                    if *show_add_actions.read() {
+                        RoundActionButton {
+                            title: "Add new Workflow",
+                            onclick: move |_| show_create_dialog.set(true),
+                            Icon { width: 16, height: 16, icon: GoWorkflow }
+                        }
+                    }
+                    button {
+                        class: "rounded-full justify-center items-center p-5 bg-fairagro-mid-500 select-none hover:bg-fairagro-dark-500 hover:text-white",
+                        title: "Add new CWL File",
+                        onclick: move |_| { show_add_actions.set(!show_add_actions()) },
+                        Icon { width: 16, height: 16, icon: GoPlus }
+                    }
+                }
             }
             Footer {
                 match &route {

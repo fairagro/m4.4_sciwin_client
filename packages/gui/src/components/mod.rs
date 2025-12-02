@@ -1,4 +1,5 @@
 mod code;
+mod button;
 mod dialog;
 pub mod files;
 pub mod graph;
@@ -6,6 +7,7 @@ pub mod layout;
 mod toast;
 
 pub use code::*;
+pub use button::*;
 pub use dialog::*;
 pub use toast::*;
 
