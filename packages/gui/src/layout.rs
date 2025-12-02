@@ -13,7 +13,7 @@ use dioxus_free_icons::{
     Icon,
     icons::go_icons::{GoRepo, GoX},
 };
-use rfd::FileDialog;
+use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
 
 #[component]
@@ -47,10 +47,15 @@ pub fn Layout() -> Element {
     rsx! {
         div {
             class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
-            onmounted: move |_| async move{
-                spawn(async move{if let Some(last_session) = restore_last_session(open_dialog, close_dialog).await.unwrap() {
-                    app_state.set(last_session)
-                }});
+            onmounted: move |_| async move {
+                spawn(async move {
+                    if let Some(last_session) = restore_last_session(open_dialog, close_dialog)
+                        .await
+                        .unwrap()
+                    {
+                        app_state.set(last_session)
+                    }
+                });
                 Ok(())
             },
             div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
@@ -58,12 +63,16 @@ pub fn Layout() -> Element {
                     form {
                         onsubmit: move |e| {
                             e.prevent_default();
-                            let path = FileDialog::new().pick_folder().unwrap();
-                            spawn(
-                                async move {if let Some(info) = open_project(path, open_dialog, close_dialog).await.unwrap() {
-                                app_state.write().working_directory = Some(info.working_directory);
-                                app_state.write().project_name = Some(info.project_name);
-                            }});
+                            spawn(async move {
+                                let path = AsyncFileDialog::new().pick_folder().await.unwrap();
+                                if let Some(info) = open_project(path.path(), open_dialog, close_dialog)
+                                    .await
+                                    .unwrap()
+                                {
+                                    app_state.write().working_directory = Some(info.working_directory);
+                                    app_state.write().project_name = Some(info.project_name);
+                                }
+                            });
                             Ok(())
                         },
                         input {
