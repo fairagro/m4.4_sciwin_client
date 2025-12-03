@@ -29,7 +29,7 @@ impl FromStr for View {
 }
 
 #[component]
-pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>, reload_trigger: ReadSignal<i32>) -> Element {
+pub fn FilesView(working_dir: ReadSignal<PathBuf>, view: ReadSignal<View>, reload_trigger: Signal<i32>) -> Element {
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto pt-1 pb-4",
             match *view.read() {

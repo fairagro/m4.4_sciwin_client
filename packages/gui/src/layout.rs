@@ -29,6 +29,7 @@ pub fn Layout() -> Element {
 
     let mut show_add_actions = use_signal(|| false);
     let mut show_create_dialog = use_signal(|| false);
+
     let show_project_dialog = use_signal(|| false);
     let confirm_project_dialog = use_signal(|| false);
 
@@ -179,7 +180,7 @@ pub fn Layout() -> Element {
                         open: show_project_dialog,
                         confirmed: confirm_project_dialog,
                     }
-                    div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
+                    div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full",
                         if *show_add_actions.read() {
                             RoundActionButton {
                                 class: "mr-3 right-30",
