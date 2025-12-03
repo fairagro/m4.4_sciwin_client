@@ -1,5 +1,5 @@
 use commonwl::prelude::*;
-use std::fs;
+use std::{fs, path::Path};
 
 mod inputs;
 mod outputs;
@@ -9,7 +9,8 @@ pub(crate) use outputs::*;
 pub(crate) use postprocess::post_process_cwl;
 
 //TODO complete list
-pub static SCRIPT_EXECUTORS: &[&str] = &["python", "Rscript", "node"];
+pub static SCRIPT_EXECUTORS: &[&str] = &["python", "python3", "R", "Rscript", "node"];
+pub static SCRIPT_MODIFIERS: &[&str] = &["-e", "-m"];
 
 pub(crate) static BAD_WORDS: &[&str] = &["sql", "postgres", "mysql", "password"];
 
@@ -20,7 +21,6 @@ pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
         Command::Single(_) => &commands[1..],
         Command::Multiple(vec) => &commands[vec.len()..],
     };
-
     let mut tool = CommandLineTool::default().with_base_command(base_command.clone());
 
     if !remainder.is_empty() {
@@ -48,9 +48,14 @@ pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
             }
             tool
         }
-        Command::Multiple(ref vec) => tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
-            &vec[1],
-        ))]),
+        Command::Multiple(ref vec) => {
+            if fs::exists(&vec[1]).unwrap_or_default() && Path::new(&vec[1]).is_file() {
+                return tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    &vec[1],
+                ))]);
+            }
+            tool
+        }
     };
 
     if tool.arguments.is_some() {
@@ -67,7 +72,12 @@ pub(crate) fn get_base_command(command: &[&str]) -> Command {
     let mut base_command = vec![command[0].to_string()];
 
     if SCRIPT_EXECUTORS.iter().any(|&exec| command[0].starts_with(exec)) {
-        base_command.push(command[1].to_string());
+        if SCRIPT_MODIFIERS.iter().any(|&modif| command[1].starts_with(modif)) {
+            base_command.push(command[1].to_string()); //the modifier
+            base_command.push(command[2].to_string()); //the package
+        } else {
+            base_command.push(command[1].to_string());
+        }
     }
 
     match base_command.len() {
@@ -126,8 +136,8 @@ mod tests {
     use std::path::Path;
 
     use super::*;
-    use commonwl::{CWLType, DefaultValue};
     use commonwl::execution::{environment::RuntimeEnvironment, runner::command::run_command};
+    use commonwl::{CWLType, DefaultValue};
     use rstest::rstest;
     use serde_yaml::Value;
     use serial_test::serial;
@@ -154,11 +164,9 @@ mod tests {
     #[rstest]
     #[case("python script.py", CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
         )]
     #[case("Rscript script.R", CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["Rscript".to_string(), "script.R".to_string()]))
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.R"))])
     )]
     #[case("python script.py --option1 value1", CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
@@ -167,7 +175,6 @@ mod tests {
                 .with_type(CWLType::String)
                 .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))])
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
     #[case("python script.py --option1 \"value with spaces\"", CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
@@ -176,7 +183,6 @@ mod tests {
                 .with_type(CWLType::String)
                 .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                 .with_default_value(DefaultValue::Any(Value::String("value with spaces".to_string())))])
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
     )]
     #[case("python script.py positional1 --option1 value1",  CommandLineTool::default()
             .with_base_command(Command::Multiple(vec!["python".to_string(), "script.py".to_string()]))
@@ -192,7 +198,7 @@ mod tests {
                     .with_binding(CommandLineBinding::default().with_prefix("--option1"))
                     .with_default_value(DefaultValue::Any(Value::String("value1".to_string())))
             ])
-            .with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file("script.py"))])
+            
     )]
     pub fn test_parse_command_line(#[case] input: &str, #[case] expected: CommandLineTool) {
         let result = parse_command(input);
@@ -246,11 +252,24 @@ mod tests {
     #[serial]
     pub fn test_cwl_execute_command_multiple() {
         with_temp_repository(|dir| {
-            let cwl = parse_command("python scripts/echo.py --test data/input.txt");
+            let cwl = parse_command("python3 scripts/echo.py --test data/input.txt");
             assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());
 
             let output_path = dir.path().join(Path::new("results.txt"));
             assert!(output_path.exists());
         });
+    }
+
+    #[test]
+    #[serial]
+    pub fn test_python_module() {
+        let args = shlex::split("python3 -m my_module").unwrap();
+        let args_slice: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+
+        let result = get_base_command(&args_slice);
+        assert_eq!(
+            result,
+            Command::Multiple(vec!["python3".to_string(), "-m".to_string(), "my_module".to_string()])
+        );
     }
 }
