@@ -1,4 +1,4 @@
-use commonwl::prelude::*;
+use commonwl::{prelude::*, requirements::WorkDirItem};
 use std::{fs, path::Path};
 
 mod inputs;
@@ -40,6 +40,7 @@ pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
         tool = tool.with_inputs(inputs).with_stdout(stdout).with_stderr(stderr).with_arguments(args);
     }
 
+    //add working dir items
     tool = match base_command {
         Command::Single(cmd) => {
             //if command is an existing file, add to requirements
@@ -49,10 +50,23 @@ pub(crate) fn parse_command_line(commands: &[&str]) -> CommandLineTool {
             tool
         }
         Command::Multiple(ref vec) => {
+            //usual command `pyton script-file.py`
             if fs::exists(&vec[1]).unwrap_or_default() && Path::new(&vec[1]).is_file() {
                 return tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
                     &vec[1],
                 ))]);
+            }
+            //command with `R -e script.R`
+            if vec.len() > 2 && SCRIPT_MODIFIERS.contains(&vec[1].as_str()) && fs::exists(&vec[2]).unwrap_or_default() && Path::new(&vec[2]).is_file() {
+                return tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement::from_file(
+                    &vec[2],
+                ))]);
+            }
+            //command with `python -m folder`
+            if vec.len() > 2 && SCRIPT_MODIFIERS.contains(&vec[1].as_str()) && fs::exists(&vec[2]).unwrap_or_default() && Path::new(&vec[2]).is_dir() {
+                let mut tool = tool;
+                tool.inputs.push(CommandInputParameter::default().with_id("module").with_type(CWLType::Directory).with_default_value(DefaultValue::Directory(Directory::from_location(&vec[2]))));
+                return tool.with_requirements(vec![Requirement::InitialWorkDirRequirement(InitialWorkDirRequirement { listing: vec![WorkDirItem::Expression("$(inputs.module)".to_string())] })]);
             }
             tool
         }
@@ -133,14 +147,16 @@ fn split_vec_at<T: PartialEq + Clone, C: AsRef<[T]>>(vec: C, split_at: &T) -> (V
 
 #[cfg(test)]
 mod tests {
+    use std::env;
     use std::path::Path;
-
     use super::*;
+    use commonwl::execution::io::copy_dir;
     use commonwl::execution::{environment::RuntimeEnvironment, runner::command::run_command};
     use commonwl::{CWLType, DefaultValue};
     use rstest::rstest;
     use serde_yaml::Value;
     use serial_test::serial;
+    use tempfile::tempdir;
     use test_utils::with_temp_repository;
 
     fn parse_command(command: &str) -> CommandLineTool {
@@ -271,5 +287,24 @@ mod tests {
             result,
             Command::Multiple(vec!["python3".to_string(), "-m".to_string(), "my_module".to_string()])
         );
+    }
+ 
+    #[test]
+    #[serial]
+    pub fn test_python_module_creation() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+
+        copy_dir("../../testdata/module", path.join("module")).unwrap();
+
+        let current = env::current_dir().unwrap();
+        env::set_current_dir(path).unwrap();
+
+        let cwl = parse_command("python3 -m module --what ever");
+        //make sure it runs
+        
+        assert!(run_command(&cwl, &mut RuntimeEnvironment::default()).is_ok());   
+        assert_eq!(cwl.base_command, Command::Multiple(vec!["python3".to_string(), "-m".to_string(),  "module".to_string() ]));
+        env::set_current_dir(current).unwrap();
     }
 }
