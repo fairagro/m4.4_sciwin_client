@@ -5,6 +5,7 @@ use crate::{
 };
 use dioxus::{
     desktop::{HotKeyState, use_global_shortcut},
+    logger::tracing,
     prelude::*,
 };
 use dioxus_free_icons::{Icon, icons::go_icons::GoCheck};
@@ -58,15 +59,6 @@ pub fn CodeViewer(path: String) -> Element {
         Ok(())
     };
 
-    use_global_shortcut("Ctrl+S", move |s| {
-        if s == HotKeyState::Pressed {
-            spawn(async move {
-                save_code_file().await.unwrap();
-            });
-        }
-    })
-    .unwrap();
-
     rsx! {
         div { class: "flex justify-end w-full py-1 px-3",
             button {
@@ -77,6 +69,16 @@ pub fn CodeViewer(path: String) -> Element {
             }
         }
         div {
+            onkeypress: move |e| {
+                if e.key() == Key::Character("s".to_string())
+                    && e.modifiers() == Modifiers::CONTROL
+                {
+                    e.stop_propagation();
+                    spawn(async move {
+                        save_code_file().await.unwrap();
+                    });
+                }
+            },
             id: "editor",
             class: "relative overflow-scroll w-full h-full min-h-0",
         }

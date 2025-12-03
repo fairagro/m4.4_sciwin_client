@@ -127,7 +127,7 @@ pub fn Layout() -> Element {
                         open: show_create_dialog,
                         working_dir,
                         show_add_actions,
-                        reload_trigger
+                        reload_trigger,
                     }
                 }
                 div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
@@ -172,7 +172,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]

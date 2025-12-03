@@ -93,8 +93,7 @@ pub fn NewDialog(title: String, children: Element, open: Signal<bool>, on_confir
                     "{title}"
                 }
                 AlertDialogDescription { class: "py-2 px-4", {children} }
-                AlertDialogActions {
-                    class: "flex justify-center py-2 gap-2",
+                AlertDialogActions { class: "flex justify-center py-2 gap-2",
                     AlertDialogAction {
                         class: "cursor-pointer border-1 border-fairagro-mid-500 rounded-sm px-4 py-1 hover:bg-fairagro-mid-500 hover:text-white",
                         on_click: on_confirm,
@@ -127,13 +126,13 @@ pub fn WorkflowAddDialog(
 
                 workflow_name.set("".to_string());
                 show_add_actions.set(false);
-                reload_trigger+=1;
+                reload_trigger += 1;
                 open.set(false);
 
                 Ok(())
             },
             div { class: "flex flex-col",
-                label { class:"text-fairagro-dark-500 font-bold", "Enter Workflow Name" }
+                label { class: "text-fairagro-dark-500 font-bold", "Enter Workflow Name" }
                 input {
                     class: "mt-2 shadow appearance-none border rounded w-full py-2 px-3 text-zinc-700 leading-tight focus:outline-none focus:shadow-outline",
                     value: "{workflow_name}",
