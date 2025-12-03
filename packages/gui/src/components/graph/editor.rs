@@ -145,7 +145,7 @@ pub fn GraphEditor(path: String) -> Element {
                 drag_state.write().dragging = None;
                 new_line.set(None);
             },
-            SmallRoundActionButton{
+            SmallRoundActionButton {
                 class: "hover:bg-fairagro-mid-200 fixed top-2 right-2 z-10 hover:rotate-30 transition-[rotate] duration-200",
                 title: "Auto Align Nodes",
                 onclick: move |_| {
@@ -153,7 +153,11 @@ pub fn GraphEditor(path: String) -> Element {
                     auto_layout(&mut graph);
                     app_state.write().workflow.graph = graph;
                 },
-                Icon{width: ICON_SIZE, height: ICON_SIZE, icon: MdCleaningServices }
+                Icon {
+                    width: ICON_SIZE,
+                    height: ICON_SIZE,
+                    icon: MdCleaningServices,
+                }
             }
             for id in graph.node_identifiers() {
                 NodeElement { id }
