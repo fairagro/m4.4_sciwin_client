@@ -1,10 +1,7 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, RoundActionButton, WorkflowAddDialog,
-        files::{FilesView, View},
-        graph::GraphEditor,
-        layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
+        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog, files::{FilesView, View}, graph::GraphEditor, layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs}
     },
     last_session_data, open_project, restore_last_session, use_app_state,
 };
@@ -68,8 +65,8 @@ pub fn Layout() -> Element {
                         h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
                             Icon { icon: GoRepo, width: 16, height: 16 }
                             div { "{project_name}" }
-                            button {
-                                class: "p-1 hover:bg-fairagro-red-light/20 rounded-xl text-fairagro-red",
+                            SmallRoundActionButton {
+                                class: "hover:bg-fairagro-red-light/20 text-fairagro-red",
                                 title: "Close Project",
                                 onclick: move |_| {
                                     fs::remove_file(last_session_data())?;
@@ -83,10 +80,12 @@ pub fn Layout() -> Element {
                                     height: ICON_SIZE,
                                 }
                             }
-                            button {
-                                class: "p-1 hover:bg-fairagro-dark-500/20 rounded-xl text-fairagro-dark-500",
+                            SmallRoundActionButton {
+                                class: "hover:bg-fairagro-dark-500/20 text-fairagro-dark-500",
                                 title: "Reload Files",
-                                onclick: move |_| { reload_trigger += 1; },
+                                onclick: move |_| {
+                                    reload_trigger += 1;
+                                },
                                 Icon {
                                     icon: GoSync,
                                     width: ICON_SIZE,
@@ -191,7 +190,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]
