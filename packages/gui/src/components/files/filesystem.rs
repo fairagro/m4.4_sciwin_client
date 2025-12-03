@@ -106,10 +106,10 @@ pub fn DirItem(node: ReadSignal<Node>, is_root: bool) -> Element {
 }
 
 #[component]
-pub fn FileSystemView(project_path: ReadSignal<PathBuf>,  reload_trigger: ReadSignal<i32>) -> Element {
+pub fn FileSystemView(project_path: ReadSignal<PathBuf>, reload_trigger: ReadSignal<i32>) -> Element {
     let app_state = use_app_state();
     let root = use_memo(move || {
-         reload_trigger();
+        reload_trigger();
         app_state.read().working_directory.as_ref().map(|path| load_project_tree(path))
     });
 
@@ -136,14 +136,15 @@ fn load_project_tree(path: &Path) -> Node {
 
         for path in entries {
             let is_dir = path.is_dir();
-
-            children.push(Node {
-                name: path.file_name().unwrap().to_string_lossy().into(),
-                path: path.clone(),
-                is_dir,
-                children: if is_dir { load_project_tree(&path).children } else { vec![] },
-                type_: read_node_type(&path),
-            });
+            if is_dir && !path.ends_with(".git") {
+                children.push(Node {
+                    name: path.file_name().unwrap().to_string_lossy().into(),
+                    path: path.clone(),
+                    is_dir,
+                    children: if is_dir { load_project_tree(&path).children } else { vec![] },
+                    type_: read_node_type(&path),
+                });
+            }
         }
     }
 
