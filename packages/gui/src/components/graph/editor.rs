@@ -146,7 +146,7 @@ pub fn GraphEditor(path: String) -> Element {
                 new_line.set(None);
             },
             SmallRoundActionButton{
-                class: "hover:bg-fairagro-mid-200 absolute top-0 right-0 z-10 hover:rotate-30 transition-[rotate] duration-200",
+                class: "hover:bg-fairagro-mid-200 fixed top-2 right-2 z-10 hover:rotate-30 transition-[rotate] duration-200",
                 title: "Auto Align Nodes",
                 onclick: move |_| {
                     let mut graph = app_state().workflow.graph;
