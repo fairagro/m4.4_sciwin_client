@@ -108,7 +108,7 @@ pub fn WorkflowAddDialog(
 
 fn create_workflow_impl(project_root: impl AsRef<Path>, name: String) -> anyhow::Result<()> {
     if name.is_empty() {
-        anyhow::bail!("Workflow Name was empty. Please enter an Name!")
+        anyhow::bail!("Workflow name was empty. Please enter a name!")
     }
 
     let path = project_root.as_ref().join(get_workflows_folder()).join(&name).join(format!("{name}.cwl"));
