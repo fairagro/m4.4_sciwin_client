@@ -1,5 +1,5 @@
 use crate::{
-    components::{ICON_SIZE, ToastItem},
+    components::{ICON_SIZE, SmallRoundActionButton, ToastItem},
     use_app_state,
     workflow::VisualWorkflow,
 };
@@ -57,8 +57,8 @@ pub fn CodeViewer(path: String) -> Element {
 
     rsx! {
         div { class: "flex justify-end w-full py-1 px-3",
-            button {
-                class: "p-1 hover:bg-fairagro-mid-200 rounded-xl",
+            SmallRoundActionButton {
+                class: "hover:bg-fairagro-mid-200",
                 title: "Save",
                 onclick: move |_| save_code_file(),
                 Icon { icon: GoCheck, width: ICON_SIZE, height: ICON_SIZE }
