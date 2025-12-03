@@ -136,15 +136,13 @@ fn load_project_tree(path: &Path) -> Node {
 
         for path in entries {
             let is_dir = path.is_dir();
-            if is_dir && !path.ends_with(".git") {
-                children.push(Node {
-                    name: path.file_name().unwrap().to_string_lossy().into(),
-                    path: path.clone(),
-                    is_dir,
-                    children: if is_dir { load_project_tree(&path).children } else { vec![] },
-                    type_: read_node_type(&path),
-                });
-            }
+            children.push(Node {
+                name: path.file_name().unwrap().to_string_lossy().into(),
+                path: path.clone(),
+                is_dir,
+                children: if is_dir { load_project_tree(&path).children } else { vec![] },
+                type_: read_node_type(&path),
+            });
         }
     }
 
