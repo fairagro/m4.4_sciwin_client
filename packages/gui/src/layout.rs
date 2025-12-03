@@ -11,7 +11,7 @@ use crate::{
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::go_icons::{GoPlus, GoRepo, GoWorkflow, GoX},
+    icons::go_icons::{GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
 };
 use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
@@ -21,7 +21,7 @@ pub fn Layout() -> Element {
     let mut app_state = use_app_state();
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
 
-    let reload_trigger = use_signal(|| 0);
+    let mut reload_trigger = use_signal(|| 0);
     let mut view = use_signal(|| View::Solution);
 
     let route: Route = use_route();
@@ -79,6 +79,16 @@ pub fn Layout() -> Element {
                                 },
                                 Icon {
                                     icon: GoX,
+                                    width: ICON_SIZE,
+                                    height: ICON_SIZE,
+                                }
+                            }
+                            button {
+                                class: "p-1 hover:bg-fairagro-dark-500/20 rounded-xl text-fairagro-dark-500",
+                                title: "Reload Files",
+                                onclick: move |_| { reload_trigger += 1; },
+                                Icon {
+                                    icon: GoSync,
                                     width: ICON_SIZE,
                                     height: ICON_SIZE,
                                 }
@@ -181,9 +191,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]

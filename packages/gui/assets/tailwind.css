@@ -821,6 +821,16 @@
       }
     }
   }
+  .hover\:bg-fairagro-dark-500\/20 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in srgb, #0f9884 20%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-fairagro-dark-500) 20%, transparent);
+        }
+      }
+    }
+  }
   .hover\:bg-fairagro-mid-200 {
     &:hover {
       @media (hover: hover) {
