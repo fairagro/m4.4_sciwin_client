@@ -149,7 +149,7 @@ pub fn Layout() -> Element {
                                 open,
                                 on_confirm: move |_| {
                                     errors_clone.clear_errors();
-                                    open.set(true); // we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise // we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise
+                                    open.set(true); // we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise
                                 },
                                 div { class: "flex gap-4",
                                     Icon { width: 32, height: 32, icon: GoAlert }
