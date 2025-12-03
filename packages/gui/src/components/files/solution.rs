@@ -145,3 +145,15 @@ fn get_submodules_cwl_files(path: impl AsRef<Path>) -> HashMap<String, Vec<Node>
 
     map
 }
+
+#[cfg(test)]
+mod tests {
+    pub use super::*;
+
+    #[test]
+    pub fn test_get_cwl_files() {
+        let path = "../../testdata/hello_world";
+        let files = get_cwl_files(path);
+        assert_eq!(files.len(), 3);
+    }
+}
