@@ -341,6 +341,9 @@
   .ml-\[-9px\] {
     margin-left: -9px;
   }
+  .ml-auto {
+    margin-left: auto;
+  }
   .block {
     display: block;
   }

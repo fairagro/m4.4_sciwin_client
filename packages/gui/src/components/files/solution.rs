@@ -1,11 +1,12 @@
-use crate::components::ICON_SIZE;
 use crate::components::files::{Node, get_route, read_node_type};
+use crate::components::{ICON_SIZE, SmallRoundActionButton};
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
-use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory};
+use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoTrash};
 use ignore::WalkBuilder;
 use repository::Repository;
+use repository::submodule::remove_submodule;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -54,7 +55,20 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: ReadSigna
             for (module , files) in submodule_files() {
                 h2 { class: "mt-2 font-bold flex gap-1 items-center",
                     Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoCloud }
-                    {module}
+                    "{module}"
+                    SmallRoundActionButton {
+                        class: "ml-auto hover:bg-fairagro-mid-200",
+                        title: "Uninstall {module}",
+                        onclick: move |_| {
+                            remove_submodule(&module)?;
+                            Ok(())
+                        },
+                        Icon {
+                            width: ICON_SIZE,
+                            height: ICON_SIZE,
+                            icon: GoTrash,
+                        }
+                    }
                 }
                 ul {
                     for item in files {
