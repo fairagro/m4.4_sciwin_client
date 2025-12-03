@@ -114,6 +114,7 @@ pub fn Layout() -> Element {
                                         app_state.write().project_name = Some(info.project_name);
                                     }
                                     //move to home if new project opens
+                                    view.set(View::Solution);
                                     router().push("/");
                                 });
                                 Ok(())
@@ -221,9 +222,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]
