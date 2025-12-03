@@ -1,6 +1,10 @@
 use crate::{
     DragContext, DragState,
-    components::graph::{EdgeElement, Line, LineProps, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
+    components::{
+        ICON_SIZE, SmallRoundActionButton,
+        graph::{EdgeElement, Line, LineProps, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
+    },
+    graph::auto_layout,
     use_app_state,
     workflow::VisualWorkflow,
 };
@@ -10,6 +14,7 @@ use dioxus::html::geometry::{
     euclid::{Point2D, Rect},
 };
 use dioxus::prelude::*;
+use dioxus_free_icons::{Icon, icons::md_maps_icons::MdCleaningServices};
 use petgraph::visit::IntoNodeIdentifiers;
 use std::{path::PathBuf, rc::Rc};
 
@@ -140,6 +145,16 @@ pub fn GraphEditor(path: String) -> Element {
                 drag_state.write().dragging = None;
                 new_line.set(None);
             },
+            SmallRoundActionButton{
+                class: "hover:bg-fairagro-mid-200 absolute top-0 right-0 z-10 hover:rotate-30 transition-[rotate] duration-200",
+                title: "Auto Align Nodes",
+                onclick: move |_| {
+                    let mut graph = app_state().workflow.graph;
+                    auto_layout(&mut graph);
+                    app_state.write().workflow.graph = graph;
+                },
+                Icon{width: ICON_SIZE, height: ICON_SIZE, icon: MdCleaningServices }
+            }
             for id in graph.node_identifiers() {
                 NodeElement { id }
             }

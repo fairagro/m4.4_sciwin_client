@@ -133,31 +133,35 @@ impl WorkflowGraphBuilder {
     }
 
     pub fn auto_layout(&mut self) {
-        let node_indices: Vec<_> = self.graph.node_indices().collect();
+        auto_layout(&mut self.graph);
+    }
+}
 
-        let positions = rust_sugiyama::from_graph(
-            &self.graph,
-            &(|_, _| (120.0, 190.0)),
-            &rust_sugiyama::configure::Config {
-                vertex_spacing: 30.0,
-                ..Default::default()
-            },
-        )
-        .into_iter()
-        .map(|(layout, _, _)| {
-            let mut new_layout = HashMap::new();
-            for (id, coords) in layout {
-                new_layout.insert(id, coords);
-            }
-            new_layout
-        })
-        .collect::<Vec<_>>();
+pub fn auto_layout(graph: &mut WorkflowGraph) {
+    let node_indices: Vec<_> = graph.node_indices().collect();
 
-        for island in &positions {
-            for ix in &node_indices {
-                if let Some(pos) = island.get(ix) {
-                    self.graph[*ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
-                }
+    let positions = rust_sugiyama::from_graph(
+        graph,
+        &(|_, _| (120.0, 190.0)),
+        &rust_sugiyama::configure::Config {
+            vertex_spacing: 30.0,
+            ..Default::default()
+        },
+    )
+    .into_iter()
+    .map(|(layout, _, _)| {
+        let mut new_layout = HashMap::new();
+        for (id, coords) in layout {
+            new_layout.insert(id, coords);
+        }
+        new_layout
+    })
+    .collect::<Vec<_>>();
+
+    for island in &positions {
+        for ix in &node_indices {
+            if let Some(pos) = island.get(ix) {
+                graph[*ix].position = Point2D::new(pos.1 as f32, pos.0 as f32);
             }
         }
     }
