@@ -3,11 +3,7 @@ use crate::{
     use_app_state,
     workflow::VisualWorkflow,
 };
-use dioxus::{
-    desktop::{HotKeyState, use_global_shortcut},
-    logger::tracing,
-    prelude::*,
-};
+use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::go_icons::GoCheck};
 use std::{fs, path::PathBuf};
 

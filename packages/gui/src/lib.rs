@@ -1,8 +1,5 @@
 use crate::{
-    components::{
-        MessageResult,
-        files::{FileType, read_node_type},
-    },
+    components::files::{FileType, read_node_type},
     workflow::VisualWorkflow,
 };
 use dioxus::{html::geometry::ClientPoint, prelude::*, router::RouterContext};
@@ -64,26 +61,20 @@ pub fn use_drag() -> Signal<DragContext> {
     use_context::<Signal<DragContext>>()
 }
 
-pub async fn open_project<T: FnMut(String, String), X: Fn() -> Option<MessageResult>>(
-    path: impl AsRef<Path>,
-    mut open: T,
-    close: X,
-) -> anyhow::Result<Option<ProjectInfo>> {
+pub async fn open_project(path: impl AsRef<Path>, mut open: Signal<bool>, mut confirmed: Signal<bool>) -> anyhow::Result<Option<ProjectInfo>> {
     let config_path = path.as_ref().join("workflow.toml");
 
     if !config_path.exists() {
-        open(
-            "No Project found!".to_string(),
-            "There is no project that has been initialized in the folder you selected. Do you want to create a new project?".to_string(),
-        );
+        open.set(true);
 
         {
             let path = path.as_ref().to_owned();
             // Check dialog result
             loop {
-                if let Some(res) = close() {
-                    if res == MessageResult::Ok {
+                if !open() {
+                    if confirmed() {
                         initialize_project(&path, false).map_err(|e| anyhow::anyhow!("{e}"))?;
+                        confirmed.set(false); //reset
                         return Ok::<_, anyhow::Error>(Some(open_project_inner(path.as_ref())?));
                     }
                     return Ok(None);
@@ -126,16 +117,13 @@ pub fn last_session_data() -> PathBuf {
     tmp.join("app_state.json")
 }
 
-pub async fn restore_last_session<T: FnMut(String, String), X: Fn() -> Option<MessageResult>>(
-    open: T,
-    close: X,
-) -> anyhow::Result<Option<ApplicationState>> {
+pub async fn restore_last_session(open: Signal<bool>, confirmed: Signal<bool>) -> anyhow::Result<Option<ApplicationState>> {
     if last_session_data().exists() {
         let data = fs::read_to_string(last_session_data())?;
         let mut state: ApplicationState = serde_json::from_str(&data)?;
 
         if let Some(working_dir) = &state.working_directory {
-            let info = open_project(working_dir, open, close).await?;
+            let info = open_project(working_dir, open, confirmed).await?;
             if let Some(info) = info {
                 state.working_directory = Some(info.working_directory);
                 state.project_name = Some(info.project_name);

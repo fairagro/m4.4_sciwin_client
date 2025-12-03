@@ -1,7 +1,7 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, Dialog, ICON_SIZE, NoProject, RoundActionButton, WorkflowAddDialog, close_dialog,
+        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, RoundActionButton, WorkflowAddDialog,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
@@ -27,14 +27,10 @@ pub fn Layout() -> Element {
     let route: Route = use_route();
     let mut route_rx = use_reactive(&route, |route| route);
 
-    let mut dialog = use_context::<Signal<Option<Dialog>>>();
-    let open_dialog = move |title: String, message: String| {
-        dialog.set(Some(Dialog::new(&title, &message)));
-    };
-    let close_dialog = move || close_dialog(dialog);
-
     let mut show_add_actions = use_signal(|| false);
     let mut show_create_dialog = use_signal(|| false);
+    let show_project_dialog = use_signal(|| false);
+    let confirm_project_dialog = use_signal(|| false);
 
     {
         use_effect(move || {
@@ -54,7 +50,10 @@ pub fn Layout() -> Element {
             class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
             onmounted: move |_| async move {
                 spawn(async move {
-                    if let Some(last_session) = restore_last_session(open_dialog, close_dialog)
+                    if let Some(last_session) = restore_last_session(
+                            show_project_dialog,
+                            confirm_project_dialog,
+                        )
                         .await
                         .unwrap()
                     {
@@ -91,7 +90,11 @@ pub fn Layout() -> Element {
                                 e.prevent_default();
                                 spawn(async move {
                                     let path = AsyncFileDialog::new().pick_folder().await.unwrap();
-                                    if let Some(info) = open_project(path.path(), open_dialog, close_dialog)
+                                    if let Some(info) = open_project(
+                                            path.path(),
+                                            show_project_dialog,
+                                            confirm_project_dialog,
+                                        )
                                         .await
                                         .unwrap()
                                     {
@@ -129,6 +132,10 @@ pub fn Layout() -> Element {
                         show_add_actions,
                         reload_trigger,
                     }
+                }
+                NoProjectDialog {
+                    open: show_project_dialog,
+                    confirmed: confirm_project_dialog,
                 }
                 div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
                     if *show_add_actions.read() {

@@ -2,7 +2,7 @@ use dioxus::desktop::tao::window::Icon;
 use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use gui::ApplicationState;
-use gui::components::{Dialog, DialogProvider, ToastItem, ToastProvider};
+use gui::components::{ToastItem, ToastProvider};
 use gui::layout::Route;
 
 fn main() {
@@ -24,14 +24,12 @@ fn main() {
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
     use_context_provider(|| Signal::new(Vec::<ToastItem>::new()));
-    use_context_provider(|| Signal::new(None::<Dialog>));
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
         Stylesheet { href: asset!("/assets/main.css") }
         Stylesheet { href: asset!("/assets/bundle.min.css") }
         Stylesheet { href: asset!("/assets/tailwind.css") }
-        DialogProvider {}
         ToastProvider {}
         Router::<Route> {}
     }
