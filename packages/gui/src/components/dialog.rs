@@ -32,6 +32,30 @@ pub fn Dialog(title: String, children: Element, open: Signal<bool>, on_confirm: 
 }
 
 #[component]
+pub fn OkDialog(title: String, children: Element, open: Signal<bool>, on_confirm: Option<EventHandler<MouseEvent>>) -> Element {
+    rsx! {
+        AlertDialogRoot {
+            class: "absolute h-screen w-screen left-0 top-0 overflow-hidden bg-zinc-500/60 z-900",
+            open: open(),
+            on_open_change: move |v| open.set(v),
+            AlertDialogContent { class: "select-none absolute justify-center bg-white top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-sm min-w-64 shadow-xl border-1 border-fairagro-dark-500",
+                AlertDialogTitle { class: "py-1 px-4 bg-fairagro-mid-500 rounded-t-sm font-bold center border-b-1 border-fairagro-dark-500",
+                    "{title}"
+                }
+                AlertDialogDescription { class: "py-2 px-4", {children} }
+                AlertDialogActions { class: "flex justify-center py-2 gap-2",
+                    AlertDialogAction {
+                        class: "cursor-pointer border-1 border-fairagro-mid-500 rounded-sm px-4 py-1 hover:bg-fairagro-mid-500 hover:text-white",
+                        on_click: on_confirm,
+                        "Ok"
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
 pub fn WorkflowAddDialog(
     open: Signal<bool>,
     working_dir: ReadSignal<PathBuf>,

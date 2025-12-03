@@ -1,14 +1,17 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog, files::{FilesView, View}, graph::GraphEditor, layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs}
+        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, OkDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog,
+        files::{FilesView, View},
+        graph::GraphEditor,
+        layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
     last_session_data, open_project, restore_last_session, use_app_state,
 };
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::go_icons::{GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
+    icons::go_icons::{GoAlert, GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
 };
 use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
@@ -134,33 +137,60 @@ pub fn Layout() -> Element {
                         NoProject {}
                     }
                 }
-                Main { Outlet::<Route> {} }
-                //floating action button
-                if let Some(working_dir) = working_dir() {
-                    WorkflowAddDialog {
-                        open: show_create_dialog,
-                        working_dir,
-                        show_add_actions,
-                        reload_trigger,
-                    }
-                }
-                NoProjectDialog {
-                    open: show_project_dialog,
-                    confirmed: confirm_project_dialog,
-                }
-                div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
-                    if *show_add_actions.read() {
-                        RoundActionButton {
-                            class: "mr-3 right-30",
-                            title: "Add new Workflow",
-                            onclick: move |_| show_create_dialog.set(true),
-                            Icon { width: 16, height: 16, icon: GoWorkflow }
+                ErrorBoundary {
+                    handle_error: |errors: ErrorContext| {
+                        let errors_clone = errors.clone();
+                        let mut open = use_signal(|| true);
+                        let error = errors.error();
+
+                        rsx! {
+                            OkDialog {
+                                title: "An Error occured",
+                                open,
+                                on_confirm: move |_| {
+                                    errors_clone.clear_errors();
+                                    open.set(true); // we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise // we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise  we set back to true as it would be invisible on next error otherwise
+                                },
+                                div { class: "flex gap-4",
+                                    Icon { width: 32, height: 32, icon: GoAlert }
+                                    if let Some(error) = error {
+                                        div {
+                                            p { "Oops, we encountered an error." }
+                                            p { class: "font-bold text-fairagro-red", "{error}" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    Main { Outlet::<Route> {} }
+                    //floating action button
+                    if let Some(working_dir) = working_dir() {
+                        WorkflowAddDialog {
+                            open: show_create_dialog,
+                            working_dir,
+                            show_add_actions,
+                            reload_trigger,
                         }
                     }
-                    RoundActionButton {
-                        title: "Add new CWL File",
-                        onclick: move |_| { show_add_actions.set(!show_add_actions()) },
-                        Icon { width: 16, height: 16, icon: GoPlus }
+                    NoProjectDialog {
+                        open: show_project_dialog,
+                        confirmed: confirm_project_dialog,
+                    }
+                    div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
+                        if *show_add_actions.read() {
+                            RoundActionButton {
+                                class: "mr-3 right-30",
+                                title: "Add new Workflow",
+                                onclick: move |_| show_create_dialog.set(true),
+                                Icon { width: 16, height: 16, icon: GoWorkflow }
+                            }
+                        }
+                        RoundActionButton {
+                            title: "Add new CWL File",
+                            onclick: move |_| { show_add_actions.set(!show_add_actions()) },
+                            Icon { width: 16, height: 16, icon: GoPlus }
+                        }
                     }
                 }
             }
