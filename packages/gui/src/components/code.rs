@@ -11,13 +11,14 @@ use std::{fs, path::PathBuf};
 pub fn CodeViewer(path: String) -> Element {
     let mut path = use_reactive(&path, PathBuf::from);
     let mut editor_initialized = use_signal(|| false);
-    let path_signal = use_signal(&mut path);
+    let mut path_signal = use_signal(&mut path);
 
     let mut toast_items = use_context::<Signal<Vec<ToastItem>>>();
     let mut app_state = use_app_state();
 
     {
         use_effect(move || {
+            path_signal.set(path());
             let contents = fs::read_to_string(path());
             let code = if let Ok(contents) = contents { contents } else { "".to_string() };
 
@@ -39,6 +40,7 @@ pub fn CodeViewer(path: String) -> Element {
         let value = document::eval("return getMonacoValue();");
         let value = value.await?;
         let code: String = serde_json::from_value(value)?;
+
         fs::write(path_signal(), code)?;
 
         toast_items.write().push(ToastItem::new(
