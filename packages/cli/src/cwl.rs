@@ -189,7 +189,7 @@ mod tests {
     #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
     fn test_resolve_filename() {
         create_tool(&CreateArgs {
-            command: vec!["python".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+            command: vec!["python3".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
             ..Default::default()
         })
         .unwrap();

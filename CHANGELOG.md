@@ -4,6 +4,7 @@
 - made inputs and outputs prefix optional in `connect`
 ## 🐛 Bugfixes
 - default values are used on input connections
+- Fixed some bugs in command parsing
 
 ## 🚜 Refactor
 - Major restructuring for better maintainability
