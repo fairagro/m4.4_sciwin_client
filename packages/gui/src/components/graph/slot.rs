@@ -31,16 +31,31 @@ pub fn SlotElement(props: SlotProps) -> Element {
         _ => "rounded-lg",
     };
 
-    let bg = match props.slot.type_ {
+    let bg_color = move |t| match t {
         CWLType::File => "bg-green-400",
         CWLType::Directory => "bg-blue-400",
         CWLType::String => "bg-red-400",
-        _ => "",
+        CWLType::Boolean => "bg-yellow-400",
+        CWLType::Double => "bg-purple-400",
+        CWLType::Float => "bg-pink-400",
+        CWLType::Long => "bg-cyan-400",
+        CWLType::Int => "bg-teal-400",
+        CWLType::Null => "bg-slate-400",
+        CWLType::Any => "bg-slate-400",
+        CWLType::Stdout => "bg-slate-400",
+        CWLType::Stderr => "bg-slate-400",
+        _ => ""
     };
 
-    let border = match props.slot.type_ {
-        CWLType::Array(_) => "border border-3 border-green-700",
-        CWLType::Optional(_) => "border border-3 border-red-700",
+    let bg = match &props.slot.type_ {
+        CWLType::Array(inner) => bg_color(*inner.clone()),
+        CWLType::Optional(inner) => bg_color(*inner.clone()),
+        _ => bg_color(props.slot.type_.clone()),
+    };
+
+    let border = match &props.slot.type_ {
+        CWLType::Array(_) => "border border-green-800",
+        CWLType::Optional(_) => "border border-red-800",
         _ => "border border-1 border-black",
     };
 

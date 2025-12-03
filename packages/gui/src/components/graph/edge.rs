@@ -32,9 +32,17 @@ pub(crate) fn get_stroke_from_cwl_type(type_: CWLType) -> &'static str {
         CWLType::String => "stroke-red-400",
         CWLType::File => "stroke-green-400",
         CWLType::Directory => "stroke-blue-400",
-        CWLType::Optional(_) => "stroke-red-700",
-        CWLType::Array(_) => "stroke-green-700",
-        _ => todo!(),
+        CWLType::Optional(inner) => get_stroke_from_cwl_type(*inner),
+        CWLType::Array(inner) => get_stroke_from_cwl_type(*inner),
+        CWLType::Boolean => "stroke-yellow-400",
+        CWLType::Double => "stroke-purple-400",
+        CWLType::Float => "stroke-pink-400",
+        CWLType::Long => "stroke-cyan-400",
+        CWLType::Int => "stroke-teal-400",
+        CWLType::Null => "stroke-slate-400",
+        CWLType::Any => "stroke-slate-400",
+        CWLType::Stdout => "stroke-slate-400",
+        CWLType::Stderr => "stroke-slate-400",
     }
 }
 

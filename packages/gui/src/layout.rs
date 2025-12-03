@@ -133,13 +133,13 @@ pub fn Layout() -> Element {
                 div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full w-auto transition-width delay-150 duration-300 ease-in-out",
                     if *show_add_actions.read() {
                         RoundActionButton {
+                            class: "mr-3 right-30",
                             title: "Add new Workflow",
                             onclick: move |_| show_create_dialog.set(true),
                             Icon { width: 16, height: 16, icon: GoWorkflow }
                         }
                     }
-                    button {
-                        class: "rounded-full justify-center items-center p-5 bg-fairagro-mid-500 select-none hover:bg-fairagro-dark-500 hover:text-white",
+                    RoundActionButton {
                         title: "Add new CWL File",
                         onclick: move |_| { show_add_actions.set(!show_add_actions()) },
                         Icon { width: 16, height: 16, icon: GoPlus }
