@@ -101,6 +101,8 @@ pub fn Layout() -> Element {
                                         app_state.write().working_directory = Some(info.working_directory);
                                         app_state.write().project_name = Some(info.project_name);
                                     }
+                                    //move to home if new project opens
+                                    router().push("/");
                                 });
                                 Ok(())
                             },
