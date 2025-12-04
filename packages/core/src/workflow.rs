@@ -107,7 +107,7 @@ pub fn add_workflow_output_connection(
 
     let output = workflow.outputs.iter_mut().find(|o| o.id == to_output).unwrap();
     output.type_ = from_type;
-    output.output_source = format!("{from_name}/{from_slot_id}");
+    output.output_source = Some(format!("{from_name}/{from_slot_id}"));
 
     Ok(())
 }
@@ -197,22 +197,12 @@ pub fn remove_workflow_input_connection(
 }
 
 /// Removes a connection between an output and a `CommandLineTool`.
-pub fn remove_workflow_output_connection(
-    workflow: &mut Workflow,
-    from_name: &str,
-    from_slot_id: &str,
-    to_output: &str,
-    remove_output: bool,
-) -> Result<()> {
+pub fn remove_workflow_output_connection(workflow: &mut Workflow, to_output: &str, remove_output: bool) -> Result<()> {
     if remove_output && let Some(index) = workflow.outputs.iter().position(|o| o.id == to_output) {
         // Remove the output connection
         workflow.outputs.remove(index);
-    }
-    // Check if this output is part of any step output and remove it, do we want that?
-    if let Some(step) = workflow.steps.iter_mut().find(|s| s.id == from_name)
-        && let Some(output_index) = step.out.iter().position(|out| out == from_slot_id)
-    {
-        step.out.remove(output_index);
+    } else if !remove_output && let Some(output) = workflow.outputs.iter_mut().find(|o| o.id == to_output) {
+        output.output_source = None;
     }
     Ok(())
 }

@@ -97,10 +97,8 @@ impl Connectable for Workflow {
     }
 
     /// Removes a connection between an output and a `CommandLineTool`.
-    fn remove_output_connection(&mut self, from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
-        let from_parts = from.split('/').collect::<Vec<_>>();
-
-        s4n_core::workflow::remove_workflow_output_connection(self, from_parts[0], from_parts[1], to_output, true)?;
+    fn remove_output_connection(&mut self, _from: &str, to_output: &str) -> Result<(), Box<dyn Error>> {
+        s4n_core::workflow::remove_workflow_output_connection(self, to_output, true)?;
         info!("➖ Removed connection to {to_output} from workflow!");
         Ok(())
     }
@@ -189,7 +187,12 @@ mod tests {
     #[fstest(repo = true, files = ["../../testdata/input.txt", "../../testdata/echo.py"])]
     fn test_resolve_filename() {
         create_tool(&CreateArgs {
-            command: vec!["python3".to_string(), "echo.py".to_string(), "--test".to_string(), "input.txt".to_string()],
+            command: vec![
+                "python3".to_string(),
+                "echo.py".to_string(),
+                "--test".to_string(),
+                "input.txt".to_string(),
+            ],
             ..Default::default()
         })
         .unwrap();

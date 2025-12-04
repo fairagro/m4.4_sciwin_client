@@ -170,7 +170,6 @@ impl VisualWorkflow {
         let from_node = from_node_instance.id().trim_end_matches(".cwl").to_string();
         let to_node = to_node_instance.id().trim_end_matches(".cwl").to_string();
 
-        let from_slot = edge.source_port.clone();
         let to_slot = edge.target_port.clone();
 
         if self.workflow.has_step(&from_node) && self.workflow.has_step(&to_node) {
@@ -178,7 +177,7 @@ impl VisualWorkflow {
         } else if !self.workflow.has_step(&from_node) {
             s4n_core::workflow::remove_workflow_input_connection(&mut self.workflow, &from_node, &to_node, &to_slot, false)?
         } else if !self.workflow.has_step(&to_node) {
-            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, &from_node, &from_slot, &to_node, false)?
+            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, &to_node, false)?
         } else {
             anyhow::bail!("undefined disconnection command")
         }

@@ -104,9 +104,11 @@ impl WorkflowGraphBuilder {
 
         //add output connections
         for output in &workflow.outputs {
-            let (source, source_port) = output.output_source.split_once("/").unwrap(); //EVIL!
-            let type_ = output.type_.clone();
-            self.connect_edge(source, &output.id, source_port, &output.id, type_)?
+            if let Some(output_source) = &output.output_source {
+                let (source, source_port) = output_source.split_once("/").unwrap(); //EVIL!
+                let type_ = output.type_.clone();
+                self.connect_edge(source, &output.id, source_port, &output.id, type_)?
+            }
         }
 
         //layout

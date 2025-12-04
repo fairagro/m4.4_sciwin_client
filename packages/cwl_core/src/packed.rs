@@ -203,16 +203,16 @@ fn unpack_input(input: &mut CommandInputParameter, id: &str) {
 
 fn pack_workflow_output(output: &mut WorkflowOutputParameter, root_id: &str) {
     output.id = format!("{root_id}/{}", output.id);
-    output.output_source = format!("{root_id}/{}", output.output_source);
+    if let Some(output_source) = &output.output_source {
+        output.output_source = Some(format!("{root_id}/{}", output_source));
+    }
 }
 
 fn unpack_workflow_output(output: &mut WorkflowOutputParameter, id: &str) {
     output.id = output.id.strip_prefix(&format!("{id}/")).unwrap_or(&output.id).to_string();
-    output.output_source = output
-        .output_source
-        .strip_prefix(&format!("{id}/"))
-        .unwrap_or(&output.output_source)
-        .to_string();
+    if let Some(output_source) = &output.output_source {
+        output.output_source = Some(output_source.strip_prefix(&format!("{id}/")).unwrap_or(output_source).to_string());
+    }
 }
 
 fn pack_command_output(output: &mut CommandOutputParameter, root_id: &str) {
@@ -406,7 +406,7 @@ mod tests {
         let mut output = WorkflowOutputParameter {
             id: "out".to_string(),
             type_: CWLType::File,
-            output_source: "plot/results".to_string(),
+            output_source: Some("plot/results".to_string()),
         };
 
         pack_workflow_output(&mut output, "#main");
