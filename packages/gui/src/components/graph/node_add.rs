@@ -110,7 +110,10 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
 #[component]
 pub fn InputAddItem(inputs: bool) -> Element {
     let mut app_state = use_app_state();
+
     let mut open = use_signal(|| false);
+    let mut open_dialog = use_signal(|| false);
+    let mut add_id = use_signal(String::new);
 
     rsx! {
         div {
@@ -138,6 +141,7 @@ pub fn InputAddItem(inputs: bool) -> Element {
                             li { class: "px-2 py-1 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
                                 button {
                                     onclick: move |_| {
+                                        open_dialog.set(true);
                                         let id = "test";
                                         if inputs {
                                             app_state.write().workflow.add_input(id, type_.clone());
@@ -147,6 +151,14 @@ pub fn InputAddItem(inputs: bool) -> Element {
                                         Ok(())
                                     },
                                     "{type_}"
+                                }
+                                if open_dialog() {
+                                    input {
+                                        r#type: "text",
+                                        value: "{add_id}",
+                                        oninput: move |e| add_id.set(e.value()),
+                                        placeholder: "name",
+                                    }
                                 }
                             }
                         }
