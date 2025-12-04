@@ -28,10 +28,10 @@ pub fn NodeAddForm(open: Signal<bool>, pos: Signal<ClientPoint>, project_path: R
                 onclick: move |_| open.set(false),
                 ul {
                     li {
-                        InputOutputMenu { is_input: true }
+                        InputOutputMenu { is_input: true, top_level_menu: open }
                     }
                     li {
-                        InputOutputMenu { is_input: false }
+                        InputOutputMenu { is_input: false, top_level_menu: open }
                     }
                     li {
                         NodeAddItem {
@@ -108,7 +108,7 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
 }
 
 #[component]
-pub fn InputOutputMenu(is_input: bool) -> Element {
+pub fn InputOutputMenu(is_input: bool, top_level_menu: Signal<bool>) -> Element {
     let mut show_types = use_signal(|| false);
     let mut active_type_index = use_signal(|| None::<usize>);
 
@@ -146,6 +146,7 @@ pub fn InputOutputMenu(is_input: bool) -> Element {
                                     type_: type_.clone(),
                                     is_active: active_type_index() == Some(idx),
                                     on_hover: move |_| active_type_index.set(Some(idx)),
+                                    top_level_menu,
                                 }
                             }
                         }
@@ -157,7 +158,7 @@ pub fn InputOutputMenu(is_input: bool) -> Element {
 }
 
 #[component]
-pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: EventHandler<()>) -> Element {
+pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: EventHandler<()>, top_level_menu: Signal<bool>) -> Element {
     rsx! {
         div { class: "flex relative", onmouseenter: move |_| on_hover.call(()),
 
@@ -174,7 +175,7 @@ pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: E
 
             if is_active {
                 div { class: "absolute left-48 top-0",
-                    NameInputForm { is_input, type_: type_.clone() }
+                    NameInputForm { is_input, type_: type_.clone(), top_level_menu }
                 }
             }
         }
@@ -182,7 +183,7 @@ pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: E
 }
 
 #[component]
-pub fn NameInputForm(is_input: bool, type_: CWLType) -> Element {
+pub fn NameInputForm(is_input: bool, type_: CWLType, top_level_menu: Signal<bool>) -> Element {
     let mut app_state = use_app_state();
     let mut name_input = use_signal(String::new);
 
@@ -207,6 +208,8 @@ pub fn NameInputForm(is_input: bool, type_: CWLType) -> Element {
                             }
                             name_input.set(String::new());
                         }
+                        //we are sucessful and can close the whole menu
+                        top_level_menu.set(false);
                     }
                     Ok(())
                 },
