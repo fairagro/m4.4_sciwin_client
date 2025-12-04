@@ -2,7 +2,7 @@ use crate::{
     graph::{WorkflowGraph, load_workflow_graph},
     types::{NodeInstance, Slot, VisualEdge, VisualNode},
 };
-use commonwl::{CWLDocument, Workflow, format::format_cwl, load_workflow};
+use commonwl::{format::format_cwl, load_workflow, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
 use petgraph::graph::{EdgeIndex, NodeIndex};
 use rand::Rng;
@@ -34,7 +34,7 @@ impl VisualWorkflow {
 }
 
 impl VisualWorkflow {
-    pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &mut CWLDocument) -> anyhow::Result<()> {
+    pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &mut CWLDocument, working_dir: &Path) -> anyhow::Result<()> {
         s4n_core::workflow::add_workflow_step(&mut self.workflow, name, path, doc);
 
         let path = Path::new(path);
@@ -61,13 +61,51 @@ impl VisualWorkflow {
                     type_: doc.get_output_type(i).unwrap(),
                 })
                 .collect(),
-            path: Some(path.to_path_buf()),
+            path: Some(working_dir.join(path)),
             position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
         });
 
         self.save()
     }
-    //...add node?
+
+    pub fn add_input(&mut self, id: &str, type_: CWLType) {
+        let input = CommandInputParameter::default().with_id(id).with_type(type_);
+        self.workflow.inputs.push(input.clone());
+
+        let mut rng = rand::rng();
+        self.graph.add_node(VisualNode {
+            instance: NodeInstance::Input(input.clone()),
+            outputs: vec![Slot {
+                id: input.id.clone(),
+                type_: input.type_.clone(),
+            }],
+            inputs: vec![],
+            path: None,
+            position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
+        });
+    }
+
+    pub fn add_output(&mut self, id: &str, type_: CWLType) {
+        let output = WorkflowOutputParameter {
+            type_,
+            id: id.to_owned(),
+            ..Default::default()
+        };
+
+        self.workflow.outputs.push(output.clone());
+
+        let mut rng = rand::rng();
+        self.graph.add_node(VisualNode {
+            instance: NodeInstance::Output(output.clone()),
+            outputs: vec![],
+            inputs: vec![Slot {
+                id: output.id.clone(),
+                type_: output.type_.clone(),
+            }],
+            path: None,
+            position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
+        });
+    }
 
     pub fn add_connection(&mut self, from_id: NodeIndex, from_slot_id: &str, to_id: NodeIndex, to_slot_id: &str) -> anyhow::Result<()> {
         let from_node = &self.graph[from_id];
