@@ -74,7 +74,7 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
                 div { class: "ml-auto absolute left-48",
                     ul {
                         for file in files {
-                            li { class: "px-2 py-1 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
+                            li { class: "min-w-48 px-2 py-1 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
                                 button {
                                     onclick: move |_| {
                                         let mut cwl = load_doc(&file.path).map_err(|e| anyhow::anyhow!("{e}"))?;
