@@ -1,9 +1,11 @@
 use crate::{
-    types::VisualEdge,
     graph::{WorkflowGraph, load_workflow_graph},
+    types::{NodeInstance, Slot, VisualEdge, VisualNode},
 };
 use commonwl::{CWLDocument, Workflow, format::format_cwl, load_workflow};
+use dioxus::html::geometry::euclid::Point2D;
 use petgraph::graph::{EdgeIndex, NodeIndex};
+use rand::Rng;
 use std::{
     fs,
     io::Write,
@@ -32,8 +34,38 @@ impl VisualWorkflow {
 }
 
 impl VisualWorkflow {
-    pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &CWLDocument) {
+    pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &mut CWLDocument) -> anyhow::Result<()> {
         s4n_core::workflow::add_workflow_step(&mut self.workflow, name, path, doc);
+
+        let path = Path::new(path);
+        if doc.id.is_none() {
+            doc.id = Some(path.file_name().unwrap().to_string_lossy().to_string());
+        }
+
+        let mut rng = rand::rng();
+        self.graph.add_node(VisualNode {
+            instance: NodeInstance::Step(doc.clone()),
+            inputs: doc
+                .inputs
+                .iter()
+                .map(|i| Slot {
+                    id: i.id.clone(),
+                    type_: i.type_.clone(),
+                })
+                .collect(),
+            outputs: doc
+                .get_output_ids()
+                .iter()
+                .map(|i| Slot {
+                    id: i.to_string(),
+                    type_: doc.get_output_type(i).unwrap(),
+                })
+                .collect(),
+            path: Some(path.to_path_buf()),
+            position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+        });
+
+        self.save()
     }
     //...add node?
 

@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+pathdiff.workspace = true
 rand.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true

@@ -67,7 +67,7 @@ pub fn CodeViewer(path: String) -> Element {
             }
         }
         div {
-            onkeypress: move |e| {
+            onkeydown: move |e| {
                 if e.key() == Key::Character("s".to_string())
                     && e.modifiers() == Modifiers::CONTROL
                 {

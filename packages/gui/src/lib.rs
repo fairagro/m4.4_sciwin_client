@@ -14,6 +14,7 @@ use std::{
 };
 
 pub mod components;
+pub mod files;
 pub mod graph;
 pub mod layout;
 pub mod types;

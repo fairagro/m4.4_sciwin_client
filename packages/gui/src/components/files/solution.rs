@@ -1,14 +1,13 @@
-use crate::components::files::{Node, get_route, read_node_type};
+use crate::components::files::{Node, get_route};
 use crate::components::{ICON_SIZE, SmallRoundActionButton};
+use crate::files::{get_cwl_files, get_submodules_cwl_files};
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
 use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoTrash};
-use ignore::WalkBuilder;
 use repository::Repository;
 use repository::submodule::remove_submodule;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[component]
 pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i32>) -> Element {
@@ -110,50 +109,5 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                 }
             }
         }
-    }
-}
-
-fn get_cwl_files(path: impl AsRef<Path>) -> Vec<Node> {
-    let mut result = vec![];
-
-    for entry in WalkBuilder::new(path).standard_filters(true).build().filter_map(Result::ok) {
-        if entry.file_type().is_some_and(|t| t.is_file()) && entry.path().extension().is_some_and(|e| e.eq_ignore_ascii_case("cwl")) {
-            let type_ = read_node_type(entry.path());
-
-            result.push(Node {
-                name: entry.file_name().to_string_lossy().into_owned(),
-                path: entry.path().to_path_buf(),
-                children: vec![],
-                is_dir: false,
-                type_,
-            });
-        }
-    }
-
-    result
-}
-
-fn get_submodules_cwl_files(path: impl AsRef<Path>) -> HashMap<String, Vec<Node>> {
-    let Ok(repo) = Repository::open(&path) else { return HashMap::new() };
-    let mut map = HashMap::new();
-    let Ok(submodules) = repo.submodules() else { return HashMap::new() };
-
-    for module in submodules.iter() {
-        let module_name = module.name().unwrap_or("unknown").to_string();
-        map.insert(module_name, get_cwl_files(path.as_ref().join(module.path())));
-    }
-
-    map
-}
-
-#[cfg(test)]
-mod tests {
-    pub use super::*;
-
-    #[test]
-    pub fn test_get_cwl_files() {
-        let path = "../../testdata/hello_world";
-        let files = get_cwl_files(path);
-        assert_eq!(files.len(), 3);
     }
 }

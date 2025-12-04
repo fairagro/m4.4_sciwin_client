@@ -2,7 +2,7 @@ use crate::{
     DragContext, DragState,
     components::{
         ICON_SIZE, SmallRoundActionButton,
-        graph::{EdgeElement, Line, LineProps, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
+        graph::{EdgeElement, Line, LineProps, NodeAddForm, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
     },
     graph::auto_layout,
     use_app_state,
@@ -20,6 +20,7 @@ use std::{path::PathBuf, rc::Rc};
 
 #[component]
 pub fn GraphEditor(path: String) -> Element {
+    let mut app_state = use_app_state();
     let mut path = use_reactive(&path, PathBuf::from);
 
     let dragging = None::<DragState>;
@@ -27,7 +28,8 @@ pub fn GraphEditor(path: String) -> Element {
     let mut drag_state = use_signal(|| DragContext { drag_offset, dragging });
     use_context_provider(|| drag_state);
 
-    let mut app_state = use_app_state();
+    let mut mouse_pos = use_signal(ClientPoint::zero);
+    let mut open_add_menu = use_signal(|| false);
 
     {
         use_effect(move || {
@@ -71,15 +73,33 @@ pub fn GraphEditor(path: String) -> Element {
         });
     };
 
+    let get_position_relative = move |current_pos: Point2D<f64, _>| async move {
+        let dims = read_dims().await.unwrap();
+        let rect = dims.rect;
+        let scroll = dims.scroll_offset;
+        let base_pos = (current_pos.x - rect.origin.x, current_pos.y - rect.origin.y);
+        let x_target = base_pos.0 + scroll.x;
+        let y_target = base_pos.1 + scroll.y;
+        (x_target, y_target)
+    };
+
     rsx! {
         div {
-            class: "relative select-none overflow-scroll w-full h-full",
+            class: "relative select-none overflow-scroll w-full h-full focus:outline-none ",
             style: "background: url({asset!(\"/assets/graph-paper.svg\")});",
+            tabindex: "0",
             onresize: move |_| update_dims(),
             onscroll: move |_| update_dims(),
             onmounted: move |e| div_ref.set(Some(e.data())),
             onmousemove: move |e| async move {
                 e.stop_propagation();
+                if !open_add_menu() {
+                    //store mouse pos if menu is closed
+                    let current_pos = e.client_coordinates();
+                    let pos = get_position_relative(current_pos).await;
+                    mouse_pos.set(Point2D::new(pos.0, pos.1));
+
+                }
                 if let Some(dragstate) = drag_state().dragging {
                     //we are dragging
                     let current_pos = e.client_coordinates();
@@ -103,20 +123,15 @@ pub fn GraphEditor(path: String) -> Element {
                             drag_state.write().drag_offset.set(current_pos);
                         }
                         DragState::Connection { source_node, source_port } => {
-                            let dims = read_dims().await.unwrap();
-                            let rect = dims.rect;
-                            let scroll = dims.scroll_offset;
-                            let base_pos = (
-                                current_pos.x - rect.origin.x,
-                                current_pos.y - rect.origin.y,
-                            );
+                            let base_pos = get_position_relative(current_pos).await;
+                            let x_target = (base_pos.0) as f32;
+                            let y_target = (base_pos.1) as f32;
+
                             let source_node = &app_state.read().workflow.graph[source_node];
                             let (x_source, y_source) = calculate_source_position(
                                 source_node,
                                 &source_port,
                             );
-                            let x_target = (base_pos.0 + scroll.x) as f32;
-                            let y_target = (base_pos.1 + scroll.y) as f32;
                             let cwl_type = source_node
                                 .outputs
                                 .iter()
@@ -145,6 +160,15 @@ pub fn GraphEditor(path: String) -> Element {
                 drag_state.write().dragging = None;
                 new_line.set(None);
             },
+            onkeydown: move |e| {
+                //listen for shift+a
+                if e.key() == Key::Character("A".to_string())
+                    && e.modifiers() == Modifiers::SHIFT
+                {
+                    e.stop_propagation();
+                    open_add_menu.set(true);
+                }
+            },
             SmallRoundActionButton {
                 class: "hover:bg-fairagro-mid-200 fixed top-2 right-2 z-10",
                 title: "Auto Align Nodes",
@@ -159,10 +183,14 @@ pub fn GraphEditor(path: String) -> Element {
                     icon: MdCleaningServices,
                 }
             }
+            NodeAddForm {
+                open: open_add_menu,
+                pos: mouse_pos,
+                project_path: app_state().working_directory.unwrap_or_default(),
+            }
             for id in graph.node_identifiers() {
                 NodeElement { id }
             }
-
             svg {
                 width: "{dim_w}",
                 height: "{dim_h}",
