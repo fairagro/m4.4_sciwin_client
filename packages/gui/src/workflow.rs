@@ -68,7 +68,7 @@ impl VisualWorkflow {
         self.save()
     }
 
-    pub fn add_input(&mut self, id: &str, type_: CWLType) {
+    pub fn add_input(&mut self, id: &str, type_: CWLType) -> anyhow::Result<()> {
         let input = CommandInputParameter::default().with_id(id).with_type(type_);
         self.workflow.inputs.push(input.clone());
 
@@ -83,9 +83,11 @@ impl VisualWorkflow {
             path: None,
             position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
         });
+
+        self.save()
     }
 
-    pub fn add_output(&mut self, id: &str, type_: CWLType) {
+    pub fn add_output(&mut self, id: &str, type_: CWLType) -> anyhow::Result<()> {
         let output = WorkflowOutputParameter {
             type_,
             id: id.to_owned(),
@@ -105,6 +107,8 @@ impl VisualWorkflow {
             path: None,
             position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
         });
+
+        self.save()
     }
 
     pub fn add_connection(&mut self, from_id: NodeIndex, from_slot_id: &str, to_id: NodeIndex, to_slot_id: &str) -> anyhow::Result<()> {

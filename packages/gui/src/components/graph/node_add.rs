@@ -28,10 +28,10 @@ pub fn NodeAddForm(open: Signal<bool>, pos: Signal<ClientPoint>, project_path: R
                 onclick: move |_| open.set(false),
                 ul {
                     li {
-                        InputAddItem { inputs: true }
+                        InputOutputMenu { is_input: true }
                     }
                     li {
-                        InputAddItem { inputs: false }
+                        InputOutputMenu { is_input: false }
                     }
                     li {
                         NodeAddItem {
@@ -108,20 +108,21 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
 }
 
 #[component]
-pub fn InputAddItem(inputs: bool) -> Element {
-    let mut app_state = use_app_state();
-
-    let mut open = use_signal(|| false);
-    let mut open_dialog = use_signal(|| false);
-    let mut add_id = use_signal(String::new);
+pub fn InputOutputMenu(is_input: bool) -> Element {
+    let mut show_types = use_signal(|| false);
+    let mut active_type_index = use_signal(|| None::<usize>);
 
     rsx! {
         div {
-            class: "flex",
-            onmouseenter: move |_| open.set(true),
-            onmouseleave: move |_| open.set(false),
+            class: "flex relative",
+            onmouseenter: move |_| show_types.set(true),
+            onmouseleave: move |_| {
+                show_types.set(false);
+                active_type_index.set(None);
+            },
+
             div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1 items-center justify-end",
-                if inputs {
+                if is_input {
                     "Input"
                 } else {
                     "Output"
@@ -134,36 +135,82 @@ pub fn InputAddItem(inputs: bool) -> Element {
                     }
                 }
             }
-            if open() {
-                div { class: "ml-auto absolute left-48 min-w-48",
+
+            if show_types() {
+                div { class: "absolute left-48 top-0",
                     ul {
-                        for type_ in type_iter() {
-                            li { class: "px-2 py-1 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
-                                button {
-                                    onclick: move |_| {
-                                        open_dialog.set(true);
-                                        let id = "test";
-                                        if inputs {
-                                            app_state.write().workflow.add_input(id, type_.clone());
-                                        } else {
-                                            app_state.write().workflow.add_output(id, type_.clone());
-                                        }
-                                        Ok(())
-                                    },
-                                    "{type_}"
-                                }
-                                if open_dialog() {
-                                    input {
-                                        r#type: "text",
-                                        value: "{add_id}",
-                                        oninput: move |e| add_id.set(e.value()),
-                                        placeholder: "name",
-                                    }
+                        for (idx , type_) in type_iter().enumerate() {
+                            li {
+                                TypeMenuItem {
+                                    is_input,
+                                    type_: type_.clone(),
+                                    is_active: active_type_index() == Some(idx),
+                                    on_hover: move |_| active_type_index.set(Some(idx)),
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: EventHandler<()>) -> Element {
+    rsx! {
+        div { class: "flex relative", onmouseenter: move |_| on_hover.call(()),
+
+            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1 items-center justify-end",
+                "{type_}"
+                div { class: "ml-auto",
+                    Icon {
+                        width: ICON_SIZE,
+                        height: ICON_SIZE,
+                        icon: GoChevronRight,
+                    }
+                }
+            }
+
+            if is_active {
+                div { class: "absolute left-48 top-0",
+                    NameInputForm { is_input, type_: type_.clone() }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn NameInputForm(is_input: bool, type_: CWLType) -> Element {
+    let mut app_state = use_app_state();
+    let mut name_input = use_signal(String::new);
+
+    rsx! {
+        div {
+            class: "min-w-48 bg-fairagro-light-200/80 px-2 py-1",
+            class: "flex items-center gap-2",
+            input {
+                r#type: "text",
+                class: "px-2 py-1 flex-1",
+                value: "{name_input}",
+                oninput: move |e| name_input.set(e.value()),
+                onclick: move |e| e.stop_propagation(),
+                onkeydown: move |e| {
+                    if e.key() == Key::Enter {
+                        let id = name_input();
+                        if !id.is_empty() {
+                            if is_input {
+                                app_state.write().workflow.add_input(&id, type_.clone())?;
+                            } else {
+                                app_state.write().workflow.add_output(&id, type_.clone())?;
+                            }
+                            name_input.set(String::new());
+                        }
+                    }
+                    Ok(())
+                },
+                placeholder: "name",
             }
         }
     }
