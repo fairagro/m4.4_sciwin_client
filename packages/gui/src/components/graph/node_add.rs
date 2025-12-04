@@ -175,7 +175,11 @@ pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: E
 
             if is_active {
                 div { class: "absolute left-48 top-0",
-                    NameInputForm { is_input, type_: type_.clone(), top_level_menu }
+                    NameInputForm {
+                        is_input,
+                        type_: type_.clone(),
+                        top_level_menu,
+                    }
                 }
             }
         }

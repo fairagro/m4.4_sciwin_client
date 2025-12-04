@@ -44,8 +44,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                     style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
                                     img { src: asset!("/assets/CWL.svg") }
                                 }
-
-                                {item.name}
+                                "{item.name}"
                             }
                         }
                     }
@@ -102,7 +101,7 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                                     img { src: asset!("/assets/CWL.svg") }
                                 }
 
-                                {item.name}
+                                "{item.name}"
                             }
                         }
                     }
