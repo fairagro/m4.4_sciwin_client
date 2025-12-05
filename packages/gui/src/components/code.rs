@@ -25,12 +25,12 @@ pub fn CodeViewer(path: String) -> Element {
             spawn(async move {
                 let escaped_value = code.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${");
                 if !editor_initialized() {
-                    document::eval(include_str!("../../assets/bundle.min.js")).await.unwrap();
+                    document::eval(include_str!("../../assets/bundle.min.js")).await.ok();
                     editor_initialized.set(true);
 
-                    document::eval(&format!("initMonaco(`{}`);", escaped_value)).await.unwrap();
+                    document::eval(&format!("initMonaco(`{}`);", escaped_value)).await.ok();
                 } else {
-                    document::eval(&format!("updateMonaco(`{}`);", escaped_value)).await.unwrap();
+                    document::eval(&format!("updateMonaco(`{}`);", escaped_value)).await.ok();
                 }
             });
         });
