@@ -486,63 +486,64 @@ pub fn get_all_outputs<P: AsRef<Path>>(workflow: &Workflow, path: P) -> Result<V
     let mut results = Vec::new();
 
     for output in &workflow.outputs {
-        let parts: Vec<&str> = output.output_source.split('/').collect();
-        if parts.len() != 2 {
-            anyhow::bail!(
-                "Invalid 'outputSource' format for output: '{}'. Expected format 'step_id/output_id'",
-                output.output_source
-            );
+        if let Some(output_source) = &output.output_source {
+            let parts: Vec<&str> = output_source.split('/').collect();
+            if parts.len() != 2 {
+                anyhow::bail!(
+                    "Invalid 'outputSource' format for output: '{}'. Expected format 'step_id/output_id'",
+                    output_source
+                );
+            }
+            let step_id = parts[0];
+            let output_id = parts[1];
+            let run_file_path = workflow
+                .steps
+                .iter()
+                .find_map(|step| {
+                    if step.id == step_id
+                        && let StringOrDocument::String(run) = &step.run
+                    {
+                        Some(run)
+                    } else {
+                        None
+                    }
+                })
+                .with_context(|| format!("Step with id '{step_id}' not found or missing 'run' field in main workflow"))?;
+
+            let full_run_file_path = main_workflow_dir
+                .join(run_file_path)
+                .canonicalize()
+                .with_context(|| format!("Failed to canonicalize run file path '{run_file_path}' for step '{step_id}'"))?;
+
+            let tool_yaml_str =
+                fs::read_to_string(&full_run_file_path).with_context(|| format!("Failed to read tool file '{}'", full_run_file_path.display()))?;
+            let tool_yaml: Value = serde_yaml::from_str(&tool_yaml_str)
+                .with_context(|| format!("Failed to parse YAML from tool file '{}'", full_run_file_path.display()))?;
+
+            let tool_outputs = tool_yaml
+                .get("outputs")
+                .with_context(|| format!("No 'outputs' section in tool file '{run_file_path}'"))?
+                .as_sequence()
+                .with_context(|| format!("'outputs' section in tool file '{run_file_path}' is not a sequence"))?;
+
+            let glob_value = tool_outputs
+                .iter()
+                .find_map(|tool_output| {
+                    let tid = tool_output.get("id").and_then(|v| v.as_str())?;
+                    if tid == output_id {
+                        tool_output
+                            .get("outputBinding")
+                            .and_then(|binding| binding.get("glob"))
+                            .and_then(|glob| glob.as_str())
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .with_context(|| format!("Output '{output_id}' not found in tool file '{run_file_path}' or missing 'glob' field"))?;
+
+            results.push((output_id.to_string(), glob_value));
         }
-        let step_id = parts[0];
-        let output_id = parts[1];
-
-        let run_file_path = workflow
-            .steps
-            .iter()
-            .find_map(|step| {
-                if step.id == step_id
-                    && let StringOrDocument::String(run) = &step.run
-                {
-                    Some(run)
-                } else {
-                    None
-                }
-            })
-            .with_context(|| format!("Step with id '{step_id}' not found or missing 'run' field in main workflow"))?;
-
-        let full_run_file_path = main_workflow_dir
-            .join(run_file_path)
-            .canonicalize()
-            .with_context(|| format!("Failed to canonicalize run file path '{run_file_path}' for step '{step_id}'"))?;
-
-        let tool_yaml_str =
-            fs::read_to_string(&full_run_file_path).with_context(|| format!("Failed to read tool file '{}'", full_run_file_path.display()))?;
-        let tool_yaml: Value = serde_yaml::from_str(&tool_yaml_str)
-            .with_context(|| format!("Failed to parse YAML from tool file '{}'", full_run_file_path.display()))?;
-
-        let tool_outputs = tool_yaml
-            .get("outputs")
-            .with_context(|| format!("No 'outputs' section in tool file '{run_file_path}'"))?
-            .as_sequence()
-            .with_context(|| format!("'outputs' section in tool file '{run_file_path}' is not a sequence"))?;
-
-        let glob_value = tool_outputs
-            .iter()
-            .find_map(|tool_output| {
-                let tid = tool_output.get("id").and_then(|v| v.as_str())?;
-                if tid == output_id {
-                    tool_output
-                        .get("outputBinding")
-                        .and_then(|binding| binding.get("glob"))
-                        .and_then(|glob| glob.as_str())
-                        .map(|s| s.to_string())
-                } else {
-                    None
-                }
-            })
-            .with_context(|| format!("Output '{output_id}' not found in tool file '{run_file_path}' or missing 'glob' field"))?;
-
-        results.push((output_id.to_string(), glob_value));
     }
     Ok(results)
 }

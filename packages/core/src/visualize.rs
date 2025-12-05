@@ -39,8 +39,10 @@ pub fn render<R: FlowchartRenderer>(r: &mut R, cwl: &Workflow, filename: &Path, 
         }
     }
     for output in &cwl.outputs {
-        let src = output.output_source.split('/').next().unwrap();
-        r.edge(src, &output.id, Some(&output.id), RenderStyle::Default);
+        if let Some(output_source) = &output.output_source {
+            let src = output_source.split('/').next().unwrap();
+            r.edge(src, &output.id, Some(&output.id), RenderStyle::Default);
+        }
     }
 
     r.end_graph();
