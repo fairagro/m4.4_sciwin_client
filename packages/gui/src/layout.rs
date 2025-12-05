@@ -63,6 +63,8 @@ pub fn Layout() -> Element {
 
     rsx! {
         div {
+            ondragover: |e| e.prevent_default(),
+            ondrop: |e| e.prevent_default(),
             class: "h-screen w-screen grid grid-rows-[1fr_1.5rem]",
             onmounted: move |_| async move {
                 spawn(async move {
@@ -280,9 +282,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]
