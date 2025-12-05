@@ -78,18 +78,22 @@ pub fn WorkflowAddDialog(
 ) -> Element {
     let mut workflow_name = use_signal(|| "".to_string());
 
+    let mut confirm = move || {
+        create_workflow_impl(working_dir(), workflow_name())?;
+
+        workflow_name.set("".to_string());
+        show_add_actions.set(false);
+        reload_trigger += 1;
+        open.set(false);
+        Ok::<_, anyhow::Error>(())
+    };
+
     rsx! {
         Dialog {
             open,
             title: "Create new Workflow",
             on_confirm: move |_| {
-                create_workflow_impl(working_dir(), workflow_name())?;
-
-                workflow_name.set("".to_string());
-                show_add_actions.set(false);
-                reload_trigger += 1;
-                open.set(false);
-
+                confirm()?;
                 Ok(())
             },
             div { class: "flex flex-col",
@@ -100,6 +104,12 @@ pub fn WorkflowAddDialog(
                     r#type: "text",
                     placeholder: "workflow name ",
                     oninput: move |e| workflow_name.set(e.value()),
+                    onkeydown: move |e| {
+                        if e.key() == Key::Enter {
+                            confirm()?;
+                        }
+                        Ok(())
+                    },
                 }
             }
         }
