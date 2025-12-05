@@ -5,7 +5,7 @@ use crate::{
 use dioxus::{html::geometry::ClientPoint, prelude::*, router::RouterContext};
 use petgraph::graph::NodeIndex;
 use s4n_core::{config::Config, project::initialize_project};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
     env::temp_dir,
     fs,
@@ -28,6 +28,21 @@ pub struct ApplicationState {
     pub config: Option<Config>,
     #[serde(skip)]
     pub workflow: VisualWorkflow,
+    #[serde(skip)]
+    data_transfer: serde_json::Value,
+}
+
+impl ApplicationState {
+    pub fn set_data_transfer<T: Serialize>(&mut self, item: &T) -> anyhow::Result<()> {
+        let value = serde_json::to_value(item)?;
+        self.data_transfer = value;
+        Ok(())
+    }
+
+    pub fn get_data_transfer<T: DeserializeOwned>(&self) -> anyhow::Result<T> {
+        let item = serde_json::from_value(self.data_transfer.clone())?;
+        Ok(item)
+    }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -62,7 +77,6 @@ pub fn use_app_state() -> Signal<ApplicationState> {
 pub fn use_drag() -> Signal<DragContext> {
     use_context::<Signal<DragContext>>()
 }
-
 pub async fn open_project(path: impl AsRef<Path>, mut open: Signal<bool>, mut confirmed: Signal<bool>) -> anyhow::Result<Option<ProjectInfo>> {
     let config_path = path.as_ref().join("workflow.toml");
 

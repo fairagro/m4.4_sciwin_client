@@ -39,6 +39,15 @@ impl VisualWorkflow {
 
 impl VisualWorkflow {
     pub fn add_new_step_if_not_exists(&mut self, name: &str, path: &str, doc: &mut CWLDocument, working_dir: &Path) -> anyhow::Result<()> {
+        //prevent name collisions
+        let mut i = 1;
+        let mut final_name = name.to_string();
+        while self.workflow.has_step(&final_name) {
+            final_name = format!("{name}{i}");
+            i += 1;
+        }
+        let name = &final_name.as_str();
+
         s4n_core::workflow::add_workflow_step(&mut self.workflow, name, path, doc);
 
         let path = Path::new(path);
@@ -122,36 +131,36 @@ impl VisualWorkflow {
         let from_node = &self.graph[from_id];
         let to_node = &self.graph[to_id];
 
-        let from_name = from_node.instance.id().trim_end_matches(".cwl").to_string();
-        let to_name = to_node.instance.id().trim_end_matches(".cwl").to_string();
+        let from_name = &from_node.id;
+        let to_name = &to_node.id;
 
         let from_filename = &from_node.path;
         let to_filename = &to_node.path;
 
-        if self.workflow.has_step(&from_name)
-            && self.workflow.has_step(&to_name)
+        if self.workflow.has_step(from_name)
+            && self.workflow.has_step(to_name)
             && let Some(from_filename) = from_filename
             && let Some(to_filename) = to_filename
         {
             s4n_core::workflow::add_workflow_step_connection(
                 &mut self.workflow,
                 from_filename,
-                &from_name,
+                from_name,
                 from_slot_id,
                 to_filename,
-                &to_name,
+                to_name,
                 to_slot_id,
             )?;
-        } else if !self.workflow.has_step(&from_name)
+        } else if !self.workflow.has_step(from_name)
             && let Some(to_filename) = to_filename
         {
             // from name is input
-            s4n_core::workflow::add_workflow_input_connection(&mut self.workflow, from_slot_id, to_filename, &to_name, to_slot_id)?;
-        } else if !self.workflow.has_step(&to_name)
+            s4n_core::workflow::add_workflow_input_connection(&mut self.workflow, from_slot_id, to_filename, to_name, to_slot_id)?;
+        } else if !self.workflow.has_step(to_name)
             && let Some(from_filename) = from_filename
         {
             // from to name is output
-            s4n_core::workflow::add_workflow_output_connection(&mut self.workflow, &from_name, from_slot_id, from_filename, &to_name)?;
+            s4n_core::workflow::add_workflow_output_connection(&mut self.workflow, from_name, from_slot_id, from_filename, to_name)?;
         } else {
             anyhow::bail!("undefined connection command")
         }
@@ -175,20 +184,20 @@ impl VisualWorkflow {
         let edge = &self.graph[index];
 
         let (from_node_id, to_node_id) = self.graph.edge_endpoints(index).unwrap();
-        let from_node_instance = &self.graph[from_node_id].instance;
-        let to_node_instance = &self.graph[to_node_id].instance;
+        let from_node = &self.graph[from_node_id];
+        let to_node = &self.graph[to_node_id];
 
-        let from_node = from_node_instance.id().trim_end_matches(".cwl").to_string();
-        let to_node = to_node_instance.id().trim_end_matches(".cwl").to_string();
+        let from_node = &from_node.id;
+        let to_node = &to_node.id;
 
         let to_slot = edge.target_port.clone();
 
-        if self.workflow.has_step(&from_node) && self.workflow.has_step(&to_node) {
-            s4n_core::workflow::remove_workflow_step_connection(&mut self.workflow, &to_node, &to_slot)?
-        } else if !self.workflow.has_step(&from_node) {
-            s4n_core::workflow::remove_workflow_input_connection(&mut self.workflow, &from_node, &to_node, &to_slot, false)?
-        } else if !self.workflow.has_step(&to_node) {
-            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, &to_node, false)?
+        if self.workflow.has_step(from_node) && self.workflow.has_step(to_node) {
+            s4n_core::workflow::remove_workflow_step_connection(&mut self.workflow, to_node, &to_slot)?
+        } else if !self.workflow.has_step(from_node) {
+            s4n_core::workflow::remove_workflow_input_connection(&mut self.workflow, from_node, to_node, &to_slot, false)?
+        } else if !self.workflow.has_step(to_node) {
+            s4n_core::workflow::remove_workflow_output_connection(&mut self.workflow, to_node, false)?
         } else {
             anyhow::bail!("undefined disconnection command")
         }

@@ -1,6 +1,7 @@
 mod filesystem;
 mod solution;
 pub use filesystem::*;
+use serde::{Deserialize, Serialize};
 pub use solution::*;
 
 use crate::layout::Route;
@@ -49,7 +50,7 @@ pub fn FilesView(
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     pub name: String,
     pub path: PathBuf,
@@ -58,7 +59,7 @@ pub struct Node {
     pub type_: FileType,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum FileType {
     Workflow,
     CommandLineTool,

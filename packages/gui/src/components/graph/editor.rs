@@ -2,6 +2,7 @@ use crate::{
     DragContext, DragState,
     components::{
         ICON_SIZE, SmallRoundActionButton,
+        files::Node,
         graph::{EdgeElement, Line, LineProps, NodeAddForm, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
     },
     graph::auto_layout,
@@ -16,6 +17,7 @@ use dioxus::html::geometry::{
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::md_maps_icons::MdCleaningServices};
 use petgraph::visit::IntoNodeIdentifiers;
+use serde_json::Value;
 use std::{path::PathBuf, rc::Rc};
 
 #[component]
@@ -91,6 +93,37 @@ pub fn GraphEditor(path: String) -> Element {
             onresize: move |_| update_dims(),
             onscroll: move |_| update_dims(),
             onmounted: move |e| div_ref.set(Some(e.data())),
+            ondragover: move |e| {
+                e.prevent_default();
+                e.stop_propagation();
+            },
+            ondrop: move |e| {
+                e.prevent_default();
+                e.stop_propagation();
+                let item = app_state().get_data_transfer::<Node>()?;
+
+                let mut cwl = load_doc(&item.path).map_err(|e| anyhow::anyhow!("{e}"))?;
+                let working_dir = app_state().working_directory.unwrap();
+                if let Some(path_relative_to_root) = pathdiff::diff_paths(
+                    &item.path,
+                    &working_dir,
+                ) {
+                    let name = item.name.strip_suffix(".cwl").unwrap_or(&item.name);
+                    app_state
+                        .write()
+                        .workflow
+                        .add_new_step_if_not_exists(
+                            name,
+                            path_relative_to_root.to_string_lossy().as_ref(),
+                            &mut cwl,
+                            &working_dir,
+                        )?;
+                }
+
+                //we accepted the data transfer so we clear it
+                app_state.write().set_data_transfer(&Value::Null)?;
+                Ok(())
+            },
             onmousemove: move |e| async move {
                 e.stop_propagation();
                 if !open_add_menu() {

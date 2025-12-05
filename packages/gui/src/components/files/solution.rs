@@ -67,7 +67,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
 
 #[component]
 pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
-    let app_state = use_app_state();
+    let mut app_state = use_app_state();
     let mut hover = use_signal(|| false);
 
     rsx! {
@@ -116,6 +116,11 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
             ul {
                 for item in files {
                     li {
+                        draggable: true,
+                        ondragstart: move |_| {
+                            app_state.write().set_data_transfer(&item)?;
+                            Ok(())
+                        },
                         Link {
                             to: get_route(&item),
                             active_class: "font-bold",
