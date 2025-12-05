@@ -35,7 +35,8 @@ pub fn NodeAddForm(open: Signal<bool>, pos: Signal<ClientPoint>, project_path: R
                     }
                     li {
                         NodeAddItem {
-                            name: app_state.read().project_name.as_ref().map_or("".to_string(), |p| p.to_string()),
+                            //at this point there needs to be a config in place
+                            name: app_state.read().config.clone().unwrap().workflow.name, 
                             files: files(),
                         }
                     }

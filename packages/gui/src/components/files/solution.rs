@@ -29,7 +29,9 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                     height: ICON_SIZE,
                     icon: GoFileDirectory,
                 }
-                {app_state.read().project_name.as_ref().map_or("".to_string(), |p| p.to_string())}
+                if let Some(config) = &app_state.read().config {
+                    "{config.workflow.name}"
+                }
             }
             ul {
                 for item in files() {

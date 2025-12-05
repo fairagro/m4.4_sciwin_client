@@ -65,10 +65,10 @@ pub fn Layout() -> Element {
             },
             div { class: "flex min-h-0 h-full w-full overflow-x-clip relative",
                 Sidebar {
-                    if let Some(project_name) = &app_state.read().project_name {
+                    if let Some(config) = &app_state.read().config {
                         h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
                             Icon { icon: GoRepo, width: 16, height: 16 }
-                            div { "{project_name}" }
+                            div { "{config.workflow.name}" }
                             SmallRoundActionButton {
                                 class: "hover:bg-fairagro-red-light/20 text-fairagro-red",
                                 title: "Close Project",
@@ -112,7 +112,7 @@ pub fn Layout() -> Element {
                                         .unwrap()
                                     {
                                         app_state.write().working_directory = Some(info.working_directory);
-                                        app_state.write().project_name = Some(info.project_name);
+                                        app_state.write().config = Some(info.config);
                                     }
                                     //move to home if new project opens
                                     view.set(View::Solution);
@@ -223,9 +223,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]

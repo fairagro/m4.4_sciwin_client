@@ -25,7 +25,7 @@ pub struct ApplicationState {
     pub working_directory: Option<PathBuf>,
     pub current_file: Option<PathBuf>,
     #[serde(skip)]
-    pub project_name: Option<String>,
+    pub config: Option<Config>,
     #[serde(skip)]
     pub workflow: VisualWorkflow,
 }
@@ -48,10 +48,11 @@ pub struct DragContext {
     pub drag_offset: Signal<ClientPoint>,
 }
 
+//used to open a project
 #[derive(Default, Clone, Debug)]
 pub struct ProjectInfo {
     pub working_directory: PathBuf,
-    pub project_name: String,
+    pub config: Config,
 }
 
 pub fn use_app_state() -> Signal<ApplicationState> {
@@ -94,7 +95,7 @@ fn open_project_inner(path: &Path) -> anyhow::Result<ProjectInfo> {
     let config: Config = toml::from_str(&toml)?;
     Ok(ProjectInfo {
         working_directory: path.to_path_buf(),
-        project_name: config.workflow.name,
+        config,
     })
 }
 
@@ -127,7 +128,7 @@ pub async fn restore_last_session(open: Signal<bool>, confirmed: Signal<bool>) -
             let info = open_project(working_dir, open, confirmed).await?;
             if let Some(info) = info {
                 state.working_directory = Some(info.working_directory);
-                state.project_name = Some(info.project_name);
+                state.config = Some(info.config);
             }
         }
 
