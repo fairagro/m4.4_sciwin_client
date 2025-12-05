@@ -4,7 +4,11 @@ use crate::{
 };
 use commonwl::{format::format_cwl, load_workflow, prelude::*};
 use dioxus::html::geometry::euclid::Point2D;
-use petgraph::graph::{EdgeIndex, NodeIndex};
+use petgraph::{
+    Direction,
+    graph::{EdgeIndex, NodeIndex},
+    visit::EdgeRef,
+};
 use rand::Rng;
 use std::{
     fs,
@@ -44,6 +48,7 @@ impl VisualWorkflow {
 
         let mut rng = rand::rng();
         self.graph.add_node(VisualNode {
+            id: name.to_string(),
             instance: NodeInstance::Step(doc.clone()),
             inputs: doc
                 .inputs
@@ -74,6 +79,7 @@ impl VisualWorkflow {
 
         let mut rng = rand::rng();
         self.graph.add_node(VisualNode {
+            id: id.to_string(),
             instance: NodeInstance::Input(input.clone()),
             outputs: vec![Slot {
                 id: input.id.clone(),
@@ -98,6 +104,7 @@ impl VisualWorkflow {
 
         let mut rng = rand::rng();
         self.graph.add_node(VisualNode {
+            id: id.to_string(),
             instance: NodeInstance::Output(output.clone()),
             outputs: vec![],
             inputs: vec![Slot {
@@ -187,6 +194,27 @@ impl VisualWorkflow {
         }
 
         self.graph.remove_edge(index);
+        self.save()
+    }
+
+    pub fn remove_node(&mut self, index: NodeIndex) -> anyhow::Result<()> {
+        //disconnect from all nodes (save() is already called in that!)
+        while let Some(edge) = self.graph.edges_directed(index, Direction::Incoming).next() {
+            self.remove_connection(edge.id())?;
+        }
+        while let Some(edge) = self.graph.edges_directed(index, Direction::Outgoing).next() {
+            self.remove_connection(edge.id())?;
+        }
+
+        //remove node
+        let node = &self.graph[index];
+        match &node.instance {
+            NodeInstance::Step(_) => self.workflow.steps.retain(|s| s.id != node.id),
+            NodeInstance::Input(_) => self.workflow.inputs.retain(|s| s.id != node.id),
+            NodeInstance::Output(_) => self.workflow.outputs.retain(|s| s.id != node.id),
+        }
+
+        self.graph.remove_node(index);
         self.save()
     }
 

@@ -30,6 +30,7 @@ impl WorkflowGraphBuilder {
 
         for input in &workflow.inputs {
             let node_id = self.graph.add_node(VisualNode {
+                id: input.id.clone(),
                 instance: NodeInstance::Input(input.clone()),
                 outputs: vec![Slot {
                     id: input.id.clone(),
@@ -44,6 +45,7 @@ impl WorkflowGraphBuilder {
 
         for output in &workflow.outputs {
             let node_id = self.graph.add_node(VisualNode {
+                id: output.id.clone(),
                 instance: NodeInstance::Output(output.clone()),
                 inputs: vec![Slot {
                     id: output.id.clone(),
@@ -71,6 +73,7 @@ impl WorkflowGraphBuilder {
             }
 
             let node_id = self.graph.add_node(VisualNode {
+                id: step_id.clone(),
                 instance: NodeInstance::Step(doc.clone()),
                 inputs: doc
                     .inputs

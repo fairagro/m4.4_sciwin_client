@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct VisualNode {
+    pub id: String,
     pub instance: NodeInstance,
     pub path: Option<PathBuf>,
     pub position: Point2D<f32, f32>,

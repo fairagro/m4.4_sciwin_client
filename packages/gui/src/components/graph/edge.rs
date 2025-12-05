@@ -1,6 +1,6 @@
 use crate::{components::graph::Line, types::VisualNode, use_app_state};
 use commonwl::CWLType;
-use dioxus::prelude::*;
+use dioxus::{html::input_data::MouseButton, prelude::*};
 use petgraph::graph::EdgeIndex;
 
 pub const HEADER_OFFSET: f32 = 18.0 + 4.0 + 6.0; //padding + height
@@ -77,8 +77,8 @@ pub fn EdgeElement(props: EdgeProps) -> Element {
             stroke,
             onclick: move |e: Event<MouseData>| {
                 e.stop_propagation();
-                if e.modifiers().shift() {
-                    //disconnect on shift click
+                if e.trigger_button() == Some(MouseButton::Primary) && e.modifiers().shift() {
+                    //disconnect on shift + left click
                     let mut state = app_state.write();
                     state.workflow.remove_connection(props.id)?;
                 }
