@@ -26,16 +26,14 @@ pub fn RoundActionButton(props: ButtonProps) -> Element {
     }
 }
 
-
 #[component]
 pub fn SmallRoundActionButton(props: ButtonProps) -> Element {
-    
     let title = props.title.unwrap_or_default();
     let class = props.class.unwrap_or_default();
     rsx! {
 
         button {
-            class: "p-1  rounded-full hover:rotate-20 transition-[rotate] duration-200 {class}",
+            class: "p-1 rounded-full hover:rotate-20 transition-[rotate] duration-200 {class}",
             onclick: move |e| {
                 if let Some(handler) = props.onclick {
                     handler.call(e);
