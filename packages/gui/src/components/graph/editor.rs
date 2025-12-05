@@ -199,7 +199,7 @@ pub fn GraphEditor(path: String) -> Element {
                     || e.key() == Key::Character("a".to_string())
                         && e.modifiers() == Modifiers::SHIFT
                 {
-                    open_add_menu.set(true);
+                    open_add_menu.toggle();
                     e.stop_propagation();
                 }
                 if e.key() == Key::Escape {
