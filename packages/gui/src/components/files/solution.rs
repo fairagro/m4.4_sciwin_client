@@ -122,7 +122,8 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                 for item in files {
                     li {
                         draggable: true,
-                        ondragstart: move |_| {
+                        ondragstart: move |e| {
+                            e.data_transfer().set_drop_effect("copy");
                             app_state.write().set_data_transfer(&item)?;
                             Ok(())
                         },
