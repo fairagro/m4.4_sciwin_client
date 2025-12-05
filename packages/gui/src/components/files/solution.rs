@@ -12,7 +12,7 @@ use std::time::Duration;
 
 #[component]
 pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
-    let app_state = use_app_state();
+    let mut app_state = use_app_state();
     let files = use_memo(move || {
         reload_trigger(); //subscribe to changes
         get_cwl_files(project_path().join("workflows"))
@@ -37,6 +37,11 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
             ul {
                 for item in files() {
                     li {
+                        draggable: true,
+                        ondragstart: move |_| {
+                            app_state.write().set_data_transfer(&item)?;
+                            Ok(())
+                        },
                         Link {
                             to: get_route(&item),
                             active_class: "font-bold",
