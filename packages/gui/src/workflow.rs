@@ -67,7 +67,7 @@ impl VisualWorkflow {
                 })
                 .collect(),
             path: Some(working_dir.join(path)),
-            position: Point2D::new(rng.random_range(0.0..=1.0), rng.random_range(0.0..=1.0)),
+            position: Point2D::new(rng.random_range(0.0..=100.0), rng.random_range(0.0..=100.0)),
         });
 
         self.save()
@@ -87,7 +87,7 @@ impl VisualWorkflow {
             }],
             inputs: vec![],
             path: None,
-            position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
+            position: Point2D::new(0.0, rng.random_range(0.0..=100.0)),
         });
 
         self.save()
@@ -112,7 +112,7 @@ impl VisualWorkflow {
                 type_: output.type_.clone(),
             }],
             path: None,
-            position: Point2D::new(0.0, rng.random_range(0.0..=1.0)),
+            position: Point2D::new(0.0, rng.random_range(0.0..=100.0)),
         });
 
         self.save()

@@ -163,11 +163,15 @@ pub fn GraphEditor(path: String) -> Element {
             onkeydown: move |e| {
                 //listen for shift+a
                 if e.key() == Key::Character("A".to_string())
-                    || e.key() == Key::Character("a".to_string())
-                        && e.modifiers() == Modifiers::SHIFT
+                || e.key() == Key::Character("a".to_string())
+                && e.modifiers() == Modifiers::SHIFT
                 {
-                    e.stop_propagation();
                     open_add_menu.set(true);
+                    e.stop_propagation();
+                }
+                if e.key() == Key::Escape {
+                    open_add_menu.set(false);
+                    e.stop_propagation();
                 }
             },
             SmallRoundActionButton {
