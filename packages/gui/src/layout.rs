@@ -1,7 +1,7 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, ICON_SIZE, NoProject, NoProjectDialog, OkDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog,
+        CodeViewer, ConfirmDialog, ICON_SIZE, NoProject, NoProjectDialog, OkDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
@@ -32,6 +32,9 @@ pub fn Layout() -> Element {
 
     let show_project_dialog = use_signal(|| false);
     let confirm_project_dialog = use_signal(|| false);
+
+    let show_confirm_dialog = use_signal(|| false);
+    let confirmed_dialog = use_signal(|| false);
 
     let mut is_editing_name = use_signal(|| false);
     let mut new_project_name = use_signal(String::new);
@@ -179,7 +182,12 @@ pub fn Layout() -> Element {
                             option { value: "Solution", "Solution" }
                             option { value: "FileSystem", "Filesystem" }
                         }
-                        FilesView { working_dir, view, reload_trigger }
+                        FilesView {
+                            working_dir,
+                            view,
+                            reload_trigger,
+                            dialog_signals: (show_confirm_dialog, confirmed_dialog),
+                        }
                     } else {
                         NoProject {}
                     }
@@ -224,6 +232,10 @@ pub fn Layout() -> Element {
                     NoProjectDialog {
                         open: show_project_dialog,
                         confirmed: confirm_project_dialog,
+                    }
+                    ConfirmDialog {
+                        open: show_confirm_dialog,
+                        confirmed: confirmed_dialog,
                     }
                     div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full",
                         if *show_add_actions.read() {

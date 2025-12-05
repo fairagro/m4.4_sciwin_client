@@ -8,9 +8,10 @@ use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoTrash};
 use repository::Repository;
 use repository::submodule::remove_submodule;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[component]
-pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i32>) -> Element {
+pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
     let app_state = use_app_state();
     let files = use_memo(move || {
         reload_trigger(); //subscribe to changes
@@ -53,14 +54,19 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                 }
             }
             for (module , files) in submodule_files() {
-                Submodule_View { module, files, reload_trigger }
+                Submodule_View {
+                    module,
+                    files,
+                    reload_trigger,
+                    dialog_signals,
+                }
             }
         }
     }
 }
 
 #[component]
-pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i32>) -> Element {
+pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
     let app_state = use_app_state();
     let mut hover = use_signal(|| false);
 
@@ -75,10 +81,28 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                     class: "ml-auto mr-3 hover:bg-fairagro-red-light",
                     title: "Uninstall {module}",
                     onclick: move |_| {
-                        let repo = Repository::open(app_state().working_directory.unwrap())?;
-                        remove_submodule(&repo, &module)?;
-                        reload_trigger += 1;
-                        Ok(())
+                        let module = module.clone();
+                        async move {
+                            //0 open, 1 confirmed
+                            dialog_signals.0.set(true);
+                            loop {
+                                if !dialog_signals.0() {
+                                    if dialog_signals.1() {
+                                        let repo = Repository::open(
+                                            //reset
+
+                                            app_state().working_directory.unwrap(),
+                                        )?;
+                                        remove_submodule(&repo, &module)?;
+                                        reload_trigger += 1;
+                                        dialog_signals.1.set(false);
+                                    }
+                                    break;
+                                }
+                                tokio::time::sleep(Duration::from_millis(100)).await;
+                            }
+                            Ok(())
+                        }
                     },
                     if hover() {
                         Icon {

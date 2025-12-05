@@ -135,3 +135,17 @@ pub fn NoProjectDialog(open: Signal<bool>, confirmed: Signal<bool>) -> Element {
         }
     }
 }
+
+#[component]
+pub fn ConfirmDialog(open: Signal<bool>, confirmed: Signal<bool>) -> Element {
+    rsx! {
+        Dialog {
+            open,
+            title: "Are you sure?",
+            on_confirm: move |_| {
+                confirmed.set(true);
+            },
+            div { "Are you sure you want to do that?" }
+        }
+    }
+}
