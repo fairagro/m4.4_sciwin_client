@@ -33,6 +33,18 @@ pub fn Layout() -> Element {
     let show_project_dialog = use_signal(|| false);
     let confirm_project_dialog = use_signal(|| false);
 
+    let mut is_editing_name = use_signal(|| false);
+    let mut new_project_name = use_signal(String::new);
+
+    {
+        use_effect(move || {
+            if *is_editing_name.read() {
+                //we should be save to unwrap in this effect, hopefully
+                new_project_name.set(app_state().config.unwrap().workflow.name);
+            }
+        });
+    }
+
     {
         use_effect(move || {
             app_state.write().current_file = match route_rx() {
@@ -68,7 +80,40 @@ pub fn Layout() -> Element {
                     if let Some(config) = &app_state.read().config {
                         h2 { class: "text-fairagro-dark-500 mb-2 text-sm flex items-center gap-1.5",
                             Icon { icon: GoRepo, width: 16, height: 16 }
-                            div { "{config.workflow.name}" }
+                            if is_editing_name() {
+                                input {
+                                    class: "shadow appearance-none border rounded w-full py-1 px-3 leading-tight focus:border-fairagro-dark-500 focus:outline-none focus:shadow-outline",
+                                    r#type: "text",
+                                    value: "{new_project_name}",
+                                    oninput: move |e| new_project_name.set(e.value()),
+                                    onkeypress: move |e| {
+                                        if e.key() == Key::Enter {
+                                            let working_dir = app_state().working_directory.unwrap();
+                                            if let Some(write_config) = &mut app_state.write().config {
+                                                e.stop_propagation();
+                                                write_config.workflow.name = new_project_name();
+                                                let toml = write_config.to_toml()?;
+                                                fs::write(working_dir.join("workflow.toml"), toml)?;
+                                                is_editing_name.set(false);
+                                            }
+                                        }
+                                        if e.key() == Key::Escape {
+                                            is_editing_name.set(false);
+                                        }
+                                        Ok(())
+                                    },
+                                    placeholder: "Project name",
+                                }
+                            } else {
+                                div {
+                                    ondoubleclick: move |e| {
+                                        e.prevent_default();
+                                        is_editing_name.set(true);
+                                    },
+                                    title: "Double-click to edit",
+                                    "{config.workflow.name}"
+                                }
+                            }
                             SmallRoundActionButton {
                                 class: "hover:bg-fairagro-red-light/20 text-fairagro-red",
                                 title: "Close Project",
@@ -223,7 +268,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]

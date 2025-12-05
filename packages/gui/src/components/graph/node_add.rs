@@ -36,7 +36,7 @@ pub fn NodeAddForm(open: Signal<bool>, pos: Signal<ClientPoint>, project_path: R
                     li {
                         NodeAddItem {
                             //at this point there needs to be a config in place
-                            name: app_state.read().config.clone().unwrap().workflow.name, 
+                            name: app_state.read().config.clone().unwrap().workflow.name,
                             files: files(),
                         }
                     }
@@ -193,8 +193,7 @@ pub fn NameInputForm(is_input: bool, type_: CWLType, top_level_menu: Signal<bool
     let mut name_input = use_signal(String::new);
 
     rsx! {
-        div {
-            class: "min-w-48 bg-fairagro-light-200/80 px-2 py-0.5 hover:bg-fairagro-light-400 flex items-center gap-2",
+        div { class: "min-w-48 bg-fairagro-light-200/80 px-2 py-0.5 hover:bg-fairagro-light-400 flex items-center gap-2",
             input {
                 r#type: "text",
                 class: "px-1 py-1 flex-1 focus:border-fairagro-dark-500 border-1",

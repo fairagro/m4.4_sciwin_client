@@ -35,7 +35,9 @@ pub fn NodeElement(props: NodeProps) -> Element {
             top: "{pos_y}px",
             onclick: move |e| {
                 e.stop_propagation();
-                if e.trigger_button() == Some(MouseButton::Primary) && e.modifiers() == Modifiers::SHIFT {
+                if e.trigger_button() == Some(MouseButton::Primary)
+                    && e.modifiers() == Modifiers::SHIFT
+                {
                     app_state.write().workflow.remove_node(props.id)?;
                 }
                 Ok(())

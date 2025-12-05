@@ -163,8 +163,8 @@ pub fn GraphEditor(path: String) -> Element {
             onkeydown: move |e| {
                 //listen for shift+a
                 if e.key() == Key::Character("A".to_string())
-                || e.key() == Key::Character("a".to_string())
-                && e.modifiers() == Modifiers::SHIFT
+                    || e.key() == Key::Character("a".to_string())
+                        && e.modifiers() == Modifiers::SHIFT
                 {
                     open_add_menu.set(true);
                     e.stop_propagation();
