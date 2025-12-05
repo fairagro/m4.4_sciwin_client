@@ -61,7 +61,7 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
             class: "flex",
             onmouseenter: move |_| open.set(true),
             onmouseleave: move |_| open.set(false),
-            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.5 items-center justify-end",
+            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.25 items-center justify-end",
                 "{name}"
                 div { class: "ml-auto",
                     Icon {
@@ -75,7 +75,7 @@ pub fn NodeAddItem(name: String, files: Vec<Node>) -> Element {
                 div { class: "ml-auto absolute left-48",
                     ul {
                         for file in files {
-                            li { class: "min-w-48 px-2 py-1.5 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
+                            li { class: "min-w-48 px-2 py-1.25 items-center bg-fairagro-light-200/80 hover:bg-fairagro-light-400",
                                 button {
                                     onclick: move |_| {
                                         let mut cwl = load_doc(&file.path).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -122,7 +122,7 @@ pub fn InputOutputMenu(is_input: bool, top_level_menu: Signal<bool>) -> Element 
                 active_type_index.set(None);
             },
 
-            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.5 items-center justify-end",
+            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.25 items-center justify-end",
                 if is_input {
                     "Input"
                 } else {
@@ -163,7 +163,7 @@ pub fn TypeMenuItem(is_input: bool, type_: CWLType, is_active: bool, on_hover: E
     rsx! {
         div { class: "flex relative", onmouseenter: move |_| on_hover.call(()),
 
-            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.5 items-center justify-end",
+            div { class: "flex w-48 bg-fairagro-light-200/80 hover:bg-fairagro-light-400 px-2 py-1.25 items-center justify-end",
                 "{type_}"
                 div { class: "ml-auto",
                     Icon {
@@ -193,7 +193,7 @@ pub fn NameInputForm(is_input: bool, type_: CWLType, top_level_menu: Signal<bool
     let mut name_input = use_signal(String::new);
 
     rsx! {
-        div { class: "min-w-48 bg-fairagro-light-200/80 px-2 py-0.5 hover:bg-fairagro-light-400 flex items-center gap-2",
+        div { class: "min-w-48 bg-fairagro-light-200/80 px-2 py-0.25 hover:bg-fairagro-light-400 flex items-center gap-2",
             input {
                 r#type: "text",
                 class: "px-1 py-1 flex-1 focus:border-fairagro-dark-500 border-1",
