@@ -191,7 +191,7 @@ impl VisualWorkflow {
         let to_node = &to_node.id;
 
         let to_slot = edge.target_port.clone();
-
+        //todo if input/output in named like a step it is confused!
         if self.workflow.has_step(from_node) && self.workflow.has_step(to_node) {
             s4n_core::workflow::remove_workflow_step_connection(&mut self.workflow, to_node, &to_slot)?
         } else if !self.workflow.has_step(from_node) {
