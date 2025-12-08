@@ -27,6 +27,7 @@ impl WorkflowGraphBuilder {
 
     fn load_workflow(&mut self, workflow: &Workflow, path: impl AsRef<Path>) -> anyhow::Result<()> {
         let mut rng = rand::rng();
+        let path = path.as_ref();
 
         for input in &workflow.inputs {
             let node_id = self.graph.add_node(VisualNode {
@@ -61,12 +62,12 @@ impl WorkflowGraphBuilder {
         // add steps sorted by execution order
         let step_ids = workflow.sort_steps().map_err(|e| anyhow::anyhow!("{e}"))?;
         for step_id in step_ids {
-            let step = workflow.get_step(&step_id).unwrap();
+            let step = workflow.get_step(&step_id).ok_or_else(|| anyhow::anyhow!("Could not find step: {step_id}"))?;
             let StringOrDocument::String(str) = &step.run else {
                 anyhow::bail!("Inline Document not supported")
             };
 
-            let step_file = path.as_ref().parent().unwrap().join(str);
+            let step_file = path.parent().unwrap_or(path).join(str);
             let mut doc = load_doc(&step_file).map_err(|e| anyhow::anyhow!("{e}"))?;
             if doc.id.is_none() {
                 doc.id = Some(step_file.file_name().unwrap().to_string_lossy().to_string());
