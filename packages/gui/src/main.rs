@@ -1,5 +1,5 @@
 use dioxus::desktop::tao::window::Icon;
-use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
+use dioxus::desktop::{Config, LogicalSize, WindowBuilder, use_window};
 use dioxus::prelude::*;
 use gui::ApplicationState;
 use gui::components::{ToastItem, ToastProvider};
@@ -24,6 +24,8 @@ fn main() {
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
     use_context_provider(|| Signal::new(Vec::<ToastItem>::new()));
+
+    document::document().eval(r#"window.dispatchEvent(new DragEvent("dragstart", { dataTransfer: new DataTransfer() }));"#.to_string());
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
