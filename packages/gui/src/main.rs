@@ -1,5 +1,5 @@
 use dioxus::desktop::tao::window::Icon;
-use dioxus::desktop::{Config, LogicalSize, WindowBuilder, use_window};
+use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use gui::ApplicationState;
 use gui::components::{ToastItem, ToastProvider};
