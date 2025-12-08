@@ -39,11 +39,12 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                     li {
                         draggable: true,
                         ondragstart: move |e| {
+                            e.data_transfer().set_effect_allowed("all");
+                            e.data_transfer().set_drop_effect("move");
                             app_state.write().set_data_transfer(&item)?;
                             e.data_transfer()
-                                .set_data("text/plain", "node")
+                                .set_data("application/x-allow-dnd", "1")
                                 .map_err(|e| anyhow::anyhow!("{e}"))?;
-                            e.data_transfer().set_effect_allowed("all");
                             Ok(())
                         },
                         Link {
@@ -128,11 +129,12 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                     li {
                         draggable: true,
                         ondragstart: move |e| {
+                            e.data_transfer().set_effect_allowed("all");
+                            e.data_transfer().set_drop_effect("move");
                             app_state.write().set_data_transfer(&item)?;
                             e.data_transfer()
-                                .set_data("text/plain", "node")
+                                .set_data("application/x-allow-dnd", "1")
                                 .map_err(|e| anyhow::anyhow!("{e}"))?;
-                            e.data_transfer().set_effect_allowed("all");
                             Ok(())
                         },
                         Link {
