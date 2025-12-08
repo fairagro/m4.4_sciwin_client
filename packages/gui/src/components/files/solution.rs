@@ -123,8 +123,9 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                     li {
                         draggable: true,
                         ondragstart: move |e| {
-                            e.data_transfer().set_drop_effect("copy");
                             app_state.write().set_data_transfer(&item)?;
+                            e.data_transfer().set_data("text/plain", "node").map_err(|e| anyhow::anyhow!("{e}"))?;
+                            e.data_transfer().set_drop_effect("copy");
                             Ok(())
                         },
                         Link {
