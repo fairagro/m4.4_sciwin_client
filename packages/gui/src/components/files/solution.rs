@@ -123,8 +123,12 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                     li {
                         draggable: true,
                         ondragstart: move |e| {
+                            e.prevent_default();
+                            e.stop_propagation();
                             app_state.write().set_data_transfer(&item)?;
-                            e.data_transfer().set_data("text/plain", "node").map_err(|e| anyhow::anyhow!("{e}"))?;
+                            e.data_transfer()
+                                .set_data("text/plain", "node")
+                                .map_err(|e| anyhow::anyhow!("{e}"))?;
                             e.data_transfer().set_effect_allowed("all");
                             Ok(())
                         },
