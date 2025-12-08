@@ -25,6 +25,22 @@ fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
     use_context_provider(|| Signal::new(Vec::<ToastItem>::new()));
 
+    use_effect(move || {
+        #[cfg(target_os = "windows")]
+        {
+            spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                eval(
+                    r#"
+                document.body.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                }, { once: true });
+            "#,
+                );
+            });
+        }
+    });
+
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
         Stylesheet { href: asset!("/assets/main.css") }
