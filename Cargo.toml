@@ -35,13 +35,13 @@ anyhow = "1.0.99"
 colored = "3.0.0"
 dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
 fancy-regex = "0.16.2"
-git2 = { version = "0.20.2", features = ["vendored-openssl"] }
+git2 = { version = "0.20.3", features = ["vendored-openssl"] }
 keyring = { version = "3.6.3", features = [
     "apple-native",
     "linux-native",
     "windows-native",
 ] }
-log = "0.4.27"
+log = "0.4.29"
 pathdiff = "0.2.3"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
@@ -55,11 +55,11 @@ reqwest = { version = "0.12.23", features = [
     "http2",
 ], default-features = false }
 toml = "0.9.5"
-toml_edit = { version = "0.23.3", features = ["serde"] }
+toml_edit = { version = "0.23.9", features = ["serde"] }
 tempfile = "3.21.0"
 tokio = { version = "1.47.1", features = ["macros"] }
 urlencoding = "2.1.3"
-uuid = { version = "1.18.0", features = ["v4"] }
+uuid = { version = "1.19.0", features = ["v4"] }
 
 # dev dependencies
 test_utils = { path = "packages/test_utils" }
