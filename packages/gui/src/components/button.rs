@@ -19,7 +19,7 @@ pub fn RoundActionButton(props: ButtonProps) -> Element {
                     handler.call(e);
                 }
             },
-            class: "rounded-full justify-center items-center p-3 bg-fairagro-mid-500 select-none hover:bg-fairagro-dark-500 hover:text-white hover:rotate-45 transition-[rotate] duration-500 {class}",
+            class: "cursor-pointer rounded-full justify-center items-center p-3 bg-fairagro-mid-500 select-none hover:bg-fairagro-dark-500 hover:text-white hover:rotate-45 transition-[rotate] duration-500 {class}",
             title,
             {props.children}
         }
@@ -32,7 +32,7 @@ pub fn SmallRoundActionButton(props: ButtonProps) -> Element {
     let class = props.class.unwrap_or_default();
     rsx! {
         button {
-            class: "p-1 rounded-full hover:rotate-20 transition-[rotate] duration-200 {class}",
+            class: "cursor-pointer p-1 rounded-full hover:rotate-20 transition-[rotate] duration-200 {class}",
             onclick: move |e| {
                 if let Some(handler) = props.onclick {
                     handler.call(e);

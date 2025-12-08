@@ -7,6 +7,7 @@ use dioxus_free_icons::Icon;
 use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoTrash};
 use repository::Repository;
 use repository::submodule::remove_submodule;
+use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -22,6 +23,8 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
         get_submodules_cwl_files(project_path())
     });
 
+    let mut hover = use_signal(|| false);
+
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto",
             h2 { class: "mt-2 font-bold flex gap-1 items-center",
@@ -35,6 +38,8 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                 }
             }
             ul {
+                onmouseenter: move |_| hover.set(true),
+                onmouseleave: move |_| hover.set(false),
                 for item in files() {
                     li {
                         class: "select-none",
@@ -48,18 +53,53 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                 .map_err(|e| anyhow::anyhow!("{e}"))?;
                             Ok(())
                         },
-                        Link {
-                            draggable: "false",
-                            to: get_route(&item),
-                            active_class: "font-bold",
-                            class: "cursor-pointer select-none",
-                            div { class: "flex gap-1 items-center",
-                                div {
-                                    class: "flex",
-                                    style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
-                                    img { src: asset!("/assets/CWL.svg") }
+                        div { class: "flex",
+                            Link {
+                                draggable: "false",
+                                to: get_route(&item),
+                                active_class: "font-bold",
+                                class: "cursor-pointer select-none",
+                                div { class: "flex gap-1 items-center",
+                                    div {
+                                        class: "flex",
+                                        style: "width: {ICON_SIZE.unwrap()}px; height: {ICON_SIZE.unwrap()}px;",
+                                        img { src: asset!("/assets/CWL.svg") }
+                                    }
+                                    "{item.name}"
                                 }
-                                "{item.name}"
+                            }
+                            if hover() {
+                                SmallRoundActionButton {
+                                    class: "ml-auto mr-3 hover:bg-fairagro-red-light",
+                                    title: "Delete {item.name}",
+                                    onclick: {
+                                        //we need to double clone here ... ugly :/
+                                        let item = item.clone();
+                                        move |_| {
+                                            let item = item.clone(); 
+                                            async move {
+                                                //0 open, 1 confirmed
+                                                dialog_signals.0.set(true);
+                                                loop {
+                                                    if !dialog_signals.0() {
+                                                        if dialog_signals.1() {
+                                                            fs::remove_file(&item.path)?;
+                                                            reload_trigger += 1
+                                                        }
+                                                        break;
+                                                    }
+                                                    tokio::time::sleep(Duration::from_millis(100)).await;
+                                                }
+                                                Ok(())
+                                            }
+                                        }
+                                    },
+                                    Icon {
+                                        width: 10,
+                                        height: 10,
+                                        icon: GoTrash,
+                                    }
+                                }
                             }
                         }
                     }

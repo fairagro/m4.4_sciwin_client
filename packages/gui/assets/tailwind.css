@@ -585,6 +585,9 @@
   .bg-fairagro-mid-500 {
     background-color: var(--color-fairagro-mid-500);
   }
+  .bg-fairagro-red {
+    background-color: var(--color-fairagro-red);
+  }
   .bg-green-400 {
     background-color: var(--color-green-400);
   }
