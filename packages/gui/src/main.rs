@@ -30,7 +30,7 @@ fn App() -> Element {
         {
             spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                eval(
+                document::eval(
                     r#"
                 document.body.addEventListener('dragover', function(e) {
                     e.preventDefault();
