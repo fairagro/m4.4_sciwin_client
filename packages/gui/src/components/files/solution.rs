@@ -1,6 +1,7 @@
 use crate::components::files::{Node, get_route};
 use crate::components::{ICON_SIZE, SmallRoundActionButton};
 use crate::files::{get_cwl_files, get_submodules_cwl_files};
+use crate::layout::Route;
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
@@ -76,7 +77,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                         //we need to double clone here ... ugly :/
                                         let item = item.clone();
                                         move |_| {
-                                            let item = item.clone(); 
+                                            let item = item.clone();
                                             async move {
                                                 //0 open, 1 confirmed
                                                 dialog_signals.0.set(true);
@@ -84,7 +85,15 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                                     if !dialog_signals.0() {
                                                         if dialog_signals.1() {
                                                             fs::remove_file(&item.path)?;
-                                                            reload_trigger += 1
+                                                            reload_trigger += 1;
+                                                            let current_path = match use_route() {
+                                                                Route::Empty => String::new(),
+                                                                Route::WorkflowView { path } => path.to_string(),
+                                                                Route::ToolView { path } => path.to_string(),
+                                                            };
+                                                            if current_path == item.path.to_string_lossy() {
+                                                                router().push("/");
+                                                            }
                                                         }
                                                         break;
                                                     }
