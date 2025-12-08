@@ -44,7 +44,7 @@ pub fn SlotElement(props: SlotProps) -> Element {
         CWLType::Any => "bg-slate-400",
         CWLType::Stdout => "bg-slate-400",
         CWLType::Stderr => "bg-slate-400",
-        _ => ""
+        _ => "",
     };
 
     let bg = match &props.slot.type_ {
@@ -94,25 +94,49 @@ pub fn SlotElement(props: SlotProps) -> Element {
                             }
                         }
                     }
-                    let cwl_type_source = source
+                    let (check, reversed) = if let Some(output) = source
                         .outputs
                         .iter()
                         .find(|i| i.id == source_port)
-                        .unwrap()
-                        .type_
-                        .clone();
-                    let cwl_type_target = target
+
+                        && let Some(input) = target.inputs.iter().find(|i| i.id == props.slot.id)
+                    {
+                        (input.type_ == output.type_, false)
+                    } else if let Some(output) = source
                         .inputs
                         .iter()
-                        .find(|i| i.id == props.slot.id)
-                        .unwrap()
-                        .type_
-                        .clone();
-                    if cwl_type_source == cwl_type_target {
-                        use_app_state()
-                            .write()
-                            .workflow
-                            .add_connection(source_node, &source_port, node_id, &props.slot.id)?;
+                        .find(|i| i.id == source_port)
+                        && let Some(input) = target
+                            .outputs
+                            .iter()
+                            .find(|i| i.id == props.slot.id)
+                    {
+                        (input.type_ == output.type_, true)
+                    } else {
+                        (false, false)
+                    };
+                    if check {
+                        if !reversed {
+                            use_app_state()
+                                .write()
+                                .workflow
+                                .add_connection(
+                                    source_node,
+                                    &source_port,
+                                    node_id,
+                                    &props.slot.id,
+                                )?;
+                        } else {
+                            use_app_state()
+                                .write()
+                                .workflow
+                                .add_connection(
+                                    node_id,
+                                    &props.slot.id,
+                                    source_node,
+                                    &source_port,
+                                )?;
+                        }
                     }
                 }
                 Ok(())

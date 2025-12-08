@@ -62,7 +62,9 @@ impl WorkflowGraphBuilder {
         // add steps sorted by execution order
         let step_ids = workflow.sort_steps().map_err(|e| anyhow::anyhow!("{e}"))?;
         for step_id in step_ids {
-            let step = workflow.get_step(&step_id).ok_or_else(|| anyhow::anyhow!("Could not find step: {step_id}"))?;
+            let step = workflow
+                .get_step(&step_id)
+                .ok_or_else(|| anyhow::anyhow!("Could not find step: {step_id}"))?;
             let StringOrDocument::String(str) = &step.run else {
                 anyhow::bail!("Inline Document not supported")
             };
@@ -98,9 +100,17 @@ impl WorkflowGraphBuilder {
             self.node_map.insert(step.id.clone(), node_id);
 
             for wsip in &step.in_ {
-                let source = wsip.source.as_ref().unwrap(); //TODO!
+                let source = wsip
+                    .source
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("source is not set in step: {:?}", wsip))?;
                 let (source, source_port) = source.split_once('/').unwrap_or((source.as_str(), source.as_str()));
-                let type_ = doc.inputs.iter().find(|i| i.id == wsip.id).unwrap().type_.clone(); //TODO!
+                let type_ = doc
+                    .inputs
+                    .iter()
+                    .find(|i| i.id == wsip.id)
+                    .map(|i| i.type_.clone())
+                    .ok_or_else(|| anyhow::anyhow!("Could not find step input: {}", wsip.id))?;
 
                 self.connect_edge(source, &step.id, source_port, &wsip.id, type_)?;
             }
@@ -109,7 +119,9 @@ impl WorkflowGraphBuilder {
         //add output connections
         for output in &workflow.outputs {
             if let Some(output_source) = &output.output_source {
-                let (source, source_port) = output_source.split_once("/").unwrap(); //EVIL!
+                let (source, source_port) = output_source
+                    .split_once("/")
+                    .ok_or_else(|| anyhow::anyhow!("Output source is not in the correct format: {output_source}"))?;
                 let type_ = output.type_.clone();
                 self.connect_edge(source, &output.id, source_port, &output.id, type_)?
             }
@@ -122,8 +134,14 @@ impl WorkflowGraphBuilder {
     }
 
     fn connect_edge(&mut self, source: &str, target: &str, source_port: &str, target_port: &str, type_: CWLType) -> anyhow::Result<()> {
-        let source_idx = self.node_map.get(source).unwrap(); //TODO!
-        let target_idx = self.node_map.get(target).unwrap(); //TODO!
+        let source_idx = self
+            .node_map
+            .get(source)
+            .ok_or_else(|| anyhow::anyhow!("Could not find node in map: {source}"))?;
+        let target_idx = self
+            .node_map
+            .get(target)
+            .ok_or_else(|| anyhow::anyhow!("Could not find node in map: {target}"))?;
 
         self.graph.add_edge(
             *source_idx,

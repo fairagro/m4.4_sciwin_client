@@ -15,7 +15,7 @@ pub(crate) fn calculate_source_position(source_node: &VisualNode, slot_id: &str)
     (x_source, y_source)
 }
 
-fn calculate_target_position(target_node: &VisualNode, slot_id: &str) -> (f32, f32) {
+pub fn calculate_target_position(target_node: &VisualNode, slot_id: &str) -> (f32, f32) {
     //get positions in array
     let tix = target_node.inputs.iter().position(|o| o.id == slot_id).unwrap_or_default();
     let y_target = HEADER_OFFSET

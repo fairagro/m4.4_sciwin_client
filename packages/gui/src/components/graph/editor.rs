@@ -3,7 +3,9 @@ use crate::{
     components::{
         ICON_SIZE, SmallRoundActionButton,
         files::Node,
-        graph::{EdgeElement, Line, LineProps, NodeAddForm, NodeElement, calculate_source_position, get_stroke_from_cwl_type},
+        graph::{
+            EdgeElement, Line, LineProps, NodeAddForm, NodeElement, calculate_source_position, calculate_target_position, get_stroke_from_cwl_type,
+        },
     },
     graph::auto_layout,
     use_app_state,
@@ -166,25 +168,48 @@ pub fn GraphEditor(path: String) -> Element {
                                 source_node,
                                 &source_port,
                             );
-                            let cwl_type = source_node
+                            if let Some(cwl_type) = source_node
                                 .outputs
                                 .iter()
                                 .find(|i| i.id == source_port)
-                                .unwrap()
-                                .type_
-                                .clone();
-                            let stroke = get_stroke_from_cwl_type(cwl_type);
-                            new_line
-                                .set(
-                                    Some(LineProps {
-                                        x_source,
-                                        y_source,
-                                        x_target,
-                                        y_target,
-                                        stroke: stroke.to_string(),
-                                        onclick: None,
-                                    }),
+                                .map(|i| i.type_.clone())
+                            {
+                                let stroke = get_stroke_from_cwl_type(cwl_type);
+                                new_line
+                                    .set(
+                                        Some(LineProps {
+                                            x_source,
+                                            y_source,
+                                            x_target,
+                                            y_target,
+                                            stroke: stroke.to_string(),
+                                            onclick: None,
+                                        }),
+                                    );
+                            } else {
+                                let cwl_type = source_node
+                                    .inputs
+                                    .iter()
+                                    .find(|i| i.id == source_port)
+                                    .map(|i| i.type_.clone())
+                                    .unwrap();
+                                let stroke = get_stroke_from_cwl_type(cwl_type);
+                                let (x_source, y_source) = calculate_target_position(
+                                    source_node,
+                                    &source_port,
                                 );
+                                new_line
+                                    .set(
+                                        Some(LineProps {
+                                            x_source,
+                                            y_source,
+                                            x_target,
+                                            y_target,
+                                            stroke: stroke.to_string(),
+                                            onclick: None,
+                                        }),
+                                    );
+                            }
                         }
                     }
                 }
