@@ -125,7 +125,7 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                         ondragstart: move |e| {
                             app_state.write().set_data_transfer(&item)?;
                             e.data_transfer().set_data("text/plain", "node").map_err(|e| anyhow::anyhow!("{e}"))?;
-                            e.data_transfer().set_drop_effect("copy");
+                            e.data_transfer().set_effect_allowed("all");
                             Ok(())
                         },
                         Link {
