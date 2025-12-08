@@ -38,11 +38,16 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                 for item in files() {
                     li {
                         draggable: true,
-                        ondragstart: move |_| {
+                        ondragstart: move |e| {
                             app_state.write().set_data_transfer(&item)?;
+                            e.data_transfer()
+                                .set_data("text/plain", "node")
+                                .map_err(|e| anyhow::anyhow!("{e}"))?;
+                            e.data_transfer().set_effect_allowed("all");
                             Ok(())
                         },
                         Link {
+                            draggable: "false",
                             to: get_route(&item),
                             active_class: "font-bold",
                             class: "cursor-pointer select-none",
@@ -131,6 +136,7 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                             Ok(())
                         },
                         Link {
+                            draggable: "false",
                             to: get_route(&item),
                             active_class: "font-bold",
                             class: "cursor-pointer select-none",
