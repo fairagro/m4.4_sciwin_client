@@ -98,9 +98,9 @@ pub fn GraphEditor(path: String) -> Element {
                 e.stop_propagation();
             },
             ondrop: move |e| {
+                e.data_transfer().set_drop_effect("copy");
                 e.prevent_default();
                 e.stop_propagation();
-                e.data_transfer().set_drop_effect("copy");
                 let item = app_state().get_data_transfer::<Node>()?;
 
                 let mut cwl = load_doc(&item.path).map_err(|e| anyhow::anyhow!("{e}"))?;

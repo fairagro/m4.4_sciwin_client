@@ -37,6 +37,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
             ul {
                 for item in files() {
                     li {
+                        class: "select-none",
                         draggable: true,
                         ondragstart: move |e| {
                             e.data_transfer().set_effect_allowed("all");
@@ -127,6 +128,7 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
             ul {
                 for item in files {
                     li {
+                        class: "select-none",
                         draggable: true,
                         ondragstart: move |e| {
                             e.data_transfer().set_effect_allowed("all");
