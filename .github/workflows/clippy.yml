@@ -45,4 +45,4 @@ jobs:
         run: |
           curl -sSL http://dioxus.dev/install.sh | bash -s v0.7.2
       - name: Run dx check
-        run: dx check -p gui
+        run: dx check -p sciwin
