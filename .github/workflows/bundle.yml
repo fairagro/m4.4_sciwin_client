@@ -19,14 +19,14 @@ jobs:
       - name: Install Dioxus 📈
         run: curl -sSL http://dioxus.dev/install.sh | sh -s v0.7.2
       - name: Create bundle
-        run: dx bundle -p gui --desktop --release
+        run: dx bundle -p sciwin --desktop --release
       - uses: actions/upload-artifact@v5
         with:
           name: Bundle
-          path: target/dx/gui/bundle/windows/bundle
+          path: target/dx/sciwin/bundle/windows/bundle
           retention-days: 1
       - uses: actions/upload-artifact@v5
         with:
           name: Exe
-          path: target/dx/gui/release/windows
+          path: target/dx/sciwin/release/windows
           retention-days: 1
