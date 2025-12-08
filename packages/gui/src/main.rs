@@ -6,7 +6,7 @@ use gui::components::{ToastItem, ToastProvider};
 use gui::layout::Route;
 
 fn main() {
-    dioxus::LaunchBuilder::new()
+    dioxus::LaunchBuilder::desktop()
         .with_cfg(
             Config::default()
                 .with_menu(None)
@@ -15,7 +15,8 @@ fn main() {
                         .with_inner_size(LogicalSize::new(1270, 720))
                         .with_title("SciWIn Studio"),
                 )
-                .with_icon(Icon::from_rgba(include_bytes!("../assets/icon.rgba").to_vec(), 192, 192).unwrap()),
+                .with_icon(Icon::from_rgba(include_bytes!("../assets/icon.rgba").to_vec(), 192, 192).unwrap())
+                .with_disable_drag_drop_handler(true),
         )
         .launch(App);
 }
@@ -24,8 +25,6 @@ fn main() {
 fn App() -> Element {
     use_context_provider(|| Signal::new(ApplicationState::default()));
     use_context_provider(|| Signal::new(Vec::<ToastItem>::new()));
-
-    document::document().eval(r#"window.dispatchEvent(new DragEvent("dragstart", { dataTransfer: new DataTransfer() }));"#.to_string());
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/icon.png") }
