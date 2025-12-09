@@ -87,9 +87,9 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                                             fs::remove_file(&item.path)?;
                                                             reload_trigger += 1;
                                                             let current_path = match use_route() {
-                                                                Route::Empty => String::new(),
                                                                 Route::WorkflowView { path } => path.to_string(),
                                                                 Route::ToolView { path } => path.to_string(),
+                                                                _ => String::new(),
                                                             };
                                                             if current_path == item.path.to_string_lossy() {
                                                                 router().push("/");

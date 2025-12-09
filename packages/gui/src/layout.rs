@@ -11,7 +11,7 @@ use crate::{
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::go_icons::{GoAlert, GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
+    icons::go_icons::{GoAlert, GoGitCommit, GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
 };
 use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
@@ -51,9 +51,9 @@ pub fn Layout() -> Element {
     {
         use_effect(move || {
             app_state.write().current_file = match route_rx() {
-                Route::Empty => None,
                 Route::WorkflowView { path } => Some(PathBuf::from(path)),
                 Route::ToolView { path } => Some(PathBuf::from(path)),
+                _ => None,
             };
 
             let serialized = serde_json::to_string(&app_state()).expect("Could not serialize app state");
@@ -237,13 +237,37 @@ pub fn Layout() -> Element {
                         open: show_confirm_dialog,
                         confirmed: confirmed_dialog,
                     }
-                    div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full",
+                    div { class: "z-100 bg-fairagro-mid-200 absolute right-10 bottom-10 rounded-full flex flex-col",
                         if *show_add_actions.read() {
-                            RoundActionButton {
-                                class: "mr-3 right-30",
-                                title: "Add new Workflow",
-                                onclick: move |_| show_create_dialog.set(true),
-                                Icon { width: 16, height: 16, icon: GoWorkflow }
+                            div { class: "flex relative mb-3",
+                                div { class: "absolute text-center right-11 top-3 py-0.5 px-1 bg-fairagro-dark-500 rounded-md text-[.6rem] text-white ring-1 ring-fairagro-dark-300/40",
+                                    "Workflow"
+                                }
+                                RoundActionButton {
+                                    title: "Add new Workflow",
+                                    onclick: move |_| show_create_dialog.set(true),
+                                    Icon {
+                                        width: 16,
+                                        height: 16,
+                                        icon: GoWorkflow,
+                                    }
+                                }
+                            }
+                            div { class: "flex relative mb-3",
+                                div { class: "absolute text-center right-11 top-3 py-0.5 px-1 bg-fairagro-dark-500 rounded-md text-[.6rem] text-white ring-1 ring-fairagro-dark-300/40",
+                                    "Tool"
+                                }
+                                RoundActionButton {
+                                    title: "Add new CommandLineTool",
+                                    onclick: move |_| {
+                                        navigator().push(Route::ToolAdd);
+                                    },
+                                    Icon {
+                                        width: 16,
+                                        height: 16,
+                                        icon: GoGitCommit,
+                                    }
+                                }
                             }
                         }
                         RoundActionButton {
@@ -256,9 +280,9 @@ pub fn Layout() -> Element {
             }
             Footer {
                 match &route {
-                    Route::Empty => "".to_string(),
                     Route::WorkflowView { path } => path.to_string(),
                     Route::ToolView { path } => path.to_string(),
+                    _ => "".to_string(),
                 }
             }
         }
@@ -276,6 +300,9 @@ pub enum Route {
 
     #[route("/tool?:path")]
     ToolView { path: String },
+
+    #[route("/tool_add")]
+    ToolAdd,
 }
 
 #[component]
@@ -324,4 +351,11 @@ pub fn ToolView(path: String) -> Element {
             }
         }
     }
+}
+
+#[component]
+pub fn ToolAdd() -> Element {
+    rsx!(
+        div { "Implement Tool Add" }
+    )
 }
