@@ -1,10 +1,14 @@
 # Unreleased
+
+# v1.1.0
 ## 🚀 Features
 - `create` now has `--env` option to load in an .env file
 - made inputs and outputs prefix optional in `connect`
+
 ## 🐛 Bugfixes
 - default values are used on input connections
-- Fixed some bugs in command parsing
+- Fixed some bugs in command parsing (`s4n create`, fixes for python modules)
+- Better alignment with CWL spec in some points (e.g. glob)
 
 ## 🚜 Refactor
 - Major restructuring for better maintainability
