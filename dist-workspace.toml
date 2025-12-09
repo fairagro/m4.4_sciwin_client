@@ -4,7 +4,7 @@ members = ["cargo:."]
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.30.0"
+cargo-dist-version = "0.30.2"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
@@ -21,3 +21,5 @@ global = "ubuntu-latest"
 aarch64-unknown-linux-gnu = "ubuntu-22.04"
 x86_64-unknown-linux-gnu = "ubuntu-22.04"
 x86_64-pc-windows-msvc = "windows-latest"
+x86_64-apple-darwin = "macos-latest"
+aarch64-apple-darwin = "macos-latest"
