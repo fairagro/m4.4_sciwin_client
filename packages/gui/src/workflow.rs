@@ -237,3 +237,62 @@ impl VisualWorkflow {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_workflow() {
+        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let wf = VisualWorkflow::from_file(path).unwrap();
+        assert_eq!(wf.graph.node_count(), 5)
+    }
+
+    #[test]
+    fn test_add_input_to_workflow() {
+        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let mut wf = VisualWorkflow::from_file(path).unwrap();
+
+        wf.add_input("wurstbrot", CWLType::Any).unwrap();
+        assert!(wf.workflow.has_input("wurstbrot"));
+
+        let ix = wf.graph.node_indices().find(|i| wf.graph[*i].id == "wurstbrot").unwrap();
+        wf.remove_node(ix).unwrap();
+        assert!(!wf.workflow.has_input("wurstbrot"));
+
+        wf.save().unwrap() //does not fail
+    }
+
+    #[test]
+    fn test_add_output_to_workflow() {
+        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let mut wf = VisualWorkflow::from_file(path).unwrap();
+
+        wf.add_output("merzlos", CWLType::Any).unwrap();
+        assert!(wf.workflow.has_output("merzlos"));
+
+        let ix = wf.graph.node_indices().find(|i| wf.graph[*i].id == "merzlos").unwrap();
+        wf.remove_node(ix).unwrap();
+        assert!(!wf.workflow.has_output("merzlos"));
+    }
+
+    #[test]
+    fn test_add_connection_to_workflow() {
+        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let mut wf = VisualWorkflow::from_file(path).unwrap();
+
+        let ix_calc = wf.graph.node_indices().find(|i| wf.graph[*i].id.contains("calculation")).unwrap();
+        let ix_plot = wf.graph.node_indices().find(|i| wf.graph[*i].id.contains("plot")).unwrap();
+
+        let edge_ix = wf.graph.find_edge(ix_calc, ix_plot).unwrap();
+
+        wf.remove_connection(edge_ix).unwrap();
+
+        assert_eq!(wf.graph.edge_count(), 3);
+
+        wf.add_connection(ix_calc, "results", ix_plot, "results").unwrap();
+
+        assert_eq!(wf.graph.edge_count(), 4);
+    }
+}
