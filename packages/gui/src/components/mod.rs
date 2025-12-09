@@ -1,14 +1,16 @@
-mod code;
 mod button;
+mod code;
 mod dialog;
 pub mod files;
 pub mod graph;
 pub mod layout;
+mod term;
 mod toast;
 
-pub use code::*;
 pub use button::*;
+pub use code::*;
 pub use dialog::*;
+pub use term::*;
 pub use toast::*;
 
 use dioxus::prelude::*;

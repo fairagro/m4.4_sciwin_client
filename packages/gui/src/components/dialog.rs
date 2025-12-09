@@ -1,3 +1,4 @@
+use crate::layout::INPUT_TEXT_CLASSES;
 use crate::layout::Route;
 use dioxus::prelude::*;
 use dioxus_primitives::alert_dialog::*;
@@ -99,7 +100,7 @@ pub fn WorkflowAddDialog(
             div { class: "flex flex-col",
                 label { class: "text-fairagro-dark-500 font-bold", "Enter Workflow Name" }
                 input {
-                    class: "mt-2 shadow appearance-none border rounded w-full py-2 px-3 text-zinc-700 leading-tight focus:border-fairagro-dark-500 focus:outline-none focus:shadow-outline",
+                    class: "mt-2 w-full {INPUT_TEXT_CLASSES}",
                     value: "{workflow_name}",
                     r#type: "text",
                     placeholder: "workflow name ",

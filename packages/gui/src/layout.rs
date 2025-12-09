@@ -1,7 +1,8 @@
 use crate::{
     ApplicationState,
     components::{
-        CodeViewer, ConfirmDialog, ICON_SIZE, NoProject, NoProjectDialog, OkDialog, RoundActionButton, SmallRoundActionButton, WorkflowAddDialog,
+        CodeViewer, ConfirmDialog, ICON_SIZE, NoProject, NoProjectDialog, OkDialog, RoundActionButton, SmallRoundActionButton, Terminal,
+        WorkflowAddDialog,
         files::{FilesView, View},
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
@@ -15,6 +16,8 @@ use dioxus_free_icons::{
 };
 use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
+
+pub const INPUT_TEXT_CLASSES: &str = "shadow appearance-none border rounded py-2 px-3 text-zinc-700 leading-tight focus:border-fairagro-dark-500 focus:outline-none focus:shadow-outline";
 
 #[component]
 pub fn Layout() -> Element {
@@ -307,9 +310,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]
@@ -356,6 +357,32 @@ pub fn ToolView(path: String) -> Element {
 #[component]
 pub fn ToolAdd() -> Element {
     rsx!(
-        div { "Implement Tool Add" }
+        div { class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
+            h2 { class: "text-lg text-fairagro-dark-500 font-bold", "New CommandLineTool" }
+            div {
+                class: "flex flex-col gap-1",
+                label { r#for: "name",
+                    "Name"
+                    span { class: "ml-2 bg-fairagro-dark-500 px-1 py-0.5 rounded-md text-xs text-zinc-100 ring-fairagro-dark-200/20",
+                        "optional"
+                    }
+                }
+                input { class: "{INPUT_TEXT_CLASSES} w-70", r#type: "text" }
+            }
+            div {                
+                class: "flex flex-col gap-1",
+                label { r#for: "command", "Command" }
+                Terminal {}
+                span {
+                    class: "text-xs text-zinc-500",
+                    "The command the CommandLineTool shall resemble. Tab and Arrow keys can be used to use completion system."
+                }
+            }
+
+            button {
+                class : "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
+                "Run & Create"
+            }
+        }
     )
 }
