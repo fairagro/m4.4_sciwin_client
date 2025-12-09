@@ -10,7 +10,6 @@ use commonwl::{
     requirements::WorkDirItem,
     Entry, EnviromentDefs, PathItem,
 };
-use cwl_execution::docker::ContainerEngineType;
 use repository::{self, Repository};
 use std::{
     collections::HashMap,
@@ -38,7 +37,7 @@ pub struct ToolCreationOptions<'a> {
     pub enable_network: bool,
     pub mounts: &'a [PathBuf],
     pub env: Option<&'a Path>,
-    pub run_container: Option<ContainerEngineType>,
+    pub run_container: Option<ContainerEngine>,
 }
 
 pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bool) -> Result<String> {
@@ -121,10 +120,10 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
 
         if let Some(engine) = &run_container {
             match engine {
-                ContainerEngineType::Singularity | ContainerEngineType::Apptainer => {
+                ContainerEngine::Singularity | ContainerEngine::Apptainer => {
                     set_container_engine(ContainerEngine::Singularity);
                 }
-                ContainerEngineType::Docker | &ContainerEngineType::Podman => {
+                ContainerEngine::Docker | &ContainerEngine::Podman => {
                     set_container_engine(ContainerEngine::Docker);
                 }
             }

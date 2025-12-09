@@ -8,7 +8,6 @@ use std::fmt::Display;
 use std::process::{Command as SystemCommand, Stdio};
 use std::{fs, path::MAIN_SEPARATOR_STR, process::Command};
 use util::handle_process;
-use clap::ValueEnum;
 
 pub fn is_docker_installed() -> bool {
     let engine = container_engine().to_string();
@@ -17,17 +16,9 @@ pub fn is_docker_installed() -> bool {
     matches!(output, Ok(output) if output.status.success())
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Debug, Copy)]
 pub enum ContainerEngine {
     #[default]
-    Docker,
-    Podman,
-    Singularity,
-    Apptainer,
-}
-
-#[derive(ValueEnum, Clone, Debug, Copy)]
-pub enum ContainerEngineType {
     Docker,
     Podman,
     Singularity,
@@ -45,18 +36,18 @@ impl Display for ContainerEngine {
     }
 }
 
-pub fn configure_container_engine(engine: &Option<ContainerEngineType>) {
+pub fn configure_container_engine(engine: &Option<ContainerEngine>) {
     match engine {
-        Some(ContainerEngineType::Docker) => {
+        Some(ContainerEngine::Docker) => {
             set_container_engine(ContainerEngine::Docker);
         }
-        Some(ContainerEngineType::Podman) => {
+        Some(ContainerEngine::Podman) => {
             set_container_engine(ContainerEngine::Podman);
         }
-        Some(ContainerEngineType::Singularity) => {
+        Some(ContainerEngine::Singularity) => {
             set_container_engine(ContainerEngine::Singularity);
         }
-        Some(ContainerEngineType::Apptainer) => {
+        Some(ContainerEngine::Apptainer) => {
             set_container_engine(ContainerEngine::Apptainer);
         }
         None => {
