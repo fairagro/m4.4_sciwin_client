@@ -14,8 +14,9 @@ use dioxus_free_icons::{
     Icon,
     icons::go_icons::{GoAlert, GoGitCommit, GoPlus, GoRepo, GoSync, GoWorkflow, GoX},
 };
+use repository::Repository;
 use rfd::AsyncFileDialog;
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, time::Duration};
 
 pub const INPUT_TEXT_CLASSES: &str = "shadow appearance-none border rounded py-2 px-3 text-zinc-700 leading-tight focus:border-fairagro-dark-500 focus:outline-none focus:shadow-outline";
 
@@ -310,7 +311,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]
@@ -356,11 +359,40 @@ pub fn ToolView(path: String) -> Element {
 
 #[component]
 pub fn ToolAdd() -> Element {
+    let app_state = use_app_state();
+    let mut modified_files = use_signal(Vec::new);
+
+    use_coroutine(move |_rx: UnboundedReceiver<()>| async move {
+        loop {
+            let working_dir = {
+                let st = app_state.read();
+                st.working_directory.clone()
+            };
+
+            if let Some(working_dir) = working_dir
+                && let Ok(repo) = Repository::open(working_dir)
+            {
+                modified_files.set(repository::get_modified_files(&repo));
+            }
+
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    });
+
     rsx!(
         div { class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
             h2 { class: "text-lg text-fairagro-dark-500 font-bold", "New CommandLineTool" }
-            div {
-                class: "flex flex-col gap-1",
+            if !modified_files().is_empty() {
+                div { class: "bg-fairagro-red-light border-fairagro-red border-2 px-3 py-2 flex gap-2 items-center",
+                    div { class: "text-red-900",
+                        Icon { width: 24, height: 24, icon: GoAlert }
+                    }
+                    p {
+                        "Your project is not in a clean state, this leads to wrong results! Please commit before creating a new CommandLineTool!"
+                    }
+                }
+            }
+            div { class: "flex flex-col gap-1",
                 label { r#for: "name",
                     "Name"
                     span { class: "ml-2 bg-fairagro-dark-500 px-1 py-0.5 rounded-md text-xs text-zinc-100 ring-fairagro-dark-200/20",
@@ -369,18 +401,15 @@ pub fn ToolAdd() -> Element {
                 }
                 input { class: "{INPUT_TEXT_CLASSES} w-70", r#type: "text" }
             }
-            div {                
-                class: "flex flex-col gap-1",
+            div { class: "flex flex-col gap-1",
                 label { r#for: "command", "Command" }
                 Terminal {}
-                span {
-                    class: "text-xs text-zinc-500",
+                span { class: "text-xs text-zinc-500",
                     "The command the CommandLineTool shall resemble. Tab and Arrow keys can be used to use completion system."
                 }
             }
 
-            button {
-                class : "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
+            button { class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
                 "Run & Create"
             }
         }

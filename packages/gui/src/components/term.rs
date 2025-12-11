@@ -46,58 +46,60 @@ pub fn Terminal() -> Element {
     const COMPLETE_ITEMS: usize = 10;
 
     rsx! {
-        div { class: "bg-zinc-900 text-white text-lg font-mono flex flex-col gap-1 px-2 py-1",
-            p { class: "text-xs text-fairagro-mid-500", "{working_dir}" }
-            div { class: "flex gap-1",
-                ">"
-                input {
-                    class: "appearance-none w-full focus:outline-none",
-                    r#type: "text",
-                    placeholder: "run command",
-                    value: "{value}",
-                    oninput: move |e| {
-                        value.set(e.value());
-                        candidates.clear();
-                        Ok(())
-                    },
-                    onkeydown: move |e| {
-                        if e.key() == Key::Tab {
-                            //capture tab
-                            e.prevent_default();
-                            if candidates().is_empty() {
-                                candidates
-                                    .set(
-                                        handle_completions(&value(), &working_dir_path(), COMPLETE_ITEMS),
-                                    );
-                            } else {
-                                next_candidate()
-                            }
-                        }
-                        if e.key() == Key::ArrowDown && !candidates().is_empty() {
-                            next_candidate();
-                        }
-                        if e.key() == Key::ArrowUp && !candidates().is_empty() {
-                            prev_candidate()
-                        }
-                        if e.key() == Key::Enter && !candidates().is_empty() {
-                            insert_selected_candidate()
-                        }
-                        if e.key() == Key::Escape {
+        div { class: "relative",
+            div { class: "bg-zinc-900 text-white text-lg font-mono flex flex-col gap-1 px-2 py-1",
+                p { class: "text-xs text-fairagro-mid-500", "{working_dir}" }
+                div { class: "flex gap-1",
+                    ">"
+                    input {
+                        class: "appearance-none w-full focus:outline-none",
+                        r#type: "text",
+                        placeholder: "run command",
+                        value: "{value}",
+                        oninput: move |e| {
+                            value.set(e.value());
                             candidates.clear();
-                        }
-                        Ok(())
-                    },
+                            Ok(())
+                        },
+                        onkeydown: move |e| {
+                            if e.key() == Key::Tab {
+                                //capture tab
+                                e.prevent_default();
+                                if candidates().is_empty() {
+                                    candidates
+                                        .set(
+                                            handle_completions(&value(), &working_dir_path(), COMPLETE_ITEMS),
+                                        );
+                                } else {
+                                    next_candidate()
+                                }
+                            }
+                            if e.key() == Key::ArrowDown && !candidates().is_empty() {
+                                next_candidate();
+                            }
+                            if e.key() == Key::ArrowUp && !candidates().is_empty() {
+                                prev_candidate()
+                            }
+                            if e.key() == Key::Enter && !candidates().is_empty() {
+                                insert_selected_candidate()
+                            }
+                            if e.key() == Key::Escape {
+                                candidates.clear();
+                            }
+                            Ok(())
+                        },
+                    }
                 }
             }
-        }
-        if !candidates().is_empty() {
-            div { class: "flex flex-col absolute bg-zinc-700/20 min-w-40 items-start",
-                for (ix , item) in candidates().into_iter().enumerate() {
-                    button {
-                        class: if ix == candidate_selected() { "font-bold" },
-                        class: "py-0.5 px-2",
-                        onclick: move |_| insert_candidate(&item),
-                        "{item}"
+            if !candidates().is_empty() {
+                div { class: "flex flex-col absolute bg-zinc-900/70 min-w-40 items-start text-white",
+                    for (ix , item) in candidates().into_iter().enumerate() {
+                        button {
+                            class: if ix == candidate_selected() { "font-bold" },
+                            class: "py-0.5 px-2",
+                            onclick: move |_| insert_candidate(&item),
+                            "{item}"
+                        }
                     }
                 }
             }
