@@ -314,7 +314,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]

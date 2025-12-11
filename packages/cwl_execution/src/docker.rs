@@ -1,8 +1,8 @@
-use crate::environment::RuntimeEnvironment;
 use crate::Result;
-use cwl_core::{requirements::DockerRequirement, Entry, StringOrNumber};
-use rand::distr::Alphanumeric;
+use crate::environment::RuntimeEnvironment;
+use cwl_core::{Entry, StringOrNumber, requirements::DockerRequirement};
 use rand::Rng;
+use rand::distr::Alphanumeric;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::process::{Command as SystemCommand, Stdio};
@@ -34,6 +34,32 @@ impl Display for ContainerEngine {
             ContainerEngine::Apptainer => write!(f, "apptainer"),
         }
     }
+}
+
+impl ContainerEngine {
+    pub fn auto() -> Option<ContainerEngine> {
+        if command_available("docker") {
+            Some(ContainerEngine::Docker)
+        } else if command_available("podman") {
+            Some(ContainerEngine::Podman)
+        } else if command_available("apptainer") {
+            Some(ContainerEngine::Apptainer)
+        } else if command_available("singularity") {
+            Some(ContainerEngine::Singularity)
+        } else {
+            None
+        }
+    }
+}
+
+fn command_available(cmd: &str) -> bool {
+    #[cfg(unix)]
+    let checker = "which";
+
+    #[cfg(windows)]
+    let checker = "where";
+
+    Command::new(checker).arg(cmd).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 pub fn configure_container_engine(engine: &Option<ContainerEngine>) {
@@ -172,4 +198,15 @@ pub(crate) fn build_docker_command(command: &mut SystemCommand, docker: &DockerR
 fn get_user_flag() -> String {
     use nix::unistd::{getgid, getuid};
     format!("--user={}:{}", getuid().as_raw(), getgid().as_raw())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_auto_container() {
+        assert!(ContainerEngine::auto().is_some());
+    }
 }

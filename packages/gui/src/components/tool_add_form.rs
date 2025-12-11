@@ -1,7 +1,9 @@
 use crate::layout::{INPUT_TEXT_CLASSES, RELOAD_TRIGGER, Route};
 use crate::{components::Terminal, use_app_state};
 use commonwl::CommandLineTool;
+use commonwl::execution::ContainerEngine;
 use dioxus::prelude::*;
+use dioxus_free_icons::icons::go_icons::GoSync;
 use dioxus_free_icons::{Icon, icons::go_icons::GoAlert};
 use repository::Repository;
 use s4n_core::io;
@@ -20,6 +22,8 @@ pub fn ToolAddForm() -> Element {
     let mut name = use_signal(|| None::<String>);
     let command = use_signal(String::new);
     let mut enable_network = use_signal(|| false);
+
+    let mut running = use_signal(|| false);
 
     use_coroutine(move |_rx: UnboundedReceiver<()>| async move {
         loop {
@@ -42,6 +46,11 @@ pub fn ToolAddForm() -> Element {
         form {
             class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
             onsubmit: move |_| async move {
+                //prevent little mistakes
+                if running() {
+                    return Ok(());
+                }
+                running.set(true);
 
                 //could refactor the create tool method to not use current dir...
                 let current = env::current_dir()?;
@@ -53,31 +62,37 @@ pub fn ToolAddForm() -> Element {
                 let command = command();
 
                 let result = tokio::task::spawn_blocking(move || {
-                let container_options = container_image
-                    .as_ref()
-                    .map(|image| ContainerInfo {
-                        image,
-                        tag: container_tag.as_deref(),
-                    });
-                let command = shlex::split(&command).unwrap();
-                let options = ToolCreationOptions {
-                    command: &command,
-                    container: container_options,
-                    enable_network,
-                    commit: true,
-                    ..Default::default()
-                };
+                    let container_options = container_image
+                        .as_ref()
+                        .map(|image| ContainerInfo {
+                            image,
+                            tag: container_tag.as_deref(),
+                        });
+                    let command = shlex::split(&command).unwrap();
+                    let run_container = if container_options.is_some() {
+                        ContainerEngine::auto()
+                    } else {
 
-                create_tool(&options, tool_name, true)
+                        None
+                    };
+                    let options = ToolCreationOptions {
+                        command: &command,
+                        container: container_options,
+                        enable_network,
+                        commit: true,
+                        run_container,
+                        ..Default::default()
+                    };
+                    create_tool(&options, tool_name, true)
                 });
+
                 let yaml = result.await??;
                 let cwl: CommandLineTool = serde_yaml::from_str(&yaml)?;
                 let path = io::get_qualified_filename(&cwl.base_command, name());
                 let path = working_dir().unwrap().join(path);
-
                 *RELOAD_TRIGGER.write() += 1;
                 env::set_current_dir(current)?;
-
+                running.set(false);
                 navigator()
                     .push(Route::ToolView {
                         path: path.to_string_lossy().to_string(),
@@ -185,11 +200,19 @@ pub fn ToolAddForm() -> Element {
                     "The tool needs access to the internet (neccessary if container is used)"
                 }
             }
-
-            input {
-                class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
-                r#type: "submit",
-                value: "Run & Create",
+            if !running() {
+                input {
+                    class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
+                    r#type: "submit",
+                    value: "Run & Create",
+                    disabled: running(),
+                }
+            } else {
+                div {
+                    class: "mx-auto text-fairagro-dark-500 animate-spin",
+                    title: "Command is running",
+                    Icon { width: 48, height: 48, icon: GoSync }
+                }
             }
         }
     )

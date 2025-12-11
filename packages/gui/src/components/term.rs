@@ -142,7 +142,7 @@ fn get_files(unfinished_path: &str, current_dir: &Path) -> Vec<String> {
     let dir = if path.is_dir() { path } else { path.parent().unwrap_or(Path::new(".")) };
 
     std::fs::read_dir(dir)
-        .unwrap()
+        .expect("Directory not found")
         .filter_map(|e| e.ok())
         .map(|e| e.path().display().to_string())
         .filter(|p| p.starts_with(&path.to_string_lossy().to_string()))
