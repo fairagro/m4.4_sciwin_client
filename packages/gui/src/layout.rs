@@ -409,6 +409,44 @@ pub fn ToolAdd() -> Element {
                 }
             }
 
+            div { class: "flex",
+                div { class: "flex flex-col gap-1",
+                    label { r#for: "container",
+                        "Container"
+                        span { class: "ml-2 bg-fairagro-dark-500 px-1 py-0.5 rounded-md text-xs text-zinc-100 ring-fairagro-dark-200/20",
+                            "optional"
+                        }
+                    }
+                    input { class: "{INPUT_TEXT_CLASSES} w-70", r#type: "text" }
+                    span { class: "text-xs text-zinc-500",
+                        "Name of the Image to be pulled from a registry (Dockerhub) e.g. python:3.12 or just 'Dockerfile' for a local Dockerfile"
+                    }
+                }
+
+                div { class: "flex flex-col gap-1",
+                    label { r#for: "container",
+                        "Container Image Tag"
+                        span { class: "ml-2 bg-fairagro-dark-500 px-1 py-0.5 rounded-md text-xs text-zinc-100 ring-fairagro-dark-200/20",
+                            "optional"
+                        }
+                    }
+                    input { class: "{INPUT_TEXT_CLASSES} w-70", r#type: "text" }
+                    span { class: "text-xs text-zinc-500",
+                        "Name which is used to tag container after built. Mandatory when Dockerfile is used."
+                    }
+                }
+            }
+
+            div {
+                div { class: "flex gap-2 items-center",
+                    input { id: "net", r#type: "checkbox" }
+                    label { r#for: "net", "Enable network connection" }
+                }
+                span { class: "text-xs text-zinc-500",
+                    "The tool needs access to the internet (neccessary if container is used)"
+                }
+            }
+
             button { class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
                 "Run & Create"
             }
