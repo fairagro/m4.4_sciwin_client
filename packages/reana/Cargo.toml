@@ -25,6 +25,8 @@ keyring = { workspace = true }
 uuid = { workspace = true }
 
 chrono = { version = "0.4.41" }
+regex = "1.12.2"
+ro-crate-rs = "0.4.12"
 
 [dev-dependencies]
 mockito = "1.7.1"

@@ -9,14 +9,19 @@ use util::{handle_process, is_docker_installed};
 
 use s4n_core::parser::SCRIPT_EXECUTORS;
 
-/// Performs some compatibility adjustments on workflow json for the exeuction using REANA.
-pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson) -> anyhow::Result<()> {
+/// Performs some compatibility adjustments on workflow json for the execution using REANA.
+pub fn compatibility_adjustments(workflow_json: &mut WorkflowJson, base_dir: Option<&Path>) -> anyhow::Result<()> {
     for item in &mut workflow_json.workflow.specification.graph {
         if let CWLDocument::CommandLineTool(tool) = item {
             adjust_basecommand(tool)?;
             // if tool has a docker pull not necessary to inject a docker pull?
             if !has_docker_pull(tool) {
-                publish_docker_ephemeral(tool)?;
+                if base_dir.is_some() {
+                    publish_docker_ephemeral_base_dir(tool, base_dir)?;
+                } else {
+                    publish_docker_ephemeral(tool)?;
+                }
+
                 if !has_docker_pull(tool) {
                     inject_docker_pull(tool)?;
                 }
@@ -37,20 +42,20 @@ fn has_docker_pull(tool: &CommandLineTool) -> bool {
     })
 }
 
-/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>
+/// Adjusts `baseCommand` and script paths (workaround for issue #114)
 fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let mut changed = false;
     let mut command_vec = match &tool.base_command {
         Command::Multiple(vec) => vec.clone(),
         _ => return Ok(()),
     };
+
     if let Some(iwdr) = tool.get_requirement_mut::<InitialWorkDirRequirement>() {
         for item in &mut iwdr.listing {
             if let WorkDirItem::Dirent(dirent) = item
                 && let Some(entryname) = &mut dirent.entryname
                 && command_vec.contains(entryname)
             {
-                //check whether entryname has a path attached to script item and rewrite command and entryname if so
                 let path = Path::new(entryname);
                 if path.parent().is_some() {
                     let pos = command_vec
@@ -62,15 +67,16 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
                         .ok_or(anyhow::anyhow!("Failed to get filename from {path:?}"))?
                         .to_string_lossy()
                         .into_owned();
-                    command_vec[pos] = (*entryname).to_string();
+                    command_vec[pos] = entryname.clone();
                     changed = true;
                 }
             }
         }
     }
+
     if changed {
         info!(
-            "Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
+            "Basecommand of {} was modified to `{}` (see issue #114).",
             tool.id.clone().unwrap().green().bold(),
             command_vec.join(" ")
         );
@@ -79,7 +85,78 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
+/// Builds and publishes a temporary Docker image from the tool’s Dockerfile (if base_dir provided)
+fn publish_docker_ephemeral_base_dir(tool: &mut CommandLineTool, base_dir: Option<&Path>) -> anyhow::Result<()> {
+    let id = tool.id.clone().unwrap();
+    let Some(dr) = tool.get_requirement_mut::<DockerRequirement>() else {
+        return Ok(());
+    };
+    let Some(_dockerfile) = &mut dr.docker_file else {
+        return Ok(());
+    };
+
+    warn!("Tool {id} depends on Dockerfile, which is not supported by REANA!");
+    if !is_docker_installed() {
+        return Ok(());
+    }
+
+    info!("Building ephemeral Docker image for Tool {}...", id.green().bold());
+
+    let image_name = uuid::Uuid::new_v4().to_string();
+    let tag = format!("ttl.sh/{image_name}:1h");
+
+    // Determine where to write Dockerfile
+    let dockerfile_path = base_dir
+        .map(|dir| dir.join("Dockerfile"))
+        .unwrap_or_else(|| env::temp_dir().join(format!("Dockerfile_{image_name}")));
+
+    if let Some(dir) = base_dir {
+        if !dockerfile_path.exists() {
+            warn!(
+                "No Dockerfile found at {}, skipping ephemeral build for {}.",
+                dockerfile_path.display(),
+                id.green().bold()
+            );
+            return Ok(());
+        }
+
+        // Build context is the directory
+        let mut process = SystemCommand::new("docker")
+            .arg("build")
+            .arg("-t")
+            .arg(&tag)
+            .arg("-f")
+            .arg(&dockerfile_path)
+            .arg(dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        handle_process(&mut process, 0).map_err(|e| anyhow::anyhow!("{e}"))?;
+        process.wait()?;
+        eprintln!("✔️  Successfully built Docker image for Tool {}", id.green().bold());
+    }
+
+    // Push to ttl.sh
+    let mut process = SystemCommand::new("docker")
+        .arg("push")
+        .arg(&tag)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    handle_process(&mut process, 0).map_err(|e| anyhow::anyhow!("{e}"))?;
+    process.wait()?;
+    eprintln!("✔️  Docker image published at {tag} (valid 1h) for Tool {}", id.green().bold());
+
+    dr.docker_pull = Some(tag);
+    dr.docker_file = None;
+    dr.docker_image_id = None;
+
+    Ok(())
+}
+
+/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/sciwin/issues/119>
 fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let id = tool.id.clone().unwrap();
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>()
@@ -150,7 +227,7 @@ fn inject_docker_pull(tool: &mut CommandLineTool) -> anyhow::Result<()> {
 
     let default_images = HashMap::from([("python", "python"), ("Rscript", "r-base"), ("node", "node")]);
 
-    if SCRIPT_EXECUTORS.contains(&&*command_vec[0]) && tool.get_requirement::<DockerRequirement>().is_some() {
+    if SCRIPT_EXECUTORS.contains(&&*command_vec[0]) && tool.get_requirement::<DockerRequirement>().is_none() {
         //is script executor but does not use containerization
         warn!(
             "Tool {} is using {} and does not use a proper container",
@@ -161,8 +238,8 @@ fn inject_docker_pull(tool: &mut CommandLineTool) -> anyhow::Result<()> {
         if let Some(container) = default_images.get(&&*command_vec[0]) {
             tool.requirements
                 .push(Requirement::DockerRequirement(DockerRequirement::from_pull(container)));
-
-            eprintln!("✔️  Added container {} to tool {}", container.bold(), id.green().bold());
+                
+            eprintln!("✔️  Added container {} to Tool {}", container.bold(), id.green().bold());
         }
     }
 

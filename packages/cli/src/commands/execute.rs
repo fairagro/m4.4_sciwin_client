@@ -1,10 +1,12 @@
 use clap::{Args, Subcommand};
 use commonwl::execution::error::ExecutionError;
 use commonwl::execution::{ContainerEngine, execute_cwlfile, set_container_engine};
+use commonwl::execution::utils::{find_cwl_in_rocrate, unzip_rocrate, find_cwl_and_inputs, verify_cwl_references, clone_from_rocrate_or_cwl};
 use commonwl::prelude::*;
 use remote_execution::{check_status, download_results, export_rocrate, logout};
 use serde_yaml::{Number, Value};
-use std::{collections::HashMap, error::Error, fs, path::PathBuf};
+use std::{collections::HashMap, error::Error, fs, path::{PathBuf, Path}};
+use anyhow::anyhow;
 
 pub fn handle_execute_commands(subcommand: &ExecuteCommands) -> Result<(), Box<dyn Error>> {
     match subcommand {
@@ -125,10 +127,51 @@ pub fn execute_local(args: &LocalExecuteArgs) -> Result<(), ExecutionError> {
     else {
         set_container_engine(ContainerEngine::Docker);
     }
-    execute_cwlfile(&args.file, &args.args, args.out_dir.clone())
+    let out_dir: Option<PathBuf> = args.out_dir.as_ref().map(PathBuf::from);
+     // rocrate directory case
+    if args.file.is_dir() {
+        let ro_crate_meta = args.file.join("ro-crate-metadata.json");
+        return execute_cwl_from_rocrate_root(&args.file, out_dir, &ro_crate_meta);
+    }
+    // zip rocrate case
+    else if args.file.extension().is_some_and(|ext| ext == "zip") {
+        let temp_dir = tempfile::tempdir().map_err(ExecutionError::IOError)?;
+        let crate_root = unzip_rocrate(&args.file, temp_dir.path())
+            .map_err(ExecutionError::Any)?;
+        let ro_crate_meta = crate_root.join("ro-crate-metadata.json");
+        return execute_cwl_from_rocrate_root(&crate_root, out_dir, &ro_crate_meta);
+    }
+    execute_cwlfile(&args.file, &args.args, out_dir)
 }
 
-pub fn schedule_run(file: &PathBuf, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
+fn execute_cwl_from_rocrate_root(
+    crate_root: &Path,
+    out_dir: Option<PathBuf>,
+    ro_crate_meta: &Path,
+) -> Result<(), ExecutionError> {
+    let cwl_path = find_cwl_in_rocrate(crate_root)?;
+    if !verify_cwl_references(&cwl_path)? {
+        let (_tmp, cloned_cwl, cloned_inputs) = clone_from_rocrate_or_cwl(ro_crate_meta, &cwl_path)?;
+        let cwl_path_to_run = cloned_cwl
+            .as_ref()
+            .ok_or_else(|| ExecutionError::Any(anyhow!("Cloned CWL file not found")))?;
+        let inputs: Vec<String> = cloned_inputs
+            .as_ref()
+            .map(|p| vec![p.to_string_lossy().to_string()])
+            .unwrap_or_default();
+        return execute_cwlfile(cwl_path_to_run, &inputs, out_dir);
+    }
+
+    let (_cwl_candidate, inputs_candidate) = find_cwl_and_inputs(crate_root, &cwl_path);
+    let inputs: Vec<String> = inputs_candidate
+        .as_ref()
+        .map(|p| vec![p.to_string_lossy().to_string()])
+        .unwrap_or_default();
+
+    execute_cwlfile(&cwl_path, &inputs, out_dir)
+}
+
+pub fn schedule_run(file: &Path, input_file: &Option<PathBuf>, rocrate: bool, watch: bool, logout: bool) -> Result<(), Box<dyn Error>> {
     let workflow_name = remote_execution::schedule_run(file, input_file)?;
 
     if watch {

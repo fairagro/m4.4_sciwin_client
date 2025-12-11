@@ -1,7 +1,7 @@
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 mod reana;
 
-pub fn schedule_run(file: &PathBuf, input_file: &Option<PathBuf>) -> Result<String, Box<dyn std::error::Error>> {
+pub fn schedule_run(file: &Path, input_file: &Option<PathBuf>) -> Result<String, Box<dyn std::error::Error>> {
     reana::execute_remote_start(file, input_file)
 }
 
