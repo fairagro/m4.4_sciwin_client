@@ -37,7 +37,7 @@ fn has_docker_pull(tool: &CommandLineTool) -> bool {
     })
 }
 
-/// adjusts path as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/114>
+/// adjusts path as a workaround for <https://github.com/fairagro/sciwin/issues/114>
 fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let mut changed = false;
     let mut command_vec = match &tool.base_command {
@@ -70,7 +70,7 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     }
     if changed {
         info!(
-            "Basecommand of {} was modified to `{}` (see https://github.com/fairagro/m4.4_sciwin_client/issues/114).",
+            "Basecommand of {} was modified to `{}` (see https://github.com/fairagro/sciwin/issues/114).",
             tool.id.clone().unwrap().green().bold(),
             command_vec.join(" ")
         );
@@ -79,7 +79,7 @@ fn adjust_basecommand(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/m4.4_sciwin_client/issues/119>
+/// adjusts dockerrequirement as a workaround for <https://github.com/fairagro/sciwin/issues/119>
 fn publish_docker_ephemeral(tool: &mut CommandLineTool) -> anyhow::Result<()> {
     let id = tool.id.clone().unwrap();
     if let Some(dr) = tool.get_requirement_mut::<DockerRequirement>()

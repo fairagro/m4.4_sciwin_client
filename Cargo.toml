@@ -22,7 +22,7 @@ rustyscript = {git = "https://github.com/Foorack/rustyscript", branch="upgrade-d
 [workspace.package]
 version = "1.1.0"
 edition = "2024"
-repository = "https://github.com/fairagro/m4.4_sciwin_client"
+repository = "https://github.com/fairagro/sciwin"
 license = "MIT OR Apache-2.0"
 authors = [
     "Jens Krumsieck",

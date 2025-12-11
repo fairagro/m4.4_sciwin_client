@@ -6,20 +6,20 @@
 # SciWIn - Scientific Workflow Infrastructure<!-- omit from toc -->
 
 ![Rust][rust-image] 
-[![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
+[![🦀 Continuous Integration](https://github.com/fairagro/sciwin/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/sciwin/actions/workflows/ci.yml)
 ![GitHub License](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-green)
-[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
-[![GitHub Downloads](https://raw.githubusercontent.com/fairagro/m4.4_metrics/refs/heads/master/badge.svg)]([https](https://github.com/fairagro/m4.4_sciwin_client/releases/latest))
+[![GitHub Release](https://img.shields.io/github/v/release/fairagro/sciwin)](https://github.com/fairagro/sciwin/releases/latest)
+[![GitHub Downloads](https://raw.githubusercontent.com/fairagro/m4.4_metrics/refs/heads/master/badge.svg)]([https](https://github.com/fairagro/sciwin/releases/latest))
 
 
 ⭐ **Star this Repo** to say "Thank you!" ⭐
 
-[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/fairagro/m4.4_sciwin_client)
-[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/fairagro/m4.4_sciwin_client)
-[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/m4.4_sciwin_client)
-[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/m4.4_sciwin_client](https://github.com/fairagro/m4.4_sciwin_client))
+[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/fairagro/sciwin)
+[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/fairagro/sciwin)
+[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/sciwin)
+[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/sciwin](https://github.com/fairagro/sciwin))
 
-📖 Read the **[Documentation](https://fairagro.github.io/m4.4_sciwin_client/)** to get started or take a look at some [examples](https://github.com/fairagro/m4.4_sciwin_client_examples)! 🚀
+📖 Read the **[Documentation](https://fairagro.github.io/sciwin/)** to get started or take a look at some [examples](https://github.com/fairagro/sciwin_examples)! 🚀
 
 🦀 Take a look at our latest publications and talks 👀
 - [FAIR, fast, and frictionless – computational workflows with SciWIn](https://doi.org/10.5281/zenodo.17651648), FDM Niedersachsen DataDays 2025 
@@ -64,8 +64,8 @@ To run the tests use `cargo nextest` or `bacon nextest` to run as watcher (imply
 
 ```bash
 # Clone the repository
-git clone https://github.com/fairagro/m4.4_sciwin_client
-cd m4.4_sciwin_client
+git clone https://github.com/fairagro/sciwin
+cd sciwin
 
 # Build the project
 cargo build
@@ -98,7 +98,7 @@ curl -sSL http://dioxus.dev/install.sh | sh
 cargo install dioxus-cli
 
 # Navigate to the project directory
-cd m4.4_sciwin_client
+cd sciwin
 
 # Launch SciWIn-Studio in debug mode
 dx serve -p sciwin
@@ -107,30 +107,30 @@ dx serve -p sciwin
 > SciWIn-Studio is currently in testing phase. Features and functionality may change as development progresses.
 
 ## 🎯 Installation
-Detailed installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
+Detailed installation instructions can be found at the [latest release](https://github.com/fairagro/sciwin/releases/latest):
 
-[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/fairagro/sciwin)](https://github.com/fairagro/sciwin/releases/latest)
 
 The easiest way is to use the `shell` or `powershell` scripts with the provided commands.
 To install latests binaries you can use the following scripts:
 
 ### Linux/MacOS:
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/sciwin/get_s4n.sh | sh 
 ```
 If `curl` responds with code 429 you can try to use `wget` instead. 
 ```bash
-wget -qO- https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+wget -qO- https://fairagro.github.io/sciwin/get_s4n.sh | sh 
 ```
 
 
 ### Windows:
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://fairagro.github.io/m4.4_sciwin_client/get_s4n.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://fairagro.github.io/sciwin/get_s4n.ps1 | iex"
 ```
 
 ## 📚 How to Use
-Take a look at the **[User documentation](https://fairagro.github.io/m4.4_sciwin_client/)**. An overview on how to use SciWIn Client is available below.
+Take a look at the **[User documentation](https://fairagro.github.io/sciwin/)**. An overview on how to use SciWIn Client is available below.
 
 ### Project initialization
 Most commands need the context of a Git repo to work. Project initialization can be done using the `s4n init` command.
@@ -204,8 +204,8 @@ s4n execute local <CWLFILE> [ARGUMENTS]
 ```
 
 ## 🪂 Contributors
-<a href="https://github.com/fairagro/m4.4_sciwin_client/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=fairagro/m4.4_sciwin_client" />
+<a href="https://github.com/fairagro/sciwin/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=fairagro/sciwin" />
 </a>
 
 <small>Made with [contrib.rocks](https://contrib.rocks).</small>
@@ -235,8 +235,8 @@ You can choose between one of them if you use this work.
 [rust-image]: https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white
 
 ## 🏁 Quick Links
-- [📄 Docs](https://fairagro.github.io/m4.4_sciwin_client/)
-- [🛠️ Releases](https://github.com/fairagro/m4.4_sciwin_client/releases)
+- [📄 Docs](https://fairagro.github.io/sciwin/)
+- [🛠️ Releases](https://github.com/fairagro/sciwin/releases)
 - [🌐 FAIRagro](https://fairagro.net/)
 
 [🔼 Back to Top](#top)

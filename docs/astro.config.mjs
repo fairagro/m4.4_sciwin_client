@@ -9,7 +9,7 @@ import starlightSidebarTopics from 'starlight-sidebar-topics'
 export default defineConfig({
   output: 'static',
   site: 'https://fairagro.github.io',
-  base: '/m4.4_sciwin_client/',
+  base: '/sciwin/',
   integrations: [
     starlight({
       title: 'SciWIn Client',
@@ -27,7 +27,7 @@ export default defineConfig({
         '@fontsource/fira-sans/900-italic.css',
         './src/styles/global.css'
       ],
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/m4.4_sciwin_client' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/fairagro/sciwin' }],
       components: {
         Hero: './src/components/Hero.astro',
         PageFrame: './src/components/PageFrame.astro',
@@ -37,7 +37,7 @@ export default defineConfig({
           {
             label: 'Home',
             icon: 'puzzle',
-            link: "/m4.4_sciwin_client/"
+            link: "/sciwin/"
           },
           {
             label: 'Documentation',
@@ -52,12 +52,12 @@ export default defineConfig({
           {
             label: 'Download Latest Release',
             icon: 'download',
-            link: 'https://github.com/fairagro/m4.4_sciwin_client/releases/latest/',
+            link: 'https://github.com/fairagro/sciwin/releases/latest/',
           },
           {
             label: 'Report Issue',
             icon: 'add-document',
-            link: 'https://github.com/fairagro/m4.4_sciwin_client/issues/new',
+            link: 'https://github.com/fairagro/sciwin/issues/new',
           },
         ]),
       ]

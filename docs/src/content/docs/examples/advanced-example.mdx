@@ -2,19 +2,19 @@
 title: Advanced Example
 ---
 
-A basic Workflow using [SciWIn Client (`s4n`)](https://github.com/fairagro/m4.4_sciwin_client) can be created with the commands hereafter. This guide assumes the usage of unix based operating systems, however Windows should work, too. If not please [open an issue](https://github.com/fairagro/m4.4_sciwin_client/issues/new).
+A basic Workflow using [SciWIn Client (`s4n`)](https://github.com/fairagro/sciwin) can be created with the commands hereafter. This guide assumes the usage of unix based operating systems, however Windows should work, too. If not please [open an issue](https://github.com/fairagro/sciwin/issues/new).
 
 ## Installation
-[![GitHub Release](https://img.shields.io/github/v/release/fairagro/m4.4_sciwin_client)](https://github.com/fairagro/m4.4_sciwin_client/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/fairagro/sciwin)](https://github.com/fairagro/sciwin/releases/latest)
 
 The latest Version of `s4n` can be installed using the following command:
 ```
-curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/m4.4_sciwin_client/get_s4n.sh | sh 
+curl --proto '=https' --tlsv1.2 -LsSf https://fairagro.github.io/sciwin/get_s4n.sh | sh 
 ```
 
 Specific Versions can be installed with the following command, by replacing the version tag with a version of choice.
 ```
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fairagro/m4.4_sciwin_client/releases/download/v0.6.0/s4n-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fairagro/sciwin/releases/download/v0.6.0/s4n-installer.sh | sh
 ```
 
 The Installation can be verified using `s4n -V`.
@@ -28,7 +28,7 @@ SciWIn Client comes with a lot of commands. In this demo the `init`, `tool`, `wo
 \____/  \___||_| \/  \/  \___/|_| |_|  \____/|_||_| \___||_| |_| \__|
 
 Client tool for Scientific Workflow Infrastructure (SciWIn)
-Documentation: https://fairagro.github.io/m4.4_sciwin_client/
+Documentation: https://fairagro.github.io/sciwin/
 
 Version: 0.8.0
 
@@ -58,8 +58,8 @@ Options:
 ## Demo Repository
 The [Demo Repository](https://github.com/fairagro/sciwin_client_demo) mainly contains two folders `data` and `code`. The result workflow will  download election data, print election results as `barplot`, convert input data into a `geojson` file, and maps it onto the `geojson` data resulting in a `choropleth` graph. See the images for the final outputs.
 
-![result](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/election.png)
-![result](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/plot.png)
+![result](https://raw.githubusercontent.com/fairagro/sciwin_demo/refs/heads/complete_run/election.png)
+![result](https://raw.githubusercontent.com/fairagro/sciwin_demo/refs/heads/complete_run/plot.png)
 
 ## Creating the CommandLineTools
 First of all, we start, by creating a new `s4n` project.
@@ -108,7 +108,7 @@ outputs:
 baseCommand: ogr2ogr
 ```
 
-However it may is tedious to write those files by hand. That is where `s4n` comes to the rescue. A Command that would normally happen on the command line just needs to be prefixed with `s4n tool create`. Examples can be found at the [documentation](https://fairagro.github.io/m4.4_sciwin_client/examples/tool-creation/).
+However it may is tedious to write those files by hand. That is where `s4n` comes to the rescue. A Command that would normally happen on the command line just needs to be prefixed with `s4n tool create`. Examples can be found at the [documentation](https://fairagro.github.io/sciwin/examples/tool-creation/).
 
 To create Tools based of the Python scripts in the `code` Directory a virtual environment needs to be created using 
 ```bash
@@ -140,7 +140,7 @@ s4n create --name demo
 ```
 The workflow that is being built looks like the graph represented in the following image
 
-![the resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_interim.svg)
+![the resulting workflow](https://raw.githubusercontent.com/fairagro/sciwin_demo/refs/heads/complete_run/workflow_interim.svg)
 
 First of all a connection between the donwload script and `get_feature_info` as well as `plot_election` is created by
 ```bash
@@ -203,7 +203,7 @@ s4n create -c Dockerfile --container-tag pyplot --enable-network python code/plo
 ## Adding the new tools to Workflow
 The two new tools will now be added to the workflow.
 
-![the final resulting workflow](https://raw.githubusercontent.com/fairagro/m4.4_sciwin_client_demo/refs/heads/complete_run/workflow_final.svg)
+![the final resulting workflow](https://raw.githubusercontent.com/fairagro/sciwin_demo/refs/heads/complete_run/workflow_final.svg)
 
 Knowing that the plot tool needs the geojson, a connection from the geojson output to the corresponding input can be created.
 ```bash
