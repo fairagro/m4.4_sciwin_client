@@ -80,6 +80,8 @@ pub fn Terminal(value: Signal<String>) -> Element {
                                 prev_candidate()
                             }
                             if e.key() == Key::Enter && !candidates().is_empty() {
+                                e.prevent_default();
+                                e.stop_propagation();
                                 insert_selected_candidate()
                             }
                             if e.key() == Key::Escape {
