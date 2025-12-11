@@ -3,7 +3,7 @@
   <img src="docs/src/assets/logo.svg" alt="icon" height="100"/> 
 </p>
 
-# SciWIn Client - Scientific Workflow Infrastructure<!-- omit from toc -->
+# SciWIn - Scientific Workflow Infrastructure<!-- omit from toc -->
 
 ![Rust][rust-image] 
 [![🦀 Continuous Integration](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml/badge.svg)](https://github.com/fairagro/m4.4_sciwin_client/actions/workflows/ci.yml)
@@ -35,6 +35,7 @@ or the FAIRagro Blogpost:
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
 - [🏗️ How to Build and Test](#️-how-to-build-and-test)
+- [💚 SciWin Studio](#-sciwin_studio)
 - [🎯 Installation](#-installation)
 - [📚 How to Use](#-how-to-use)
   - [Project initialization](#project-initialization)
@@ -46,17 +47,20 @@ or the FAIRagro Blogpost:
 
 
 ## 🚀 About
+Computational workflows, which define complex, multi-step procedures for automated execution, are crucial for ensuring reproducibility, scalability, and efficiency in scientific research. The FAIRagro Scientific Workflow Infrastructure (SciWIn) empowers scientists to create, execute, share, and publish these workflows, promoting collaboration and transparency.
 
-Computational workflows, which describe complex, multi-step procedures for automated execution, are essential for ensuring reproducibility, scalability, and efficiency in scientific research. The **FAIRagro Scientific Workflow Infrastructure (SciWIn)** supports scientists to create, execute, share, and publish these workflows, fostering collaboration and transparency.
+This repository consists of two complementary tools: **SciWIn-Client** and **SciWIn-Studio** (currently in testing).
 
+Reproducibility in computational research is essential for effective collaboration, result verification, and maintaining transparency. However, it remains challenging due to complex workflows, inconsistent data management practices, and dependencies on specific software environments. **SciWIn-Client** is a command-line tool designed to simplify the creation, recording, annotation, and execution of computational workflows. It enables researchers to interactively use intuitive commands to track tasks such as data extraction, cleaning, transformation, analysis, visualization, and computational simulation. By automating and standardizing workflows, SciWIn-Client minimizes error sources and supports transparent, reproducible Open Science practices.
 
-Reproducibility in computational research is vital for efficient collaboration, verifying results and ensuring transparency. Yet it remains challenging due to complex workflows, inconsistent data management and the reliance on specific software environments. **SciWIn Client** is a command-line tool designed to easily create, record, annotate and execute computational workflows. SciWIn Client enables researchers to interactively use intuitive commands to keep track of tasks such as as data-extraction, -cleaning, -transformation, -analysis, -visualization and computational simulation. Automated and standardised workflows minimise sources of error and support transparent and reproducible Open Science.
+**SciWIn-Studio** provides a graphical user interface that makes workflow management accessible to researchers who prefer visual tools over command-line interactions, offering an intuitive alternative for designing and executing computational workflows without requiring terminal expertise.
 
 
 ## 🏗️ How to Build and Test
-This project is being developed using Rust and Cargo. To run the source code use `cargo run`, to build use `cargo build`. 
+This project is being developed using Rust and Cargo. 
+To run SciWIn-Client you can just use `cargo run` to run from source code, to build use `cargo build`. 
 
-To run the tests use `cargo test` or `cargo test -- --nocapture` to output logs.
+To run the tests use `cargo nextest` or `bacon nextest` to run as watcher (implying that bacon and nextest are installed).
 
 ```bash
 # Clone the repository
@@ -72,9 +76,35 @@ cargo run
 
 To run tests (unit and integration)
 ```bash
-cargo test --workspace           # Run all tests
-cargo test -- --nocapture  # Show log output during tests
+cargo nextest --workspace           # Run all tests
 ```
+
+## 💚 SciWin Studio
+*SciWIn-Studio** is a graphical user interface (GUI) application currently in testing that complements SciWIn-Client. It provides an intuitive visual environment for researchers who prefer graphical tools over command-line interactions.
+### Features
+- Visual workflow design and management
+- Drag-and-drop interface for connecting workflow steps
+- Real-time workflow visualization
+- Accessible workflow creation without terminal expertise
+
+<img src=".github/studio.png" alt="Screenshot of SciWIn Studio" width=750>
+
+### Running SciWIn-Studio
+To run SciWIn-Studio, you need to [install the Dioxus CLI `dx`](https://dioxuslabs.com/learn/0.7/getting_started/):
+```bash
+# Install Dioxus CLI
+curl -sSL http://dioxus.dev/install.sh | sh
+# or (slower)
+cargo install dioxus-cli
+
+# Navigate to the project directory
+cd m4.4_sciwin_client
+
+# Launch SciWIn-Studio in debug mode
+dx serve -p sciwin
+```
+> [!NOTE]
+> SciWIn-Studio is currently in testing phase. Features and functionality may change as development progresses.
 
 ## 🎯 Installation
 Detailed installation instructions can be found at the [latest release](https://github.com/fairagro/m4.4_sciwin_client/releases/latest):
