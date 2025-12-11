@@ -68,10 +68,13 @@ pub fn ToolAddForm() -> Element {
                 let path = io::get_qualified_filename(&cwl.base_command, name());
                 let path = working_dir().unwrap().join(path);
 
-                *RELOAD_TRIGGER.write() +=1;
+                *RELOAD_TRIGGER.write() += 1;
                 env::set_current_dir(current)?;
 
-                navigator().push(Route::ToolView{path: path.to_string_lossy().to_string()});
+                navigator()
+                    .push(Route::ToolView {
+                        path: path.to_string_lossy().to_string(),
+                    });
                 Ok(())
             },
             h2 { class: "text-lg text-fairagro-dark-500 font-bold", "New CommandLineTool" }
@@ -179,7 +182,7 @@ pub fn ToolAddForm() -> Element {
             input {
                 class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
                 r#type: "submit",
-                value: "Run & Create"
+                value: "Run & Create",
             }
         }
     )

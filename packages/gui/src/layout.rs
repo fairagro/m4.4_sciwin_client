@@ -246,7 +246,10 @@ pub fn Layout() -> Element {
                                 }
                                 RoundActionButton {
                                     title: "Add new Workflow",
-                                    onclick: move |_| show_create_dialog.set(true),
+                                    onclick: move |_| {
+                                        show_add_actions.set(false);
+                                        show_create_dialog.set(true)
+                                    },
                                     Icon {
                                         width: 16,
                                         height: 16,
@@ -261,6 +264,7 @@ pub fn Layout() -> Element {
                                 RoundActionButton {
                                     title: "Add new CommandLineTool",
                                     onclick: move |_| {
+                                        show_add_actions.set(false);
                                         navigator().push(Route::ToolAdd);
                                     },
                                     Icon {
@@ -308,7 +312,9 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(div {})
+    rsx!(
+        div {}
+    )
 }
 
 #[component]

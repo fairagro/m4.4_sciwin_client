@@ -115,11 +115,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<b
                 }
             }
             for (module , files) in submodule_files() {
-                Submodule_View {
-                    module,
-                    files,
-                    dialog_signals,
-                }
+                Submodule_View { module, files, dialog_signals }
             }
         }
     }
