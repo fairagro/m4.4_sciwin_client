@@ -7,7 +7,7 @@ use crate::{
         graph::GraphEditor,
         layout::{Footer, Main, Sidebar, TabContent, TabList, TabTrigger, Tabs},
     },
-    last_session_data, open_project, restore_last_session, use_app_state,
+    last_session_data, open_project, restore_last_session, save_file, use_app_state,
 };
 use dioxus::prelude::*;
 use dioxus_free_icons::{
@@ -100,6 +100,8 @@ pub fn Layout() -> Element {
                                                 write_config.workflow.name = new_project_name();
                                                 let toml = write_config.to_toml()?;
                                                 fs::write(working_dir.join("workflow.toml"), toml)?;
+                                                save_file(&working_dir, "workflow.toml", "🧾 Changed project name")?;
+
                                                 is_editing_name.set(false);
                                             }
                                         }
@@ -312,9 +314,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]

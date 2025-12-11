@@ -41,29 +41,36 @@ pub fn ToolAddForm() -> Element {
     rsx!(
         form {
             class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
-            onsubmit: move |_| {
+            onsubmit: move |_| async move {
+
+                //could refactor the create tool method to not use current dir...
+                let current = env::current_dir()?;
+                env::set_current_dir(working_dir().unwrap())?;
+                let tool_name = name();
                 let container_image = container_image();
                 let container_tag = container_tag();
+                let enable_network = enable_network();
+                let command = command();
+
+                let result = tokio::task::spawn_blocking(move || {
                 let container_options = container_image
                     .as_ref()
                     .map(|image| ContainerInfo {
                         image,
                         tag: container_tag.as_deref(),
                     });
-                let command = shlex::split(&command()).unwrap();
+                let command = shlex::split(&command).unwrap();
                 let options = ToolCreationOptions {
                     command: &command,
                     container: container_options,
-                    enable_network: enable_network(),
+                    enable_network,
                     commit: true,
                     ..Default::default()
                 };
 
-                //could refactor the create tool method to not use current dir...
-                let current = env::current_dir()?;
-                env::set_current_dir(working_dir().unwrap())?;
-
-                let yaml = create_tool(&options, name(), true)?;
+                create_tool(&options, tool_name, true)
+                });
+                let yaml = result.await??;
                 let cwl: CommandLineTool = serde_yaml::from_str(&yaml)?;
                 let path = io::get_qualified_filename(&cwl.base_command, name());
                 let path = working_dir().unwrap().join(path);

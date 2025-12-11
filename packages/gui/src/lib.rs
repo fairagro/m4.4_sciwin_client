@@ -4,6 +4,7 @@ use crate::{
 };
 use dioxus::{html::geometry::ClientPoint, prelude::*, router::RouterContext};
 use petgraph::graph::NodeIndex;
+use repository::{Repository, commit, stage_file};
 use s4n_core::{config::Config, project::initialize_project};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
@@ -155,4 +156,13 @@ pub async fn restore_last_session(open: Signal<bool>, confirmed: Signal<bool>) -
     } else {
         Ok(None)
     }
+}
+
+//Saves AND commits a file
+pub fn save_file(working_dir: &Path, filename: impl AsRef<Path>, message: &str) -> anyhow::Result<()> {
+    let repo = Repository::open(working_dir)?;
+    stage_file(&repo, filename)?;
+    commit(&repo, message)?;
+
+    Ok(())
 }
