@@ -19,7 +19,7 @@
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/fairagro/sciwin)
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%2[https://github.com/fairagro/sciwin](https://github.com/fairagro/sciwin))
 
-📖 Read the **[Documentation](https://fairagro.github.io/sciwin/)** to get started or take a look at some [examples](https://github.com/fairagro/sciwin_examples)! 🚀
+📖 Read the **[Documentation](https://fairagro.github.io/sciwin/)** to get started or take a look at some [examples](https://github.com/fairagro/m4.4_sciwin_client_examples)! 🚀
 
 🦀 Take a look at our latest publications and talks 👀
 - [FAIR, fast, and frictionless – computational workflows with SciWIn](https://doi.org/10.5281/zenodo.17651648), FDM Niedersachsen DataDays 2025 
