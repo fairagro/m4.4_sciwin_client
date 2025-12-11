@@ -35,7 +35,7 @@ or the FAIRagro Blogpost:
 ## 📖 Table of Contents<!-- omit from toc -->
 - [🚀 About](#-about)
 - [🏗️ How to Build and Test](#️-how-to-build-and-test)
-- [💚 SciWin Studio](#-sciwin_studio)
+- [💚 SciWin Studio](#-sciwin-studio)
 - [🎯 Installation](#-installation)
 - [📚 How to Use](#-how-to-use)
   - [Project initialization](#project-initialization)
