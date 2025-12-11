@@ -25,6 +25,7 @@ pub struct ContainerInfo<'a> {
     pub tag: Option<&'a str>,
 }
 
+#[derive(Default)]
 pub struct ToolCreationOptions<'a> {
     pub command: &'a [String],
     pub outputs: &'a [String],
