@@ -2,13 +2,13 @@ use crate::{
     io::{self, resolve_path},
     parser,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use commonwl::{
-    Entry, EnviromentDefs, PathItem,
-    execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command},
+    execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command, set_container_engine, ContainerEngine},
     format::format_cwl,
     prelude::*,
     requirements::WorkDirItem,
+    Entry, EnviromentDefs, PathItem,
 };
 use repository::{self, Repository};
 use std::{
@@ -19,6 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Clone)]
 pub struct ContainerInfo<'a> {
     pub image: &'a str,
     pub tag: Option<&'a str>,
@@ -36,13 +37,27 @@ pub struct ToolCreationOptions<'a> {
     pub enable_network: bool,
     pub mounts: &'a [PathBuf],
     pub env: Option<&'a Path>,
+    pub run_container: Option<ContainerEngine>,
 }
 
 pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bool) -> Result<String> {
-    let cwl = create_tool_base(options)?;
+    let mut cwl = create_tool_base(options)?;
 
-    // Handle container requirements
-    let mut cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
+    if options.run_container.is_none() {
+        cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
+    } else if let Some(container) = &options.container {
+        cwl.base.requirements.retain(|req| !matches!(req, Requirement::DockerRequirement(_)));
+
+        if Path::new(container.image).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif")){
+            let mut modified_container = container.clone();
+            modified_container.image = container.image.trim_end_matches(".sif");
+            cwl = add_tool_requirements(cwl, Some(&modified_container), options.enable_network, options.mounts, options.env)?;
+        } else {
+            cwl = add_tool_requirements(cwl, Some(container), options.enable_network, options.mounts, options.env)?;
+        }
+        
+    }
+    // Finalize CWL
     let path = io::get_qualified_filename(&cwl.base_command, name);
     let yaml = finalize_tool(&mut cwl, &path)?;
 
@@ -76,6 +91,7 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
     let commit: bool = options.commit;
     let clear_defaults: bool = options.clear_defaults;
     let env: Option<&Path> = options.env;
+    let run_container = options.run_container;
 
     let command = command.iter().map(String::as_str).collect::<Vec<_>>();
     let current_working_dir = env::current_dir()?;
@@ -98,14 +114,29 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
 
     if !no_run {
         let mut environment = RuntimeEnvironment::default();
-        if let Some(env) = env {
-            environment = environment.with_environment(read_env(env)?);
+        if let Some(env_file) = env {
+            environment = environment.with_environment(read_env(env_file)?);
         }
 
-        // run command and get modified files
-        command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+        if let Some(engine) = &run_container {
+            match engine {
+                ContainerEngine::Singularity | ContainerEngine::Apptainer => {
+                    set_container_engine(ContainerEngine::Singularity);
+                }
+                ContainerEngine::Docker | &ContainerEngine::Podman => {
+                    set_container_engine(ContainerEngine::Docker);
+                }
+            }
+        cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
+        command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Failed to run tool: {e}"))?;
+        }
+        else {
+             command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+        }
+
+        // Handle modified files
         let mut files = repository::get_modified_files(&repo);
-        files.retain(|f| !modified.contains(f)); //remove files that were changed before run
+        files.retain(|f| !modified.contains(f));
 
         if cleanup {
             for file in &files {
@@ -113,7 +144,6 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
             }
         }
 
-        // stage changed files
         if commit {
             for file in &files {
                 let path = Path::new(file);
@@ -132,17 +162,14 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
         }
     }
 
-    //add fixed inputs
     if !inputs.is_empty() {
         parser::add_fixed_inputs(&mut cwl, &inputs.iter().map(String::as_str).collect::<Vec<_>>())
-            .map_err(|e| anyhow::anyhow!("Could not gather fixed inputs: {e}"))?;
+            .map_err(|e| anyhow!("Could not gather fixed inputs: {e}"))?;
     }
-
+    // Clear defaults if requested
     if clear_defaults {
         for input in &mut cwl.inputs {
-            if input.default.is_some() {
-                input.default = None;
-            }
+            input.default = None;
         }
     }
 
