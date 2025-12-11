@@ -3,12 +3,11 @@ use dioxus::prelude::*;
 use std::{env, fs, path::Path};
 
 #[component]
-pub fn Terminal() -> Element {
+pub fn Terminal(value: Signal<String>) -> Element {
     let app_state = use_app_state();
     let working_dir_path = use_memo(move || app_state.read().working_directory.clone().unwrap());
     let working_dir = use_memo(move || working_dir_path().to_string_lossy().to_string());
 
-    let mut value = use_signal(String::new);
     let mut candidates: Signal<Vec<String>> = use_signal(Vec::new);
     let mut candidate_selected = use_signal(|| 0);
 

@@ -1,18 +1,22 @@
-use crate::layout::INPUT_TEXT_CLASSES;
+use crate::layout::{INPUT_TEXT_CLASSES, RELOAD_TRIGGER};
 use crate::{components::Terminal, use_app_state};
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::go_icons::GoAlert};
 use repository::Repository;
+use s4n_core::tool::{ContainerInfo, ToolCreationOptions, create_tool};
+use std::env;
 use std::time::Duration;
 
 #[component]
 pub fn ToolAddForm() -> Element {
     let app_state = use_app_state();
+    let working_dir = use_memo(move || app_state.read().working_directory.clone());
     let mut modified_files = use_signal(Vec::new);
 
     let mut container_image = use_signal(|| None::<String>);
     let mut container_tag = use_signal(|| None::<String>);
     let mut name = use_signal(|| None::<String>);
+    let command = use_signal(String::new);
     let mut enable_network = use_signal(|| false);
 
     use_coroutine(move |_rx: UnboundedReceiver<()>| async move {
@@ -33,7 +37,34 @@ pub fn ToolAddForm() -> Element {
     });
 
     rsx!(
-        div { class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
+        form {
+            class: "mx-5 py-3 min-h-full text-sm flex flex-col gap-4 bg-zinc-100 px-4 border-1 border-zinc-400",
+            onsubmit: move |_| {
+                let container_image = container_image();
+                let container_tag = container_tag();
+                let container_options = container_image
+                    .as_ref()
+                    .map(|image| ContainerInfo {
+                        image,
+                        tag: container_tag.as_deref(),
+                    });
+                let command = shlex::split(&command()).unwrap();
+                let options = ToolCreationOptions {
+                    command: &command,
+                    container: container_options,
+                    enable_network: enable_network(),
+                    commit: true,
+                    ..Default::default()
+                };
+
+                //could refactor the create tool method to not use current dir...
+                let current = env::current_dir()?;
+                env::set_current_dir(working_dir().unwrap())?;
+                create_tool(&options, name(), true)?;
+                *RELOAD_TRIGGER.write() +=1;
+                env::set_current_dir(current)?;
+                Ok(())
+            },
             h2 { class: "text-lg text-fairagro-dark-500 font-bold", "New CommandLineTool" }
             if !modified_files().is_empty() {
                 div { class: "bg-fairagro-red-light border-fairagro-red border-2 px-3 py-2 flex gap-2 items-center",
@@ -66,7 +97,7 @@ pub fn ToolAddForm() -> Element {
             }
             div { class: "flex flex-col gap-1",
                 label { r#for: "command", "Command" }
-                Terminal {}
+                Terminal { value: command }
                 span { class: "text-xs text-zinc-500",
                     "The command the CommandLineTool shall resemble. Tab and Arrow keys can be used to use completion system."
                 }
@@ -136,8 +167,10 @@ pub fn ToolAddForm() -> Element {
                 }
             }
 
-            button { class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
-                "Run & Create"
+            input {
+                class: "text-white bg-fairagro-mid-500 hover:bg-fairagro-dark-500 mx-auto px-3 py-2 rounded-md",
+                r#type: "submit",
+                value: "Run & Create"
             }
         }
     )

@@ -1,6 +1,6 @@
 use crate::components::ICON_SIZE;
 use crate::components::files::{Node, get_route, read_node_type};
-use crate::layout::Route;
+use crate::layout::{RELOAD_TRIGGER, Route};
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
@@ -106,10 +106,10 @@ pub fn DirItem(node: ReadSignal<Node>, is_root: bool) -> Element {
 }
 
 #[component]
-pub fn FileSystemView(project_path: ReadSignal<PathBuf>, reload_trigger: ReadSignal<i32>) -> Element {
+pub fn FileSystemView(project_path: ReadSignal<PathBuf>) -> Element {
     let app_state = use_app_state();
     let root = use_memo(move || {
-        reload_trigger();
+        RELOAD_TRIGGER();
         app_state.read().working_directory.as_ref().map(|path| load_project_tree(path))
     });
 

@@ -8,11 +8,9 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
     --color-red-400: oklch(70.4% 0.191 22.216);
-    --color-red-700: oklch(50.5% 0.213 27.518);
     --color-red-800: oklch(44.4% 0.177 26.899);
     --color-red-900: oklch(39.6% 0.141 25.723);
     --color-yellow-400: oklch(85.2% 0.199 91.936);
-    --color-yellow-500: oklch(79.5% 0.184 86.047);
     --color-green-400: oklch(79.2% 0.209 151.711);
     --color-green-800: oklch(44.8% 0.119 151.328);
     --color-green-900: oklch(39.3% 0.095 152.535);
@@ -240,9 +238,6 @@
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
-  .top-1 {
-    top: calc(var(--spacing) * 1);
-  }
   .top-1\/2 {
     top: calc(1/2 * 100%);
   }
@@ -272,9 +267,6 @@
   }
   .left-0 {
     left: calc(var(--spacing) * 0);
-  }
-  .left-1 {
-    left: calc(var(--spacing) * 1);
   }
   .left-1\/2 {
     left: calc(1/2 * 100%);
@@ -438,9 +430,6 @@
   .flex-1 {
     flex: 1;
   }
-  .flex-shrink {
-    flex-shrink: 1;
-  }
   .shrink {
     flex-shrink: 1;
   }
@@ -453,19 +442,8 @@
   .grow {
     flex-grow: 1;
   }
-  .border-collapse {
-    border-collapse: collapse;
-  }
-  .-translate-x-1 {
-    --tw-translate-x: calc(var(--spacing) * -1);
-    translate: var(--tw-translate-x) var(--tw-translate-y);
-  }
   .-translate-x-1\/2 {
     --tw-translate-x: calc(calc(1/2 * 100%) * -1);
-    translate: var(--tw-translate-x) var(--tw-translate-y);
-  }
-  .-translate-y-1 {
-    --tw-translate-y: calc(var(--spacing) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .-translate-y-1\/2 {
@@ -630,9 +608,6 @@
   .bg-fairagro-dark-500 {
     background-color: var(--color-fairagro-dark-500);
   }
-  .bg-fairagro-light-200 {
-    background-color: var(--color-fairagro-light-200);
-  }
   .bg-fairagro-light-200\/80 {
     background-color: color-mix(in srgb, #d6eab8 80%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -690,9 +665,6 @@
   .bg-zinc-300 {
     background-color: var(--color-zinc-300);
   }
-  .bg-zinc-500 {
-    background-color: var(--color-zinc-500);
-  }
   .bg-zinc-500\/60 {
     background-color: color-mix(in srgb, oklch(55.2% 0.016 285.938) 60%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -702,26 +674,8 @@
   .bg-zinc-700 {
     background-color: var(--color-zinc-700);
   }
-  .bg-zinc-700\/20 {
-    background-color: color-mix(in srgb, oklch(37% 0.013 285.805) 20%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-zinc-700) 20%, transparent);
-    }
-  }
-  .bg-zinc-700\/50 {
-    background-color: color-mix(in srgb, oklch(37% 0.013 285.805) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-zinc-700) 50%, transparent);
-    }
-  }
   .bg-zinc-900 {
     background-color: var(--color-zinc-900);
-  }
-  .bg-zinc-900\/50 {
-    background-color: color-mix(in srgb, oklch(21% 0.006 285.885) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-zinc-900) 50%, transparent);
-    }
   }
   .bg-zinc-900\/70 {
     background-color: color-mix(in srgb, oklch(21% 0.006 285.885) 70%, transparent);
@@ -779,9 +733,6 @@
   }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
-  }
-  .py-0 {
-    padding-block: calc(var(--spacing) * 0);
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
@@ -854,26 +805,14 @@
   .text-fairagro-red {
     color: var(--color-fairagro-red);
   }
-  .text-red-700 {
-    color: var(--color-red-700);
-  }
   .text-red-900 {
     color: var(--color-red-900);
   }
   .text-white {
     color: var(--color-white);
   }
-  .text-yellow-500 {
-    color: var(--color-yellow-500);
-  }
   .text-zinc-100 {
     color: var(--color-zinc-100);
-  }
-  .text-zinc-200 {
-    color: var(--color-zinc-200);
-  }
-  .text-zinc-300 {
-    color: var(--color-zinc-300);
   }
   .text-zinc-400 {
     color: var(--color-zinc-400);
@@ -916,17 +855,11 @@
     --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
-  .ring-fairagro-dark-200 {
-    --tw-ring-color: var(--color-fairagro-dark-200);
-  }
   .ring-fairagro-dark-200\/20 {
     --tw-ring-color: color-mix(in srgb, #9fd6ce 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-ring-color: color-mix(in oklab, var(--color-fairagro-dark-200) 20%, transparent);
     }
-  }
-  .ring-fairagro-dark-300 {
-    --tw-ring-color: var(--color-fairagro-dark-300);
   }
   .ring-fairagro-dark-300\/40 {
     --tw-ring-color: color-mix(in srgb, #6fc1b5 40%, transparent);

@@ -18,13 +18,13 @@ use rfd::AsyncFileDialog;
 use std::{fs, path::PathBuf};
 
 pub const INPUT_TEXT_CLASSES: &str = "shadow appearance-none border rounded py-2 px-3 text-zinc-700 leading-tight focus:border-fairagro-dark-500 focus:outline-none focus:shadow-outline";
+pub static RELOAD_TRIGGER: GlobalSignal<i32> = Signal::global(|| 0);
 
 #[component]
 pub fn Layout() -> Element {
     let mut app_state = use_app_state();
     let working_dir = use_memo(move || app_state.read().working_directory.clone());
 
-    let mut reload_trigger = use_signal(|| 0);
     let mut view = use_signal(|| View::Solution);
 
     let route: Route = use_route();
@@ -139,7 +139,7 @@ pub fn Layout() -> Element {
                                 class: "hover:bg-fairagro-dark-500/20 text-fairagro-dark-500",
                                 title: "Reload Files",
                                 onclick: move |_| {
-                                    reload_trigger += 1;
+                                    *RELOAD_TRIGGER.write() += 1;
                                 },
                                 Icon {
                                     icon: GoSync,
@@ -188,7 +188,6 @@ pub fn Layout() -> Element {
                         FilesView {
                             working_dir,
                             view,
-                            reload_trigger,
                             dialog_signals: (show_confirm_dialog, confirmed_dialog),
                         }
                     } else {
@@ -229,7 +228,6 @@ pub fn Layout() -> Element {
                             open: show_create_dialog,
                             working_dir,
                             show_add_actions,
-                            reload_trigger,
                         }
                     }
                     NoProjectDialog {
@@ -310,9 +308,7 @@ pub enum Route {
 
 #[component]
 pub fn Empty() -> Element {
-    rsx!(
-        div {}
-    )
+    rsx!(div {})
 }
 
 #[component]

@@ -1,4 +1,5 @@
 use crate::layout::INPUT_TEXT_CLASSES;
+use crate::layout::RELOAD_TRIGGER;
 use crate::layout::Route;
 use dioxus::prelude::*;
 use dioxus_primitives::alert_dialog::*;
@@ -75,7 +76,6 @@ pub fn WorkflowAddDialog(
     open: Signal<bool>,
     working_dir: ReadSignal<PathBuf>,
     show_add_actions: Signal<bool>,
-    reload_trigger: Signal<i32>,
 ) -> Element {
     let mut workflow_name = use_signal(|| "".to_string());
 
@@ -84,7 +84,7 @@ pub fn WorkflowAddDialog(
 
         workflow_name.set("".to_string());
         show_add_actions.set(false);
-        reload_trigger += 1;
+        *RELOAD_TRIGGER.write() += 1;
         open.set(false);
         Ok::<_, anyhow::Error>(())
     };

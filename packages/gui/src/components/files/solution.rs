@@ -1,7 +1,7 @@
 use crate::components::files::{Node, get_route};
 use crate::components::{ICON_SIZE, SmallRoundActionButton};
 use crate::files::{get_cwl_files, get_submodules_cwl_files};
-use crate::layout::Route;
+use crate::layout::{RELOAD_TRIGGER, Route};
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
@@ -13,14 +13,14 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 #[component]
-pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
+pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
     let mut app_state = use_app_state();
     let files = use_memo(move || {
-        reload_trigger(); //subscribe to changes
+        RELOAD_TRIGGER(); //subscribe to changes
         get_cwl_files(project_path().join("workflows"))
     });
     let submodule_files = use_memo(move || {
-        reload_trigger(); //subscribe to changes
+        RELOAD_TRIGGER(); //subscribe to changes
         get_submodules_cwl_files(project_path())
     });
 
@@ -85,7 +85,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                                                     if !dialog_signals.0() {
                                                         if dialog_signals.1() {
                                                             fs::remove_file(&item.path)?;
-                                                            reload_trigger += 1;
+                                                            *RELOAD_TRIGGER.write() += 1;
                                                             let current_path = match use_route() {
                                                                 Route::WorkflowView { path } => path.to_string(),
                                                                 Route::ToolView { path } => path.to_string(),
@@ -118,7 +118,6 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
                 Submodule_View {
                     module,
                     files,
-                    reload_trigger,
                     dialog_signals,
                 }
             }
@@ -127,7 +126,7 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, reload_trigger: Signal<i3
 }
 
 #[component]
-pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i32>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
+pub fn Submodule_View(module: String, files: Vec<Node>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
     let mut app_state = use_app_state();
     let mut hover = use_signal(|| false);
 
@@ -155,7 +154,7 @@ pub fn Submodule_View(module: String, files: Vec<Node>, reload_trigger: Signal<i
                                             app_state().working_directory.unwrap(),
                                         )?;
                                         remove_submodule(&repo, &module)?;
-                                        reload_trigger += 1;
+                                        *RELOAD_TRIGGER.write() += 1;
                                         dialog_signals.1.set(false);
                                     }
                                     break;
