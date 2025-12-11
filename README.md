@@ -80,7 +80,7 @@ cargo nextest --workspace           # Run all tests
 ```
 
 ## 💚 SciWin Studio
-*SciWIn-Studio** is a graphical user interface (GUI) application currently in testing that complements SciWIn-Client. It provides an intuitive visual environment for researchers who prefer graphical tools over command-line interactions.
+**SciWIn-Studio** is a graphical user interface (GUI) application currently in testing that complements SciWIn-Client. It provides an intuitive visual environment for researchers who prefer graphical tools over command-line interactions.
 ### Features
 - Visual workflow design and management
 - Drag-and-drop interface for connecting workflow steps
