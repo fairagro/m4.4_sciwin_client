@@ -7,7 +7,7 @@ on:
     branches: ["main"]
 
 jobs:
-  bundle:
+  bundle_windows:
     name: 🎁 Bundle windows
     permissions:
       contents: read
@@ -30,6 +30,7 @@ jobs:
           name: Windows-Exe
           path: target/dx/sciwin/release/windows
           retention-days: 1
+  bundle_linux:  
     name: 🎁 Bundle Linux
     permissions:
       contents: read
