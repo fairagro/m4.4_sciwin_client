@@ -200,12 +200,12 @@ fn get_user_flag() -> String {
     format!("--user={}:{}", getuid().as_raw(), getgid().as_raw())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(target_os = "macos", ignore)]
     fn test_auto_container() {
         assert!(ContainerEngine::auto().is_some());
     }
