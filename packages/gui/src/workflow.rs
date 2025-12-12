@@ -1,5 +1,6 @@
 use crate::{
     graph::{WorkflowGraph, load_workflow_graph},
+    save_file_canonical,
     types::{NodeInstance, Slot, VisualEdge, VisualNode},
 };
 use commonwl::{format::format_cwl, load_workflow, prelude::*};
@@ -231,8 +232,11 @@ impl VisualWorkflow {
         let mut yaml = serde_yaml::to_string(&self.workflow)?;
 
         yaml = format_cwl(&yaml).map_err(|e| anyhow::anyhow!("Could not format yaml: {e}"))?;
-        let mut file = fs::File::create(self.path.clone().unwrap())?;
+        let path = self.path.clone().unwrap();
+        let mut file = fs::File::create(&path)?;
         file.write_all(yaml.as_bytes())?;
+
+        save_file_canonical(&path, &format!("🧩 Saved changes on Workflow {path:?}!"))?;
 
         Ok(())
     }

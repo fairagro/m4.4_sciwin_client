@@ -3,6 +3,7 @@ use crate::{
     workflow::VisualWorkflow,
 };
 use dioxus::{html::geometry::ClientPoint, prelude::*, router::RouterContext};
+use pathdiff::diff_paths;
 use petgraph::graph::NodeIndex;
 use repository::{Repository, commit, stage_file};
 use s4n_core::{config::Config, project::initialize_project};
@@ -165,4 +166,50 @@ pub fn save_file(working_dir: &Path, filename: impl AsRef<Path>, message: &str) 
     commit(&repo, message)?;
 
     Ok(())
+}
+
+//Saves AND commits a file
+pub fn save_file_canonical(filename: impl AsRef<Path>, message: &str) -> anyhow::Result<()> {
+    let mut residual = filename.as_ref();
+    let mut relative_filename = None;
+    loop {
+        if Repository::open(residual).is_ok()
+            && let Some(relative_filename) = relative_filename
+        {
+            save_file(residual, relative_filename, message)?;
+            break;
+        } else {
+            residual = residual.parent().unwrap_or(Path::new("/"));
+            if residual == Path::new("/") {
+                break; //can't get down any further
+            }
+            relative_filename = diff_paths(filename.as_ref(), residual);
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+    use fstest::fstest;
+
+    #[fstest(repo = true)]
+    fn test_save_file_canonical() {
+        fs::create_dir("./test_dir").unwrap();
+        fs::write("./test_dir/161.txt", "haha sciwin go brr").unwrap();
+
+        let filename = env::current_dir().unwrap().join("./test_dir/161.txt");
+        let repo = Repository::open_from_env().unwrap();
+        let modified_files = repository::get_modified_files(&repo);
+        assert_eq!(modified_files.len(), 1);
+
+        assert!(save_file_canonical(filename, "haha sciwin go brr").is_ok());
+
+        let modified_files = repository::get_modified_files(&repo);
+        assert_eq!(modified_files.len(), 0);
+    }
 }
