@@ -19,6 +19,8 @@ outputs:
 - id: out
   type: File
   outputSource: plot/o_results
+- id: merzlos
+  type: Any
 
 steps:
 - id: plot
