@@ -294,8 +294,8 @@ mod tests {
     pub fn test_python_module_creation() {
         let dir = tempdir().unwrap();
         let path = dir.path();
-
-        copy_dir("../../testdata/module", path.join("module")).unwrap();
+        let root = env::var("CARGO_MANIFEST_DIR").unwrap();
+        copy_dir(Path::new(&root).join("../../testdata/module"), path.join("module")).unwrap();
 
         let current = env::current_dir().unwrap();
         env::set_current_dir(path).unwrap();
