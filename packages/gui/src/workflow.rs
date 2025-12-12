@@ -245,20 +245,38 @@ impl VisualWorkflow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use commonwl::execution::io::copy_dir;
+    use repository::{Repository, initial_commit};
     use serial_test::serial;
+    use std::env;
+    use tempfile::TempDir;
+    use tempfile::tempdir;
+
+    fn setup() -> (PathBuf, TempDir) {
+        let dir = tempdir().unwrap();
+        let repo = Repository::init(dir.path()).unwrap();
+        copy_dir("../../testdata/hello_world", dir.path()).unwrap();
+        initial_commit(&repo).unwrap();
+        let current = env::current_dir().unwrap();
+        env::set_current_dir(dir.path()).unwrap();
+        (current, dir)
+    }
 
     #[test]
     #[serial]
     fn test_load_workflow() {
-        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let (current, dir) = setup();
+        let path = dir.path().join("workflows/main/main.cwl");
         let wf = VisualWorkflow::from_file(path).unwrap();
-        assert_eq!(wf.graph.node_count(), 5)
+        assert_eq!(wf.graph.node_count(), 5);
+        env::set_current_dir(current).unwrap();
     }
 
     #[test]
     #[serial]
     fn test_add_input_to_workflow() {
-        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let (current, dir) = setup();
+        let path = dir.path().join("workflows/main/main.cwl");
         let mut wf = VisualWorkflow::from_file(path).unwrap();
 
         wf.add_input("wurstbrot", CWLType::Any).unwrap();
@@ -267,12 +285,14 @@ mod tests {
         let ix = wf.graph.node_indices().find(|i| wf.graph[*i].id == "wurstbrot").unwrap();
         wf.remove_node(ix).unwrap();
         assert!(!wf.workflow.has_input("wurstbrot"));
+        env::set_current_dir(current).unwrap();
     }
 
     #[test]
     #[serial]
     fn test_add_output_to_workflow() {
-        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let (current, dir) = setup();
+        let path = dir.path().join("workflows/main/main.cwl");
         let mut wf = VisualWorkflow::from_file(path).unwrap();
 
         wf.add_output("merzlos", CWLType::Any).unwrap();
@@ -281,12 +301,14 @@ mod tests {
         let ix = wf.graph.node_indices().find(|i| wf.graph[*i].id == "merzlos").unwrap();
         wf.remove_node(ix).unwrap();
         assert!(!wf.workflow.has_output("merzlos"));
+        env::set_current_dir(current).unwrap();
     }
 
     #[test]
     #[serial]
     fn test_add_connection_to_workflow() {
-        let path = "../../testdata/hello_world/workflows/main/main.cwl";
+        let (current, dir) = setup();
+        let path = dir.path().join("workflows/main/main.cwl");
         let mut wf = VisualWorkflow::from_file(path).unwrap();
 
         let ix_calc = wf.graph.node_indices().find(|i| wf.graph[*i].id.contains("calculation")).unwrap();
@@ -301,5 +323,6 @@ mod tests {
         wf.add_connection(ix_calc, "results", ix_plot, "results").unwrap();
 
         assert_eq!(wf.graph.edge_count(), 4);
+        env::set_current_dir(current).unwrap();
     }
 }
