@@ -22,9 +22,7 @@ outputs:
 
 steps:
 - id: plot
-  in:
-  - id: results
-    source: calculation/results
+  in: []
   run: ../plot/plot.cwl
   out:
   - o_results
