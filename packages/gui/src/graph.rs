@@ -195,8 +195,10 @@ pub fn auto_layout(graph: &mut WorkflowGraph) {
 mod tests {
     use super::*;
     use commonwl::load_workflow;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_load_workflow_graph() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         let workflow = load_workflow(path).unwrap();
@@ -207,6 +209,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_load_workflow_graph_02() {
         let path = "../../testdata/mkdir_wf.cwl";
         let workflow = load_workflow(path).unwrap();
