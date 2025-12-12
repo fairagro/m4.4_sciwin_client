@@ -245,8 +245,10 @@ impl VisualWorkflow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_load_workflow() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         let wf = VisualWorkflow::from_file(path).unwrap();
@@ -254,6 +256,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_add_input_to_workflow() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         let mut wf = VisualWorkflow::from_file(path).unwrap();
@@ -264,11 +267,10 @@ mod tests {
         let ix = wf.graph.node_indices().find(|i| wf.graph[*i].id == "wurstbrot").unwrap();
         wf.remove_node(ix).unwrap();
         assert!(!wf.workflow.has_input("wurstbrot"));
-
-        wf.save().unwrap() //does not fail
     }
 
     #[test]
+    #[serial]
     fn test_add_output_to_workflow() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         let mut wf = VisualWorkflow::from_file(path).unwrap();
@@ -282,6 +284,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_add_connection_to_workflow() {
         let path = "../../testdata/hello_world/workflows/main/main.cwl";
         let mut wf = VisualWorkflow::from_file(path).unwrap();
