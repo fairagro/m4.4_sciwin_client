@@ -14,6 +14,8 @@ inputs:
   default:
     class: File
     location: ../../data/speakers_revised.csv
+- id: wurstbrot
+  type: Any
 
 outputs:
 - id: out
