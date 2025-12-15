@@ -123,11 +123,8 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
                 ContainerEngine::Singularity | ContainerEngine::Apptainer => {
                     set_container_engine(ContainerEngine::Singularity);
                 }
-                ContainerEngine::Docker => {
-                    set_container_engine(ContainerEngine::Docker);
-                }
-                ContainerEngine::Podman => {
-                    set_container_engine(ContainerEngine::Podman);
+                _ => {
+                    set_container_engine(*engine);
                 }
             }
             cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
