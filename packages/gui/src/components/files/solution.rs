@@ -1,20 +1,22 @@
 use crate::components::files::{Node, get_route};
 use crate::components::{ICON_SIZE, SmallRoundActionButton};
 use crate::files::{get_cwl_files, get_submodules_cwl_files};
-use crate::layout::{RELOAD_TRIGGER, Route};
+use crate::layout::{INPUT_TEXT_CLASSES, RELOAD_TRIGGER, Route};
 use crate::use_app_state;
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
-use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoTrash};
+use dioxus_free_icons::icons::go_icons::{GoCloud, GoFileDirectory, GoPlusCircle, GoTrash};
 use repository::Repository;
-use repository::submodule::remove_submodule;
+use repository::submodule::{add_submodule, remove_submodule};
+use reqwest::Url;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 #[component]
 pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<bool>, Signal<bool>)) -> Element {
     let mut app_state = use_app_state();
+
     let files = use_memo(move || {
         RELOAD_TRIGGER(); //subscribe to changes
         get_cwl_files(project_path().join("workflows"))
@@ -25,6 +27,9 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<b
     });
 
     let mut hover = use_signal(|| false);
+    let mut adding = use_signal(|| false);
+    let mut processing = use_signal(|| false);
+    let mut new_package = use_signal(String::new);
 
     rsx! {
         div { class: "flex flex-grow flex-col overflow-y-auto",
@@ -116,6 +121,48 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<b
             }
             for (module , files) in submodule_files() {
                 Submodule_View { module, files, dialog_signals }
+            }
+
+            h2 {
+                class: "mt-2 font-bold flex gap-1 items-center cursor-pointer",
+                onclick: move |_| adding.set(true),
+                Icon { width: ICON_SIZE, height: ICON_SIZE, icon: GoPlusCircle }
+                if !adding() {
+                    "Add package"
+                } else if !processing() {
+                    input {
+                        class: "{INPUT_TEXT_CLASSES}",
+                        r#type: "text",
+                        value: "{new_package}",
+                        placeholder: "package name",
+                        oninput: move |e| new_package.set(e.value()),
+                        onkeydown: move |e| {
+                            if e.key() == Key::Enter {
+                                e.prevent_default();
+                                e.stop_propagation();                                
+                                adding.set(false);
+                                processing.set(true);
+                                let working_dir = app_state().working_directory.unwrap();
+                                let mut repo = Repository::open(&working_dir)?;
+                                let package = new_package();
+                                let url = package.strip_suffix(".git").unwrap_or(&package);
+                                
+                                let url_obj = Url::parse(url)?;
+                                
+                                let package_dir = Path::new("packages");
+                                let repo_name = url_obj.path().strip_prefix("/").unwrap();
+                                add_submodule(&mut repo, url, &None, &working_dir.join(package_dir.join(repo_name)))?;
+                                
+                                *RELOAD_TRIGGER.write() += 1;
+                                processing.set(false);
+                            }
+                            Ok(())
+                        },
+                    }
+                }
+                else {
+                    "..."
+                }
             }
         }
     }

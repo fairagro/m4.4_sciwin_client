@@ -21,7 +21,15 @@ pub fn add_submodule(repo: &mut Repository, url: &str, branch: &Option<String>, 
     } else {
         RepoBuilder::new().clone(url, path)?;
     }
-    let mut module = repo.submodule(url, path, false)?;
+
+    let repo_base_path = repo
+        .path()
+        .join("../")
+        .canonicalize()
+        .map_err(|e| git2::Error::from_str(&e.to_string()))?;
+    let relative_path = path.strip_prefix(repo_base_path).unwrap_or(path);
+
+    let mut module = repo.submodule(url, relative_path, false)?;
 
     //set correct branch to submodule
     if let Some(branch) = branch {
