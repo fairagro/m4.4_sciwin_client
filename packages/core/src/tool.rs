@@ -46,16 +46,16 @@ pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bo
 
     if options.run_container.is_none() {
         cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
-    } else if let Some(container) = &options.container {
+    } else if let Some(container) = &options.container
+        && Path::new(container.image).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif"))
+    {
+        //if run_container is some requirements are already set in create_tool_base()
+        //just the docker requirements needs to be altered in case of sif file
         cwl.base.requirements.retain(|req| !matches!(req, Requirement::DockerRequirement(_)));
 
-        if Path::new(container.image).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif")) {
-            let mut modified_container = container.clone();
-            modified_container.image = container.image.trim_end_matches(".sif");
-            cwl = add_tool_requirements(cwl, Some(&modified_container), options.enable_network, options.mounts, options.env)?;
-        } else {
-            cwl = add_tool_requirements(cwl, Some(container), options.enable_network, options.mounts, options.env)?;
-        }
+        let mut modified_container = container.clone();
+        modified_container.image = container.image.trim_end_matches(".sif");
+        cwl = append_container_requirement(cwl, Some(&modified_container));
     }
     // Finalize CWL
     let path = io::get_qualified_filename(&cwl.base_command, name);
@@ -184,16 +184,7 @@ fn add_tool_requirements(
     env: Option<&Path>,
 ) -> Result<CommandLineTool> {
     // Handle container requirements
-    if let Some(container) = &container {
-        let requirement = if container.image.contains("Dockerfile") {
-            let image_id = container.tag.unwrap_or("sciwin-container");
-            Requirement::DockerRequirement(DockerRequirement::from_file(container.image, image_id))
-        } else {
-            Requirement::DockerRequirement(DockerRequirement::from_pull(container.image))
-        };
-
-        cwl = cwl.append_requirement(requirement);
-    }
+    cwl = append_container_requirement(cwl, container);
 
     if enable_network {
         cwl = cwl.append_requirement(Requirement::NetworkAccess(NetworkAccess { network_access: true }));
@@ -226,6 +217,21 @@ fn add_tool_requirements(
         }
     }
     Ok(cwl)
+}
+
+fn append_container_requirement(cwl: CommandLineTool, container: Option<&ContainerInfo>) -> CommandLineTool {
+    if let Some(container) = &container {
+        let requirement = if container.image.contains("Dockerfile") {
+            let image_id = container.tag.unwrap_or("sciwin-container");
+            Requirement::DockerRequirement(DockerRequirement::from_file(container.image, image_id))
+        } else {
+            Requirement::DockerRequirement(DockerRequirement::from_pull(container.image))
+        };
+
+        cwl.append_requirement(requirement)
+    } else {
+        cwl
+    }
 }
 
 fn finalize_tool(cwl: &mut CommandLineTool, path: &str) -> Result<String> {
