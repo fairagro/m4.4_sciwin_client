@@ -142,6 +142,8 @@ pub fn SolutionView(project_path: ReadSignal<PathBuf>, dialog_signals: (Signal<b
                                 e.stop_propagation();                                
                                 adding.set(false);
                                 processing.set(true);
+                                *RELOAD_TRIGGER.write() += 1;
+
                                 let working_dir = app_state().working_directory.unwrap();
                                 let mut repo = Repository::open(&working_dir)?;
                                 let package = new_package();
