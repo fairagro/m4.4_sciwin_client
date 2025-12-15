@@ -2,13 +2,13 @@ use crate::{
     io::{self, resolve_path},
     parser,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use commonwl::{
-    execution::{environment::RuntimeEnvironment, io::create_and_write_file, runner::command, set_container_engine, ContainerEngine},
+    Entry, EnviromentDefs, PathItem,
+    execution::{ContainerEngine, environment::RuntimeEnvironment, io::create_and_write_file, runner::command, set_container_engine},
     format::format_cwl,
     prelude::*,
     requirements::WorkDirItem,
-    Entry, EnviromentDefs, PathItem,
 };
 use repository::{self, Repository};
 use std::{
@@ -49,14 +49,13 @@ pub fn create_tool(options: &ToolCreationOptions, name: Option<String>, save: bo
     } else if let Some(container) = &options.container {
         cwl.base.requirements.retain(|req| !matches!(req, Requirement::DockerRequirement(_)));
 
-        if Path::new(container.image).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif")){
+        if Path::new(container.image).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("sif")) {
             let mut modified_container = container.clone();
             modified_container.image = container.image.trim_end_matches(".sif");
             cwl = add_tool_requirements(cwl, Some(&modified_container), options.enable_network, options.mounts, options.env)?;
         } else {
             cwl = add_tool_requirements(cwl, Some(container), options.enable_network, options.mounts, options.env)?;
         }
-        
     }
     // Finalize CWL
     let path = io::get_qualified_filename(&cwl.base_command, name);
@@ -124,15 +123,18 @@ fn create_tool_base(options: &ToolCreationOptions) -> Result<CommandLineTool> {
                 ContainerEngine::Singularity | ContainerEngine::Apptainer => {
                     set_container_engine(ContainerEngine::Singularity);
                 }
-                ContainerEngine::Docker | &ContainerEngine::Podman => {
+                ContainerEngine::Docker => {
                     set_container_engine(ContainerEngine::Docker);
                 }
+                ContainerEngine::Podman => {
+                    set_container_engine(ContainerEngine::Podman);
+                }
             }
-        cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
-        command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Failed to run tool: {e}"))?;
-        }
-        else {
-             command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
+            cwl = add_tool_requirements(cwl, options.container.as_ref(), options.enable_network, options.mounts, options.env)?;
+            command::run_command(&cwl, &mut environment).map_err(|e| anyhow::anyhow!("Failed to run tool: {e}"))?;
+        } else {
+            command::run_command(&cwl, &mut environment)
+                .map_err(|e| anyhow::anyhow!("Could not execute command: `{}`: {}!", command.join(" "), e))?;
         }
 
         // Handle modified files
