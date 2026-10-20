@@ -80,7 +80,12 @@ Rust was chosen for practical reasons beyond type safety. It produces a single s
 An overview of the architecture is shown in \autoref{fig:overview}.
 
 ## Authoring tools
-When users invoke a command or script using the `s4n create` prefix SciWIn-Client automatically generates a tool. 
+When users invoke a command or script using the `s4n create` prefix, SciWIn-Client automatically generates a tool following a simple 4 step process:
+
+1. The command-line is used to parse `inputs` and `baseCommand` to construct a preliminary `CommandLineTool`.
+2. The preliminary `CommandLineTool` is executed locally ("probe"). Git is used in background to determine changes in the file system. Changed files and directories are added as `outputs`. 
+3. Requirement metadata such as containers, network access, environment variables are added to the preliminary `CommandLineTool` by `s4n create`'s command options. 
+4. The preliminary `CommandLineTool` is finalized by post processing steps such as EDAM format annotation, path relativization and array input detection.
 
 Example:
 ```bash
@@ -133,13 +138,6 @@ baseCommand:
 - python
 - code/plot_election.py
 ```
-
-The tool generation procedure follows a simple 4 step process:
-
-1. The command-line is used to parse `inputs` and `baseCommand` to construct a preliminary `CommandLineTool`.
-2. The preliminary `CommandLineTool` is executed locally ("probe"). Git is used in background to determine changes in the file system. Changed files and directories are added as `outputs`. 
-3. Requirement metadata such as containers, network access, environment variables are added to the preliminary `CommandLineTool` by `s4n create`'s command options. 
-4. The preliminary `CommandLineTool` is finalized by post processing steps such as EDAM format annotation, path relativization and array input detection.
 
 As Git is used to determine changes, a Git repository is a hard requirement. However we accept this cost because version control is already best practice for the intended users and gives versioning of the generated files for free. A `.gitignore` can be used to ignore temporary directories or files may be created by the command.
 
