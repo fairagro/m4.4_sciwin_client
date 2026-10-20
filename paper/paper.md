@@ -139,7 +139,7 @@ baseCommand:
 - code/plot_election.py
 ```
 
-As Git is used to determine changes, a Git repository is a hard requirement. However we accept this cost because version control is already best practice for the intended users and gives versioning of the generated files for free. A `.gitignore` can be used to ignore temporary directories or files may be created by the command.
+As Git is used to determine changes, a Git repository is a hard requirement. However, version control is already best practice for the intended users and it provides versioning of the generated files for free. A `.gitignore` can be used to ignore temporary directories or files may be created by the command.
 
 While the system can automatically infer `inputs` and `outputs`, it also has inherent limits. Therefore users also have the option to define `inputs` and `outputs` explicitly.
 
