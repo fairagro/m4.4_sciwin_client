@@ -171,7 +171,7 @@ The conformance with the CWL conformance test suite of `commonwl`'s backends is 
 # Research impact statement
 SciWIn-Client was used within FAIRagro to build the workflow for Use Case 6  (high-throughput crop growth simulation) [@Gitahi.2026;@Gitahi.2026b]. The resulting workflow was published on WorkflowHub [@Gustafsson.2025;@Gitahi.2026b] and annotated using DataPLANT tooling, which shows that SciWIn-created workflows can be moved into ARC-based research data management [@Brilhaus.2026]. Workflows can be executed on the FAIRagro REANA instance operated in the de.NBI Cloud.
 
-The software has been taught and presented to to its target community of agricultural and life science researchers. SciWIn-Client was presented at the 2nd Conference on Research Data Infrastructure (CoRDI 2025) [@Krumsieck.2025;@Krumsieck.2025b]. A hands-on workshop on SciWIn-Client was held at the Boosting Biodata Bootcamp 2026 [@Leidel.2026]. It has also been demonstrated at several further events, including the NFDI4LS Conference and the FAIRagro Community Summit [@Krumsieck.2025c;@Krumsieck.2025d;@Krumsieck.2026b;@Krumsieck.2026].
+The software has been taught and presented to its target community of agricultural and life science researchers. SciWIn-Client was presented at the 2nd Conference on Research Data Infrastructure (CoRDI 2025) [@Krumsieck.2025;@Krumsieck.2025b]. A hands-on workshop on SciWIn-Client was held at the Boosting Biodata Bootcamp 2026 [@Leidel.2026]. It has also been demonstrated at several further events, including the NFDI4LS Conference and the FAIRagro Community Summit [@Krumsieck.2025c;@Krumsieck.2025d;@Krumsieck.2026b;@Krumsieck.2026].
 
 The release binaries have been downloaded more than 1700 times as of October 2026 ([Collected download data](https://github.com/fairagro/m4.4_metrics)). The supporting libraries `commonwl`, `reana` and `rocrate` are published separately on `crates.io`.
 
@@ -191,6 +191,6 @@ We gratefully acknowledge the financial support of the German Research Foundatio
 
 # AI usage disclosure
 All paper content was written manually and reflects the careful thought and input of the authors. 
-SciWIn is an open source project, and as such contributors are free to use any tools, AI or otherwise, to generate code contained in pull requests or commits. Claude Code was used as assistant to help with implementation of individual parts. It was mainly used for code generation, refatoring and documentation. All commits and pull requests are reviewed by the core developers and often iterated on multiple times; therefore, all content in the repository represents the effort and judgment of the authors.
+SciWIn is an open source project, and as such contributors are free to use any tools, AI or otherwise, to generate code contained in pull requests or commits. Claude Code was used as assistant to help with implementation of individual parts. It was mainly used for code generation, refactoring and documentation. All commits and pull requests are reviewed by the core developers and often iterated on multiple times; therefore, all content in the repository represents the effort and judgment of the authors.
 
 # References
