@@ -143,7 +143,7 @@ The tool generation procedure follows a simple 4 step process:
 3. Requirement metadata such as containers, network access, environment variables are added to the preliminary `CommandLineTool` by `s4n create`'s command options. 
 4. The preliminary `CommandLineTool` is finalized by post processing steps such as EDAM format annotation, path relativization and array input detection.
 
-As Git is used to determine changes, a Git repository is a hard requirement. However we accept this cost because version control is already best practice for the intended users and gives versioning of the generated files for free. A `.gitignore` can be used to ignore temporary directories or files may be created by the command.
+As Git is used to determine changes, a Git repository is a hard requirement. However, we accept this cost because version control is already best practice for the intended users and gives versioning of the generated files for free. A `.gitignore` can be used to ignore temporary directories or files may be created by the command.
 
 While the system can automatically infer `inputs` and `outputs`, it also has inherent limits. Therefore users also have the option to define `inputs` and `outputs` explicitly.
 
